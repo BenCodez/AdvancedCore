@@ -60,11 +60,26 @@ class SqliteRequiredColumnTest {
         try (SqliteUserBackend backend = open()) { assertTrue(backend.enumerateUsers().isEmpty()); }
     }
 
-    @Test void caseAliasesAndCopiedUuidMetadataKeepOneColumnAndTheBoundIdentity() {
+    @Test void ambiguousCaseAliasesAreRejectedBeforeWriting() {
         UUID uuid = UUID.randomUUID();
         HashMap<String, DataValue> values = new HashMap<>();
         values.put("PlayerName", new DataValueString("Ben"));
-        values.put("playername", new DataValueString("Ben"));
+        values.put("playername", new DataValueString("Other"));
+        values.put("UUID", new DataValueString(UUID.randomUUID().toString()));
+        HashMap<String, DataValue> original = new HashMap<>(values);
+        try (SqliteUserBackend backend = open()) {
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> backend.user(uuid).writeValues(UserStorage.SQLITE, values));
+            assertTrue(failure.getMessage().contains("PlayerName"));
+            assertEquals(original, values);
+            assertFalse(backend.user(uuid).contains(UserStorage.SQLITE));
+        }
+    }
+
+    @Test void copiedUuidMetadataCannotChangeTheBoundIdentity() {
+        UUID uuid = UUID.randomUUID();
+        HashMap<String, DataValue> values = new HashMap<>();
+        values.put("PlayerName", new DataValueString("Ben"));
         values.put("UUID", new DataValueString(UUID.randomUUID().toString()));
         HashMap<String, DataValue> original = new HashMap<>(values);
         try (SqliteUserBackend backend = open()) {

@@ -35,6 +35,10 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
     @Override public List<Cleanup> beforeExecutorShutdown() {
         return List.of(
+                new Cleanup("full inventory handler", () -> {
+                    FullInventoryHandler handler = plugin.getFullInventoryHandler();
+                    if (handler != null) handler.shutdown();
+                }),
                 new Cleanup("Javascript engine", () -> {
                     if (plugin.getOptions() != null && plugin.getOptions().isJavascriptEngineEnabled()) {
                         plugin.getLogger().info("Shutting down Javascript engine");
@@ -63,13 +67,6 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                 new Cleanup("plugin unload hook", plugin::onUnLoad),
                 new Cleanup("skull cache", () -> {
                     if (plugin.getSkullCacheHandler() != null) plugin.getSkullCacheHandler().close();
-                }),
-                new Cleanup("full inventory handler", () -> {
-                    FullInventoryHandler handler = plugin.getFullInventoryHandler();
-                    if (handler != null) {
-                        handler.shutdown();
-                        handler.save();
-                    }
                 }),
                 new Cleanup("hologram handler", () -> {
                     if (plugin.getHologramHandler() != null) plugin.getHologramHandler().onShutDown();

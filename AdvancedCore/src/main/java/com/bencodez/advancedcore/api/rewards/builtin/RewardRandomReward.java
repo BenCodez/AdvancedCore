@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.rewards.builtin;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Material;
@@ -26,6 +27,20 @@ public final class RewardRandomReward {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRewards().add(new RewardInjectStringList("RandomReward") {
             @Override
+            public boolean supportsAsyncRequest() { return true; }
+
+            @Override
+            public boolean requiresConfiguredDataForAsync() { return true; }
+
+			@Override
+			public boolean hasPendingReplayWork(HashMap<String, String> placeholders) {
+				return Reward.hasReplaySelection(placeholders);
+			}
+
+            @Override
+            public boolean supportsAsyncSynchronization() { return false; }
+
+            @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> list,
                     HashMap<String, String> placeholders) {
                 if (!list.isEmpty()) {
@@ -34,6 +49,27 @@ public final class RewardRandomReward {
                     return selected;
                 }
                 return null;
+            }
+
+            @Override
+            public CompletionStage<String> onRewardRequestAsync(Reward reward, AdvancedCoreUser user,
+                    ArrayList<String> list, HashMap<String, String> placeholders) {
+				if (list.isEmpty() && !hasPendingReplayWork(placeholders)) {
+					return java.util.concurrent.CompletableFuture.completedFuture(null);
+				}
+                String selected = Reward.replaySelection(placeholders,
+                        () -> list.get(ThreadLocalRandom.current().nextInt(list.size())));
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
+				RewardOptions childOptions = Reward.withReplayState(
+						new RewardOptions().setPlaceholders(placeholders), replayState,
+						replayKey, "selected:" + selected, Reward.currentReplayOccurrenceId());
+				return Reward.persistReplayMetadataAsync(plugin, placeholders)
+						.thenCompose(ignored -> Reward.replaySingleNestedReward(plugin, placeholders,
+								"selected", replayState, replayKey,
+								() -> Reward.continueOnServerThread(plugin, user,
+										() -> handler.giveRewardAsync(user, selected, childOptions))))
+						.thenApply(ignored -> selected);
             }
         }.asPlaceholder("RandomReward").priority(20).addEditButton(
                 new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("RandomReward", null) {

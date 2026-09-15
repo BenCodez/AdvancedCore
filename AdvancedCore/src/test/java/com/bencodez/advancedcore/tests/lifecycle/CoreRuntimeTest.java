@@ -12,7 +12,13 @@ import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 
+import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.item.FullInventoryHandler;
+import com.bencodez.advancedcore.api.user.UserManager;
+import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.bukkit.runtime.BukkitRuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
@@ -54,11 +60,12 @@ class CoreRuntimeTest {
         new AdvancedCoreRuntime(platform).shutdown();
         assertEquals(List.of("pre", "login-stop", "timer-stop", "time-stop", "inventory-stop", "wait-log",
                 "login-wait", "timer-wait", "time-wait", "inventory-wait", "rewards",
-                "login-force", "timer-force", "time-force", "inventory-force", "post"), events);
+				"login-force", "timer-force", "time-force", "inventory-force",
+				"login-wait", "timer-wait", "time-wait", "inventory-wait", "post"), events);
         verify(login).awaitTermination(2, TimeUnit.SECONDS);
         verify(timer).awaitTermination(2, TimeUnit.SECONDS);
         verify(time).awaitTermination(2, TimeUnit.SECONDS);
-        verify(inventory).awaitTermination(1, TimeUnit.SECONDS);
+        verify(inventory, times(2)).awaitTermination(1, TimeUnit.SECONDS);
         verify(platform, times(1)).getTimeTimer();
     }
 
@@ -122,7 +129,24 @@ class CoreRuntimeTest {
 		verify(timer).shutdown();
 	}
 
-	@Test void failedRetirementLeavesStorageWorkerAvailableForRecovery() {
+	@Test void deferredRetirementFailureTerminatesItsWorkerAfterReportingTheFailure() {
+		RuntimePlatform platform = platform();
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.getTimer()).thenReturn(timer);
+
+		new AdvancedCoreRuntime(platform).shutdown();
+		verify(timer, never()).shutdown();
+		verify(timer, never()).shutdownNow();
+		IllegalStateException failure = new IllegalStateException("write failed");
+		retiring.completeExceptionally(failure);
+		verify(platform).cleanupFailed("pre-executor shutdown", failure);
+		verify(timer).shutdownNow();
+	}
+
+	@Test void failedRetirementTerminatesStorageWorkerAfterReportingTheFailure() {
 		RuntimePlatform platform = platform();
 		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
@@ -132,7 +156,7 @@ class CoreRuntimeTest {
 
 		new AdvancedCoreRuntime(platform).shutdown();
 		verify(timer, never()).shutdown();
-		verify(timer, never()).shutdownNow();
+		verify(timer).shutdownNow();
 		verify(platform).cleanupFailed(eq("pre-executor shutdown"), any(IllegalStateException.class));
 	}
 
@@ -163,4 +187,63 @@ class CoreRuntimeTest {
         assertNull(platform.getTimeTimer());
         assertDoesNotThrow(() -> new AdvancedCoreLifecycle(null).shutdown());
     }
+
+	@Test void bukkitAdapterFlushesFullInventoryBeforeExecutorShutdown() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		FullInventoryHandler handler = mock(FullInventoryHandler.class);
+		MySQL mysql = mock(MySQL.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getFullInventoryHandler()).thenReturn(handler);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(plugin.getMysql()).thenReturn(mysql);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("full inventory handler"))
+				.findFirst().orElseThrow().action().run();
+
+		verify(handler).shutdown();
+		assertTrue(platform.beforeExecutorShutdown().stream()
+				.noneMatch(cleanup -> cleanup.name().equals("MySQL")));
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+		verify(mysql).close();
+		assertTrue(platform.afterExecutorShutdown().stream()
+				.noneMatch(cleanup -> cleanup.name().equals("full inventory handler")
+						|| cleanup.name().equals("MySQL")));
+	}
+
+	@Test void bukkitAdapterDefersMysqlCloseUntilSharedStorageRetires() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		MySQL mysql = mock(MySQL.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(plugin.getMysql()).thenReturn(mysql);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		Runnable[] afterRetirement = new Runnable[1];
+		CompletableFuture<Void> retired = new CompletableFuture<>();
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenAnswer(call -> {
+			afterRetirement[0] = call.getArgument(0, Runnable.class);
+			return retired;
+		});
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+		verify(mysql, never()).close();
+		assertSame(retired, platform.beforeExecutorShutdownCompletion());
+		assertNotNull(afterRetirement[0]);
+		afterRetirement[0].run();
+		retired.complete(null);
+		verify(mysql).close();
+	}
 }

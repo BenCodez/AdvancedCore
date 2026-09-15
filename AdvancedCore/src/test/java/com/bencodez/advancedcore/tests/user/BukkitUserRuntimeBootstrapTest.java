@@ -4,11 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -24,9 +26,42 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
+import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.advancedcore.bukkit.user.runtime.BukkitUserRuntimeBootstrap;
 
 class BukkitUserRuntimeBootstrapTest {
+	@Test void nativeEnumerationFailureIsNotReportedAsAPartialSuccess() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		MySQL mysql = mock(MySQL.class);
+		when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(plugin.getMysql()).thenReturn(mysql);
+		doAnswer(invocation -> {
+			invocation.getArgument(2, java.util.function.Consumer.class)
+					.accept(new java.sql.SQLException("fixture"));
+			return null;
+		}).when(mysql).forEachUser(any(), any(), any());
+
+		var backend = new com.bencodez.advancedcore.bukkit.user.storage.BukkitSqlUserBackend(plugin);
+		IllegalStateException failure = assertThrows(IllegalStateException.class, backend::enumerateUsers);
+		assertTrue(failure.getCause() instanceof java.sql.SQLException);
+	}
+
+	@Test void nativeSqliteEnumerationFailureIsNotReportedAsAPartialSuccess() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserTable table = mock(UserTable.class);
+		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+		when(plugin.getSQLiteUserTable()).thenReturn(table);
+		doAnswer(invocation -> {
+			invocation.getArgument(2, java.util.function.Consumer.class)
+					.accept(new java.sql.SQLException("fixture"));
+			return null;
+		}).when(table).forEachUser(any(), any(), any());
+
+		var backend = new com.bencodez.advancedcore.bukkit.user.storage.BukkitSqlUserBackend(plugin);
+		IllegalStateException failure = assertThrows(IllegalStateException.class, backend::enumerateUsers);
+		assertTrue(failure.getCause() instanceof java.sql.SQLException);
+	}
+
     @Test void sharedAdapterRejectsPrimaryThreadStorageAccess() throws Exception {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         MySQL mysql = mock(MySQL.class);

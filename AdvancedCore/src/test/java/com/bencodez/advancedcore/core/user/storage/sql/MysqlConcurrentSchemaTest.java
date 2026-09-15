@@ -28,7 +28,8 @@ class MysqlConcurrentSchemaTest {
         fixture.columnAppears = true;
         try (var managers = fixture.managers(); var backend = fixture.open()) {
             assertTrue(backend.isOpen());
-            assertEquals(2, fixture.inspections);
+            assertEquals(3, fixture.inspections,
+                    "the raced column is re-read once more to verify whether its physical type needs migration");
             assertEquals(1, fixture.adds);
             verify(managers.constructed().get(0), never()).close();
         }
@@ -118,7 +119,10 @@ class MysqlConcurrentSchemaTest {
                     results.add(result);
                     if (sql.toLowerCase(Locale.ROOT).startsWith("select data_type,")) {
                         when(result.next()).thenReturn(true, false);
-                        when(result.getString(1)).thenReturn("uuid");
+                        when(result.getString(1)).thenReturn(type == DbType.POSTGRESQL ? "uuid" : "varchar");
+                        when(result.getString("DATA_TYPE")).thenReturn("varchar");
+                        when(result.getObject("CHARACTER_MAXIMUM_LENGTH")).thenReturn(37L);
+                        when(result.getString("COLUMN_DEFAULT")).thenReturn(null);
                     } else if (sql.endsWith("WHERE 1=0")) {
                         ResultSetMetaData metadata = mock(ResultSetMetaData.class);
                         when(result.getMetaData()).thenReturn(metadata);

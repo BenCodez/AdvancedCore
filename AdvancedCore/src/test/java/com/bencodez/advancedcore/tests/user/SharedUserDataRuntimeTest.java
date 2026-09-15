@@ -14,6 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
@@ -105,8 +109,8 @@ class SharedUserDataRuntimeTest {
         assertTrue(runtime.isClosed());
     }
 
-    @Test
-    void failedFlushDoesNotDiscardQueueOrCloseBackend() {
+	@Test
+	void failedFlushDoesNotDiscardQueueOrCloseBackend() {
         UUID uuid = UUID.randomUUID();
         FakeBackend backend = new FakeBackend();
         backend.put(uuid, "Points", new DataValueInt(1));
@@ -122,8 +126,31 @@ class SharedUserDataRuntimeTest {
 
         backend.failWrites = false;
         runtime.close();
-        assertEquals(3, backend.value(uuid, "Points").getInt());
-    }
+		assertEquals(3, backend.value(uuid, "Points").getInt());
+	}
+
+	@Test
+	void changeNotificationCanRequestExclusiveUserWorkAfterFlushAdmissionIsReleased() throws Exception {
+		UUID uuid = UUID.randomUUID();
+		FakeBackend backend = new FakeBackend();
+		backend.put(uuid, "Points", new DataValueInt(1));
+		FakeCacheOwner cache = new FakeCacheOwner();
+		SharedUserDataRuntime runtime = new SharedUserDataRuntime(backend, cache);
+		runtime.queueChange(uuid, "Points", new DataValueInt(2));
+		cache.notifyAfterFlush(uuid, () -> runtime.remove(uuid));
+		ExecutorService worker = Executors.newSingleThreadExecutor(task -> {
+			Thread thread = new Thread(task, "shared-user-notification-test");
+			thread.setDaemon(true);
+			return thread;
+		});
+		try {
+			Future<?> flush = worker.submit(() -> runtime.flush(uuid));
+			flush.get(2, TimeUnit.SECONDS);
+			assertFalse(backend.rows.containsKey(uuid));
+		} finally {
+			worker.shutdownNow();
+		}
+	}
 
     private static HashMap<String, DataValue> values(String key, DataValue value) {
         HashMap<String, DataValue> result = new HashMap<>();
@@ -134,6 +161,7 @@ class SharedUserDataRuntimeTest {
     private static final class FakeCacheOwner implements UserCacheOwner {
         private final Map<UUID, HashMap<String, DataValue>> cache = new HashMap<>();
         private final Map<UUID, HashMap<String, DataValue>> pending = new HashMap<>();
+		private final Map<UUID, Runnable> notifications = new HashMap<>();
         private int populateCalls;
         private boolean shutdown;
 
@@ -169,6 +197,21 @@ class SharedUserDataRuntimeTest {
             storage.writeValues(UserStorage.SQLITE, new HashMap<>(changes));
             pending.remove(uuid);
         }
+
+		void notifyAfterFlush(UUID uuid, Runnable notification) {
+			notifications.put(uuid, notification);
+		}
+
+		@Override
+		public void dispatchNotifications(UUID uuid) {
+			Runnable notification = notifications.remove(uuid);
+			if (notification != null) notification.run();
+		}
+
+		@Override
+		public void dispatchAllNotifications() {
+			for (UUID uuid : Set.copyOf(notifications.keySet())) dispatchNotifications(uuid);
+		}
 
         @Override
         public Set<UUID> cachedUsers() {

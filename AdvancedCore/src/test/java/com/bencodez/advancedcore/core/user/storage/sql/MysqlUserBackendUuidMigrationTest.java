@@ -35,6 +35,28 @@ class MysqlUserBackendUuidMigrationTest {
     private static final String QUOTED_TABLE = "\"prefix-User \"\"Data\"\"\"";
     private static final String ALTER_UUID = "ALTER TABLE " + QUOTED_TABLE
             + " ALTER COLUMN \"uuid\" TYPE UUID USING NULLIF(\"uuid\", '')::uuid;";
+    private static final String ALTER_MYSQL_UUID = "ALTER TABLE `prefix-User \"Data\"` MODIFY `uuid` VARCHAR(37);";
+
+    @Test
+    void migratesNarrowMysqlFamilyUuidSynchronouslyBeforeUserAccess() throws Exception {
+        for (DbType dbType : List.of(DbType.MYSQL, DbType.MARIADB)) {
+            JdbcFixture jdbc = new JdbcFixture(dbType, "varchar", 16L);
+            try (MockedConstruction<ConnectionManager> managers = jdbc.managers()) {
+                try (MysqlUserBackend backend = openBackend(dbType)) {
+                    assertTrue(backend.isOpen());
+                    assertEquals(37L, jdbc.uuidLength);
+                    assertSame(Thread.currentThread(), jdbc.migrationThread);
+                    assertEquals(1, jdbc.sql.stream().filter(ALTER_MYSQL_UUID::equals).count());
+                    assertTrue(backend.user(UUID_VALUE).contains(UserStorage.MYSQL));
+                    verify(jdbc.lookup).setString(1, UUID_VALUE.toString());
+                    assertEquals(List.of("migration-complete", "text-uuid-lookup"), jdbc.events);
+                }
+                assertEquals(1, managers.constructed().size());
+                verify(managers.constructed().get(0)).close();
+                jdbc.verifyClosed();
+            }
+        }
+    }
 
     @Test
     void migratesLegacyVarcharUuidSynchronouslyBeforeUserAccess() throws Exception {
@@ -99,8 +121,12 @@ class MysqlUserBackendUuidMigrationTest {
     }
 
     private static MysqlUserBackend openBackend() {
+        return openBackend(DbType.POSTGRESQL);
+    }
+
+    private static MysqlUserBackend openBackend(DbType dbType) {
         MysqlConfig config = new MysqlConfig();
-        config.setDbType(DbType.POSTGRESQL);
+        config.setDbType(dbType);
         config.setDatabase("test_database");
         config.setMaxThreads(2);
         config.setTablePrefix("prefix-");
@@ -115,19 +141,27 @@ class MysqlUserBackendUuidMigrationTest {
         final List<String> sql = new ArrayList<>();
         final List<String> events = new ArrayList<>();
         String uuidType;
+        Long uuidLength;
+        final DbType dbType;
         Thread migrationThread;
         SQLException migrationFailure;
         SQLException inspectionFailure;
         PreparedStatement lookup;
 
         JdbcFixture(String uuidType) {
+            this(DbType.POSTGRESQL, uuidType, 37L);
+        }
+
+        JdbcFixture(DbType dbType, String uuidType, Long uuidLength) {
+            this.dbType = dbType;
             this.uuidType = uuidType;
+            this.uuidLength = uuidLength;
         }
 
         MockedConstruction<ConnectionManager> managers() {
             return mockConstruction(ConnectionManager.class, (manager, context) -> {
                 when(manager.open()).thenReturn(true);
-                when(manager.getDbType()).thenReturn(DbType.POSTGRESQL);
+                when(manager.getDbType()).thenReturn(dbType);
                 when(manager.getConnection()).thenAnswer(ignored -> connection());
             });
         }
@@ -141,10 +175,11 @@ class MysqlUserBackendUuidMigrationTest {
                 PreparedStatement statement = mock(PreparedStatement.class);
                 statements.add(statement);
                 when(statement.executeUpdate()).thenAnswer(ignored -> {
-                    if (ALTER_UUID.equals(query)) {
+                    if (ALTER_UUID.equals(query) || ALTER_MYSQL_UUID.equals(query)) {
                         migrationThread = Thread.currentThread();
                         if (migrationFailure != null) throw migrationFailure;
-                        uuidType = "uuid";
+                        uuidType = dbType == DbType.POSTGRESQL ? "uuid" : "varchar";
+                        uuidLength = dbType == DbType.POSTGRESQL ? null : 37L;
                         events.add("migration-complete");
                     }
                     // CREATE IF NOT EXISTS must not replace the legacy column type.
@@ -156,16 +191,21 @@ class MysqlUserBackendUuidMigrationTest {
                         verify(statement).setString(1, TABLE);
                         verify(statement).setString(2, "uuid");
                         ResultSet result = row(uuidType);
-                        when(result.getObject(2)).thenReturn(37L);
+                        when(result.getObject(2)).thenReturn(uuidLength);
+                        when(result.getString("DATA_TYPE")).thenReturn(uuidType);
+                        when(result.getObject("CHARACTER_MAXIMUM_LENGTH")).thenReturn(uuidLength);
+                        when(result.getString("COLUMN_DEFAULT")).thenReturn(null);
                         return result;
                     }
                     if (query.startsWith("SELECT column_name FROM information_schema.columns")) {
                         return row("uuid");
                     }
                     if (query.startsWith("SELECT 1 FROM")) {
-                        if (!"uuid".equals(uuidType)) throw new SQLException("varchar = uuid is invalid");
+                        if (dbType == DbType.POSTGRESQL && !"uuid".equals(uuidType)) {
+                            throw new SQLException("varchar = uuid is invalid");
+                        }
                         lookup = statement;
-                        events.add("native-uuid-lookup");
+                        events.add(dbType == DbType.POSTGRESQL ? "native-uuid-lookup" : "text-uuid-lookup");
                         return row("1");
                     }
                     return row(UUID_VALUE.toString());

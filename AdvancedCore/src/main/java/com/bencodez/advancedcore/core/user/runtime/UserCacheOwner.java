@@ -56,6 +56,12 @@ public interface UserCacheOwner {
 
     default void requireBlockingAllowed() {}
 
+	/** Deliver callbacks accumulated by a flush after its user admission is released. */
+	default void dispatchNotifications(UUID uuid) {}
+
+	/** Deliver callbacks accumulated by a lifecycle-wide flush after all admission is released. */
+	default void dispatchAllNotifications() {}
+
     Set<UUID> cachedUsers();
     void remove(UUID uuid);
     void clearAfterFlush();

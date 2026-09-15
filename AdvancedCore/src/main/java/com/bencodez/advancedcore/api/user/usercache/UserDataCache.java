@@ -138,6 +138,53 @@ public class UserDataCache {
 		clearCacheNow();
 	}
 
+	/**
+	 * Drains every queued or in-flight cache batch before running a synchronous
+	 * write. Shared storage keeps the complete drain and replacement under the
+	 * per-user lifecycle gate, preventing a newer cache operation from interleaving.
+	 */
+	public void flushChangesAndRun(Runnable action) {
+		if (action == null) return;
+		initializeSharedStorage();
+		Consumer<Runnable> gate;
+		synchronized (this) { gate = sharedFlushGate; }
+		if (gate != null) {
+			ArrayList<Runnable> notifications = new ArrayList<>();
+			try {
+				gate.accept(() -> {
+					while (true) {
+						Runnable notification = processChangesInternal(true);
+						if (notification != null) notifications.add(notification);
+						synchronized (this) {
+							if (cachedChanges != null && !cachedChanges.isEmpty()) continue;
+							action.run();
+							break;
+						}
+					}
+				});
+			} finally {
+				for (Runnable notification : notifications) notification.run();
+			}
+			return;
+		}
+		while (true) {
+			processChanges();
+			synchronized (this) {
+				while (inFlightBatches > 0) {
+					try {
+						wait();
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						throw new IllegalStateException("Interrupted while flushing cached user changes", e);
+					}
+				}
+				if (cachedChanges != null && !cachedChanges.isEmpty()) continue;
+				action.run();
+				return;
+			}
+		}
+	}
+
 	private void clearCacheNow() {
 		initializeSharedStorage();
 		Consumer<Runnable> gate;
@@ -263,6 +310,16 @@ public class UserDataCache {
 		initializeSharedStorage();
 		Runnable notification = processChangesInternal(false);
 		if (notification != null) notification.run();
+	}
+
+	/**
+	 * Persist one shared-runtime batch while returning its change notification to
+	 * the runtime. The runtime delivers it only after releasing lifecycle and
+	 * per-user admission, so listeners may safely request exclusive user work.
+	 */
+	public Runnable processChangesForSharedRuntime() {
+		initializeSharedStorage();
+		return processChangesInternal(false);
 	}
 
 	/** Flush now when blocking is allowed, otherwise preserve ordering on the cache worker. */

@@ -186,8 +186,8 @@ class SharedUserLifecycleRegressionTest {
         doAnswer(call -> { runtime.remove(fixture.uuid); return null; })
                 .when(userManager).onChange(any(AdvancedCoreUser.class), any(String[].class));
 
-        assertDoesNotThrow(cache::processChanges);
-        assertFalse(fixture.caches.containsKey(fixture.uuid));
+		assertDoesNotThrow(cache::processChanges);
+		assertFalse(fixture.caches.containsKey(fixture.uuid));
         runtime.close();
     }
 
@@ -271,9 +271,9 @@ class SharedUserLifecycleRegressionTest {
         final List<Runnable> tasks = new CopyOnWriteArrayList<>();
         final MemoryBackend first = new MemoryBackend(UserStorage.SQLITE);
         final BukkitUserCacheOwner owner;
-        Fixture() {
-            when(manager.getPlugin()).thenReturn(plugin);
-            when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+		Fixture() {
+			when(manager.getPlugin()).thenReturn(plugin);
+			when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
             when(manager.getUserDataCache()).thenReturn(caches);
             when(manager.isCached(any(UUID.class))).thenAnswer(call -> {
                 UserDataCache cache = caches.get(call.getArgument(0));

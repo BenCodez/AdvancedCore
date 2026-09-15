@@ -6,12 +6,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
+import java.io.File;
 import java.util.Base64;
+import java.util.Set;
 import java.util.logging.Logger;
+import java.util.concurrent.CompletionException;
 
 import org.bukkit.Bukkit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -23,6 +27,8 @@ import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 
 class QueuedGeneratedRewardDispatchTest {
+	@TempDir
+	File tempDir;
 
     private static final String QUEUE_PREFIX = "\\AdvancedCoreQueue/1/";
 
@@ -235,4 +241,23 @@ class QueuedGeneratedRewardDispatchTest {
 
         verify(handler, never()).getQueuedGeneratedReward("QueuedReward", "uuid");
     }
+
+	@Test
+	void asyncGeneratedSnapshotRejectsAUserOutsideItsPersistedQueueCapability() throws Exception {
+		AdvancedCorePlugin.setInstance(plugin);
+		try {
+			java.lang.reflect.Constructor<?> constructor = Class
+					.forName("com.bencodez.advancedcore.api.rewards.QueuedGeneratedReward")
+					.getDeclaredConstructor(File.class, String.class, Set.class);
+			constructor.setAccessible(true);
+			Reward queued = (Reward) constructor.newInstance(tempDir, "QueuedReward", Set.of("allowed"));
+
+			org.junit.jupiter.api.Assertions.assertThrows(CompletionException.class,
+					() -> queued.giveRewardAsync(user, new RewardOptions()).toCompletableFuture().join());
+
+			verify(plugin, never()).getOptions();
+		} finally {
+			AdvancedCorePlugin.setInstance(null);
+		}
+	}
 }

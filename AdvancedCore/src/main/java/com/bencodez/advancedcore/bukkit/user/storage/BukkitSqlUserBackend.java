@@ -71,15 +71,21 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
     public void forEachUser(Consumer<UUID> consumer) {
         Objects.requireNonNull(consumer, "consumer");
         requireOpen();
-        UserStorage storage = storageType();
-        if (storage == UserStorage.MYSQL) {
-            mysql().forEachUser((uuid, ignored) -> consumer.accept(uuid), ignored -> {});
-            return;
-        }
-        synchronized (sqliteOperations) {
-            table().forEachUser((uuid, ignored) -> consumer.accept(uuid), ignored -> {});
-        }
-    }
+		UserStorage storage = storageType();
+		if (storage == UserStorage.MYSQL) {
+			mysql().forEachUser((uuid, ignored) -> consumer.accept(uuid), ignored -> {},
+					failure -> { throw enumerationFailure("MySQL", failure); });
+			return;
+		}
+		synchronized (sqliteOperations) {
+			table().forEachUser((uuid, ignored) -> consumer.accept(uuid), ignored -> {},
+					failure -> { throw enumerationFailure("SQLite", failure); });
+		}
+	}
+
+	private IllegalStateException enumerationFailure(String storage, Throwable failure) {
+		return new IllegalStateException("Failed to enumerate " + storage + " users", failure);
+	}
 
     @Override public boolean isOpen() { return open.get(); }
 

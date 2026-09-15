@@ -31,6 +31,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
     private final SqlUserSchema schema;
     private final SqlBackendLogger logger;
     private final AtomicBoolean open = new AtomicBoolean();
+    private final AtomicBoolean invalidUuidWarningLogged = new AtomicBoolean();
     private final ReentrantReadWriteLock operations = new ReentrantReadWriteLock(true);
 
     public SqliteUserBackend(Path dataDirectory, String databaseName, String tableName, SqlUserSchema schema, SqlBackendLogger logger) {
@@ -50,7 +51,7 @@ public final class SqliteUserBackend implements SqlUserBackend {
 
     @Override
     public SqlUserStorage user(UUID uuid) {
-        requireOpen();
+        requireAdmissionOpen();
         SqlUserStorage delegate = new JdbcSqlUserStorage(UserStorage.SQLITE, uuid, tableName, schema,
                 this::openConnection, JdbcSqlUserStorage.Dialect.SQLITE, logger);
         return new SqlUserStorage() {
@@ -82,7 +83,6 @@ public final class SqliteUserBackend implements SqlUserBackend {
                 List<UserPageEntry> page = readUserPage(cursor);
                 if (page.isEmpty()) return null;
                 cursor = page.get(page.size() - 1).cursor();
-                // No SQLite result set/read transaction is open while callbacks run.
                 for (UserPageEntry entry : page) {
                     if (entry.uuid() != null) consumer.accept(entry.uuid());
                 }
@@ -94,7 +94,8 @@ public final class SqliteUserBackend implements SqlUserBackend {
     private List<UserPageEntry> readUserPage(String cursor) {
         String uuidColumn = quote(SqlUserSchema.UUID_COLUMN);
         String sql = "SELECT " + uuidColumn + " FROM " + quote(tableName)
-                + (cursor == null ? "" : " WHERE " + uuidColumn + " > ?")
+                + " WHERE " + uuidColumn + " IS NOT NULL"
+                + (cursor == null ? "" : " AND " + uuidColumn + " > ?")
                 + " ORDER BY " + uuidColumn + " ASC LIMIT ?";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             int index = 1;
@@ -106,9 +107,16 @@ public final class SqliteUserBackend implements SqlUserBackend {
                     String value = result.getString(1);
                     if (value == null) continue;
                     UUID parsed = null;
-                    try { parsed = UUID.fromString(value); }
+                    try {
+                        parsed = UUID.fromString(value);
+                        if (!parsed.toString().equals(value)) throw new IllegalArgumentException("Non-canonical UUID");
+                    }
                     catch (IllegalArgumentException invalid) {
-                        logger.warn("Skipping invalid UUID in " + tableName + ": " + value, invalid);
+                        parsed = null;
+                        if (invalidUuidWarningLogged.compareAndSet(false, true)) {
+                            logger.warn("Skipping malformed UUID entries while enumerating SQLite users; further diagnostics suppressed",
+                                    new IllegalArgumentException("Malformed SQLite UUID value"));
+                        }
                     }
                     page.add(new UserPageEntry(value, parsed));
                 }
@@ -132,10 +140,16 @@ public final class SqliteUserBackend implements SqlUserBackend {
     }
 
     private <T> T withOperation(Supplier<T> operation) {
-        requireOpen();
+        requireAdmissionOpen();
         operations.readLock().lock();
-        try { requireOpen(); return operation.get(); }
-        finally { operations.readLock().unlock(); }
+        try {
+            // This is the actual admission point. A caller that passed the first
+            // check but lost the race to close must not become a new active operation.
+            requireAdmissionOpen();
+            return operation.get();
+        } finally {
+            operations.readLock().unlock();
+        }
     }
 
     private void initialize() {
@@ -152,16 +166,25 @@ public final class SqliteUserBackend implements SqlUserBackend {
     }
 
     private void ensureRegisteredColumns() throws SQLException {
+        // CREATE TABLE IF NOT EXISTS deliberately leaves a pre-existing table
+        // untouched.  Do not report a usable backend when that table cannot
+        // support the immutable user identity used by every operation.  Adding
+        // an identity column here would be an unsafe migration because existing
+        // rows have no unambiguous UUID to populate.
+        if (!hasColumn(SqlUserSchema.UUID_COLUMN)) {
+            throw new SQLException("SQLite user table is missing required UUID column");
+        }
+        if (!hasCompatibleUuidType()) {
+            throw new SQLException("SQLite user table UUID column must use a text-compatible type");
+        }
+        if (!hasUniqueUuidConstraint()) {
+            throw new SQLException("SQLite user table UUID column must be PRIMARY KEY or UNIQUE");
+        }
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
             if (SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name()) || hasColumn(column.name())) continue;
             String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name()) + " " + column.sqlType();
-            try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.executeUpdate();
-            } catch (SQLException addFailure) {
-                // A second backend can win the same schema expansion race. Accept
-                // only the duplicate-column case after a fresh schema inspection.
-                if (!isDuplicateColumn(addFailure) || !hasColumn(column.name())) throw addFailure;
-            }
+            try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
+            catch (SQLException addFailure) { if (!isDuplicateColumn(addFailure) || !hasColumn(column.name())) throw addFailure; }
         }
     }
 
@@ -178,6 +201,80 @@ public final class SqliteUserBackend implements SqlUserBackend {
         }
     }
 
+    private boolean hasCompatibleUuidType() throws SQLException {
+        String sql = "PRAGMA table_info(" + quote(tableName) + ")";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                if (!SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(result.getString("name"))) continue;
+                String type = result.getString("type");
+                if (type == null || type.isBlank()) return true;
+                String normalized = type.strip().toUpperCase(Locale.ROOT);
+                return normalized.contains("CHAR") || normalized.contains("CLOB")
+                        || normalized.contains("TEXT") || normalized.contains("STRING");
+            }
+            return false;
+        }
+    }
+
+    private boolean hasUniqueUuidConstraint() throws SQLException {
+        String uuid = SqlUserSchema.UUID_COLUMN;
+        String tableInfo = "PRAGMA table_info(" + quote(tableName) + ")";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(tableInfo);
+                ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                if (uuid.equalsIgnoreCase(result.getString("name")) && result.getInt("pk") > 0) {
+                    // A composite primary key is not sufficient: another row
+                    // could still share the same UUID. Require UUID to be the
+                    // sole primary-key column.
+                    int primaryKeyPosition = result.getInt("pk");
+                    if (primaryKeyPosition == 1 && !hasOtherPrimaryKeyColumn(connection)) return true;
+                }
+            }
+        }
+
+        String indexes = "PRAGMA index_list(" + quote(tableName) + ")";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(indexes);
+                ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                if (result.getInt("unique") == 0 || hasPartialIndex(result)) continue;
+                String indexName = result.getString("name");
+                String indexInfo = "PRAGMA index_info(" + quote(indexName) + ")";
+                try (PreparedStatement indexStatement = connection.prepareStatement(indexInfo);
+                        ResultSet columns = indexStatement.executeQuery()) {
+                    int count = 0;
+                    boolean uuidColumn = false;
+                    while (columns.next()) {
+                        count++;
+                        uuidColumn |= uuid.equalsIgnoreCase(columns.getString("name"));
+                    }
+                    if (count == 1 && uuidColumn) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean hasOtherPrimaryKeyColumn(Connection connection) throws SQLException {
+        String tableInfo = "PRAGMA table_info(" + quote(tableName) + ")";
+        try (PreparedStatement statement = connection.prepareStatement(tableInfo); ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                if (!SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(result.getString("name")) && result.getInt("pk") > 0) return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasPartialIndex(ResultSet index) throws SQLException {
+        try {
+            return index.getInt("partial") != 0;
+        } catch (SQLException missingColumn) {
+            // Older SQLite drivers may omit the optional PRAGMA column.  A
+            // unique partial index is not a substitute for identity
+            // uniqueness, so fail closed when its presence cannot be proven.
+            return true;
+        }
+    }
+
     private String createTableSql() {
         StringBuilder sql = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(quote(tableName)).append(" (");
         boolean first = true;
@@ -190,7 +287,16 @@ public final class SqliteUserBackend implements SqlUserBackend {
         return sql.toString();
     }
 
-    private Connection openConnection() throws SQLException { requireOpen(); return DriverManager.getConnection("jdbc:sqlite:" + databaseFile.toAbsolutePath()); }
-    private void requireOpen() { if (!open.get()) throw new IllegalStateException("SQLite user backend is closed"); }
+    private Connection openConnection() throws SQLException {
+        // Nested JDBC work belonging to an already-admitted operation may finish
+        // while close waits on the write lock. New top-level operations cannot get here.
+        if (!open.get() && operations.getReadHoldCount() == 0) throw new IllegalStateException("SQLite user backend is closed");
+        return DriverManager.getConnection("jdbc:sqlite:" + databaseFile.toAbsolutePath());
+    }
+
+    private void requireAdmissionOpen() {
+        if (!open.get()) throw new IllegalStateException("SQLite user backend is closed");
+    }
+
     private static String quote(String identifier) { return JdbcSqlUserStorage.Dialect.SQLITE.quote(identifier); }
 }

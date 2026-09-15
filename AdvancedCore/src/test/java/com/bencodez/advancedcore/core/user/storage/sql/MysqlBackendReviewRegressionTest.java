@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
@@ -23,6 +24,32 @@ import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 
 /** Exercises real backend/SimpleAPI construction with mocked JDBC, not a live database. */
 class MysqlBackendReviewRegressionTest {
+    @Test void malformedUuidDiagnosticsAreBoundedAndValueFree() throws Exception {
+        Fixture fixture = new Fixture(DbType.MYSQL, "Points");
+        fixture.enumerationRows = List.of("1-1-1-1-1", "private-two");
+        List<String> warnings = new ArrayList<>();
+        SqlBackendLogger logger = new SqlBackendLogger() {
+            @Override public void info(String message) { }
+            @Override public void warn(String message, Throwable error) {
+                warnings.add(message + ":" + error.getMessage());
+            }
+        };
+        try (var managers = fixture.managers(); var backend = fixture.open(logger)) {
+            assertTrue(backend.enumerateUsers().isEmpty());
+        }
+        assertEquals(List.of("Skipping malformed UUID entries while enumerating SQL users; further diagnostics suppressed:Malformed SQL UUID value"), warnings);
+    }
+
+    @Test void uppercaseUuidRowsAreNotExposedAsUnaddressableLowercaseUsers() throws Exception {
+        Fixture fixture = new Fixture(DbType.MYSQL, "Points");
+        fixture.enumerationRows = List.of("AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE");
+
+        try (var managers = fixture.managers(); var backend = fixture.open()) {
+            assertTrue(backend.enumerateUsers().isEmpty());
+        }
+        fixture.assertClosed();
+    }
+
     @Test void postgresRenamesCaseOnlyHistoricalColumnInsteadOfCreatingAParallelColumn() throws Exception {
         Fixture fixture = new Fixture(DbType.POSTGRESQL, "points");
         try (var managers = fixture.managers()) {
@@ -104,8 +131,13 @@ class MysqlBackendReviewRegressionTest {
         int uuidInspections, migrations;
         boolean competitorConverts;
         SQLException migrationFailure, reinspectionFailure;
+        List<String> enumerationRows = List.of();
 
-        Fixture(DbType type, String storedColumn) { this.type = type; this.storedColumn = storedColumn; }
+        Fixture(DbType type, String storedColumn) {
+            this.type = type;
+            this.storedColumn = storedColumn;
+            if (type != DbType.POSTGRESQL) uuidType = "varchar";
+        }
 
         MockedConstruction<ConnectionManager> managers() {
             return mockConstruction(ConnectionManager.class, (manager, context) -> {
@@ -116,6 +148,10 @@ class MysqlBackendReviewRegressionTest {
         }
 
         MysqlUserBackend open() {
+            return open(SqlBackendLogger.NO_OP);
+        }
+
+        MysqlUserBackend open(SqlBackendLogger logger) {
             MysqlConfig config = new MysqlConfig();
             config.setDbType(type);
             config.setDatabase("test_database");
@@ -123,7 +159,7 @@ class MysqlBackendReviewRegressionTest {
             config.setTableName("Users");
             config.setMaxThreads(1);
             return new MysqlUserBackend("Users", config, SqlUserSchema.builder()
-                    .column("Points", "INT DEFAULT '0'", DataType.INTEGER).build(), SqlBackendLogger.NO_OP);
+                    .column("Points", "INT DEFAULT '0'", DataType.INTEGER).build(), logger);
         }
 
         Connection connection() throws SQLException {
@@ -153,12 +189,19 @@ class MysqlBackendReviewRegressionTest {
                         when(result.next()).thenReturn(true, false);
                         when(result.getString(1)).thenReturn(uuidType);
                         when(result.getObject(2)).thenReturn(37L);
+                        when(result.getString("DATA_TYPE")).thenReturn(uuidType);
+                        when(result.getObject("CHARACTER_MAXIMUM_LENGTH")).thenReturn(37L);
+                        when(result.getString("COLUMN_DEFAULT")).thenReturn(null);
                     } else if (sql.endsWith("WHERE 1=0")) {
                         ResultSetMetaData metadata = mock(ResultSetMetaData.class);
                         when(result.getMetaData()).thenReturn(metadata);
                         when(metadata.getColumnCount()).thenReturn(2);
                         when(metadata.getColumnName(1)).thenReturn("uuid");
                         when(metadata.getColumnName(2)).thenReturn(storedColumn);
+                    } else if (sql.startsWith("SELECT `uuid` FROM")) {
+                        AtomicInteger row = new AtomicInteger();
+                        when(result.next()).thenAnswer(invocation -> row.get() < enumerationRows.size());
+                        when(result.getString(1)).thenAnswer(invocation -> enumerationRows.get(row.getAndIncrement()));
                     }
                     return result;
                 });

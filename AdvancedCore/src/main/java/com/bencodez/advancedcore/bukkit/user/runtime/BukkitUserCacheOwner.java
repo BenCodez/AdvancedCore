@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -33,6 +34,8 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     private volatile BiConsumer<UUID, Runnable> userGate;
     private volatile BiConsumer<UUID, Runnable> exclusiveUserGate;
     private final ConcurrentHashMap<UUID, Consumer<Runnable>> cacheGates = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, ConcurrentLinkedQueue<Runnable>> pendingNotifications =
+			new ConcurrentHashMap<>();
     private final Consumer<UUID> cacheRemovalListener = cacheGates::remove;
     private final Consumer<UserDataCache> cacheInitializer;
 
@@ -221,9 +224,34 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
                 requireBlockingAllowed();
                 storage.writeValues(type, values);
             });
-            do { cache.processChanges(); } while (cache.hasChangesToProcess());
+			do {
+				Runnable notification = cache.processChangesForSharedRuntime();
+				if (notification != null) pendingNotifications.compute(uuid, (ignored, notifications) -> {
+					ConcurrentLinkedQueue<Runnable> queue = notifications == null
+							? new ConcurrentLinkedQueue<>() : notifications;
+					queue.add(notification);
+					return queue;
+				});
+			} while (cache.hasChangesToProcess());
         }
     }
+
+	@Override public void dispatchNotifications(UUID uuid) {
+		ConcurrentLinkedQueue<Runnable> notifications = pendingNotifications.remove(uuid);
+		if (notifications == null) return;
+		// Preserve the established storage-worker callback contract. The runtime has
+		// released per-user admission here, so callbacks may perform exclusive storage
+		// work; moving them to Bukkit's primary thread would make that work illegal.
+		Runnable notification;
+		while ((notification = notifications.poll()) != null) {
+			try { notification.run(); }
+			catch (RuntimeException | Error failure) { manager.getPlugin().debug(failure); }
+		}
+	}
+
+	@Override public void dispatchAllNotifications() {
+		for (UUID uuid : Set.copyOf(pendingNotifications.keySet())) dispatchNotifications(uuid);
+	}
 
     @Override public Set<UUID> cachedUsers() { return new HashSet<>(manager.getUserDataCache().keySet()); }
 

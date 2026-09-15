@@ -35,7 +35,8 @@ public final class RewardTitle {
                 }
                 return null;
             }
-        }.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAINTING), new EditGUIValueInventory("Title") {
+		}.requiresPlayerWhen((data, placeholders) -> data.getBoolean("Title.Enabled"))
+				.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAINTING), new EditGUIValueInventory("Title") {
             @Override
             public void openInventory(ClickEvent clickEvent) {
                 RewardEditData reward = (RewardEditData) getInv().getData("Reward");

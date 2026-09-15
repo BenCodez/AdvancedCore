@@ -113,16 +113,17 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 
     public void flush(UUID uuid) {
         Objects.requireNonNull(uuid, "uuid");
-        storageUserAccess(uuid, () -> { flushInternal(uuid); return null; });
+		try { storageUserAccess(uuid, () -> { flushInternal(uuid); return null; }); }
+		finally { cacheOwner.dispatchNotifications(uuid); }
     }
 
     private void flushInternal(UUID uuid) { cacheOwner.flush(uuid, backend.storageType(), backend.user(uuid)); }
 
     public void flushAll() {
-        storageAccess(() -> {
+		try { storageAccess(() -> {
             for (UUID uuid : Set.copyOf(cacheOwner.cachedUsers())) userAccess(uuid, () -> { flushInternal(uuid); return null; });
             return null;
-        });
+		}); } finally { cacheOwner.dispatchAllNotifications(); }
     }
 
     /**
@@ -142,7 +143,10 @@ public final class SharedUserDataRuntime implements AutoCloseable {
             flushAllInternal();
             cacheOwner.clearAfterFlush();
             operation.run();
-        } finally { lifecycle.writeLock().unlock(); }
+		} finally {
+			lifecycle.writeLock().unlock();
+			cacheOwner.dispatchAllNotifications();
+		}
     }
 
     private void flushAllInternal() { for (UUID uuid : Set.copyOf(cacheOwner.cachedUsers())) flushInternal(uuid); }
@@ -167,7 +171,10 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                 pendingBackendClose = previous;
                 throw failure;
             }
-        } finally { lifecycle.writeLock().unlock(); }
+		} finally {
+			lifecycle.writeLock().unlock();
+			cacheOwner.dispatchAllNotifications();
+		}
     }
 
     private void retryPendingBackendClose() {
@@ -180,12 +187,14 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     public void remove(UUID uuid) {
         Objects.requireNonNull(uuid, "uuid");
         cacheOwner.requireBlockingAllowed();
-        userExclusiveAccess(uuid, () -> {
-            flushInternal(uuid);
-            backend.user(uuid).delete(backend.storageType());
-            cacheOwner.remove(uuid);
-            return null;
-        });
+		try {
+			userExclusiveAccess(uuid, () -> {
+				flushInternal(uuid);
+				backend.user(uuid).delete(backend.storageType());
+				cacheOwner.remove(uuid);
+				return null;
+			});
+		} finally { cacheOwner.dispatchNotifications(uuid); }
     }
 
     public SqlUserBackend backend() { return backend; }
@@ -216,7 +225,10 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 							backend.close();
                             closed = true;
                         }
-                    } finally { lifecycle.writeLock().unlock(); }
+					} finally {
+						lifecycle.writeLock().unlock();
+						cacheOwner.dispatchAllNotifications();
+					}
                     result.complete(null);
                 } catch (Throwable failure) { result.completeExceptionally(failure); }
             });
