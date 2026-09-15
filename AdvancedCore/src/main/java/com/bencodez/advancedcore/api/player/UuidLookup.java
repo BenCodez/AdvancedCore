@@ -81,6 +81,19 @@ public class UuidLookup {
 		return resolveUUID(playerName, false);
 	}
 
+	/** Resolve a UUID only through persisted plugin storage; never calls Bukkit. */
+	public String getUUIDFromStorage(String playerName) {
+		if (playerName == null || playerName.trim().isEmpty()) return "";
+		UUID parsed = tryParseUuid(playerName.trim());
+		if (parsed != null) return parsed.toString();
+		String stored = lookupUuidFromStorageOrFlatfile(playerName.trim());
+		if (isUuidString(stored)) {
+			cacheMapping(stored, playerName);
+			return stored;
+		}
+		return "";
+	}
+
 	private String resolveUUID(String playerName, boolean allowStorageLookup) {
 		if (playerName == null) {
 			return "";
@@ -222,6 +235,26 @@ public class UuidLookup {
 		return "";
 	}
 
+	/** Resolve an online player's name without touching persisted user storage. */
+	public String getOnlinePlayerName(String uuid) {
+		if (!isUuidString(uuid)) return "";
+		Player player = Bukkit.getPlayer(UUID.fromString(uuid.trim()));
+		if (player == null || !isGoodName(player.getName())) return "";
+		String liveName = player.getName();
+		cacheMapping(uuid, liveName);
+		return liveName;
+	}
+
+	/** Resolve a stored player name without accessing Bukkit's thread-confined API. */
+	public String getPlayerNameFromStorage(AdvancedCoreUser user, String uuid, boolean useCache) {
+		if (user == null || !isUuidString(uuid)) return "";
+		String storedName = safeString(
+				user.getData().getString("PlayerName", UserDataFetchMode.fromBooleans(useCache, true)));
+		if (!isGoodName(storedName)) return "";
+		cacheMapping(uuid, storedName);
+		return storedName;
+	}
+
 	/**
 	 * Force insert/update mapping in local caches.
 	 */
@@ -347,7 +380,9 @@ public class UuidLookup {
 					if (!isUuidString(uuid)) {
 						continue;
 					}
-					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+					// Persisted lookup may run on the storage worker; do not ask this
+					// temporary user to resolve its Bukkit-facing display name.
+					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid), false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					String storedName = user.getData().getString("PlayerName", UserDataFetchMode.NO_CACHE);
 					if (storedName != null && storedName.equalsIgnoreCase(playerName)) {

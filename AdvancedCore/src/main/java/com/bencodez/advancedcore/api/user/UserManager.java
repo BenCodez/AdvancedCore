@@ -353,7 +353,7 @@ public class UserManager {
 			return;
 		}
 		try {
-			if (!dataManager.deferSharedStorageResult(() -> UuidLookup.getInstance().getUUID(playerName),
+			if (!dataManager.deferSharedStorageResult(() -> UuidLookup.getInstance().getUUIDFromStorage(playerName),
 					uuid -> deliverResolvedUser(uuid, playerName, success, failure), failure)) {
 				// The shared backend was retired between the eligibility check and
 				// admission. Do not fall back to a synchronous profile/storage lookup on

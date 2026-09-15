@@ -584,16 +584,31 @@ public class AdvancedCoreUser {
 
 	/** Resolve a UUID-backed name without performing shared SQL on Bukkit's primary thread. */
 	private void loadPlayerNameWithoutBlocking(boolean useCache) {
-		String cached = com.bencodez.advancedcore.api.player.UuidLookup.getInstance().getCachedName(uuid);
+		com.bencodez.advancedcore.api.player.UuidLookup lookup =
+				com.bencodez.advancedcore.api.player.UuidLookup.getInstance();
+		String cached = lookup.getCachedName(uuid);
 		if (!cached.isEmpty()) {
 			setPlayerName(cached);
 			return;
 		}
 		UserDataManager manager = plugin.getUserManager().getDataManager();
+		if (!manager.mustDeferSharedStorageAccess()) {
+			setPlayerName(PlayerManager.getInstance().getPlayerName(this, uuid, useCache));
+			return;
+		}
+		// Bukkit identity access stays on the caller's platform thread. Only the
+		// persisted fallback below is eligible for the storage worker.
+		String online = lookup.getOnlinePlayerName(uuid);
+		if (!online.isEmpty()) {
+			setPlayerName(online);
+			updateName(false);
+			return;
+		}
 		if (manager.deferSharedStorageResult(
-				() -> PlayerManager.getInstance().getPlayerName(this, uuid, useCache),
+				() -> lookup.getPlayerNameFromStorage(this, uuid, useCache),
 				this::setPlayerName, plugin::debug)) return;
-		setPlayerName(PlayerManager.getInstance().getPlayerName(this, uuid, useCache));
+		// Shared storage retired between the eligibility check and admission. Do not
+		// fall back to Bukkit or persisted access on this primary-thread race.
 	}
 
 	/**

@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
@@ -39,6 +40,7 @@ import com.bencodez.simpleapi.array.ArrayUtils;
 import lombok.Getter;
 
 public class UserDataManager {
+	private static final AtomicInteger WORKER_SEQUENCE = new AtomicInteger();
 	@Getter private ArrayList<UserDataKey> keys;
 	@Getter private ArrayList<String> intColumns;
 	@Getter private ArrayList<String> booleanColumns;
@@ -601,7 +603,14 @@ public class UserDataManager {
 		keys = new ArrayList<>();
 		intColumns = new ArrayList<>();
 		booleanColumns = new ArrayList<>();
-		timer = Executors.newScheduledThreadPool(1);
+		timer = Executors.newScheduledThreadPool(1, task -> {
+			Thread worker = new Thread(task, "AdvancedCore-UserStorage-" + WORKER_SEQUENCE.incrementAndGet());
+			// A JDBC driver may ignore interruption during final retirement. Keeping
+			// this component-owned worker daemon prevents that hung call from retaining
+			// the server JVM after the bounded lifecycle watchdog has reported it.
+			worker.setDaemon(true);
+			return worker;
+		});
 		loadKeys();
 		timer.scheduleAtFixedRate(() -> {
 			if (plugin != null && plugin.isEnabled()) clearNonNeededCachedUsers();

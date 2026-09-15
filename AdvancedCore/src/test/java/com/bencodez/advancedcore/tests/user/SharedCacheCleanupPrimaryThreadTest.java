@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,11 +51,24 @@ import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.bukkit.user.runtime.BukkitUserCacheOwner;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class SharedCacheCleanupPrimaryThreadTest {
+	@Test
+	void userStorageWorkerCannotRetainJvmDuringHungRetirement() throws Exception {
+		UserDataManager manager = new UserDataManager(mock(AdvancedCorePlugin.class));
+		try {
+			Thread worker = manager.getTimer().submit(Thread::currentThread).get(2, TimeUnit.SECONDS);
+			assertTrue(worker.isDaemon());
+			assertTrue(worker.getName().startsWith("AdvancedCore-UserStorage-"));
+		} finally {
+			manager.getTimer().shutdownNow();
+		}
+	}
+
 	@Test
 	void primaryThreadIdentityLookupUsesOnlyKnownOnlineOfflineOrCachedIdentity() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
@@ -90,6 +104,25 @@ class SharedCacheCleanupPrimaryThreadTest {
 			assertEquals(UUID.nameUUIDFromBytes("OfflinePlayer:offlinename".getBytes(java.nio.charset.StandardCharsets.UTF_8))
 					.toString(), offline);
 			bukkit.verify(() -> Bukkit.getOfflinePlayer("OfflineName"), never());
+
+			when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
+			MySQL mysql = mock(MySQL.class);
+			when(plugin.getMysql()).thenReturn(mysql);
+			UUID storedUuid = UUID.randomUUID();
+			when(mysql.getUUID("StoredOnly")).thenReturn(storedUuid.toString());
+			assertEquals(storedUuid.toString(), lookup.getUUIDFromStorage("StoredOnly"));
+			bukkit.verify(() -> Bukkit.getPlayer(storedUuid), never());
+			bukkit.verify(() -> Bukkit.getPlayerExact("StoredOnly"), never());
+			bukkit.verify(() -> Bukkit.getOfflinePlayer("StoredOnly"), never());
+
+			UUID storedNameUuid = UUID.randomUUID();
+			AdvancedCoreUser storedUser = mock(AdvancedCoreUser.class);
+			UserData storedData = mock(UserData.class);
+			when(storedUser.getData()).thenReturn(storedData);
+			when(storedData.getString(eq("PlayerName"), any())).thenReturn("PersistedName");
+			assertEquals("PersistedName",
+					lookup.getPlayerNameFromStorage(storedUser, storedNameUuid.toString(), true));
+			bukkit.verify(() -> Bukkit.getPlayer(storedNameUuid), never());
 		}
 	}
 
@@ -145,20 +178,24 @@ class SharedCacheCleanupPrimaryThreadTest {
 		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
 		UUID uuid = UUID.randomUUID();
-		try (var bukkit = mockStatic(Bukkit.class); var players = mockStatic(PlayerManager.class)) {
+		try (var bukkit = mockStatic(Bukkit.class); var lookups = mockStatic(UuidLookup.class)) {
 			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
-			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false);
-			PlayerManager playerManager = mock(PlayerManager.class);
-			players.when(PlayerManager::getInstance).thenReturn(playerManager);
-			when(playerManager.getPlayerName(any(AdvancedCoreUser.class), eq(uuid.toString()), eq(false)))
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, true, false);
+			UuidLookup lookup = mock(UuidLookup.class);
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			when(lookup.getCachedName(uuid.toString())).thenReturn("");
+			when(lookup.getOnlinePlayerName(uuid.toString())).thenReturn("");
+			when(lookup.getPlayerNameFromStorage(any(AdvancedCoreUser.class), eq(uuid.toString()), eq(false)))
 					.thenReturn("StoredName");
 
 			AdvancedCoreUser user = assertDoesNotThrow(() -> new AdvancedCoreUser(plugin, uuid));
 			assertEquals("", user.getPlayerName());
-			verify(playerManager, never()).getPlayerName(any(), any(), eq(false));
+			verify(lookup).getOnlinePlayerName(uuid.toString());
+			verify(lookup, never()).getPlayerNameFromStorage(any(), any(), eq(false));
 			ArgumentCaptor<Runnable> storageTask = ArgumentCaptor.forClass(Runnable.class);
 			verify(worker).execute(storageTask.capture());
 			storageTask.getValue().run();
+			verify(lookup).getPlayerNameFromStorage(any(), eq(uuid.toString()), eq(false));
 			ArgumentCaptor<Runnable> callback = ArgumentCaptor.forClass(Runnable.class);
 			verify(scheduler).runTask(eq(plugin), callback.capture());
 			callback.getValue().run();
