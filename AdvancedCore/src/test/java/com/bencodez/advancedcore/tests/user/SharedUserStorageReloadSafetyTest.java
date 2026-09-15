@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -169,6 +170,43 @@ class SharedUserStorageReloadSafetyTest {
 			manager.replaceSharedSqlBackendAsync(replacement).toCompletableFuture().get(5, TimeUnit.SECONDS);
 			verify(runtime).replaceBackend(eq(replacement), any(Runnable.class));
 		} finally {
+			manager.getTimer().shutdownNow();
+		}
+	}
+
+	@Test
+	void retirementContinuesAfterAnInFlightReplacementFails() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
+		SqlUserBackend replacement = mock(SqlUserBackend.class);
+		when(runtime.isClosed()).thenReturn(false);
+		CountDownLatch replacementStarted = new CountDownLatch(1);
+		CountDownLatch releaseReplacement = new CountDownLatch(1);
+		IllegalStateException replacementFailure = new IllegalStateException("replacement failed");
+		doAnswer(ignored -> {
+			replacementStarted.countDown();
+			assertTrue(releaseReplacement.await(5, TimeUnit.SECONDS));
+			throw replacementFailure;
+		}).when(runtime).replaceBackend(eq(replacement), any(Runnable.class));
+		when(runtime.closeAsync(any())).thenReturn(CompletableFuture.completedFuture(null));
+		manager.bindSharedRuntime(runtime);
+		CountDownLatch retired = new CountDownLatch(1);
+		try {
+			CompletionStage<Void> replacementStage = manager.replaceSharedSqlBackendAsync(replacement);
+			assertTrue(replacementStarted.await(5, TimeUnit.SECONDS));
+			CompletionStage<Void> retirement = manager.closeSharedRuntimeAsyncCompletion(retired::countDown);
+			assertFalse(retirement.toCompletableFuture().isDone());
+			releaseReplacement.countDown();
+
+			assertThrows(java.util.concurrent.CompletionException.class,
+					() -> replacementStage.toCompletableFuture().join());
+			assertThrows(java.util.concurrent.CompletionException.class,
+					() -> retirement.toCompletableFuture().join());
+			assertTrue(retired.await(5, TimeUnit.SECONDS));
+			verify(runtime).closeAsync(any());
+		} finally {
+			releaseReplacement.countDown();
 			manager.getTimer().shutdownNow();
 		}
 	}

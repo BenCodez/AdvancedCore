@@ -418,7 +418,12 @@ public class UserDataManager {
 		synchronized (this) {
 			if (sharedRuntimeReplacing) {
 				CompletionStage<Void> replacement = sharedRuntimeReplacement;
-				return replacement.thenCompose(ignored -> closeSharedRuntimeAsyncCompletion(afterRetirement));
+				// A failed replacement leaves the old runtime and native owner alive.
+				// Shutdown must still retire that old owner; thenCompose would skip the
+				// recursive retirement entirely on the exceptional path.
+				return replacement.handle((ignored, replacementFailure) -> replacementFailure)
+						.thenCompose(replacementFailure -> continueRetirementAfterReplacement(afterRetirement,
+								replacementFailure));
 			}
 			runtime = sharedRuntime;
 			// A second shutdown caller must not interpret an in-flight retirement as
@@ -449,6 +454,24 @@ public class UserDataManager {
 			else completion.completeExceptionally(cleanupFailure);
 		});
 		return completion;
+	}
+
+	private CompletionStage<Void> continueRetirementAfterReplacement(Runnable afterRetirement,
+			Throwable replacementFailure) {
+		if (replacementFailure != null) reportDeferredStorageFailure(replacementFailure);
+		CompletionStage<Void> retirement = closeSharedRuntimeAsyncCompletion(afterRetirement);
+		if (retirement == null) {
+			if (replacementFailure == null) return CompletableFuture.completedFuture(null);
+			return CompletableFuture.failedFuture(replacementFailure);
+		}
+		return retirement.handle((ignored, retirementFailure) -> {
+			if (replacementFailure != null) {
+				if (retirementFailure != null) replacementFailure.addSuppressed(retirementFailure);
+				throw new java.util.concurrent.CompletionException(replacementFailure);
+			}
+			if (retirementFailure != null) throw new java.util.concurrent.CompletionException(retirementFailure);
+			return null;
+		});
 	}
 
 	/**

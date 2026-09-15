@@ -208,6 +208,12 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	/** Coalesces public storage reload requests while a replacement is being prepared. */
 	private Object userStorageReloadLock = new Object();
 	private CompletionStage<Void> userStorageReload;
+	/**
+	 * Storage-backed tab completion cannot enumerate the user provider on the
+	 * Bukkit thread during a shared-storage replacement. Keep at most one
+	 * enumeration in flight and apply only the newest completed snapshot.
+	 */
+	private final UuidTabCompletionRefresh uuidTabCompletionRefresh = new UuidTabCompletionRefresh();
 
 	/**
 	 * Handler for full inventory management.
@@ -999,26 +1005,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 			@Override
 			public void reload() {
-				LinkedHashSet<String> uuids = new LinkedHashSet<>();
-
-				// UUIDs from storage
-				for (String uuid : getUserManager().getAllUUIDs()) {
-					if (uuid != null && !uuid.isEmpty()) {
-						uuids.add(uuid);
-					}
-				}
-
-				// Also include online players UUIDs depending on mode
-				for (Player player : Bukkit.getOnlinePlayers()) {
-					String uuid = getOptions().isOnlineMode() ? player.getUniqueId().toString()
-							: UuidLookup.getInstance().getUUID(player.getName()); // name-derived in offline-mode
-
-					if (uuid != null && !uuid.isEmpty()) {
-						uuids.add(uuid);
-					}
-				}
-
-				setReplace(new ArrayList<>(uuids));
+				uuidTabCompletionRefresh.request(AdvancedCorePlugin.this, this);
 			}
 
 			@Override
@@ -1185,6 +1172,107 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 		TabCompleteHandler.getInstance().loadTimer(getTimer());
+	}
+
+	/**
+	 * Coalesces the storage-backed UUID replacement refresh so a reload never
+	 * enumerates storage from the Bukkit thread. Bukkit player access and the
+	 * replacement mutation remain on the global scheduler. A newer request wins
+	 * over an older worker result.
+	 */
+	static final class UuidTabCompletionRefresh {
+		private final Object lock = new Object();
+		private long nextGeneration;
+		private RefreshRequest current;
+		private boolean refreshInProgress;
+
+		void request(AdvancedCorePlugin plugin, TabCompleteHandle handle) {
+			RefreshRequest refresh;
+			boolean schedule = false;
+			synchronized (lock) {
+				refresh = new RefreshRequest(++nextGeneration, handle);
+				current = refresh;
+				if (!refreshInProgress) {
+					refreshInProgress = true;
+					schedule = true;
+				}
+			}
+			if (schedule) schedule(plugin, refresh);
+		}
+
+		private void schedule(AdvancedCorePlugin plugin, RefreshRequest refresh) {
+			try {
+				plugin.getBukkitScheduler().runTaskAsynchronously(plugin, () -> enumerateStorage(plugin, refresh));
+			} catch (Throwable failure) {
+				finish(plugin, refresh);
+				plugin.debug(failure);
+			}
+		}
+
+		private void enumerateStorage(AdvancedCorePlugin plugin, RefreshRequest refresh) {
+			ArrayList<String> storageUuids = new ArrayList<>();
+			Throwable failure = null;
+			try {
+				for (String uuid : plugin.getUserManager().getAllUUIDs()) {
+					if (uuid != null && !uuid.isEmpty()) storageUuids.add(uuid);
+				}
+			} catch (Throwable caught) {
+				failure = caught;
+			}
+			final Throwable refreshFailure = failure;
+			try {
+				plugin.getBukkitScheduler().runTask(plugin,
+						() -> applyOnGlobalScheduler(plugin, refresh, storageUuids, refreshFailure));
+			} catch (Throwable schedulingFailure) {
+				finish(plugin, refresh);
+				plugin.debug(schedulingFailure);
+			}
+		}
+
+		private void applyOnGlobalScheduler(AdvancedCorePlugin plugin, RefreshRequest refresh,
+				ArrayList<String> storageUuids, Throwable failure) {
+			try {
+				if (!isCurrent(refresh)) return;
+				if (failure != null) {
+					plugin.debug(failure);
+					return;
+				}
+
+				LinkedHashSet<String> uuids = new LinkedHashSet<>(storageUuids);
+				for (Player player : Bukkit.getOnlinePlayers()) {
+					String uuid = plugin.getOptions().isOnlineMode() ? player.getUniqueId().toString()
+							: UuidLookup.getInstance().getUUID(player.getName());
+					if (uuid != null && !uuid.isEmpty()) uuids.add(uuid);
+				}
+
+				ArrayList<String> replacements = new ArrayList<>(uuids);
+				refresh.handle().setReplace(replacements);
+				TabCompleteHandler.getInstance().getTabCompleteOptions().put(refresh.handle().getToReplace(), replacements);
+			} finally {
+				finish(plugin, refresh);
+			}
+		}
+
+		private boolean isCurrent(RefreshRequest refresh) {
+			synchronized (lock) {
+				return refresh.equals(current);
+			}
+		}
+
+		private void finish(AdvancedCorePlugin plugin, RefreshRequest completed) {
+			RefreshRequest next = null;
+			synchronized (lock) {
+				if (!completed.equals(current)) {
+					next = current;
+				} else {
+					refreshInProgress = false;
+				}
+			}
+			if (next != null) schedule(plugin, next);
+		}
+
+		private record RefreshRequest(long generation, TabCompleteHandle handle) {
+		}
 	}
 
 	/**
