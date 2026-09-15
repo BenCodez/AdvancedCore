@@ -217,8 +217,7 @@ public class UserData {
 
 	public ArrayList<String> getKeys(UserStorage storage) {
 		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
-		UserDataCache sharedCache = primaryThreadSharedCache(storage);
-		if (sharedCache != null) return new ArrayList<>(sharedCache.snapshot().keySet());
+		rejectPrimaryThreadPersistedRowRead(storage);
 		return sqlData.getKeys(storage);
 	}
 
@@ -381,8 +380,7 @@ public class UserData {
 
 	public HashMap<String, DataValue> getValues(UserStorage storage) {
 		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
-		UserDataCache sharedCache = primaryThreadSharedCache(storage);
-		if (sharedCache != null) return sharedCache.snapshot();
+		rejectPrimaryThreadPersistedRowRead(storage);
 		return convert(sqlData.readRow(storage));
 	}
 
@@ -662,6 +660,15 @@ public class UserData {
 					"Shared user data is still loading; defer this read until cache population completes");
 		}
 		return cache;
+	}
+
+	/** Bulk row APIs expose persisted storage, not defaults or pending cache values. */
+	private void rejectPrimaryThreadPersistedRowRead(UserStorage storage) {
+		UserDataManager manager = sharedDataManager();
+		if (manager != null && manager.usesSharedSqlStorage(storage) && manager.mustDeferSharedStorageAccess()) {
+			throw new IllegalStateException(
+					"Shared persisted user data must be read on a worker; use deferSharedStorageResult");
+		}
 	}
 
 	public void setStringList(final String key, final ArrayList<String> value) {

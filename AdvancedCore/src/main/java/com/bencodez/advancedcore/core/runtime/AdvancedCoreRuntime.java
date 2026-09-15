@@ -2,12 +2,14 @@ package com.bencodez.advancedcore.core.runtime;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
@@ -136,33 +138,62 @@ public final class AdvancedCoreRuntime {
 		}
 	}
 
-	/** Finish every teardown phase only after deferred storage work has completed. */
+	/** Finish platform teardown now and bound the remaining storage-worker retirement. */
 	private void finishDeferredCleanup(CompletionStage<Void> completion, String component, ExecutorGrace grace) {
 		ScheduledExecutorService timer = platform.getTimer();
+		// Bukkit/Folia-facing cleanup must finish on the lifecycle thread before
+		// onDisable returns. Only storage-executor retirement continues later.
+		finishDeferredPlatformCleanup(grace);
+		AtomicBoolean finished = new AtomicBoolean();
 		completion.whenComplete((ignored, failure) -> {
-			boolean timerForced = failure != null;
-			if (failure == null) {
-				shutdown(timer);
-			} else {
+			if (!finished.compareAndSet(false, true)) return;
+			if (failure == null) shutdown(timer);
+			else {
 				Throwable cause = failure instanceof CompletionException && failure.getCause() != null
 						? failure.getCause() : failure;
 				platform.cleanupFailed(component, cause);
 				shutdownNow(timer);
 			}
-			Runnable continuation = () -> {
-				await(timer, failure == null ? 2 : 1, TimeUnit.SECONDS);
-				finishAfterExecutorGrace(grace, timerForced);
-			};
-			// Completion normally runs on the storage timer itself. Let that callback
-			// return before awaiting the timer, otherwise it waits for its own task.
-			Thread shutdownThread = new Thread(continuation, "AdvancedCore-Shutdown");
-			shutdownThread.setDaemon(true);
-			try { shutdownThread.start(); }
-			catch (RuntimeException | Error startFailure) {
-				platform.cleanupFailed("deferred shutdown continuation", startFailure);
-				continuation.run();
-			}
+			finishDeferredStorageTimer(timer, failure != null);
 		});
+		long timeoutMillis = Math.max(1, platform.deferredShutdownTimeoutMillis());
+		Runnable timeout = () -> {
+			if (!finished.compareAndSet(false, true)) return;
+			platform.cleanupFailed(component, new TimeoutException(
+					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
+			shutdownNow(timer);
+			finishDeferredStorageTimer(timer, true);
+		};
+		try { CompletableFuture.delayedExecutor(timeoutMillis, TimeUnit.MILLISECONDS).execute(timeout); }
+		catch (RuntimeException | Error schedulingFailure) {
+			platform.cleanupFailed("deferred storage shutdown watchdog", schedulingFailure);
+			timeout.run();
+		}
+	}
+
+	private void finishDeferredPlatformCleanup(ExecutorGrace grace) {
+		clean(platform.afterExecutorGrace());
+		shutdownNow(platform.getLoginTimer());
+		shutdownNow(grace.timeTimer());
+		shutdownNow(platform.getInventoryTimer());
+		await(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
+		await(grace.timeTimer(), 1, TimeUnit.SECONDS);
+		await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
+		clean(platform.afterExecutorShutdown());
+	}
+
+	private void finishDeferredStorageTimer(ScheduledExecutorService timer, boolean forced) {
+		Runnable retirement = () -> {
+			await(timer, forced ? 1 : 2, TimeUnit.SECONDS);
+			if (!forced && timer != null && !timer.isTerminated()) shutdownNow(timer);
+		};
+		Thread shutdownThread = new Thread(retirement, "AdvancedCore-Storage-Shutdown");
+		shutdownThread.setDaemon(true);
+		try { shutdownThread.start(); }
+		catch (RuntimeException | Error startFailure) {
+			platform.cleanupFailed("deferred storage shutdown continuation", startFailure);
+			shutdownNow(timer);
+		}
 	}
 
     public static void shutdown(ScheduledExecutorService executor) {

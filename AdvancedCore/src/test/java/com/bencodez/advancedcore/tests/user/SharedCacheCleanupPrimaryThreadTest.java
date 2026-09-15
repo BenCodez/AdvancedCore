@@ -51,7 +51,7 @@ import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class SharedCacheCleanupPrimaryThreadTest {
 	@Test
-	void primaryThreadBulkReadsUseTheCompletedSharedCacheSnapshot() {
+	void primaryThreadPersistedBulkReadsRequireWorkerDeferral() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		UserManager users = mock(UserManager.class);
 		when(plugin.getUserManager()).thenReturn(users);
@@ -72,8 +72,8 @@ class SharedCacheCleanupPrimaryThreadTest {
 		try (var bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
 			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
-			assertEquals(Set.of("Points"), Set.copyOf(data.getKeys()));
-			assertEquals(7, data.getValues().get("Points").getInt());
+			IllegalStateException keysFailure = assertThrows(IllegalStateException.class, data::getKeys);
+			IllegalStateException valuesFailure = assertThrows(IllegalStateException.class, data::getValues);
 			assertTrue(data.hasData());
 			IllegalStateException intFailure = assertThrows(IllegalStateException.class,
 					() -> data.getInt(UserStorage.MYSQL, "Points", -1,
@@ -83,6 +83,8 @@ class SharedCacheCleanupPrimaryThreadTest {
 							com.bencodez.advancedcore.api.user.UserDataFetchMode.NO_CACHE));
 			assertTrue(intFailure.getMessage().contains("defer"));
 			assertTrue(stringFailure.getMessage().contains("defer"));
+			assertTrue(keysFailure.getMessage().contains("defer"));
+			assertTrue(valuesFailure.getMessage().contains("defer"));
 			verify(backend, never()).user(any(UUID.class));
 		}
 		manager.getTimer().shutdownNow();
@@ -247,6 +249,25 @@ class SharedCacheCleanupPrimaryThreadTest {
 			task.getValue().run();
 
 			assertSame(failure, manager.getLastDeferredStorageFailure());
+		}
+	}
+
+	@Test
+	void synchronousPopulationRethrowsStorageFailure() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		UserDataManager manager = new UserDataManager(plugin);
+		UUID uuid = UUID.randomUUID();
+		IllegalStateException failure = new IllegalStateException("storage unavailable");
+		when(plugin.getUserManager().getUser(uuid, false).getUserData().getKeys()).thenThrow(failure);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.storageType()).thenReturn(UserStorage.MYSQL);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		try {
+			assertSame(failure, assertThrows(IllegalStateException.class,
+					() -> manager.cacheUser(uuid, null)));
+			assertFalse(manager.containsKey(uuid));
+		} finally {
+			manager.getTimer().shutdownNow();
 		}
 	}
 

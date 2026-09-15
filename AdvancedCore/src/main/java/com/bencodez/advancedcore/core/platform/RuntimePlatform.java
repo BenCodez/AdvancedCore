@@ -37,6 +37,9 @@ public interface RuntimePlatform {
 	 */
 	default boolean canBlockForPreExecutorShutdown() { return true; }
 
+	/** Maximum time a non-blocking lifecycle waits before forcing its storage worker. */
+	default long deferredShutdownTimeoutMillis() { return 5_000; }
+
     List<Cleanup> afterExecutorGrace();
     List<Cleanup> afterExecutorShutdown();
     void info(String message);

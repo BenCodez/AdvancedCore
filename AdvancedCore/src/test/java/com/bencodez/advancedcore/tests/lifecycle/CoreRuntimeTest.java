@@ -32,6 +32,7 @@ class CoreRuntimeTest {
         when(platform.afterExecutorGrace()).thenReturn(List.of());
         when(platform.afterExecutorShutdown()).thenReturn(List.of());
         when(platform.canBlockForPreExecutorShutdown()).thenReturn(true);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(5_000L);
         return platform;
     }
 
@@ -122,21 +123,52 @@ class CoreRuntimeTest {
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
 		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
 		when(platform.getTimer()).thenReturn(timer);
+		java.util.concurrent.atomic.AtomicReference<Thread> cleanupThread = new java.util.concurrent.atomic.AtomicReference<>();
 		when(platform.afterExecutorGrace()).thenReturn(List.of(
 				new Cleanup("reward", () -> events.add("reward"))));
 		when(platform.afterExecutorShutdown()).thenReturn(List.of(
-				new Cleanup("unload", () -> events.add("unload"))));
+				new Cleanup("unload", () -> { cleanupThread.set(Thread.currentThread()); events.add("unload"); })));
 
+		Thread lifecycleThread = Thread.currentThread();
 		assertDoesNotThrow(() -> new AdvancedCoreRuntime(platform).shutdown());
 		verify(timer, never()).shutdown();
 		verify(timer, never()).shutdownNow();
 		verify(timer, never()).awaitTermination(anyLong(), any());
-		assertTrue(events.isEmpty(), "unload hooks must wait for storage retirement");
+		assertEquals(List.of("reward", "unload"), events);
+		assertSame(lifecycleThread, cleanupThread.get(),
+				"Bukkit-facing cleanup must finish on the lifecycle thread before disable returns");
 		retiring.complete(null);
 		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-		while (!events.contains("unload") && System.nanoTime() < deadline) Thread.yield();
+		while (mockingDetails(timer).getInvocations().stream()
+				.noneMatch(invocation -> invocation.getMethod().getName().equals("shutdown"))
+				&& System.nanoTime() < deadline) Thread.yield();
 		verify(timer).shutdown();
-		assertEquals(List.of("reward", "unload"), events);
+		assertEquals(List.of("reward", "unload"), events, "deferred completion must not repeat cleanup");
+	}
+
+	@Test void deferredRetirementTimeoutForcesStorageWorkerWithoutRepeatingPlatformCleanup() {
+		RuntimePlatform platform = platform();
+		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(20L);
+		when(platform.getTimer()).thenReturn(timer);
+		when(platform.afterExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("unload", () -> events.add("unload"))));
+
+		new AdvancedCoreRuntime(platform).shutdown();
+		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+		while (mockingDetails(timer).getInvocations().stream()
+				.noneMatch(invocation -> invocation.getMethod().getName().equals("shutdownNow"))
+				&& System.nanoTime() < deadline) Thread.yield();
+
+		verify(timer).shutdownNow();
+		verify(platform).cleanupFailed(eq("pre-executor shutdown"), any(java.util.concurrent.TimeoutException.class));
+		assertEquals(List.of("unload"), events);
+		retiring.complete(null);
+		assertEquals(List.of("unload"), events);
 	}
 
 	@Test void deferredRetirementFailureTerminatesItsWorkerAfterReportingTheFailure() {

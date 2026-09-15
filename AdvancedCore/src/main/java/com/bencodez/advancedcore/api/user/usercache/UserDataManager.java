@@ -503,6 +503,14 @@ public class UserDataManager {
 		catch (Error failure) { errorFailure = failure; }
 		finally { cacheMapLifecycle.readLock().unlock(); }
 		boolean current = population == null || finishSharedCachePopulation(population, runtimeFailure == null && errorFailure == null);
+		if (runtimeFailure != null) {
+			if (current) notifyCacheChangesAfterFailure(refreshed, runtimeFailure);
+			throw runtimeFailure;
+		}
+		if (errorFailure != null) {
+			if (current) notifyCacheChangesAfterFailure(refreshed, errorFailure);
+			throw errorFailure;
+		}
 		if (!current || !populated[0]) {
 			// A synchronous caller whose read was fenced before it began still expects
 			// one attempt in the newly published generation. Do not retry a read that
@@ -512,14 +520,6 @@ public class UserDataManager {
 				cacheUserSynchronously(uuid, traceDevelopmentCall, false);
 			}
 			return;
-		}
-		if (runtimeFailure != null) {
-			notifyCacheChangesAfterFailure(refreshed, runtimeFailure);
-			throw runtimeFailure;
-		}
-		if (errorFailure != null) {
-			notifyCacheChangesAfterFailure(refreshed, errorFailure);
-			throw errorFailure;
 		}
 		notifyCacheChanges(refreshed);
 	}

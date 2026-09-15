@@ -565,7 +565,8 @@ public class CommandLoader {
 				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
 						values -> values.forEach((key, value) ->
 								sendMessage(sender, "&c&l" + key + " &c" + value.toString())),
-						failure -> sendMessage(sender, "&cUnable to read user data; check the server log."))) return;
+						failure -> sendMessage(sender, "&cUnable to read user data; check the server log."),
+						callbackOwner(sender))) return;
 				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
 					sendMessage(sender, "&c&l" + entry.getKey() + " &c" + entry.getValue().toString());
 				}
@@ -678,8 +679,8 @@ public class CommandLoader {
 
 	private void startStorageConversion(CommandSender sender, UserStorage from, UserStorage to) {
 		sender.sendMessage(MessageAPI.colorize("&cStarting convert from " + from + " to " + to));
-		plugin.convertDataStorageAsync(from, to).whenComplete((ignored, failure) ->
-			plugin.getBukkitScheduler().runTask(plugin, () -> {
+		plugin.convertDataStorageAsync(from, to).whenComplete((ignored, failure) -> {
+			Runnable completion = () -> {
 				if (failure == null) {
 					sender.sendMessage(MessageAPI.colorize("&cFinished converting"));
 					return;
@@ -689,7 +690,11 @@ public class CommandLoader {
 				plugin.getLogger().severe("User storage conversion failed ("
 						+ failure.getClass().getSimpleName() + ")");
 				sender.sendMessage(MessageAPI.colorize("&cUser storage conversion failed; see the server log"));
-			}));
+			};
+			org.bukkit.entity.Entity owner = callbackOwner(sender);
+			if (owner == null) plugin.getBukkitScheduler().runTask(plugin, completion);
+			else plugin.getBukkitScheduler().runTask(plugin, completion, owner);
+		});
 	}
 
 	/** Complete destructive user removal before reporting success or clearing identity mappings. */
@@ -705,12 +710,17 @@ public class CommandLoader {
 		};
 		java.util.function.Consumer<Throwable> failed = ignored ->
 			sender.sendMessage(MessageAPI.colorize("&cUnable to remove " + identifier + "; check the server log."));
-		if (plugin.getUserManager().getDataManager().deferSharedStorageResult(remove, succeeded, failed)) return;
+		if (plugin.getUserManager().getDataManager().deferSharedStorageResult(remove, succeeded, failed,
+				callbackOwner(sender))) return;
 		try { succeeded.accept(remove.get()); }
 		catch (RuntimeException failure) {
 			plugin.getLogger().severe("User removal failed (" + failure.getClass().getSimpleName() + ")");
 			failed.accept(failure);
 		}
+	}
+
+	private org.bukkit.entity.Entity callbackOwner(CommandSender sender) {
+		return sender instanceof Player player ? player : null;
 	}
 
 	/**
