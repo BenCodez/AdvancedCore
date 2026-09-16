@@ -30,10 +30,57 @@ import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 class CommandLoaderBulkPermissionTest {
+	@Test
+	void forceCacheReportsOnlyTheDeferredPopulationOutcome() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		CommandSender sender = mock(CommandSender.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getAnonymousLogger());
+		when(users.getDataManager()).thenReturn(dataManager);
+		ArrayList<java.util.function.Supplier<Boolean>> workers = new ArrayList<>();
+		ArrayList<Consumer<Boolean>> successes = new ArrayList<>();
+		ArrayList<Consumer<Throwable>> failures = new ArrayList<>();
+		doAnswer(call -> {
+			workers.add(call.getArgument(0));
+			successes.add(call.getArgument(1));
+			failures.add(call.getArgument(2));
+			return true;
+		}).when(dataManager).deferSharedStorageResult(any(), any(), any(),
+				org.mockito.ArgumentMatchers.isNull());
+		CommandLoader loader = new CommandLoader(plugin);
+
+		loader.cacheUserAndReport(sender, "voter", user);
+		verify(user, never()).cache();
+		verify(sender, never()).sendMessage(any(String.class));
+
+		Boolean populated = workers.remove(0).get();
+		verify(user).cache();
+		verify(sender, never()).sendMessage(any(String.class));
+		successes.remove(0).accept(populated);
+		failures.remove(0);
+		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Forced cached voter"));
+
+		loader.cacheUserAndReport(sender, "broken", user);
+		workers.remove(0);
+		failures.remove(0).accept(new IllegalStateException("storage unavailable"));
+		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Unable to cache broken"));
+
+		when(dataManager.deferSharedStorageResult(any(), any(), any(),
+				org.mockito.ArgumentMatchers.isNull()))
+				.thenThrow(new java.util.concurrent.RejectedExecutionException("manager stopped"));
+		loader.cacheUserAndReport(sender, "stopped", user);
+		verify(user, org.mockito.Mockito.times(1)).cache();
+		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Unable to cache stopped"));
+	}
+
 	@Test
 	void totalUsersDefersStorageAndReturnsResultOrErrorOnTheMainScheduler() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);

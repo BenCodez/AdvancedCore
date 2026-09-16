@@ -578,10 +578,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				withResolvedUser(sender, args[1], user -> {
-					user.cache();
-					runCommandCallback(sender, () -> sendMessage(sender, "&aForced cached " + args[1]));
-				});
+				withResolvedUser(sender, args[1], user -> cacheUserAndReport(sender, args[1], user));
 			}
 		});
 
@@ -785,6 +782,28 @@ public class CommandLoader {
 		try { succeeded.accept(remove.get()); }
 		catch (RuntimeException failure) {
 			plugin.getLogger().severe("User removal failed (" + failure.getClass().getSimpleName() + ")");
+			failed.accept(failure);
+		}
+	}
+
+	/** Complete cache population before acknowledging the administrative command. */
+	void cacheUserAndReport(CommandSender sender, String identifier, AdvancedCoreUser user) {
+		java.util.function.Supplier<Boolean> populate = () -> {
+			user.cache();
+			return Boolean.TRUE;
+		};
+		java.util.function.Consumer<Boolean> succeeded = ignored ->
+				sender.sendMessage(MessageAPI.colorize("&aForced cached " + identifier));
+		java.util.function.Consumer<Throwable> failed = ignored ->
+				sender.sendMessage(MessageAPI.colorize(
+						"&cUnable to cache " + identifier + "; check the server log."));
+		try {
+			if (plugin.getUserManager().getDataManager().deferSharedStorageResult(populate, succeeded, failed,
+					callbackOwner(sender))) return;
+			succeeded.accept(populate.get());
+		}
+		catch (RuntimeException | Error failure) {
+			plugin.getLogger().severe("User cache population failed (" + failure.getClass().getSimpleName() + ")");
 			failed.accept(failure);
 		}
 	}
