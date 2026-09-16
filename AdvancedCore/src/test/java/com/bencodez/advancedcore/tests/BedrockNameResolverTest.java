@@ -289,6 +289,41 @@ public class BedrockNameResolverTest {
 	}
 
 	@Test
+	public void testIsBedrockAsyncUsesPersistedResolution() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(userManager.getDataManager()).thenReturn(dataManager);
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+		AdvancedCoreUser bedrockUser = mock(AdvancedCoreUser.class);
+		when(bedrockUser.userDataFetechMode(UserDataFetchMode.NO_CACHE)).thenReturn(bedrockUser);
+		when(bedrockUser.isBedrockUser()).thenReturn(true);
+		UUID storedUuid = UUID.randomUUID();
+		when(userManager.getUser(storedUuid, false)).thenReturn(bedrockUser);
+		AtomicReference<Runnable> worker = new AtomicReference<>();
+		doAnswer(invocation -> {
+			Supplier<?> storage = invocation.getArgument(0);
+			@SuppressWarnings("unchecked") Consumer<Object> success = invocation.getArgument(1);
+			worker.set(() -> success.accept(storage.get()));
+			return true;
+		}).when(dataManager).deferSharedStorageResult(any(), any(), any());
+		AtomicReference<Boolean> result = new AtomicReference<>();
+		UuidLookup lookup = mock(UuidLookup.class);
+		when(lookup.getUUIDFromStorage("StoredBedrock")).thenReturn(storedUuid.toString());
+
+		try (MockedStatic<UuidLookup> lookups = mockStatic(UuidLookup.class)) {
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			resolver.isBedrockAsync("StoredBedrock", result::set, failure -> fail(failure));
+			assertNull(result.get());
+			worker.get().run();
+			assertTrue(result.get());
+		}
+	}
+
+	@Test
 	public void testIsBedrock_uuidAuthoritative_true() throws Exception {
 		BedrockNameResolver resolver = newResolverWithPrefix(".");
 		DetectStub detect = new DetectStub();

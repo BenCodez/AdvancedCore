@@ -102,6 +102,7 @@ public final class AdvancedCoreRuntime {
 		await(platform.getTimer(), 1, TimeUnit.SECONDS);
 		await(grace.timeTimer(), 1, TimeUnit.SECONDS);
         await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
+		clean(platform.afterStorageExecutorShutdown());
         clean(platform.afterExecutorShutdown());
     }
 
@@ -159,8 +160,12 @@ public final class AdvancedCoreRuntime {
 		// onDisable returns. Only storage-executor retirement continues later.
 		finishDeferredPlatformCleanup(grace);
 		AtomicBoolean finished = new AtomicBoolean();
+		AtomicBoolean terminalStorageCleanup = new AtomicBoolean();
 		completion.whenComplete((ignored, failure) -> {
-			if (!finished.compareAndSet(false, true)) return;
+			if (!finished.compareAndSet(false, true)) {
+				if (failure != null) finishDeferredStorageTimer(timer, true, true, terminalStorageCleanup);
+				return;
+			}
 			if (failure == null) shutdown(timer);
 			else {
 				Throwable cause = failure instanceof CompletionException && failure.getCause() != null
@@ -168,7 +173,7 @@ public final class AdvancedCoreRuntime {
 				platform.cleanupFailed(component, cause);
 				shutdownNow(timer);
 			}
-			finishDeferredStorageTimer(timer, failure != null);
+			finishDeferredStorageTimer(timer, failure != null, failure != null, terminalStorageCleanup);
 		});
 		long timeoutMillis = Math.max(1, platform.deferredShutdownTimeoutMillis());
 		Runnable timeout = () -> {
@@ -176,7 +181,10 @@ public final class AdvancedCoreRuntime {
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
 			shutdownNow(timer);
-			finishDeferredStorageTimer(timer, true);
+			// The retirement result is not known yet. Do not close its native owner
+			// merely because the watchdog expired; an eventual exceptional completion
+			// will run terminal cleanup after this forced worker retirement.
+			finishDeferredStorageTimer(timer, true, false, terminalStorageCleanup);
 		};
 		try { CompletableFuture.delayedExecutor(timeoutMillis, TimeUnit.MILLISECONDS).execute(timeout); }
 		catch (RuntimeException | Error schedulingFailure) {
@@ -196,10 +204,14 @@ public final class AdvancedCoreRuntime {
 		clean(platform.afterExecutorShutdown());
 	}
 
-	private void finishDeferredStorageTimer(ScheduledExecutorService timer, boolean forced) {
+	private void finishDeferredStorageTimer(ScheduledExecutorService timer, boolean forced,
+			boolean runTerminalCleanup, AtomicBoolean terminalStorageCleanup) {
 		Runnable retirement = () -> {
 			await(timer, forced ? 1 : 2, TimeUnit.SECONDS);
 			if (!forced && timer != null && !timer.isTerminated()) shutdownNow(timer);
+			if (runTerminalCleanup && terminalStorageCleanup.compareAndSet(false, true)) {
+				clean(platform.afterStorageExecutorShutdown());
+			}
 		};
 		Thread shutdownThread = new Thread(retirement, "AdvancedCore-Storage-Shutdown");
 		shutdownThread.setDaemon(true);

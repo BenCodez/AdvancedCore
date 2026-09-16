@@ -62,6 +62,15 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
         }));
     }
 
+	@Override public List<Cleanup> afterStorageExecutorShutdown() {
+		return List.of(new Cleanup("terminal user storage", () -> {
+			if (userStorageRetirement != null
+					&& userStorageRetirement.toCompletableFuture().isCompletedExceptionally()) {
+				closeCurrentUserStorageOwner(plugin.getLoadedUserManager());
+			}
+		}));
+	}
+
     @Override public List<Cleanup> afterExecutorShutdown() {
         return List.of(
                 new Cleanup("plugin unload hook", plugin::onUnLoad),
@@ -100,18 +109,20 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
             userStorageRetirement = CompletableFuture.completedFuture(null);
             return;
         }
-        CompletionStage<Void> retirement = users.getDataManager().closeSharedRuntimeAsyncCompletion(closeMysql);
+		CompletionStage<Void> retirement = users.getDataManager().closeSharedRuntimeAsyncCompletion(closeMysql);
         if (retirement == null) {
             closeMysql.run();
             userStorageRetirement = CompletableFuture.completedFuture(null);
-        } else userStorageRetirement = retirement;
-    }
+		} else userStorageRetirement = retirement;
+	}
 
 	private void closeCurrentUserStorageOwner(UserManager users) {
 		try {
 			AdvancedCorePlugin.UserStorageOwner owner = plugin.getNativeUserStorageOwner();
 			if (owner != null) {
 				if (owner.storageType() == UserStorage.MYSQL && owner.mysql() != null) owner.mysql().close();
+				else if (owner.storageType() == UserStorage.SQLITE && owner.table() != null
+						&& owner.table().getSqLite() != null) owner.table().getSqLite().closeConnection();
 				return;
 			}
 			boolean ownsMysql = users != null && users.getDataManager().hasSharedSqlBackend()

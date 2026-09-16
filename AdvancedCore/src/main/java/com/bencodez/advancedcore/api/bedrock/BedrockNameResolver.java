@@ -77,6 +77,16 @@ public final class BedrockNameResolver {
 	}
 
 	/**
+	 * Checks persisted Bedrock identity without blocking the primary thread.
+	 * Callers that need an authoritative offline result should prefer this over
+	 * the synchronous compatibility method.
+	 */
+	public void isBedrockAsync(String name, Consumer<Boolean> success, Consumer<Throwable> failure) {
+		if (success == null) throw new IllegalArgumentException("Resolution callback is required");
+		resolveAsync(name, result -> success.accept(result.isBedrock), failure);
+	}
+
+	/**
 	 * Checks if a player is a Bedrock player by UUID and name.
 	 * 
 	 * @param uuid the player UUID

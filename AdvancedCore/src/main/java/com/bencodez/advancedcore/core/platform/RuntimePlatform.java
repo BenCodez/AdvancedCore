@@ -41,6 +41,10 @@ public interface RuntimePlatform {
 	default long deferredShutdownTimeoutMillis() { return 5_000; }
 
     List<Cleanup> afterExecutorGrace();
+
+	/** Terminal cleanup that must run only after the storage executor has retired. */
+	default List<Cleanup> afterStorageExecutorShutdown() { return List.of(); }
+
     List<Cleanup> afterExecutorShutdown();
     void info(String message);
     void cleanupFailed(String component, Throwable failure);

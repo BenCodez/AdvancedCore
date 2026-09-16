@@ -21,17 +21,20 @@ import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
+import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.advancedcore.bukkit.runtime.BukkitRuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
 import com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime;
 import com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle;
+import com.bencodez.simpleapi.sql.sqlite.db.SQLite;
 
 class CoreRuntimeTest {
     private RuntimePlatform platform() {
         RuntimePlatform platform = mock(RuntimePlatform.class);
         when(platform.beforeExecutorShutdown()).thenReturn(List.of());
         when(platform.afterExecutorGrace()).thenReturn(List.of());
+		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of());
         when(platform.afterExecutorShutdown()).thenReturn(List.of());
         when(platform.canBlockForPreExecutorShutdown()).thenReturn(true);
 		when(platform.deferredShutdownTimeoutMillis()).thenReturn(5_000L);
@@ -210,6 +213,9 @@ class CoreRuntimeTest {
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
 		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
 		when(platform.getTimer()).thenReturn(timer);
+		java.util.concurrent.atomic.AtomicBoolean terminalCleanup = new java.util.concurrent.atomic.AtomicBoolean();
+		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("terminal storage", () -> terminalCleanup.set(true))));
 
 		new AdvancedCoreRuntime(platform).shutdown();
 		verify(timer, never()).shutdown();
@@ -220,8 +226,10 @@ class CoreRuntimeTest {
 		while (mockingDetails(timer).getInvocations().stream()
 				.noneMatch(invocation -> invocation.getMethod().getName().equals("shutdownNow"))
 				&& System.nanoTime() < deadline) Thread.yield();
+		while (!terminalCleanup.get() && System.nanoTime() < deadline) Thread.yield();
 		verify(platform).cleanupFailed("pre-executor shutdown", failure);
 		verify(timer).shutdownNow();
+		assertTrue(terminalCleanup.get(), "native storage cleanup must follow forced worker retirement");
 	}
 
 	@Test void failedRetirementTerminatesStorageWorkerAfterReportingTheFailure() {
@@ -231,11 +239,14 @@ class CoreRuntimeTest {
 		retiring.completeExceptionally(new IllegalStateException("write failed"));
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
 		when(platform.getTimer()).thenReturn(timer);
+		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("terminal storage", () -> { })));
 
 		new AdvancedCoreRuntime(platform).shutdown();
 		verify(timer, never()).shutdown();
 		verify(timer).shutdownNow();
 		verify(platform).cleanupFailed(eq("pre-executor shutdown"), any(IllegalStateException.class));
+		verify(platform).afterStorageExecutorShutdown();
 	}
 
     @Test void preservesInterruptAndSkipsAlreadyFinishedExecutors() throws Exception {
@@ -350,6 +361,61 @@ class CoreRuntimeTest {
 				.findFirst().orElseThrow().action().run();
 
 		verify(mysql).close();
+	}
+
+	@Test void bukkitAdapterClosesMysqlAndPendingOwnersAfterTerminalFlushFailure() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		MySQL mysql = mock(MySQL.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(plugin.getNativeUserStorageOwner()).thenReturn(
+				new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, mysql, null));
+		when(users.getDataManager()).thenReturn(dataManager);
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(retirement);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+		IllegalStateException flushFailure = new IllegalStateException("final flush failed");
+		retirement.completeExceptionally(flushFailure);
+		CompletionException reported = assertThrows(CompletionException.class,
+				() -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
+		assertSame(flushFailure, reported.getCause());
+		verify(mysql, never()).close();
+
+		platform.afterStorageExecutorShutdown().get(0).action().run();
+		verify(mysql).close();
+		verify(plugin).closePendingNativeUserStorageOwners();
+	}
+
+	@Test void bukkitAdapterClosesSqliteOwnerAfterTerminalFlushFailure() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		UserTable table = mock(UserTable.class);
+		SQLite sqlite = mock(SQLite.class);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(plugin.getNativeUserStorageOwner()).thenReturn(
+				new AdvancedCorePlugin.UserStorageOwner(UserStorage.SQLITE, null, table));
+		when(users.getDataManager()).thenReturn(dataManager);
+		when(table.getSqLite()).thenReturn(sqlite);
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(retirement);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+		retirement.completeExceptionally(new IllegalStateException("final flush failed"));
+		platform.afterStorageExecutorShutdown().get(0).action().run();
+
+		verify(sqlite).closeConnection();
+		verify(plugin).closePendingNativeUserStorageOwners();
 	}
 
 	@Test void bukkitAdapterClosesMysqlOwnerInstalledWhileSharedReplacementCompletes() {
