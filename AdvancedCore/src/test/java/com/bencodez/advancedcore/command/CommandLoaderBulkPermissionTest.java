@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -26,6 +28,7 @@ import com.bencodez.advancedcore.api.command.CommandHandler;
 import com.bencodez.advancedcore.api.command.PlayerCommandHandler;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
+import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
@@ -175,6 +178,7 @@ class CommandLoaderBulkPermissionTest {
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
 		when(users.getOfflineRewardsPath()).thenReturn("OfflineRewards");
 		when(users.getUser(offlineUuid, false)).thenReturn(offlineUser);
+		when(offlineUser.forceRunOfflineRewardsAsync()).thenReturn(CompletableFuture.completedFuture(null));
 		ArrayList<Runnable> workers = new ArrayList<>();
 		doAnswer(call -> { workers.add(call.getArgument(1, Runnable.class)); return null; })
 				.when(scheduler).runTaskAsynchronously(any(), any());
@@ -194,7 +198,122 @@ class CommandLoaderBulkPermissionTest {
 		verify(users, never()).forEachUserKeys(any(), any());
 		assertEquals(4, workers.size());
 		workers.get(1).run();
-		verify(offlineUser).forceRunOfflineRewards();
+		verify(offlineUser).forceRunOfflineRewardsAsync();
+	}
+
+	@Test
+	void purgeRunsOnTheStorageWorkerAndReportsCompletionOnTheCommandScheduler() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		UserManager users = mock(UserManager.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		CommandSender sender = mock(CommandSender.class);
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		ArrayList<Runnable> workers = new ArrayList<>();
+		ArrayList<Runnable> callbacks = new ArrayList<>();
+		doAnswer(call -> { workers.add(call.getArgument(1, Runnable.class)); return null; })
+				.when(scheduler).runTaskAsynchronously(any(), any());
+		doAnswer(call -> { callbacks.add(call.getArgument(1, Runnable.class)); return null; })
+				.when(scheduler).runTask(any(), any());
+
+		find(new CommandLoader(plugin), "Purge").execute(sender, new String[] { "Purge" });
+		verify(users, never()).purgeOldPlayersNow();
+		workers.remove(0).run();
+		verify(users).purgeOldPlayersNow();
+		verify(sender, never()).sendMessage(org.mockito.ArgumentMatchers.contains("Purged data"));
+		callbacks.remove(0).run();
+		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Purged data"));
+	}
+
+	@Test
+	void temporaryPermissionCommandsResolveAsynchronouslyAndRouteMessagesBack() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		UserManager users = mock(UserManager.class);
+		PermissionHandler permissions = mock(PermissionHandler.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		CommandSender sender = mock(CommandSender.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UUID uuid = UUID.randomUUID();
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getPermissionHandler()).thenReturn(permissions);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(user.getUUID()).thenReturn(uuid.toString());
+		doAnswer(call -> {
+			@SuppressWarnings("unchecked") Consumer<AdvancedCoreUser> success = call.getArgument(1, Consumer.class);
+			success.accept(user);
+			return null;
+		}).when(users).getUserAsync(org.mockito.ArgumentMatchers.eq("voter"), any(), any());
+		ArrayList<Runnable> callbacks = new ArrayList<>();
+		doAnswer(call -> { callbacks.add(call.getArgument(1, Runnable.class)); return null; })
+				.when(scheduler).runTask(any(), any());
+		CommandLoader loader = new CommandLoader(plugin);
+
+		find(loader, "User", "(Player)", "RemoveTempPermissions")
+				.execute(sender, new String[] { "User", "voter", "RemoveTempPermissions" });
+		find(loader, "User", "(Player)", "AddTempPermissions", "(Text)")
+				.execute(sender, new String[] { "User", "voter", "AddTempPermissions", "example.use" });
+		find(loader, "User", "(Player)", "AddTempPermissions", "(Text)", "(Number)")
+				.execute(sender, new String[] { "User", "voter", "AddTempPermissions", "example.use", "60" });
+		verify(permissions, never()).removePermission(any());
+		verify(permissions, never()).addPermission(any(UUID.class), any(String.class));
+
+		try (org.mockito.MockedStatic<org.bukkit.Bukkit> bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
+			bukkit.when(() -> org.bukkit.Bukkit.getPlayer(uuid)).thenReturn(null);
+			for (int index = 0; index < 3; index++) callbacks.remove(0).run();
+		}
+		verify(permissions).removePermission(uuid);
+		verify(permissions).addPermission(uuid, "example.use");
+		verify(permissions).addPermission(uuid, "example.use", 60);
+		assertEquals(3, callbacks.size());
+		for (Runnable callback : List.copyOf(callbacks)) callback.run();
+		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Removed temporary permissions"));
+		verify(sender, org.mockito.Mockito.times(2))
+				.sendMessage(org.mockito.ArgumentMatchers.contains("Added temporary permission"));
+	}
+
+	@Test
+	void forcedReplayReportsCompletionOnlyAfterEveryReplayFinishes() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		UserManager users = mock(UserManager.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		CommandSender sender = mock(CommandSender.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UUID uuid = UUID.randomUUID();
+		CompletableFuture<Void> replay = new CompletableFuture<>();
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(users.getUser(uuid, false)).thenReturn(user);
+		when(user.forceRunOfflineRewardsAsync()).thenReturn(replay);
+		ArrayList<Runnable> workers = new ArrayList<>();
+		ArrayList<Runnable> callbacks = new ArrayList<>();
+		doAnswer(call -> { workers.add(call.getArgument(1, Runnable.class)); return null; })
+				.when(scheduler).runTaskAsynchronously(any(), any());
+		doAnswer(call -> { callbacks.add(call.getArgument(1, Runnable.class)); return null; })
+				.when(scheduler).runTask(any(), any());
+		doAnswer(call -> {
+			@SuppressWarnings("unchecked") BiConsumer<UUID, ArrayList<Column>> perUser = call.getArgument(0, BiConsumer.class);
+			perUser.accept(uuid, new ArrayList<>());
+			@SuppressWarnings("unchecked") Consumer<Integer> onFinished = call.getArgument(1, Consumer.class);
+			onFinished.accept(1);
+			return null;
+		}).when(users).forEachUserKeys(any(), any());
+
+		find(new CommandLoader(plugin), "ForceRunOfflineRewards")
+				.execute(sender, new String[] { "ForceRunOfflineRewards" });
+		workers.remove(0).run();
+		verify(sender, never()).sendMessage(org.mockito.ArgumentMatchers.contains("Finished running offline rewards"));
+		assertTrue(callbacks.isEmpty());
+
+		replay.complete(null);
+		assertEquals(1, callbacks.size());
+		callbacks.remove(0).run();
+		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Finished running offline rewards"));
 	}
 
 	private static CommandHandler find(CommandLoader loader, String... args) {

@@ -291,14 +291,16 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cStarting to run offline rewards");
 
-				runUserStorageCommand(sender, () -> plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
-					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
-					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-					user.updateTempCacheWithColumns(columns);
-					// Replay remains on this worker. Individual player-affine reward actions
-					// marshal themselves through the reward scheduler when necessary.
-					user.forceRunOfflineRewards();
-				}, null), () -> sendMessage(sender, "&cFinished running offline rewards"));
+				runUserStorageCommand(sender, () -> {
+					ForcedReplayBarrier barrier = new ForcedReplayBarrier(
+							failure -> reportForcedReplayCompletion(sender, null, failure));
+					plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+						AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
+						user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
+						user.updateTempCacheWithColumns(columns);
+						barrier.add(user.forceRunOfflineRewardsAsync());
+					}, ignored -> barrier.enumerationComplete());
+				}, null);
 			}
 		});
 
@@ -312,9 +314,8 @@ public class CommandLoader {
 
 				withResolvedUser(sender, args[1], user -> {
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-					user.forceRunOfflineRewards();
-					runCommandCallback(sender,
-							() -> sendMessage(sender, "&cFinished running offline rewards for " + args[1]));
+					user.forceRunOfflineRewardsAsync().whenComplete((ignored, failure) ->
+							reportForcedReplayCompletion(sender, args[1], failure));
 				});
 			}
 		});
@@ -360,13 +361,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
-				if (isBlank(uuidStr)) {
-					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
-					return;
-				}
-				plugin.getPermissionHandler().removePermission(UUID.fromString(uuidStr));
-				sendMessage(sender, "&cRemoved temporary permissions from " + args[1]);
+				withResolvedUser(sender, args[1], user -> {
+					plugin.getPermissionHandler().removePermission(UUID.fromString(user.getUUID()));
+					runCommandCallback(sender,
+							() -> sendMessage(sender, "&cRemoved temporary permissions from " + args[1]));
+				});
 			}
 		});
 
@@ -376,14 +375,12 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
-				if (isBlank(uuidStr)) {
-					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
-					return;
-				}
-				plugin.getPermissionHandler().addPermission(UUID.fromString(uuidStr), args[3],
-						Integer.valueOf(args[4]));
-				sendMessage(sender, "&cAdded temporary permission to " + args[1] + " for " + args[4]);
+				withResolvedUser(sender, args[1], user -> {
+					plugin.getPermissionHandler().addPermission(UUID.fromString(user.getUUID()), args[3],
+							Integer.valueOf(args[4]));
+					runCommandCallback(sender,
+							() -> sendMessage(sender, "&cAdded temporary permission to " + args[1] + " for " + args[4]));
+				});
 			}
 		});
 
@@ -392,13 +389,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
-				if (isBlank(uuidStr)) {
-					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
-					return;
-				}
-				plugin.getPermissionHandler().addPermission(UUID.fromString(uuidStr), args[3]);
-				sendMessage(sender, "&cAdded temporary permission to " + args[1]);
+				withResolvedUser(sender, args[1], user -> {
+					plugin.getPermissionHandler().addPermission(UUID.fromString(user.getUUID()), args[3]);
+					runCommandCallback(sender,
+							() -> sendMessage(sender, "&cAdded temporary permission to " + args[1]));
+				});
 			}
 		});
 
@@ -460,8 +455,8 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				plugin.getUserManager().purgeOldPlayersNow();
-				sendMessage(sender, "&cPurged data");
+				runUserStorageCommand(sender, () -> plugin.getUserManager().purgeOldPlayersNow(),
+						() -> sendMessage(sender, "&cPurged data"));
 			}
 		});
 
@@ -700,6 +695,46 @@ public class CommandLoader {
 		org.bukkit.entity.Entity owner = callbackOwner(sender);
 		if (owner == null) plugin.getBukkitScheduler().runTask(plugin, callback);
 		else plugin.getBukkitScheduler().runTask(plugin, callback, owner);
+	}
+
+	private void reportForcedReplayCompletion(CommandSender sender, String playerName, Throwable failure) {
+		runCommandCallback(sender, () -> {
+			if (failure == null) {
+				sender.sendMessage(MessageAPI.colorize(playerName == null ? "&cFinished running offline rewards"
+						: "&cFinished running offline rewards for " + playerName));
+				return;
+			}
+			if (plugin.getLogger() != null) plugin.getLogger().severe(
+					"Forced offline reward replay failed (" + failure.getClass().getSimpleName() + ")");
+			sender.sendMessage(MessageAPI.colorize("&cUnable to run offline rewards; check the server log."));
+		});
+	}
+
+	private static final class ForcedReplayBarrier {
+		private final java.util.concurrent.atomic.AtomicInteger pending = new java.util.concurrent.atomic.AtomicInteger(1);
+		private final java.util.concurrent.atomic.AtomicReference<Throwable> firstFailure =
+				new java.util.concurrent.atomic.AtomicReference<>();
+		private final Consumer<Throwable> completion;
+
+		private ForcedReplayBarrier(Consumer<Throwable> completion) {
+			this.completion = completion;
+		}
+
+		private void add(java.util.concurrent.CompletionStage<Void> replay) {
+			pending.incrementAndGet();
+			replay.whenComplete((ignored, failure) -> {
+				if (failure != null) firstFailure.compareAndSet(null, failure);
+				completeOne();
+			});
+		}
+
+		private void enumerationComplete() {
+			completeOne();
+		}
+
+		private void completeOne() {
+			if (pending.decrementAndGet() == 0) completion.accept(firstFailure.get());
+		}
 	}
 
 	/**

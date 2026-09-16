@@ -260,6 +260,57 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void forcedReplayCompletionWaitsForDeferredStorageAndRewardHandling() {
+		AdvancedCoreUser replayUser = org.mockito.Mockito.spy(user);
+		org.mockito.Mockito.doReturn(true).when(replayUser).isOnline();
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		ArgumentCaptor<Runnable> deferred = ArgumentCaptor.forClass(Runnable.class);
+		when(dataManager.deferSharedStorageWork(deferred.capture())).thenReturn(true);
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenReturn(new ArrayList<>(List.of("VoteReward")));
+		CompletableFuture<Void> rewardCompletion = new CompletableFuture<>();
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(replayUser), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(rewardCompletion);
+
+		CompletableFuture<Void> completion = replayUser.forceRunOfflineRewardsAsync().toCompletableFuture();
+		assertFalse(completion.isDone());
+
+		deferred.getValue().run();
+		assertFalse(completion.isDone());
+
+		rewardCompletion.complete(null);
+		assertTrue(completion.isDone());
+	}
+
+	@Test
+	void forcedReplaySurfacesRecoveryFailureWithoutBlockingTheNextOccurrence() {
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenReturn(new ArrayList<>(List.of("FirstReward", "SecondReward")));
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.failedFuture(new IllegalStateException("delivery failed")))
+				.thenReturn(CompletableFuture.completedFuture(null));
+		org.mockito.Mockito.doThrow(new IllegalStateException("restore failed"))
+				.when(data).setStringList(eq("offlineRewardsPath"), any());
+
+		CompletableFuture<Void> completion = user.forceRunOfflineRewardsAsync().toCompletableFuture();
+
+		assertTrue(completion.isCompletedExceptionally());
+		verify(rewardHandler, org.mockito.Mockito.times(2)).givePersistedQueueRewardAsync(
+				eq(user), any(PersistedQueueReference.class), any(RewardOptions.class));
+	}
+
+	@Test
+	void forcedReplayReturnsAnExceptionalStageWhenStorageReadFails() {
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenThrow(new IllegalStateException("storage unavailable"));
+
+		CompletableFuture<Void> completion = user.forceRunOfflineRewardsAsync().toCompletableFuture();
+
+		assertTrue(completion.isCompletedExceptionally());
+	}
+
+	@Test
 	void queuedAsyncReplayResumesAtItsStoredCheckpoint() {
 		ArrayList<String> rewards = new ArrayList<>();
 		rewards.add("VoteReward%asyncprogress%2%placeholders%Server%pair%server-a");

@@ -1170,8 +1170,9 @@ public class AdvancedCoreUser {
 		dispatchOfflineRewards(false, capturedState);
 	}
 
-	private void dispatchOfflineRewards(boolean force, ReplayPlayerState capturedState) {
+	private CompletionStage<Void> dispatchOfflineRewards(boolean force, ReplayPlayerState capturedState) {
 		ArrayList<String> rewards = new ArrayList<>(getOfflineRewards());
+		ArrayList<CompletableFuture<Void>> completions = new ArrayList<>();
 		for (String rewardEntry : rewards) {
 			if (rewardEntry == null || rewardEntry.equals("null")) {
 				continue;
@@ -1202,7 +1203,7 @@ public class AdvancedCoreUser {
 			AtomicReference<String> currentEntry = new AtomicReference<>(rewardEntry);
 			options.setAsyncReplayCheckpointConsumer(checkpoint -> checkpointOfflineReward(currentEntry, checkpoint));
 
-			enqueuePersistedReplay(() -> {
+			completions.add(enqueuePersistedReplay(() -> {
 				CompletionStage<Void> replay;
 				try {
 					replay = plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
@@ -1218,8 +1219,9 @@ public class AdvancedCoreUser {
 					else restoreOfflineReward(currentEntry.get(), failure);
 					return null;
 				});
-			});
+			}).toCompletableFuture());
 		}
+		return CompletableFuture.allOf(completions.toArray(CompletableFuture[]::new));
 	}
 
 	/**
@@ -1228,14 +1230,15 @@ public class AdvancedCoreUser {
 	 * its own restore path retains the queue entry, while the next occurrence must
 	 * still be allowed to start without blocking a caller thread.
 	 */
-	private void enqueuePersistedReplay(Supplier<CompletionStage<Void>> replay) {
+	private CompletionStage<Void> enqueuePersistedReplay(Supplier<CompletionStage<Void>> replay) {
 		ReplayClaims claims;
 		CompletableFuture<Void> previous;
-		CompletableFuture<Void> next = new CompletableFuture<>();
+		CompletableFuture<Void> serialTail = new CompletableFuture<>();
+		CompletableFuture<Void> outcome = new CompletableFuture<>();
 		synchronized (plugin) {
 			claims = replayClaims();
 			previous = claims.serialReplayTail;
-			claims.serialReplayTail = next;
+			claims.serialReplayTail = serialTail;
 		}
 		previous.whenComplete((ignored, previousFailure) -> {
 			CompletionStage<Void> stage;
@@ -1243,15 +1246,19 @@ public class AdvancedCoreUser {
 				stage = replay.get();
 				if (stage == null) throw new IllegalStateException("Persisted reward replay returned no completion stage");
 			} catch (Throwable failure) {
-				next.complete(null);
+				outcome.completeExceptionally(failure);
+				serialTail.complete(null);
 				releaseReplayClaimsIfEmpty(claims);
 				return;
 			}
 			stage.whenComplete((result, failure) -> {
-				next.complete(null);
+				if (failure == null) outcome.complete(null);
+				else outcome.completeExceptionally(failure);
+				serialTail.complete(null);
 				releaseReplayClaimsIfEmpty(claims);
 			});
 		});
+		return outcome;
 	}
 
 	private void checkpointOfflineReward(AtomicReference<String> currentEntry, Reward.ReplayCheckpoint checkpoint) {
@@ -1499,22 +1506,46 @@ public class AdvancedCoreUser {
 	 * Forces running of offline rewards without processing checks.
 	 */
 	public void forceRunOfflineRewards() {
-		forceRunOfflineRewards(null);
+		forceRunOfflineRewardsAsync();
 	}
 
-	private void forceRunOfflineRewards(ReplayPlayerState capturedState) {
+	/** Complete after every claimed forced replay reaches its durable terminal handling. */
+	public CompletionStage<Void> forceRunOfflineRewardsAsync() {
+		return forceRunOfflineRewardsAsync(null);
+	}
+
+	private CompletionStage<Void> forceRunOfflineRewardsAsync(ReplayPlayerState capturedState) {
 		if (!plugin.getOptions().isProcessRewards()) {
 			plugin.debug("Processing rewards is disabled");
-			return;
+			return CompletableFuture.completedFuture(null);
 		}
 		UserDataManager manager = sharedReplayDataManager();
 		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
 			ReplayPlayerState state = captureReplayPlayerState();
-			if (manager.deferSharedStorageWork(() -> forceRunOfflineRewards(state))) return;
+			CompletableFuture<Void> completion = new CompletableFuture<>();
+			try {
+				if (manager.deferSharedStorageWork(() -> {
+					try {
+						forceRunOfflineRewardsAsync(state).whenComplete((ignored, failure) -> {
+							if (failure == null) completion.complete(null);
+							else completion.completeExceptionally(failure);
+						});
+					} catch (Throwable failure) {
+						completion.completeExceptionally(failure);
+					}
+				})) return completion;
+			} catch (RuntimeException | Error failure) {
+				completion.completeExceptionally(failure);
+				return completion;
+			}
 		}
 
 		setCheckWorld(false);
-		dispatchOfflineRewards(true, capturedState);
+		try {
+			return dispatchOfflineRewards(true, capturedState);
+		} catch (RuntimeException | Error failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
 	}
 
 	private ReplayPlayerState captureReplayPlayerState() {
