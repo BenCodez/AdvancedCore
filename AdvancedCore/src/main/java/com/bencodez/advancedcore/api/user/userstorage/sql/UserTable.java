@@ -61,121 +61,101 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 	 * @param onFinished called once at the end with the number of rows processed
 	 */
 	public void forEachUser(BiConsumer<UUID, ArrayList<Column>> perUser, Consumer<Integer> onFinished) {
+		forEachUser(perUser, onFinished, failure -> {
+			throw new IllegalStateException("Failed to enumerate SQLite users", failure);
+		});
+	}
+
+	/** Streams users and reports a terminal SQL failure without claiming completion. */
+	public void forEachUser(BiConsumer<UUID, ArrayList<Column>> perUser, Consumer<Integer> onFinished,
+			Consumer<Throwable> onFailure) {
+		java.util.Objects.requireNonNull(perUser, "perUser");
+		java.util.Objects.requireNonNull(onFailure, "onFailure");
 		int processed = 0;
-		final String query = "SELECT * FROM " + getName() + ";";
-
-		try (PreparedStatement ps = sqLite.getSQLConnection().prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY,
-				ResultSet.CONCUR_READ_ONLY); ResultSet rs = ps.executeQuery()) {
-
-			// Helps on some JDBC drivers (SQLite varies, but harmless)
-			try {
-				ps.setFetchSize(500);
-			} catch (Exception ignored) {
-			}
-
-			// Compute metadata ONCE
-			final ResultSetMetaData meta = rs.getMetaData();
-			final int colCount = meta.getColumnCount();
-
-			// Precompute how each column should be read
-			final String[] colNames = new String[colCount + 1];
-			final byte[] kind = new byte[colCount + 1]; // 0=string, 1=int, 2=bool
-			int uuidIndex = -1;
-
-			for (int i = 1; i <= colCount; i++) {
-				String name = meta.getColumnLabel(i);
-				colNames[i] = name;
-
-				if ("uuid".equalsIgnoreCase(name)) {
-					uuidIndex = i;
-				}
-
-				if (plugin.getUserManager().getDataManager().isInt(name)) {
-					kind[i] = 1;
-				} else if (plugin.getUserManager().getDataManager().isBoolean(name)) {
-					kind[i] = 2;
-				} else {
-					kind[i] = 0;
-				}
-			}
-
-			while (rs.next()) {
-				UUID uuid = null;
-
-				// Fast path: read uuid column directly (avoid scanning for it)
-				if (uuidIndex > 0) {
-					String uuidStr = rs.getString(uuidIndex);
-					if (uuidStr != null && !uuidStr.isEmpty() && !"null".equalsIgnoreCase(uuidStr)) {
-						try {
-							uuid = UUID.fromString(uuidStr);
-						} catch (IllegalArgumentException ignored) {
-							// bad uuid; skip row below
-						}
+		final int pageSize = 500;
+		String cursor = null;
+		while (true) {
+			ArrayList<EnumerationEntry> page = new ArrayList<>(pageSize);
+			int rowsThisPage = 0;
+			String nextCursor = cursor;
+			String query = "SELECT * FROM " + getName() + " WHERE uuid IS NOT NULL"
+					+ (cursor == null ? "" : " AND uuid > ?") + " ORDER BY uuid ASC LIMIT ?;";
+			try (PreparedStatement ps = sqLite.getSQLConnection().prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY,
+					ResultSet.CONCUR_READ_ONLY)) {
+				int parameter = 1;
+				if (cursor != null) ps.setString(parameter++, cursor);
+				ps.setInt(parameter, pageSize);
+				try (ResultSet rs = ps.executeQuery()) {
+					ResultSetMetaData meta = rs.getMetaData();
+					int colCount = meta.getColumnCount();
+					String[] colNames = new String[colCount + 1];
+					byte[] kind = new byte[colCount + 1];
+					int uuidIndex = -1;
+					for (int i = 1; i <= colCount; i++) {
+						String name = meta.getColumnLabel(i);
+						colNames[i] = name;
+						if ("uuid".equalsIgnoreCase(name)) uuidIndex = i;
+						if (plugin.getUserManager().getDataManager().isInt(name)) kind[i] = 1;
+						else if (plugin.getUserManager().getDataManager().isBoolean(name)) kind[i] = 2;
 					}
-				}
-
-				// Build cols only if we have a valid uuid (saves a ton if db has junk)
-				if (uuid == null) {
-					continue;
-				}
-
-				ArrayList<Column> cols = new ArrayList<>(colCount);
-
-				for (int i = 1; i <= colCount; i++) {
-					String columnName = colNames[i];
-					Column rCol;
-
-					switch (kind[i]) {
-					case 1: { // int
-						rCol = new Column(columnName, DataType.INTEGER);
-						int v;
-						try {
-							v = rs.getInt(i);
-							if (rs.wasNull())
-								v = 0;
-						} catch (Exception e) {
-							String data = rs.getString(i);
-							if (data != null) {
-								try {
-									v = Integer.parseInt(data);
-								} catch (NumberFormatException ex) {
-									v = 0;
+					if (uuidIndex < 1) throw new IllegalStateException("SQLite user table has no UUID column");
+					while (rs.next()) {
+						rowsThisPage++;
+						String uuidString = rs.getString(uuidIndex);
+						nextCursor = uuidString;
+						UUID uuid = null;
+						if (uuidString != null && !uuidString.isEmpty() && !"null".equalsIgnoreCase(uuidString)) {
+							try { uuid = UUID.fromString(uuidString); }
+							catch (IllegalArgumentException ignored) { }
+						}
+						if (uuid == null) continue;
+						ArrayList<Column> columns = new ArrayList<>(colCount);
+						for (int i = 1; i <= colCount; i++) {
+							String columnName = colNames[i];
+							Column column;
+							if (kind[i] == 1) {
+								column = new Column(columnName, DataType.INTEGER);
+								int value;
+								try { value = rs.getInt(i); if (rs.wasNull()) value = 0; }
+								catch (Exception failure) {
+									String data = rs.getString(i);
+									try { value = data == null ? 0 : Integer.parseInt(data); }
+									catch (NumberFormatException invalid) { value = 0; }
 								}
+								column.setValue(new DataValueInt(value));
+							} else if (kind[i] == 2) {
+								column = new Column(columnName, DataType.BOOLEAN);
+								column.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
 							} else {
-								v = 0;
+								column = new Column(columnName, DataType.STRING);
+								column.setValue(new DataValueString(rs.getString(i)));
 							}
+							columns.add(column);
 						}
-						rCol.setValue(new DataValueInt(v));
-						break;
+						page.add(new EnumerationEntry(uuid, columns));
 					}
-					case 2: { // bool
-						rCol = new Column(columnName, DataType.BOOLEAN);
-						// Keep same semantics as your original: Boolean.valueOf(String)
-						rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
-						break;
-					}
-					default: { // string
-						rCol = new Column(columnName, DataType.STRING);
-						rCol.setValue(new DataValueString(rs.getString(i)));
-						break;
-					}
-					}
-
-					cols.add(rCol);
 				}
-
-				processed++;
-				perUser.accept(uuid, cols);
+			} catch (SQLException | RuntimeException failure) {
+				onFailure.accept(failure);
+				return;
 			}
-
-		} catch (SQLException e) {
-			e.printStackTrace();
-		} finally {
-			if (onFinished != null) {
-				onFinished.accept(processed);
+			for (EnumerationEntry entry : page) {
+				try { perUser.accept(entry.uuid(), entry.columns()); processed++; }
+				catch (Throwable failure) { onFailure.accept(failure); return; }
 			}
+			if (rowsThisPage < pageSize) break;
+			if (nextCursor == null || java.util.Objects.equals(cursor, nextCursor)) {
+				onFailure.accept(new IllegalStateException("SQLite user enumeration did not advance its UUID cursor"));
+				return;
+			}
+			cursor = nextCursor;
+		}
+		if (onFinished != null) {
+			onFinished.accept(processed);
 		}
 	}
+
+	private record EnumerationEntry(UUID uuid, ArrayList<Column> columns) { }
 
 	public UserTable(AdvancedCorePlugin plugin, String name, Column... columns) {
 		this.name = name;
@@ -604,6 +584,18 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 	}
 
 	public String getUUID(String playerName) {
+		try {
+			return getUUIDOrThrow(playerName);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		} catch (ArrayIndexOutOfBoundsException e) {
+			return null;
+		}
+	}
+
+	/** Query a persisted UUID while allowing authoritative lookup failures to propagate. */
+	public String getUUIDOrThrow(String playerName) throws SQLException {
 		String query = "SELECT uuid FROM " + getName() + " WHERE PlayerName=?;";
 
 		try (PreparedStatement sql = sqLite.getSQLConnection().prepareStatement(query)) {
@@ -620,9 +612,6 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 				}
 			}
 			rs.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		} catch (ArrayIndexOutOfBoundsException e) {
 		}
 		return null;
 	}

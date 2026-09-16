@@ -31,6 +31,13 @@ public class RewardOptions {
 	@Setter
 	private boolean onlineSet = false;
 
+	/** Server-thread player state captured before a replay moves to storage work. */
+	@Getter
+	private boolean livePlayerStateSet;
+
+	@Getter
+	private boolean livePlayerVanished;
+
 	private HashMap<String, String> placeholders = new HashMap<>();
 
 	private String prefix = "";
@@ -181,6 +188,13 @@ public class RewardOptions {
 		return this;
 	}
 
+	public RewardOptions captureLivePlayerState(boolean online, boolean vanished) {
+		setOnline(online);
+		livePlayerStateSet = true;
+		livePlayerVanished = vanished;
+		return this;
+	}
+
 	public RewardOptions setPlaceholders(HashMap<String, String> placeholders) {
 		this.placeholders = placeholders;
 		return this;
@@ -245,6 +259,7 @@ public class RewardOptions {
 		if (forceOffline) copy.forceOffline();
 		if (!useDefaultWorlds) copy.disableDefaultWorlds();
 		if (onlineSet) copy.setOnline(online);
+		if (livePlayerStateSet) copy.captureLivePlayerState(online, livePlayerVanished);
 		if (!server.isEmpty()) copy.setServer(server);
 		copy.setAsyncReplayState(asyncReplayState);
 		copy.setAsyncReplayRegistryFingerprints(new HashMap<>(asyncReplayRegistryFingerprints));

@@ -8,6 +8,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -17,8 +20,11 @@ import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.bedrock.BedrockNameResolver;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 
 /**
  * Unit tests for {@link BedrockNameResolver}.
@@ -230,6 +236,206 @@ public class BedrockNameResolverTest {
 		assertTrue(r.isBedrock);
 		assertEquals(".OnlyStored", r.finalName);
 		assertEquals("db-bedrock-prefixed-variant", r.rationale);
+	}
+
+	@Test
+	public void testResolveAsyncChecksPersistedExactIdentityBeforeOnlinePrefixedFallback() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(userManager.getDataManager()).thenReturn(dataManager);
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		DetectStub detect = new DetectStub();
+		setDetect(resolver, detect);
+
+		AdvancedCoreUser javaUser = mock(AdvancedCoreUser.class);
+		when(javaUser.userDataFetechMode(UserDataFetchMode.NO_CACHE)).thenReturn(javaUser);
+		when(javaUser.isBedrockUser()).thenReturn(false);
+		UUID storedUuid = UUID.randomUUID();
+		when(userManager.getUser(storedUuid, false)).thenReturn(javaUser);
+		UUID bedrockUuid = UUID.randomUUID();
+		detect.set(bedrockUuid, true);
+		Player bedrockPlayer = mock(Player.class);
+		when(bedrockPlayer.getName()).thenReturn(".SharedName");
+		when(bedrockPlayer.getUniqueId()).thenReturn(bedrockUuid);
+		mockOnlinePlayers(bedrockPlayer);
+
+		AtomicReference<Runnable> worker = new AtomicReference<>();
+		doAnswer(invocation -> {
+			Supplier<?> storage = invocation.getArgument(0);
+			@SuppressWarnings("unchecked")
+			Consumer<Object> success = invocation.getArgument(1);
+			worker.set(() -> success.accept(storage.get()));
+			return true;
+		}).when(dataManager).deferSharedStorageResult(any(), any(), any());
+		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
+
+		UuidLookup lookup = mock(UuidLookup.class);
+		when(lookup.getUUIDFromStorage("SharedName")).thenReturn(storedUuid.toString());
+		try (MockedStatic<UuidLookup> lookups = mockStatic(UuidLookup.class)) {
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			resolver.resolveAsync("SharedName", resolved::set, failure -> fail(failure));
+
+			assertNull(resolved.get(), "persisted identity must complete before an ambiguous fallback is credited");
+			assertNotNull(worker.get());
+			worker.get().run();
+			assertEquals("SharedName", resolved.get().finalName);
+			assertFalse(resolved.get().isBedrock);
+			assertEquals("db-java", resolved.get().rationale);
+			verify(userManager).getUser(storedUuid, false);
+			verify(userManager, never()).getUser(any(String.class));
+		}
+	}
+
+	@Test
+	public void testResolveAsyncPropagatesPersistedLookupFailure() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(userManager.getDataManager()).thenReturn(dataManager);
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+
+		AtomicReference<Runnable> worker = new AtomicReference<>();
+		doAnswer(invocation -> {
+			Supplier<?> storage = invocation.getArgument(0);
+			@SuppressWarnings("unchecked") Consumer<Object> success = invocation.getArgument(1);
+			@SuppressWarnings("unchecked") Consumer<Throwable> failure = invocation.getArgument(2);
+			worker.set(() -> {
+				try {
+					success.accept(storage.get());
+				} catch (RuntimeException problem) {
+					failure.accept(problem);
+				}
+			});
+			return true;
+		}).when(dataManager).deferSharedStorageResult(any(), any(), any());
+		IllegalStateException storageFailure = new IllegalStateException("storage unavailable");
+		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+		UuidLookup lookup = mock(UuidLookup.class);
+		when(lookup.getUUIDFromStorage("SharedName")).thenThrow(storageFailure);
+
+		try (MockedStatic<UuidLookup> lookups = mockStatic(UuidLookup.class)) {
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			resolver.resolveAsync("SharedName", resolved::set, failed::set);
+			worker.get().run();
+		}
+
+		assertNull(resolved.get());
+		assertSame(storageFailure, failed.get());
+		verify(lookup, never()).getUUIDFromStorage(".SharedName");
+	}
+
+	@Test
+	public void testResolveAsyncPropagatesPrefixedPersistedLookupFailure() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(userManager.getDataManager()).thenReturn(dataManager);
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+
+		AtomicReference<Runnable> worker = new AtomicReference<>();
+		doAnswer(invocation -> {
+			Supplier<?> storage = invocation.getArgument(0);
+			@SuppressWarnings("unchecked") Consumer<Object> success = invocation.getArgument(1);
+			@SuppressWarnings("unchecked") Consumer<Throwable> failure = invocation.getArgument(2);
+			worker.set(() -> {
+				try {
+					success.accept(storage.get());
+				} catch (RuntimeException problem) {
+					failure.accept(problem);
+				}
+			});
+			return true;
+		}).when(dataManager).deferSharedStorageResult(any(), any(), any());
+		IllegalStateException storageFailure = new IllegalStateException("storage unavailable");
+		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+		UuidLookup lookup = mock(UuidLookup.class);
+		when(lookup.getUUIDFromStorage("SharedName")).thenReturn(null);
+		when(lookup.getUUIDFromStorage(".SharedName")).thenThrow(storageFailure);
+
+		try (MockedStatic<UuidLookup> lookups = mockStatic(UuidLookup.class)) {
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			resolver.resolveAsync("SharedName", resolved::set, failed::set);
+			worker.get().run();
+		}
+
+		assertNull(resolved.get());
+		assertSame(storageFailure, failed.get());
+	}
+
+	@Test
+	public void testIsBedrockAsyncUsesPersistedResolution() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(userManager.getDataManager()).thenReturn(dataManager);
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+		AdvancedCoreUser bedrockUser = mock(AdvancedCoreUser.class);
+		when(bedrockUser.userDataFetechMode(UserDataFetchMode.NO_CACHE)).thenReturn(bedrockUser);
+		when(bedrockUser.isBedrockUser()).thenReturn(true);
+		UUID storedUuid = UUID.randomUUID();
+		when(userManager.getUser(storedUuid, false)).thenReturn(bedrockUser);
+		AtomicReference<Runnable> worker = new AtomicReference<>();
+		doAnswer(invocation -> {
+			Supplier<?> storage = invocation.getArgument(0);
+			@SuppressWarnings("unchecked") Consumer<Object> success = invocation.getArgument(1);
+			worker.set(() -> success.accept(storage.get()));
+			return true;
+		}).when(dataManager).deferSharedStorageResult(any(), any(), any());
+		AtomicReference<Boolean> result = new AtomicReference<>();
+		UuidLookup lookup = mock(UuidLookup.class);
+		when(lookup.getUUIDFromStorage("StoredBedrock")).thenReturn(storedUuid.toString());
+
+		try (MockedStatic<UuidLookup> lookups = mockStatic(UuidLookup.class)) {
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			resolver.isBedrockAsync("StoredBedrock", result::set, failure -> fail(failure));
+			assertNull(result.get());
+			worker.get().run();
+			assertTrue(result.get());
+		}
+	}
+
+	@Test
+	public void testResolveAsyncMarshalsWorkerCallBeforeReadingBukkitIdentity() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		com.bencodez.simpleapi.scheduler.BukkitScheduler scheduler =
+				mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+		AtomicReference<Runnable> platformTask = new AtomicReference<>();
+		doAnswer(invocation -> {
+			platformTask.set(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		java.util.concurrent.atomic.AtomicBoolean platformLane = new java.util.concurrent.atomic.AtomicBoolean(false);
+		bukkitStatic.when(Bukkit::getServer).thenReturn(mock(org.bukkit.Server.class));
+		bukkitStatic.when(Bukkit::isPrimaryThread).thenAnswer(ignored -> platformLane.get());
+		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
+
+		resolver.resolveAsync("WorkerName", resolved::set, failure -> fail(failure));
+
+		assertNull(resolved.get());
+		assertNotNull(platformTask.get());
+		bukkitStatic.verify(Bukkit::getOnlinePlayers, never());
+		platformLane.set(true);
+		platformTask.get().run();
+		assertEquals("WorkerName", resolved.get().finalName);
+		bukkitStatic.verify(Bukkit::getOnlinePlayers, atLeastOnce());
 	}
 
 	@Test

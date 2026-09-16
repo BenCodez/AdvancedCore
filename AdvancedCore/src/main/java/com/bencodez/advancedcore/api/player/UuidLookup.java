@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.player;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -18,19 +19,20 @@ import com.bencodez.advancedcore.api.user.UserStorage;
 
 public class UuidLookup {
 
-	private static final UuidLookup instance = new UuidLookup();
+	private static final UuidLookup instance = new UuidLookup(AdvancedCorePlugin.getInstance());
 
 	public static UuidLookup getInstance() {
 		return instance;
 	}
 
-	private final AdvancedCorePlugin plugin = AdvancedCorePlugin.getInstance();
+	private final AdvancedCorePlugin plugin;
 
 	// Fast local caches
 	private final ConcurrentHashMap<String, String> uuidToName = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<String, String> nameToUuid = new ConcurrentHashMap<>();
 
-	private UuidLookup() {
+	private UuidLookup(AdvancedCorePlugin plugin) {
+		this.plugin = plugin;
 		// Cache is owned here.
 	}
 	
@@ -63,6 +65,37 @@ public class UuidLookup {
 	 * @return UUID string, or "" if not found / invalid input
 	 */
 	public String getUUID(String playerName) {
+		return resolveUUID(playerName, true);
+	}
+
+	/**
+	 * Resolve a UUID using only an already-known UUID, offline-mode derivation,
+	 * an online player, or the local cache. Shared-storage callers use this while
+	 * running on Bukkit's primary thread. In particular, this intentionally does
+	 * not use Bukkit's OfflinePlayer fallback: a name lookup there can block on a
+	 * profile/UUID lookup.
+	 *
+	 * @param playerName player name or UUID string
+	 * @return UUID string, or "" if no non-storage lookup succeeds
+	 */
+	public String getUUIDWithoutStorage(String playerName) {
+		return resolveUUID(playerName, false);
+	}
+
+	/** Resolve a UUID only through persisted plugin storage; never calls Bukkit. */
+	public String getUUIDFromStorage(String playerName) {
+		if (playerName == null || playerName.trim().isEmpty()) return "";
+		UUID parsed = tryParseUuid(playerName.trim());
+		if (parsed != null) return parsed.toString();
+		String stored = lookupUuidFromStorageOrFlatfile(playerName.trim());
+		if (isUuidString(stored)) {
+			cacheMapping(stored, playerName);
+			return stored;
+		}
+		return "";
+	}
+
+	private String resolveUUID(String playerName, boolean allowStorageLookup) {
 		if (playerName == null) {
 			return "";
 		}
@@ -109,12 +142,19 @@ public class UuidLookup {
 			return cachedUuid;
 		}
 
-		// Storage lookup (mysql/sqlite) OR flatfile fallback
-		String storageUuid = lookupUuidFromStorageOrFlatfile(playerName);
-		if (isUuidString(storageUuid)) {
-			cacheMapping(storageUuid, playerName);
-			return storageUuid;
+		if (allowStorageLookup) {
+			// Storage lookup (mysql/sqlite) OR flatfile fallback
+			String storageUuid = lookupUuidFromStorageOrFlatfile(playerName);
+			if (isUuidString(storageUuid)) {
+				cacheMapping(storageUuid, playerName);
+				return storageUuid;
+			}
 		}
+
+		// This fallback can perform a blocking native/profile lookup. It is retained
+		// for the established public getUUID API, but is never available to the
+		// primary-thread-safe lookup above.
+		if (!allowStorageLookup) return "";
 
 		// Bukkit OfflinePlayer fallback (best-effort)
 		try {
@@ -179,11 +219,10 @@ public class UuidLookup {
 			cacheMapping(uuid, liveName);
 
 			// Update stored PlayerName if it changed / missing
-			if (user != null && user.getUserData().hasData()) {
-				if (storedName.isEmpty() || storedName.equalsIgnoreCase("Error getting name")
-						|| !liveName.equals(storedName)) {
-					user.getData().setString("PlayerName", liveName);
-				}
+			if (user != null && (storedName.isEmpty() || storedName.equalsIgnoreCase("Error getting name")
+					|| !liveName.equals(storedName))) {
+				user.setPlayerName(liveName);
+				user.updateName(false);
 			}
 			return liveName;
 		}
@@ -195,6 +234,26 @@ public class UuidLookup {
 		}
 
 		return "";
+	}
+
+	/** Resolve an online player's name without touching persisted user storage. */
+	public String getOnlinePlayerName(String uuid) {
+		if (!isUuidString(uuid)) return "";
+		Player player = Bukkit.getPlayer(UUID.fromString(uuid.trim()));
+		if (player == null || !isGoodName(player.getName())) return "";
+		String liveName = player.getName();
+		cacheMapping(uuid, liveName);
+		return liveName;
+	}
+
+	/** Resolve a stored player name without accessing Bukkit's thread-confined API. */
+	public String getPlayerNameFromStorage(AdvancedCoreUser user, String uuid, boolean useCache) {
+		if (user == null || !isUuidString(uuid)) return "";
+		String storedName = safeString(
+				user.getData().getString("PlayerName", UserDataFetchMode.fromBooleans(useCache, true)));
+		if (!isGoodName(storedName)) return "";
+		cacheMapping(uuid, storedName);
+		return storedName;
 	}
 
 	/**
@@ -308,12 +367,25 @@ public class UuidLookup {
 	 */
 
 	private String lookupUuidFromStorageOrFlatfile(String playerName) {
+		var users = plugin.getUserManager();
+		var manager = users == null ? null : users.getDataManager();
+		// Lifecycle-admission failures must propagate to the async failure callback;
+		// treating them as "not found" could incorrectly start profile resolution
+		// while a replacement is changing the authoritative store.
+		return manager == null ? lookupUuidFromNativeOwnerOrFlatfile(playerName, null)
+				: manager.withSharedNativeUserStorage(
+						owner -> lookupUuidFromNativeOwnerOrFlatfile(playerName, owner));
+	}
+
+	private String lookupUuidFromNativeOwnerOrFlatfile(String playerName,
+			AdvancedCorePlugin.UserStorageOwner owner) {
 		try {
-			if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-				String uuid = plugin.getMysql().getUUID(playerName);
+			UserStorage storage = owner == null ? plugin.getStorageType() : owner.storageType();
+			if (storage.equals(UserStorage.MYSQL)) {
+				String uuid = (owner == null ? plugin.getMysql() : owner.mysql()).getUUIDOrThrow(playerName);
 				return safeString(uuid);
-			} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-				String uuid = plugin.getSQLiteUserTable().getUUID(playerName);
+			} else if (storage.equals(UserStorage.SQLITE)) {
+				String uuid = (owner == null ? plugin.getSQLiteUserTable() : owner.table()).getUUIDOrThrow(playerName);
 				return safeString(uuid);
 			} else {
 				// Flatfile / other: scan all UUIDs (expensive but consistent with prior
@@ -322,7 +394,9 @@ public class UuidLookup {
 					if (!isUuidString(uuid)) {
 						continue;
 					}
-					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid));
+					// Persisted lookup may run on the storage worker; do not ask this
+					// temporary user to resolve its Bukkit-facing display name.
+					AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(uuid), false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					String storedName = user.getData().getString("PlayerName", UserDataFetchMode.NO_CACHE);
 					if (storedName != null && storedName.equalsIgnoreCase(playerName)) {
@@ -331,8 +405,8 @@ public class UuidLookup {
 					}
 				}
 			}
-		} catch (Exception e) {
-			plugin.debug(e);
+		} catch (SQLException storageFailure) {
+			throw new IllegalStateException("Unable to query persisted player identity", storageFailure);
 		}
 		return "";
 	}

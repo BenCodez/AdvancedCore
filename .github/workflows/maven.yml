@@ -11,7 +11,7 @@ on:
   push:
     branches: [ "master" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "codex/shared-sql-backend-init" ]
 
 permissions:
   contents: write   # required for dependency submission

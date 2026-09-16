@@ -194,6 +194,13 @@ public class UserDataCacheSchedulingTest {
 		values.clear();
 
 		assertTrue(cache.isCached("PlayerName"));
+		assertTrue(cache.hasPublishedStorageSnapshot());
+	}
+
+	@Test
+	public void emptyPlaceholderIsNotACompletedStorageSnapshot() {
+		UserDataCache cache = new UserDataCache(mock(UserDataManager.class), UUID.randomUUID());
+		assertFalse(cache.hasPublishedStorageSnapshot());
 	}
 
 	@Test

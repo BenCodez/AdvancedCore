@@ -7,11 +7,18 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserData;
+import com.bencodez.advancedcore.api.user.UserDataFetchMode;
+import com.bencodez.advancedcore.api.user.UserManager;
+import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.data.DataValue;
 
@@ -80,5 +87,39 @@ public class UserDataTest {
 		assertEquals(2, out.size());
 		assertSame(v1, out.get("a"));
 		assertSame(v2, out.get("b"));
+	}
+
+	@Test
+	public void incompleteSharedCacheNeverMasqueradesAsPersistedDefaults() {
+		UUID uuid = UUID.randomUUID();
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		UserDataCache placeholder = mock(UserDataCache.class);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getUUID()).thenReturn(uuid.toString());
+		when(user.getCache()).thenReturn(placeholder);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.usesSharedSqlStorage(UserStorage.SQLITE)).thenReturn(true);
+		when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
+		when(manager.mustDeferSharedStorageAccess()).thenReturn(true);
+		when(placeholder.hasPublishedStorageSnapshot()).thenReturn(false);
+
+		UserData data = new UserData(user);
+		assertThrows(IllegalStateException.class,
+				() -> data.getInt("Points", 17, UserDataFetchMode.DEFAULT));
+		assertThrows(IllegalStateException.class,
+				() -> data.getString("PlayerName", UserDataFetchMode.DEFAULT));
+		assertThrows(IllegalStateException.class, data::getValues);
+		assertThrows(IllegalStateException.class, data::hasData);
+
+		when(placeholder.hasPublishedStorageSnapshot()).thenReturn(true);
+		assertEquals(17, data.getInt("Points", 17, UserDataFetchMode.DEFAULT));
+		assertEquals("", data.getString("PlayerName", UserDataFetchMode.DEFAULT));
+		assertThrows(IllegalStateException.class,
+				() -> data.getInt("Points", 17, UserDataFetchMode.NO_CACHE));
 	}
 }
