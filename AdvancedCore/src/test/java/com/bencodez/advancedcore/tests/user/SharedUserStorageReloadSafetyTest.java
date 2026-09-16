@@ -295,18 +295,38 @@ class SharedUserStorageReloadSafetyTest {
     }
 
 	@Test
-	void conversionEnumeratesTheActiveMysqlSourceBeforeOpeningSqlite() {
+	void conversionEnumeratesTheActiveMysqlSourceBeforeOpeningSqlite() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
 		UserManager users = mock(UserManager.class);
 		UserDataManager manager = new UserDataManager(plugin);
 		SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
 		MySQL activeMysql = mock(MySQL.class);
+		Database temporaryDatabase = mock(Database.class);
+		SQLite temporarySqlite = mock(SQLite.class);
+		when(temporaryDatabase.getDB()).thenReturn(temporarySqlite);
+		AdvancedCorePlugin.UserStorageOwner activeOwner =
+				new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, activeMysql, null);
+		UUID uuid = UUID.randomUUID();
+		HashMap<UUID, ArrayList<com.bencodez.simpleapi.sql.Column>> source = new HashMap<>();
+		source.put(uuid, new ArrayList<>());
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserData data = mock(UserData.class);
 		when(plugin.getUserManager()).thenReturn(users);
 		when(users.getDataManager()).thenReturn(manager);
-		doReturn(new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, activeMysql, null))
-				.when(plugin).getNativeUserStorageOwner();
-		when(users.getAllKeys(UserStorage.MYSQL)).thenReturn(new HashMap<>());
-		doNothing().when(plugin).loadUserAPI(UserStorage.SQLITE);
+		setPrivateField(plugin, "nativeUserStorageOwner", activeOwner);
+		setPrivateField(plugin, "mysql", activeMysql);
+		when(users.getAllKeys(UserStorage.MYSQL)).thenReturn(source);
+		when(users.getUser(uuid, false)).thenReturn(user);
+		when(user.getData()).thenReturn(data);
+		when(data.convert(any())).thenReturn(new HashMap<>());
+		doReturn(mock(java.util.logging.Logger.class)).when(plugin).getLogger();
+		doAnswer(ignored -> {
+			setPrivateField(plugin, "database", temporaryDatabase);
+			setPrivateField(plugin, "nativeUserStorageOwner",
+					new AdvancedCorePlugin.UserStorageOwner(UserStorage.SQLITE, null,
+							mock(com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class)));
+			return null;
+		}).when(plugin).loadUserAPI(UserStorage.SQLITE);
 		doNothing().when(plugin).debug(any(String.class));
 		doAnswer(call -> {
 			call.getArgument(0, Runnable.class).run();
@@ -319,6 +339,12 @@ class SharedUserStorageReloadSafetyTest {
 			verify(plugin, never()).loadUserAPI(UserStorage.MYSQL);
 			verify(users).getAllKeys(UserStorage.MYSQL);
 			verify(plugin).loadUserAPI(UserStorage.SQLITE);
+			verify(data).setValues(eq(UserStorage.SQLITE), any(HashMap.class));
+			assertSame(activeOwner, plugin.getNativeUserStorageOwner());
+			assertSame(activeMysql, getPrivateField(plugin, "mysql"));
+			assertNull(getPrivateField(plugin, "database"));
+			verify(activeMysql, never()).close();
+			verify(temporarySqlite).closeConnection();
 		} finally {
 			manager.getTimer().shutdownNow();
 		}

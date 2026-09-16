@@ -576,7 +576,9 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		UserStorageOwner activeOwner = getNativeUserStorageOwner();
 		MySQL activeMysql = mysql;
 		Database activeDatabase = database;
-		boolean restoreActiveTarget = activeOwner != null && activeOwner.storageType() == to;
+		boolean restoreActiveOwner = activeOwner != null
+				&& (activeOwner.storageType() == from || activeOwner.storageType() == to);
+		boolean targetAlreadyActive = restoreActiveOwner && activeOwner.storageType() == to;
 		NativeUserStorageClose temporarySource = null;
 		try {
 			if (activeOwner == null || activeOwner.storageType() != from) loadUserAPI(from);
@@ -586,7 +588,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			HashMap<UUID, ArrayList<Column>> cols = getUserManager().getAllKeys(from);
 			// The source is fully materialized now. Restore every legacy provider field,
 			// not only the owner snapshot, before writes target the already-active store.
-			if (restoreActiveTarget) {
+			if (targetAlreadyActive) {
 				temporarySource = restoreConversionTarget(activeOwner, activeMysql, activeDatabase);
 			} else {
 				loadUserAPI(to);
@@ -607,7 +609,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 			}
 			debug("Convert finished!");
 		} finally {
-			if (restoreActiveTarget) {
+			if (restoreActiveOwner) {
 				if (temporarySource == null) {
 					temporarySource = restoreConversionTarget(activeOwner, activeMysql, activeDatabase);
 				}
