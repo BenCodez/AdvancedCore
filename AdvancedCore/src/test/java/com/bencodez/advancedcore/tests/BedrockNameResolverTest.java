@@ -20,7 +20,9 @@ import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.bedrock.BedrockNameResolver;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 
@@ -248,9 +250,10 @@ public class BedrockNameResolverTest {
 		setDetect(resolver, detect);
 
 		AdvancedCoreUser javaUser = mock(AdvancedCoreUser.class);
+		when(javaUser.userDataFetechMode(UserDataFetchMode.NO_CACHE)).thenReturn(javaUser);
 		when(javaUser.isBedrockUser()).thenReturn(false);
-		when(userManager.userExistStored("SharedName")).thenReturn(true);
-		when(userManager.getUser("SharedName")).thenReturn(javaUser);
+		UUID storedUuid = UUID.randomUUID();
+		when(userManager.getUser(storedUuid, false)).thenReturn(javaUser);
 		UUID bedrockUuid = UUID.randomUUID();
 		detect.set(bedrockUuid, true);
 		Player bedrockPlayer = mock(Player.class);
@@ -268,14 +271,21 @@ public class BedrockNameResolverTest {
 		}).when(dataManager).deferSharedStorageResult(any(), any(), any());
 		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
 
-		resolver.resolveAsync("SharedName", resolved::set, failure -> fail(failure));
+		UuidLookup lookup = mock(UuidLookup.class);
+		when(lookup.getUUIDFromStorage("SharedName")).thenReturn(storedUuid.toString());
+		try (MockedStatic<UuidLookup> lookups = mockStatic(UuidLookup.class)) {
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			resolver.resolveAsync("SharedName", resolved::set, failure -> fail(failure));
 
-		assertNull(resolved.get(), "persisted identity must complete before an ambiguous fallback is credited");
-		assertNotNull(worker.get());
-		worker.get().run();
-		assertEquals("SharedName", resolved.get().finalName);
-		assertFalse(resolved.get().isBedrock);
-		assertEquals("db-java", resolved.get().rationale);
+			assertNull(resolved.get(), "persisted identity must complete before an ambiguous fallback is credited");
+			assertNotNull(worker.get());
+			worker.get().run();
+			assertEquals("SharedName", resolved.get().finalName);
+			assertFalse(resolved.get().isBedrock);
+			assertEquals("db-java", resolved.get().rationale);
+			verify(userManager).getUser(storedUuid, false);
+			verify(userManager, never()).getUser(any(String.class));
+		}
 	}
 
 	@Test

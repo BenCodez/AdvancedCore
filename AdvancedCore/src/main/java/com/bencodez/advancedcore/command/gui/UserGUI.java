@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.command.gui;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -100,12 +101,13 @@ public class UserGUI {
 				new ValueRequest(plugin, plugin.getDialogService()).requestString(clickEvent.getPlayer(), "",
 						rewards, true, null, new StringListener() {
 
-							@Override
+						@Override
 							public void onInput(Player player, String value) {
-								AdvancedCoreUser user = plugin.getUserManager()
-										.getUser(UserGUI.getInstance().getCurrentPlayer(player));
-								plugin.getRewardHandler().giveReward(user, value, new RewardOptions());
-								player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
+								String target = UserGUI.getInstance().getCurrentPlayer(player);
+								withResolvedEditorUser(player, target, user -> {
+									plugin.getRewardHandler().giveReward(user, value, new RewardOptions());
+									player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
+								});
 							}
 						});
 			}
@@ -116,13 +118,14 @@ public class UserGUI {
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				Player player = clickEvent.getPlayer();
-				final AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
-				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
-						values -> {
-							if (isCurrentEditorTarget(player, playerName)) openEditData(player, playerName, user, values);
-						},
-						failure -> player.sendMessage("Unable to read user data; check the server log."), player)) return;
-				openEditData(player, playerName, user, user.getData().getValues());
+				withResolvedEditorUser(player, playerName, user -> {
+					if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
+							values -> {
+								if (isCurrentEditorTarget(player, playerName)) openEditData(player, playerName, user, values);
+							},
+							failure -> player.sendMessage("Unable to read user data; check the server log."), player)) return;
+					openEditData(player, playerName, user, user.getData().getValues());
+				});
 			}
 		});
 
@@ -130,12 +133,15 @@ public class UserGUI {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
-				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
-						values -> sendUserData(user, values),
-						failure -> clickEvent.getPlayer().sendMessage("Unable to read user data; check the server log."),
-						clickEvent.getPlayer())) return;
-				sendUserData(user, user.getData().getValues());
+				Player player = clickEvent.getPlayer();
+				withResolvedEditorUser(player, playerName, user -> {
+					if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
+							values -> {
+								if (isCurrentEditorTarget(player, playerName)) sendUserData(user, values);
+							},
+							failure -> player.sendMessage("Unable to read user data; check the server log."), player)) return;
+					sendUserData(user, user.getData().getValues());
+				});
 			}
 		});
 
@@ -153,6 +159,20 @@ public class UserGUI {
 			return false;
 		}
 		return playerName.equals(getCurrentPlayer(player));
+	}
+
+	/** Resolve an editor target without blocking Bukkit and reject stale callbacks. */
+	void withResolvedEditorUser(Player player, String playerName, Consumer<AdvancedCoreUser> action) {
+		if (playerName == null || !isCurrentEditorTarget(player, playerName)) return;
+		plugin.getUserManager().getUserAsync(playerName,
+				user -> {
+					if (isCurrentEditorTarget(player, playerName)) action.accept(user);
+				},
+				failure -> {
+					if (isCurrentEditorTarget(player, playerName)) {
+						player.sendMessage("Unable to resolve user; check the server log.");
+					}
+				});
 	}
 
 	/** Build inventories only after a deferred shared-store read returns to Bukkit's thread. */

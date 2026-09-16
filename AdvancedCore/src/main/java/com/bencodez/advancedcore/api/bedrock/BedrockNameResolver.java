@@ -11,7 +11,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 
@@ -275,8 +277,8 @@ public final class BedrockNameResolver {
 
 	private Result resolvePersisted(String incomingName, Result fallback) {
 		try {
-			if (userManager.userExistStored(incomingName)) {
-				AdvancedCoreUser user = userManager.getUser(incomingName);
+			AdvancedCoreUser user = getPersistedUser(incomingName);
+			if (user != null) {
 				boolean bedrock = user.isBedrockUser();
 				return new Result(addPrefixIfNeeded(incomingName, bedrock), bedrock,
 						"db-" + (bedrock ? "bedrock" : "java"));
@@ -292,8 +294,8 @@ public final class BedrockNameResolver {
 		}
 		String prefixed = buildPrefixedVariant(incomingName);
 		try {
-			if (prefixed != null && userManager.userExistStored(prefixed)) {
-				AdvancedCoreUser user = userManager.getUser(prefixed);
+			AdvancedCoreUser user = prefixed == null ? null : getPersistedUser(prefixed);
+			if (user != null) {
 				boolean bedrock = user.isBedrockUser();
 				return new Result(bedrock ? prefixed : incomingName, bedrock,
 						"db-" + (bedrock ? "bedrock" : "java") + "-prefixed-variant");
@@ -301,6 +303,13 @@ public final class BedrockNameResolver {
 		} catch (Throwable ignored) {
 		}
 		return fallback;
+	}
+
+	/** Resolve only through persisted plugin storage; this method never calls Bukkit. */
+	private AdvancedCoreUser getPersistedUser(String playerName) {
+		String uuid = UuidLookup.getInstance().getUUIDFromStorage(playerName);
+		if (uuid == null || uuid.isBlank()) return null;
+		return userManager.getUser(UUID.fromString(uuid), false).userDataFetechMode(UserDataFetchMode.NO_CACHE);
 	}
 
 	public Result resolveWithoutDb(String incomingName) {
