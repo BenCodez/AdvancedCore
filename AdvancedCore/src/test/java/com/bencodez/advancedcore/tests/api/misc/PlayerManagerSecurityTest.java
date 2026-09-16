@@ -119,6 +119,7 @@ class PlayerManagerSecurityTest {
 		CompletableFuture<PlayerProfile> update = new CompletableFuture<>();
 		when(plugin.getBedrockHandle()).thenReturn(resolver);
 		when(plugin.getOptions()).thenReturn(options);
+		when(options.isOnlineMode()).thenReturn(true);
 		when(plugin.getUserManager()).thenReturn(users);
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
 		when(users.getDataManager()).thenReturn(dataManager);
@@ -157,6 +158,47 @@ class PlayerManagerSecurityTest {
 	}
 
 	@Test
+	void asynchronousServerHistoryUsesOfflineUuidWithoutProfileLookup() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		BedrockNameResolver resolver = mock(BedrockNameResolver.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		OfflinePlayer offline = mock(OfflinePlayer.class);
+		ArrayList<Runnable> callbacks = new ArrayList<>();
+		UUID offlineUuid = UUID.nameUUIDFromBytes("OfflinePlayer:OfflineUser".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		when(plugin.getBedrockHandle()).thenReturn(resolver);
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(options.isOnlineMode()).thenReturn(false);
+		when(options.getBedrockPlayerPrefix()).thenReturn(".");
+		when(offline.hasPlayedBefore()).thenReturn(true);
+		org.mockito.Mockito.doAnswer(call -> {
+			@SuppressWarnings("unchecked") java.util.function.Consumer<BedrockNameResolver.Result> success =
+					call.getArgument(1);
+			success.accept(new BedrockNameResolver.Result("OfflineUser", false, "none"));
+			return null;
+		}).when(resolver).resolveAsync(org.mockito.ArgumentMatchers.eq("OfflineUser"),
+				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+		org.mockito.Mockito.doAnswer(call -> { callbacks.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTask(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+		PlayerManager.getInstance().setPlugin(plugin);
+		AtomicReference<Boolean> valid = new AtomicReference<>();
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayerExact("OfflineUser")).thenReturn(null);
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(() -> Bukkit.getOfflinePlayer(offlineUuid)).thenReturn(offline);
+			PlayerManager.getInstance().isValidUserAsync("OfflineUser", true, valid::set,
+					failure -> org.junit.jupiter.api.Assertions.fail(failure));
+			assertEquals(1, callbacks.size());
+			bukkit.verify(() -> Bukkit.createPlayerProfile(org.mockito.ArgumentMatchers.anyString()), never());
+			callbacks.remove(0).run();
+			assertTrue(valid.get());
+			bukkit.verify(() -> Bukkit.getOfflinePlayer(offlineUuid));
+		}
+	}
+
+	@Test
 	void asynchronousServerHistoryDoesNotTouchBukkitAfterShutdown() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
@@ -168,6 +210,7 @@ class PlayerManagerSecurityTest {
 		when(plugin.getBedrockHandle()).thenReturn(resolver);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(options.isOnlineMode()).thenReturn(true);
 		when(options.getBedrockPlayerPrefix()).thenReturn(".");
 		when(pendingProfile.update()).thenReturn(update);
 		when(resolvedProfile.getUniqueId()).thenReturn(UUID.randomUUID());
@@ -207,6 +250,7 @@ class PlayerManagerSecurityTest {
 		when(plugin.getBedrockHandle()).thenReturn(resolver);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(options.isOnlineMode()).thenReturn(true);
 		when(options.getBedrockPlayerPrefix()).thenReturn(".");
 		when(pendingProfile.update()).thenReturn(update);
 		when(resolvedProfile.getUniqueId()).thenReturn(UUID.randomUUID());
@@ -250,6 +294,7 @@ class PlayerManagerSecurityTest {
 		when(plugin.getBedrockHandle()).thenReturn(resolver);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(options.isOnlineMode()).thenReturn(true);
 		when(options.getBedrockPlayerPrefix()).thenReturn(".");
 		when(pendingProfile.update()).thenReturn(update);
 		when(resolvedProfile.getUniqueId()).thenReturn(uuid);

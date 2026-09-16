@@ -1,5 +1,6 @@
 package com.bencodez.advancedcore.api.misc;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
@@ -288,6 +289,11 @@ public class PlayerManager {
 	private void checkServerHistoryAsync(String candidate, Consumer<Boolean> success, Consumer<Throwable> failure) {
 		try {
 			var scheduler = plugin.getBukkitScheduler();
+			if (!plugin.getOptions().isOnlineMode()) {
+				UUID offlineUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + candidate).getBytes(StandardCharsets.UTF_8));
+				dispatchValidationResult(scheduler, () -> completeServerHistory(offlineUuid, success, failure), failure);
+				return;
+			}
 			Bukkit.createPlayerProfile(candidate).update().whenComplete((profile, problem) ->
 					dispatchValidationResult(scheduler, () -> {
 						if (problem != null) {
@@ -299,19 +305,23 @@ public class PlayerManager {
 							success.accept(false);
 							return;
 						}
-						boolean valid;
-						try {
-							OfflinePlayer offline = Bukkit.getOfflinePlayer(uuid);
-							valid = offline.hasPlayedBefore() || offline.isOnline() || offline.getLastPlayed() != 0;
-						} catch (RuntimeException | Error historyFailure) {
-							failure.accept(historyFailure);
-							return;
-						}
-						success.accept(valid);
+						completeServerHistory(uuid, success, failure);
 					}, failure));
 		} catch (RuntimeException failureReason) {
 			failure.accept(failureReason);
 		}
+	}
+
+	private void completeServerHistory(UUID uuid, Consumer<Boolean> success, Consumer<Throwable> failure) {
+		boolean valid;
+		try {
+			OfflinePlayer offline = Bukkit.getOfflinePlayer(uuid);
+			valid = offline.hasPlayedBefore() || offline.isOnline() || offline.getLastPlayed() != 0;
+		} catch (RuntimeException | Error historyFailure) {
+			failure.accept(historyFailure);
+			return;
+		}
+		success.accept(valid);
 	}
 
 	private void dispatchValidationResult(com.bencodez.simpleapi.scheduler.BukkitScheduler scheduler,
