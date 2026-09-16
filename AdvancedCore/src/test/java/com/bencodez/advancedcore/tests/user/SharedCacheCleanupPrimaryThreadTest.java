@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -467,6 +468,66 @@ class SharedCacheCleanupPrimaryThreadTest {
 			assertSame(failure, manager.getLastDeferredStorageFailure());
 			verify(logger).log(Level.SEVERE, "Deferred user-cache cleanup failed", failure);
 			assertTrue(manager.getUserDataCache().containsKey(uuid));
+		}
+	}
+
+	@Test
+	void completionAwareCacheClearWaitsForWorkerAndReportsItsFailure() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		Logger logger = mock(Logger.class);
+		when(plugin.getLogger()).thenReturn(logger);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		UserDataCache cache = mock(UserDataCache.class);
+		RuntimeException failure = new IllegalStateException("flush failed");
+		org.mockito.Mockito.doThrow(failure).when(cache).clearCache();
+		manager.getUserDataCache().put(uuid, cache);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		Server server = mock(Server.class);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+			CompletableFuture<Void> completion = manager.clearCacheAsyncCompletion().toCompletableFuture();
+			verify(worker).execute(task.capture());
+			assertFalse(completion.isDone());
+			task.getValue().run();
+			CompletionException reported = assertThrows(CompletionException.class, completion::join);
+			assertSame(failure, reported.getCause());
+			assertSame(failure, manager.getLastDeferredStorageFailure());
+			assertTrue(manager.getUserDataCache().containsKey(uuid));
+		}
+	}
+
+	@Test
+	void completionAwareCacheClearReturnsRejectedStage() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.getLogger()).thenReturn(mock(Logger.class));
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		RejectedExecutionException rejection = new RejectedExecutionException("stopped");
+		org.mockito.Mockito.doThrow(rejection).when(worker).execute(any(Runnable.class));
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			CompletableFuture<Void> completion = manager.clearCacheAsyncCompletion().toCompletableFuture();
+			CompletionException reported = assertThrows(CompletionException.class, completion::join);
+			assertSame(rejection, reported.getCause());
+			assertSame(rejection, manager.getLastDeferredStorageFailure());
 		}
 	}
 

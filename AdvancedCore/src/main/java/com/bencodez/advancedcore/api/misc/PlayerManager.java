@@ -281,9 +281,56 @@ public class PlayerManager {
 				success.accept(false);
 				return;
 			}
-			OfflinePlayer offline = Bukkit.getOfflinePlayer(candidate);
-			success.accept(offline.hasPlayedBefore() || offline.isOnline() || offline.getLastPlayed() != 0);
+			checkServerHistoryAsync(candidate, success, failure);
 		}, failure);
+	}
+
+	private void checkServerHistoryAsync(String candidate, Consumer<Boolean> success, Consumer<Throwable> failure) {
+		try {
+			var scheduler = plugin.getBukkitScheduler();
+			Bukkit.createPlayerProfile(candidate).update().whenComplete((profile, problem) ->
+					dispatchValidationResult(scheduler, () -> {
+						if (problem != null) {
+							failure.accept(problem);
+							return;
+						}
+						UUID uuid = profile == null ? null : profile.getUniqueId();
+						if (uuid == null) {
+							success.accept(false);
+							return;
+						}
+						boolean valid;
+						try {
+							OfflinePlayer offline = Bukkit.getOfflinePlayer(uuid);
+							valid = offline.hasPlayedBefore() || offline.isOnline() || offline.getLastPlayed() != 0;
+						} catch (RuntimeException | Error historyFailure) {
+							failure.accept(historyFailure);
+							return;
+						}
+						success.accept(valid);
+					}, failure));
+		} catch (RuntimeException failureReason) {
+			failure.accept(failureReason);
+		}
+	}
+
+	private void dispatchValidationResult(com.bencodez.simpleapi.scheduler.BukkitScheduler scheduler,
+			Runnable callback, Consumer<Throwable> failure) {
+		try {
+			if (Bukkit.getServer() == null) {
+				failure.accept(new IllegalStateException("Server stopped before player validation completed"));
+				return;
+			}
+			scheduler.runTask(plugin, () -> {
+				if (Bukkit.getServer() == null) {
+					failure.accept(new IllegalStateException("Server stopped before player validation completed"));
+					return;
+				}
+				callback.run();
+			});
+		} catch (RuntimeException failureReason) {
+			failure.accept(failureReason);
+		}
 	}
 
 	/**
@@ -311,13 +358,6 @@ public class PlayerManager {
 			return true;
 		}
 
-		boolean userExist = plugin.getUserManager().userExist(name);
-		plugin.extraDebug("isValidUser: userExist(" + name + ")=" + userExist);
-		if (userExist) {
-			plugin.extraDebug("isValidUser: returning true from userExist");
-			return true;
-		}
-
 		if (name.isEmpty()) {
 			plugin.extraDebug("isValidUser: empty name -> false");
 			return false;
@@ -325,9 +365,22 @@ public class PlayerManager {
 
 		boolean sharedPrimary = plugin.getUserManager().getDataManager() != null
 				&& plugin.getUserManager().getDataManager().mustDeferSharedStorageAccess();
-		boolean isBedrock = sharedPrimary
-				? plugin.getBedrockHandle().resolveWithoutDb(name).isBedrock
-				: plugin.getBedrockHandle().isBedrock(name);
+		if (sharedPrimary) {
+			var resolved = plugin.getBedrockHandle().resolveWithoutDb(name);
+			String rationale = resolved.rationale == null ? "" : resolved.rationale;
+			boolean exactCached = "cache-java".equals(rationale) || rationale.startsWith("cache-bedrock");
+			plugin.extraDebug("isValidUser: shared-primary cache result=" + rationale);
+			return resolved.isBedrock || exactCached;
+		}
+
+		boolean userExist = plugin.getUserManager().userExist(name);
+		plugin.extraDebug("isValidUser: userExist(" + name + ")=" + userExist);
+		if (userExist) {
+			plugin.extraDebug("isValidUser: returning true from userExist");
+			return true;
+		}
+
+		boolean isBedrock = plugin.getBedrockHandle().isBedrock(name);
 		plugin.extraDebug("isValidUser: isBedrock(" + name + ")=" + isBedrock);
 		if (isBedrock) {
 			plugin.extraDebug("isValidUser: bedrock match -> true (skipping offline check)");

@@ -444,9 +444,16 @@ public class CommandLoader {
 					}
 				}
 
-				plugin.getUserManager().getDataManager().clearCache();
-
-				sender.sendMessage(MessageAPI.colorize("&cCache cleared"));
+				plugin.getUserManager().getDataManager().clearCacheAsyncCompletion().whenComplete((ignored, failure) ->
+						runCommandCallback(sender, () -> {
+							if (failure == null) sender.sendMessage(MessageAPI.colorize("&cCache cleared"));
+							else {
+								Throwable cause = failure.getCause() == null ? failure : failure.getCause();
+								if (plugin.getLogger() != null) plugin.getLogger().severe(
+										"Cache clear failed (" + cause.getClass().getSimpleName() + ")");
+								sender.sendMessage(MessageAPI.colorize("&cFailed to clear cache; see the server log"));
+							}
+						}));
 
 			}
 		});

@@ -36,6 +36,37 @@ import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 class CommandLoaderBulkPermissionTest {
 	@Test
+	void clearCacheReportsOnlyAfterCompletion() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		CommandSender sender = mock(CommandSender.class);
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		when(plugin.getStorageType()).thenReturn(com.bencodez.advancedcore.api.user.UserStorage.SQLITE);
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getAnonymousLogger());
+		when(users.getDataManager()).thenReturn(dataManager);
+		when(dataManager.clearCacheAsyncCompletion()).thenReturn(completion);
+		ArrayList<Runnable> callbacks = new ArrayList<>();
+		doAnswer(call -> { callbacks.add(call.getArgument(1, Runnable.class)); return null; })
+				.when(scheduler).runTask(any(), any());
+		CommandHandler command = find(new CommandLoader(plugin), "ClearCache");
+
+		command.execute(sender, new String[] { "ClearCache" });
+		verify(sender, never()).sendMessage(org.mockito.ArgumentMatchers.contains("Cache cleared"));
+		assertTrue(callbacks.isEmpty());
+		completion.complete(null);
+		assertEquals(1, callbacks.size());
+		verify(sender, never()).sendMessage(org.mockito.ArgumentMatchers.contains("Cache cleared"));
+		callbacks.remove(0).run();
+		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Cache cleared"));
+	}
+
+	@Test
 	void forceCacheReportsOnlyTheDeferredPopulationOutcome() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		UserManager users = mock(UserManager.class);

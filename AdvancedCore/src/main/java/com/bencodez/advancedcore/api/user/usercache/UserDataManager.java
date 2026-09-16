@@ -946,6 +946,36 @@ public class UserDataManager {
 		clearCacheNow();
 	}
 
+	/** Complete only after all cache entries have been flushed and retired. */
+	public CompletionStage<Void> clearCacheAsyncCompletion() {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		if (!mustDeferSharedStorageAccess()) {
+			try {
+				clearCacheNow();
+				completion.complete(null);
+			} catch (RuntimeException | Error failure) {
+				completion.completeExceptionally(failure);
+			}
+			return completion;
+		}
+		try {
+			timer.execute(() -> {
+				lastDeferredStorageFailure.set(null);
+				try {
+					clearCacheNow();
+					completion.complete(null);
+				} catch (RuntimeException | Error failure) {
+					reportDeferredStorageFailure(failure);
+					completion.completeExceptionally(failure);
+				}
+			});
+		} catch (RejectedExecutionException rejected) {
+			reportDeferredStorageFailure(rejected);
+			completion.completeExceptionally(rejected);
+		}
+		return completion;
+	}
+
 	private void clearCacheNow() {
 		// Do not retain this map lock while flushing through a shared runtime gate.
 		// A population already admitted by that runtime needs the map read lock to
