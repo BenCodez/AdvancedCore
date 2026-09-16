@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.api.misc;
 
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -235,10 +236,64 @@ public class PlayerManager {
 		return false;
 	}
 
+	/** @deprecated Use {@link #isValidUserAsync(String, boolean, Consumer, Consumer)} for persisted identity. */
+	@Deprecated
 	public boolean isValidUser(String name) {
 		return isValidUser(name, false);
 	}
 
+	/**
+	 * Validates online, persisted Java, and persisted Bedrock identities without
+	 * blocking the primary thread. The callback is returned through the resolver's
+	 * platform-safe completion path when shared storage must be consulted.
+	 */
+	public void isValidUserAsync(String name, boolean checkServer, Consumer<Boolean> success,
+			Consumer<Throwable> failure) {
+		if (success == null || failure == null) throw new IllegalArgumentException("Validation callbacks are required");
+		if (name == null) {
+			success.accept(false);
+			return;
+		}
+		String candidate = name.trim();
+		if (candidate.isEmpty()) {
+			success.accept(false);
+			return;
+		}
+		Player online = Bukkit.getPlayerExact(candidate);
+		if (online != null) {
+			success.accept(true);
+			return;
+		}
+		plugin.getBedrockHandle().resolveAsync(candidate, resolved -> {
+			String rationale = resolved.rationale == null ? "" : resolved.rationale;
+			boolean exactPersisted = "db-java".equals(rationale) || "cache-java".equals(rationale)
+					|| rationale.startsWith("db-bedrock") || rationale.startsWith("cache-bedrock");
+			if (resolved.isBedrock || exactPersisted) {
+				success.accept(true);
+				return;
+			}
+			if (!checkServer) {
+				success.accept(false);
+				return;
+			}
+			String prefix = plugin.getOptions().getBedrockPlayerPrefix();
+			if (prefix != null && !prefix.isEmpty() && candidate.startsWith(prefix)) {
+				success.accept(false);
+				return;
+			}
+			OfflinePlayer offline = Bukkit.getOfflinePlayer(candidate);
+			success.accept(offline.hasPlayedBefore() || offline.isOnline() || offline.getLastPlayed() != 0);
+		}, failure);
+	}
+
+	/**
+	 * Immediate compatibility validation. On shared-storage server threads this
+	 * intentionally uses only online/cache Bedrock evidence; callers requiring an
+	 * authoritative offline result must use {@link #isValidUserAsync}.
+	 *
+	 * @deprecated Use {@link #isValidUserAsync(String, boolean, Consumer, Consumer)}.
+	 */
+	@Deprecated
 	@SuppressWarnings("deprecation")
 	public boolean isValidUser(String name, boolean checkServer) {
 		plugin.extraDebug("isValidUser START: name=" + name + ", checkServer=" + checkServer);
@@ -268,7 +323,11 @@ public class PlayerManager {
 			return false;
 		}
 
-		boolean isBedrock = plugin.getBedrockHandle().isBedrock(name);
+		boolean sharedPrimary = plugin.getUserManager().getDataManager() != null
+				&& plugin.getUserManager().getDataManager().mustDeferSharedStorageAccess();
+		boolean isBedrock = sharedPrimary
+				? plugin.getBedrockHandle().resolveWithoutDb(name).isBedrock
+				: plugin.getBedrockHandle().isBedrock(name);
 		plugin.extraDebug("isValidUser: isBedrock(" + name + ")=" + isBedrock);
 		if (isBedrock) {
 			plugin.extraDebug("isValidUser: bedrock match -> true (skipping offline check)");

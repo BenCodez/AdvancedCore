@@ -186,6 +186,16 @@ public class MySQL extends AbstractSqlTable {
 	 */
 	public void forEachUser(java.util.function.BiConsumer<UUID, ArrayList<Column>> perUser,
 			java.util.function.Consumer<Integer> onFinished) {
+		forEachUser(perUser, onFinished, failure -> {
+			throw new IllegalStateException("Failed to enumerate MySQL users", failure);
+		});
+	}
+
+	/** Streams users and reports a terminal read/callback failure without claiming completion. */
+	public void forEachUser(java.util.function.BiConsumer<UUID, ArrayList<Column>> perUser,
+			java.util.function.Consumer<Integer> onFinished, java.util.function.Consumer<Throwable> onFailure) {
+		java.util.Objects.requireNonNull(perUser, "perUser");
+		java.util.Objects.requireNonNull(onFailure, "onFailure");
 
 		int processed = 0;
 		final int pageSize = 500;
@@ -234,6 +244,7 @@ public class MySQL extends AbstractSqlTable {
 					final int colCount = meta.getColumnCount();
 
 					while (rs.next()) {
+						rowsThisPage++;
 						ArrayList<Column> cols = new ArrayList<>(colCount);
 
 						UUID uuid = null;
@@ -298,25 +309,25 @@ public class MySQL extends AbstractSqlTable {
 							cols.add(rCol);
 						}
 
-						if (uuid != null && uuidStrForSeek != null) {
-							rowsThisPage++;
-							processed++;
-
-							// advance cursor based on the last row
+						if (uuidStrForSeek != null) {
 							if (dbType == DbType.POSTGRESQL) {
-								lastUuidPg = uuid;
+								if (uuid != null) lastUuidPg = uuid;
 							} else {
 								lastUuidMy = uuidStrForSeek;
 							}
+						}
 
+						if (uuid != null && uuidStrForSeek != null) {
+							processed++;
 							page.add(new java.util.AbstractMap.SimpleEntry<>(uuid, cols));
 						}
 					}
 				}
 
-			} catch (SQLException e) {
+			} catch (SQLException | RuntimeException e) {
 				debug(e);
-				break;
+				onFailure.accept(e);
+				return;
 			}
 
 			// Run callbacks outside DB resources
@@ -325,11 +336,18 @@ public class MySQL extends AbstractSqlTable {
 					perUser.accept(entry.getKey(), entry.getValue());
 				} catch (Throwable t) {
 					debug(t);
+					onFailure.accept(t);
+					return;
 				}
 			}
 
-			if (rowsThisPage == 0) {
+			if (rowsThisPage < pageSize) {
 				break;
+			}
+			if ((dbType == DbType.POSTGRESQL && lastUuidPg == null)
+					|| (dbType != DbType.POSTGRESQL && lastUuidMy == null)) {
+				onFailure.accept(new IllegalStateException("User enumeration page did not advance its UUID cursor"));
+				return;
 			}
 		}
 

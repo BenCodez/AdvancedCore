@@ -11,7 +11,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStartup;
 
@@ -72,6 +74,16 @@ public final class BedrockNameResolver {
 	 */
 	public boolean isBedrock(String name) {
 		return isBedrockName(name);
+	}
+
+	/**
+	 * Checks persisted Bedrock identity without blocking the primary thread.
+	 * Callers that need an authoritative offline result should prefer this over
+	 * the synchronous compatibility method.
+	 */
+	public void isBedrockAsync(String name, Consumer<Boolean> success, Consumer<Throwable> failure) {
+		if (success == null) throw new IllegalArgumentException("Resolution callback is required");
+		resolveAsync(name, result -> success.accept(result.isBedrock), failure);
 	}
 
 	/**
@@ -161,6 +173,12 @@ public final class BedrockNameResolver {
 	public Result resolve(String incomingName) {
 		if (incomingName == null || incomingName.isEmpty())
 			return new Result(incomingName, false, "empty-name");
+		// This synchronous compatibility API cannot wait for the shared storage
+		// worker. On Bukkit's primary thread it therefore uses only online/cache
+		// evidence; callers that need persisted identity must resolve off-thread.
+		if (userManager.getDataManager() != null && userManager.getDataManager().mustDeferSharedStorageAccess()) {
+			return resolveWithoutDb(incomingName);
+		}
 
 		// An exact online identity is authoritative.
 		Player match = findOnlineExact(incomingName);
@@ -227,28 +245,94 @@ public final class BedrockNameResolver {
 		return new Result(incomingName, false, "unknown-default-java");
 	}
 
+	/**
+	 * Resolve persisted identity without blocking Bukkit's primary thread. Online
+	 * and exact cached identities complete immediately; an otherwise ambiguous
+	 * name checks the shared store on its worker and returns on the platform
+	 * scheduler.
+	 *
+	 * @param incomingName player name to resolve
+	 * @param success resolved identity callback
+	 * @param failure worker-admission failure callback
+	 */
+	public void resolveAsync(String incomingName, Consumer<Result> success, Consumer<Throwable> failure) {
+		if (success == null || failure == null) throw new IllegalArgumentException("Resolution callbacks are required");
+		if (incomingName == null || incomingName.isEmpty()) {
+			success.accept(new Result(incomingName, false, "empty-name"));
+			return;
+		}
+		if (userManager.getDataManager() == null || !userManager.getDataManager().mustDeferSharedStorageAccess()) {
+			try { success.accept(resolve(incomingName)); }
+			catch (RuntimeException problem) { failure.accept(problem); }
+			return;
+		}
+
+		Result exact = resolveExactWithoutDb(incomingName);
+		if (exact != null) {
+			success.accept(exact);
+			return;
+		}
+		// Capture Bukkit/online evidence before entering the storage worker. The
+		// worker performs only persisted lookups and then applies this fallback.
+		Result fallback = resolveWithoutDb(incomingName);
+		try {
+			if (!userManager.getDataManager().deferSharedStorageResult(
+					() -> resolvePersisted(incomingName, fallback), success, failure)) {
+				success.accept(resolve(incomingName));
+			}
+		} catch (RuntimeException rejected) {
+			failure.accept(rejected);
+		}
+	}
+
+	private Result resolvePersisted(String incomingName, Result fallback) {
+		try {
+			AdvancedCoreUser user = getPersistedUser(incomingName);
+			if (user != null) {
+				boolean bedrock = user.isBedrockUser();
+				return new Result(addPrefixIfNeeded(incomingName, bedrock), bedrock,
+						"db-" + (bedrock ? "bedrock" : "java"));
+			}
+		} catch (Throwable ignored) {
+		}
+
+		// Match the synchronous ordering: a captured online or cached prefixed
+		// identity wins once an exact persisted identity has been ruled out.
+		if (fallback.rationale.startsWith("online-")
+				|| fallback.rationale.startsWith("cache-") && fallback.rationale.endsWith("-prefixed-variant")) {
+			return fallback;
+		}
+		String prefixed = buildPrefixedVariant(incomingName);
+		try {
+			AdvancedCoreUser user = prefixed == null ? null : getPersistedUser(prefixed);
+			if (user != null) {
+				boolean bedrock = user.isBedrockUser();
+				return new Result(bedrock ? prefixed : incomingName, bedrock,
+						"db-" + (bedrock ? "bedrock" : "java") + "-prefixed-variant");
+			}
+		} catch (Throwable ignored) {
+		}
+		return fallback;
+	}
+
+	/** Resolve only through persisted plugin storage; this method never calls Bukkit. */
+	private AdvancedCoreUser getPersistedUser(String playerName) {
+		String uuid = UuidLookup.getInstance().getUUIDFromStorage(playerName);
+		if (uuid == null || uuid.isBlank()) return null;
+		return userManager.getUser(UUID.fromString(uuid), false).userDataFetechMode(UserDataFetchMode.NO_CACHE);
+	}
+
 	public Result resolveWithoutDb(String incomingName) {
 		if (incomingName == null || incomingName.isEmpty()) {
 			return new Result(incomingName, false, "empty-name");
 		}
 
-		// Exact online identity first.
-		Player match = findOnlineExact(incomingName);
-		if (match != null) {
-			return resultFromOnlineMatch(incomingName, match);
-		}
-
-		// Cache on incoming name
-		Boolean cached = getCachedCaseInsensitive(incomingName);
-		if (cached != null) {
-			boolean bedrock = cached;
-			String finalName = addPrefixIfNeeded(incomingName, bedrock);
-			return new Result(finalName, bedrock, "cache-" + (bedrock ? "bedrock" : "java"));
-		}
+		Result exact = resolveExactWithoutDb(incomingName);
+		if (exact != null) return exact;
 
 		// Only use an online prefixed/stripped fallback when no exact cached identity
 		// exists.
-		match = findOnlinePrefixedOrStripped(incomingName);
+		Player match = findOnlinePrefixedOrStripped(incomingName);
 		if (match != null) {
 			return resultFromOnlineMatch(incomingName, match);
 		}
@@ -270,6 +354,15 @@ public final class BedrockNameResolver {
 		}
 
 		return new Result(incomingName, false, "unknown-no-db");
+	}
+
+	private Result resolveExactWithoutDb(String incomingName) {
+		Player match = findOnlineExact(incomingName);
+		if (match != null) return resultFromOnlineMatch(incomingName, match);
+		Boolean cached = getCachedCaseInsensitive(incomingName);
+		if (cached == null) return null;
+		return new Result(addPrefixIfNeeded(incomingName, cached), cached,
+				"cache-" + (cached ? "bedrock" : "java"));
 	}
 
 	/**

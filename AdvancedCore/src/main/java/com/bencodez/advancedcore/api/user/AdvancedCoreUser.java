@@ -51,6 +51,7 @@ import com.bencodez.advancedcore.api.rewards.RewardBuilder;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.actionbar.ActionBar;
 import com.bencodez.simpleapi.player.PlayerUtils;
@@ -513,7 +514,16 @@ public class AdvancedCoreUser {
 	public AdvancedCoreUser(AdvancedCorePlugin plugin, String playerName) {
 		this.plugin = plugin;
 		loadData();
-		uuid = PlayerManager.getInstance().getUUID(playerName);
+		UserManager users = plugin.getUserManager();
+		UserDataManager manager = users == null ? null : users.getDataManager();
+		boolean deferredPrimaryLookup = manager != null && manager.mustDeferSharedStorageAccess();
+		uuid = deferredPrimaryLookup
+				? com.bencodez.advancedcore.api.player.UuidLookup.getInstance().getUUIDWithoutStorage(playerName)
+				: PlayerManager.getInstance().getUUID(playerName);
+		if (deferredPrimaryLookup && (uuid == null || uuid.isBlank())) {
+			throw new IllegalStateException("Cannot synchronously construct an unresolved user on the primary thread; "
+					+ "use UserManager.getUserAsync");
+		}
 		setPlayerName(playerName);
 	}
 
@@ -528,7 +538,7 @@ public class AdvancedCoreUser {
 		this.plugin = plugin;
 		this.uuid = uuid.toString();
 		loadData();
-		setPlayerName(PlayerManager.getInstance().getPlayerName(this, this.uuid, false));
+		loadPlayerNameWithoutBlocking(false);
 	}
 
 	/**
@@ -545,7 +555,7 @@ public class AdvancedCoreUser {
 		this.loadName = loadName;
 		loadData();
 		if (this.loadName) {
-			setPlayerName(PlayerManager.getInstance().getPlayerName(this, this.uuid));
+			loadPlayerNameWithoutBlocking(true);
 		}
 
 	}
@@ -567,9 +577,38 @@ public class AdvancedCoreUser {
 			loadData();
 		}
 		if (this.loadName) {
-			setPlayerName(PlayerManager.getInstance().getPlayerName(this, this.uuid));
+			loadPlayerNameWithoutBlocking(true);
 		}
 
+	}
+
+	/** Resolve a UUID-backed name without performing shared SQL on Bukkit's primary thread. */
+	private void loadPlayerNameWithoutBlocking(boolean useCache) {
+		com.bencodez.advancedcore.api.player.UuidLookup lookup =
+				com.bencodez.advancedcore.api.player.UuidLookup.getInstance();
+		String cached = lookup.getCachedName(uuid);
+		if (!cached.isEmpty()) {
+			setPlayerName(cached);
+			return;
+		}
+		UserDataManager manager = plugin.getUserManager().getDataManager();
+		if (!manager.mustDeferSharedStorageAccess()) {
+			setPlayerName(PlayerManager.getInstance().getPlayerName(this, uuid, useCache));
+			return;
+		}
+		// Bukkit identity access stays on the caller's platform thread. Only the
+		// persisted fallback below is eligible for the storage worker.
+		String online = lookup.getOnlinePlayerName(uuid);
+		if (!online.isEmpty()) {
+			setPlayerName(online);
+			updateName(false);
+			return;
+		}
+		if (manager.deferSharedStorageResult(
+				() -> lookup.getPlayerNameFromStorage(this, uuid, useCache),
+				this::setPlayerName, plugin::debug)) return;
+		// Shared storage retired between the eligibility check and admission. Do not
+		// fall back to Bukkit or persisted access on this primary-thread race.
 	}
 
 	/**
@@ -1033,6 +1072,15 @@ public class AdvancedCoreUser {
 	 * Checks and processes delayed/timed rewards.
 	 */
 	public void checkDelayedTimedRewards() {
+		checkDelayedTimedRewards(null);
+	}
+
+	private void checkDelayedTimedRewards(ReplayPlayerState capturedState) {
+		UserDataManager manager = sharedReplayDataManager();
+		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
+			ReplayPlayerState state = captureReplayPlayerState();
+			if (manager.deferSharedStorageWork(() -> checkDelayedTimedRewards(state))) return;
+		}
 		plugin.debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
 		for (Entry<String, Long> entry : timed.entrySet()) {
@@ -1057,6 +1105,8 @@ public class AdvancedCoreUser {
 					}
 					RewardOptions replayOptions = new RewardOptions().setCheckTimed(false)
 							.withPlaceHolder(ArrayUtils.fromString(placeholders));
+					if (capturedState != null) replayOptions.captureLivePlayerState(
+							capturedState.online(), capturedState.vanished());
 					replayOptions.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
 					replayOptions.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
 					replayOptions.setAsyncReplayRegistryFingerprints(queuedReplay.asyncReplayRegistryFingerprints);
@@ -1101,18 +1151,28 @@ public class AdvancedCoreUser {
 	 * Check offline rewards.
 	 */
 	public void checkOfflineRewards() {
+		checkOfflineRewards(null);
+	}
+
+	private void checkOfflineRewards(ReplayPlayerState capturedState) {
 		if (!plugin.getOptions().isProcessRewards()) {
 			plugin.debug("Processing rewards is disabled");
 			return;
 		}
+		UserDataManager manager = sharedReplayDataManager();
+		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
+			ReplayPlayerState state = captureReplayPlayerState();
+			if (manager.deferSharedStorageWork(() -> checkOfflineRewards(state))) return;
+		}
 		if (isCheckWorld()) {
 			setCheckWorld(false);
 		}
-		dispatchOfflineRewards(false);
+		dispatchOfflineRewards(false, capturedState);
 	}
 
-	private void dispatchOfflineRewards(boolean force) {
+	private CompletionStage<Void> dispatchOfflineRewards(boolean force, ReplayPlayerState capturedState) {
 		ArrayList<String> rewards = new ArrayList<>(getOfflineRewards());
+		ArrayList<CompletableFuture<Void>> completions = new ArrayList<>();
 		for (String rewardEntry : rewards) {
 			if (rewardEntry == null || rewardEntry.equals("null")) {
 				continue;
@@ -1132,6 +1192,8 @@ public class AdvancedCoreUser {
 
 			RewardOptions options = new RewardOptions().setOnline(false).setCheckTimed(false)
 					.withPlaceHolder(ArrayUtils.fromString(placeholderStr));
+			if (capturedState != null) options.captureLivePlayerState(
+					capturedState.online(), capturedState.vanished());
 			if (force) options.setGiveOffline(false).forceOffline();
 			options.setCompletedAsyncInjections(queuedReplay.completedAsyncInjections);
 			options.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
@@ -1141,7 +1203,7 @@ public class AdvancedCoreUser {
 			AtomicReference<String> currentEntry = new AtomicReference<>(rewardEntry);
 			options.setAsyncReplayCheckpointConsumer(checkpoint -> checkpointOfflineReward(currentEntry, checkpoint));
 
-			enqueuePersistedReplay(() -> {
+			completions.add(enqueuePersistedReplay(() -> {
 				CompletionStage<Void> replay;
 				try {
 					replay = plugin.getRewardHandler().givePersistedQueueRewardAsync(this,
@@ -1157,8 +1219,9 @@ public class AdvancedCoreUser {
 					else restoreOfflineReward(currentEntry.get(), failure);
 					return null;
 				});
-			});
+			}).toCompletableFuture());
 		}
+		return CompletableFuture.allOf(completions.toArray(CompletableFuture[]::new));
 	}
 
 	/**
@@ -1167,14 +1230,15 @@ public class AdvancedCoreUser {
 	 * its own restore path retains the queue entry, while the next occurrence must
 	 * still be allowed to start without blocking a caller thread.
 	 */
-	private void enqueuePersistedReplay(Supplier<CompletionStage<Void>> replay) {
+	private CompletionStage<Void> enqueuePersistedReplay(Supplier<CompletionStage<Void>> replay) {
 		ReplayClaims claims;
 		CompletableFuture<Void> previous;
-		CompletableFuture<Void> next = new CompletableFuture<>();
+		CompletableFuture<Void> serialTail = new CompletableFuture<>();
+		CompletableFuture<Void> outcome = new CompletableFuture<>();
 		synchronized (plugin) {
 			claims = replayClaims();
 			previous = claims.serialReplayTail;
-			claims.serialReplayTail = next;
+			claims.serialReplayTail = serialTail;
 		}
 		previous.whenComplete((ignored, previousFailure) -> {
 			CompletionStage<Void> stage;
@@ -1182,15 +1246,19 @@ public class AdvancedCoreUser {
 				stage = replay.get();
 				if (stage == null) throw new IllegalStateException("Persisted reward replay returned no completion stage");
 			} catch (Throwable failure) {
-				next.complete(null);
+				outcome.completeExceptionally(failure);
+				serialTail.complete(null);
 				releaseReplayClaimsIfEmpty(claims);
 				return;
 			}
 			stage.whenComplete((result, failure) -> {
-				next.complete(null);
+				if (failure == null) outcome.complete(null);
+				else outcome.completeExceptionally(failure);
+				serialTail.complete(null);
 				releaseReplayClaimsIfEmpty(claims);
 			});
 		});
+		return outcome;
 	}
 
 	private void checkpointOfflineReward(AtomicReference<String> currentEntry, Reward.ReplayCheckpoint checkpoint) {
@@ -1438,14 +1506,59 @@ public class AdvancedCoreUser {
 	 * Forces running of offline rewards without processing checks.
 	 */
 	public void forceRunOfflineRewards() {
+		forceRunOfflineRewardsAsync();
+	}
+
+	/** Complete after every claimed forced replay reaches its durable terminal handling. */
+	public CompletionStage<Void> forceRunOfflineRewardsAsync() {
+		return forceRunOfflineRewardsAsync(null);
+	}
+
+	private CompletionStage<Void> forceRunOfflineRewardsAsync(ReplayPlayerState capturedState) {
 		if (!plugin.getOptions().isProcessRewards()) {
 			plugin.debug("Processing rewards is disabled");
-			return;
+			return CompletableFuture.completedFuture(null);
+		}
+		UserDataManager manager = sharedReplayDataManager();
+		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
+			ReplayPlayerState state = captureReplayPlayerState();
+			CompletableFuture<Void> completion = new CompletableFuture<>();
+			try {
+				if (manager.deferSharedStorageWork(() -> {
+					try {
+						forceRunOfflineRewardsAsync(state).whenComplete((ignored, failure) -> {
+							if (failure == null) completion.complete(null);
+							else completion.completeExceptionally(failure);
+						});
+					} catch (Throwable failure) {
+						completion.completeExceptionally(failure);
+					}
+				})) return completion;
+			} catch (RuntimeException | Error failure) {
+				completion.completeExceptionally(failure);
+				return completion;
+			}
 		}
 
 		setCheckWorld(false);
-		dispatchOfflineRewards(true);
+		try {
+			return dispatchOfflineRewards(true, capturedState);
+		} catch (RuntimeException | Error failure) {
+			return CompletableFuture.failedFuture(failure);
+		}
 	}
+
+	private ReplayPlayerState captureReplayPlayerState() {
+		boolean vanished = plugin.getOptions().isTreatVanishAsOffline() && isVanished();
+		return new ReplayPlayerState(isOnline(), vanished);
+	}
+
+	private UserDataManager sharedReplayDataManager() {
+		UserManager users = plugin.getUserManager();
+		return users == null ? null : users.getDataManager();
+	}
+
+	private record ReplayPlayerState(boolean online, boolean vanished) { }
 
 	/**
 	 * Gets the user data cache.
@@ -3022,11 +3135,45 @@ public class AdvancedCoreUser {
 	 * @param force whether to force the update
 	 */
 	public void updateName(boolean force) {
-		if (getData().hasData() || force) {
-			String playerName = getData().getString("PlayerName", userDataFetchMode);
-			if (playerName == null || !playerName.equals(getPlayerName())) {
-				getData().setString("PlayerName", getPlayerName(), true);
-			}
+		UserData currentData = getData();
+		if (!force && plugin != null && plugin.getUserManager() != null
+				&& plugin.getUserManager().getDataManager().deferSharedStorageResult(
+						() -> readStoredName(currentData), storedName -> updateName(currentData, storedName), ignored -> {})) return;
+		updateName(currentData, force, force || currentData.hasData());
+	}
+
+	/** Read all persisted state needed by a deferred name update before returning to Bukkit. */
+	private StoredName readStoredName(UserData currentData) {
+		boolean hasData = currentData.hasData();
+		return new StoredName(hasData, hasData ? currentData.getString("PlayerName", userDataFetchMode) : null);
+	}
+
+	private void updateName(UserData currentData, StoredName storedName) {
+		if (!storedName.hasData) return;
+		String resolvedName = getPlayerName();
+		if (resolvedName == null || resolvedName.isBlank()) return;
+		if (storedName.value == null || !storedName.value.equals(resolvedName)) {
+			currentData.setString("PlayerName", resolvedName, true);
+		}
+	}
+
+	private static final class StoredName {
+		private final boolean hasData;
+		private final String value;
+
+		private StoredName(boolean hasData, String value) {
+			this.hasData = hasData;
+			this.value = value;
+		}
+	}
+
+	private void updateName(UserData currentData, boolean force, boolean hasData) {
+		if (!hasData && !force) return;
+		String resolvedName = getPlayerName();
+		if (resolvedName == null || resolvedName.isBlank()) return;
+		String storedName = currentData.getString("PlayerName", userDataFetchMode);
+		if (storedName == null || !storedName.equals(resolvedName)) {
+			currentData.setString("PlayerName", resolvedName, true);
 		}
 	}
 

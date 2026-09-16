@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -17,8 +18,59 @@ import org.mockito.MockedStatic;
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
+import com.bencodez.advancedcore.api.bedrock.BedrockNameResolver;
+import com.bencodez.advancedcore.api.user.UserManager;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 
 class PlayerManagerSecurityTest {
+	@Test
+	void asynchronousValidationUsesPersistedBedrockResolution() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		BedrockNameResolver resolver = mock(BedrockNameResolver.class);
+		when(plugin.getBedrockHandle()).thenReturn(resolver);
+		PlayerManager.getInstance().setPlugin(plugin);
+		org.mockito.Mockito.doAnswer(call -> {
+			@SuppressWarnings("unchecked") java.util.function.Consumer<BedrockNameResolver.Result> success =
+					call.getArgument(1);
+			success.accept(new BedrockNameResolver.Result(".StoredBedrock", true, "db-bedrock-prefixed-variant"));
+			return null;
+		}).when(resolver).resolveAsync(org.mockito.ArgumentMatchers.eq("StoredBedrock"),
+				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+		AtomicReference<Boolean> valid = new AtomicReference<>();
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayerExact("StoredBedrock")).thenReturn(null);
+			PlayerManager.getInstance().isValidUserAsync("StoredBedrock", false, valid::set,
+					failure -> org.junit.jupiter.api.Assertions.fail(failure));
+		}
+
+		assertTrue(valid.get());
+		org.mockito.Mockito.verify(resolver).resolveAsync(org.mockito.ArgumentMatchers.eq("StoredBedrock"),
+				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+	}
+
+	@Test
+	void legacyValidationKeepsPersistedResolutionOffTheSharedPrimaryPath() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		BedrockNameResolver resolver = mock(BedrockNameResolver.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(plugin.getBedrockHandle()).thenReturn(resolver);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		when(users.userExist("StoredBedrock")).thenReturn(false);
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(false);
+		when(resolver.isBedrock("StoredBedrock")).thenReturn(true);
+		PlayerManager.getInstance().setPlugin(plugin);
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayerExact("StoredBedrock")).thenReturn(null);
+			assertTrue(PlayerManager.getInstance().isValidUser("StoredBedrock", false));
+		}
+
+		org.mockito.Mockito.verify(resolver).isBedrock("StoredBedrock");
+		org.mockito.Mockito.verify(resolver, org.mockito.Mockito.never()).resolveWithoutDb("StoredBedrock");
+	}
 
 	@AfterEach
 	void tearDown() {
