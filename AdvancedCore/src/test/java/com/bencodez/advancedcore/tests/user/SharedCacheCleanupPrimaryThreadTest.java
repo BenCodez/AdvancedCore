@@ -114,7 +114,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 			MySQL mysql = mock(MySQL.class);
 			when(plugin.getMysql()).thenReturn(mysql);
 			UUID storedUuid = UUID.randomUUID();
-			when(mysql.getUUID("StoredOnly")).thenReturn(storedUuid.toString());
+			when(mysql.getUUIDOrThrow("StoredOnly")).thenReturn(storedUuid.toString());
 			assertEquals(storedUuid.toString(), lookup.getUUIDFromStorage("StoredOnly"));
 			bukkit.verify(() -> Bukkit.getPlayer(storedUuid), never());
 			bukkit.verify(() -> Bukkit.getPlayerExact("StoredOnly"), never());
@@ -147,7 +147,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
 		when(plugin.getSQLiteUserTable()).thenReturn(staleTable);
 		UUID uuid = UUID.randomUUID();
-		when(activeMysql.getUUID("PinnedUser")).thenReturn(uuid.toString());
+		when(activeMysql.getUUIDOrThrow("PinnedUser")).thenReturn(uuid.toString());
 		when(manager.withSharedNativeUserStorage(any())).thenAnswer(invocation ->
 				invocation.getArgument(0, Function.class).apply(
 						new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, activeMysql, null)));
@@ -156,8 +156,29 @@ class SharedCacheCleanupPrimaryThreadTest {
 		UuidLookup lookup = constructor.newInstance(plugin);
 
 		assertEquals(uuid.toString(), lookup.getUUIDFromStorage("PinnedUser"));
-		verify(activeMysql).getUUID("PinnedUser");
-		verify(staleTable, never()).getUUID(any(String.class));
+		verify(activeMysql).getUUIDOrThrow("PinnedUser");
+		verify(staleTable, never()).getUUIDOrThrow(any(String.class));
+	}
+
+	@Test
+	void persistedUuidLookupPropagatesNativeQueryFailure() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(manager);
+		MySQL mysql = mock(MySQL.class);
+		when(mysql.getUUIDOrThrow("UnavailableUser")).thenThrow(new java.sql.SQLException("database unavailable"));
+		when(manager.withSharedNativeUserStorage(any())).thenAnswer(invocation ->
+				invocation.getArgument(0, Function.class).apply(
+						new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, mysql, null)));
+		Constructor<UuidLookup> constructor = UuidLookup.class.getDeclaredConstructor(AdvancedCorePlugin.class);
+		constructor.setAccessible(true);
+		UuidLookup lookup = constructor.newInstance(plugin);
+
+		IllegalStateException failure = assertThrows(IllegalStateException.class,
+				() -> lookup.getUUIDFromStorage("UnavailableUser"));
+		assertTrue(failure.getCause() instanceof java.sql.SQLException);
 	}
 
 	@Test

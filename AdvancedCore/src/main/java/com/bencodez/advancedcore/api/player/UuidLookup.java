@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.api.player;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -381,10 +382,10 @@ public class UuidLookup {
 		try {
 			UserStorage storage = owner == null ? plugin.getStorageType() : owner.storageType();
 			if (storage.equals(UserStorage.MYSQL)) {
-				String uuid = (owner == null ? plugin.getMysql() : owner.mysql()).getUUID(playerName);
+				String uuid = (owner == null ? plugin.getMysql() : owner.mysql()).getUUIDOrThrow(playerName);
 				return safeString(uuid);
 			} else if (storage.equals(UserStorage.SQLITE)) {
-				String uuid = (owner == null ? plugin.getSQLiteUserTable() : owner.table()).getUUID(playerName);
+				String uuid = (owner == null ? plugin.getSQLiteUserTable() : owner.table()).getUUIDOrThrow(playerName);
 				return safeString(uuid);
 			} else {
 				// Flatfile / other: scan all UUIDs (expensive but consistent with prior
@@ -404,8 +405,8 @@ public class UuidLookup {
 					}
 				}
 			}
-		} catch (Exception e) {
-			plugin.debug(e);
+		} catch (SQLException storageFailure) {
+			throw new IllegalStateException("Unable to query persisted player identity", storageFailure);
 		}
 		return "";
 	}

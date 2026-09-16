@@ -413,6 +413,16 @@ public class MySQL extends AbstractSqlTable {
 	}
 
 	public String getUUID(String playerName) {
+		try {
+			return getUUIDOrThrow(playerName);
+		} catch (SQLException e) {
+			debug(e);
+			return null;
+		}
+	}
+
+	/** Query a persisted UUID while allowing authoritative lookup failures to propagate. */
+	public String getUUIDOrThrow(String playerName) throws SQLException {
 		String query = "SELECT " + qi("uuid") + " FROM " + qi(tableName) + " WHERE " + qi("PlayerName") + "=?;";
 		plugin.devDebug("DB QUERY: " + query);
 
@@ -434,8 +444,6 @@ public class MySQL extends AbstractSqlTable {
 					}
 				}
 			}
-		} catch (SQLException e) {
-			debug(e);
 		}
 		return null;
 	}

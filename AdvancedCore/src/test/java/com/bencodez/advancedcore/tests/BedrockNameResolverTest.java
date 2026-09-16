@@ -289,6 +289,90 @@ public class BedrockNameResolverTest {
 	}
 
 	@Test
+	public void testResolveAsyncPropagatesPersistedLookupFailure() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(userManager.getDataManager()).thenReturn(dataManager);
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+
+		AtomicReference<Runnable> worker = new AtomicReference<>();
+		doAnswer(invocation -> {
+			Supplier<?> storage = invocation.getArgument(0);
+			@SuppressWarnings("unchecked") Consumer<Object> success = invocation.getArgument(1);
+			@SuppressWarnings("unchecked") Consumer<Throwable> failure = invocation.getArgument(2);
+			worker.set(() -> {
+				try {
+					success.accept(storage.get());
+				} catch (RuntimeException problem) {
+					failure.accept(problem);
+				}
+			});
+			return true;
+		}).when(dataManager).deferSharedStorageResult(any(), any(), any());
+		IllegalStateException storageFailure = new IllegalStateException("storage unavailable");
+		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+		UuidLookup lookup = mock(UuidLookup.class);
+		when(lookup.getUUIDFromStorage("SharedName")).thenThrow(storageFailure);
+
+		try (MockedStatic<UuidLookup> lookups = mockStatic(UuidLookup.class)) {
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			resolver.resolveAsync("SharedName", resolved::set, failed::set);
+			worker.get().run();
+		}
+
+		assertNull(resolved.get());
+		assertSame(storageFailure, failed.get());
+		verify(lookup, never()).getUUIDFromStorage(".SharedName");
+	}
+
+	@Test
+	public void testResolveAsyncPropagatesPrefixedPersistedLookupFailure() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(userManager.getDataManager()).thenReturn(dataManager);
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+
+		AtomicReference<Runnable> worker = new AtomicReference<>();
+		doAnswer(invocation -> {
+			Supplier<?> storage = invocation.getArgument(0);
+			@SuppressWarnings("unchecked") Consumer<Object> success = invocation.getArgument(1);
+			@SuppressWarnings("unchecked") Consumer<Throwable> failure = invocation.getArgument(2);
+			worker.set(() -> {
+				try {
+					success.accept(storage.get());
+				} catch (RuntimeException problem) {
+					failure.accept(problem);
+				}
+			});
+			return true;
+		}).when(dataManager).deferSharedStorageResult(any(), any(), any());
+		IllegalStateException storageFailure = new IllegalStateException("storage unavailable");
+		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+		UuidLookup lookup = mock(UuidLookup.class);
+		when(lookup.getUUIDFromStorage("SharedName")).thenReturn(null);
+		when(lookup.getUUIDFromStorage(".SharedName")).thenThrow(storageFailure);
+
+		try (MockedStatic<UuidLookup> lookups = mockStatic(UuidLookup.class)) {
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			resolver.resolveAsync("SharedName", resolved::set, failed::set);
+			worker.get().run();
+		}
+
+		assertNull(resolved.get());
+		assertSame(storageFailure, failed.get());
+	}
+
+	@Test
 	public void testIsBedrockAsyncUsesPersistedResolution() throws Exception {
 		UserManager userManager = mock(UserManager.class);
 		UserDataManager dataManager = mock(UserDataManager.class);

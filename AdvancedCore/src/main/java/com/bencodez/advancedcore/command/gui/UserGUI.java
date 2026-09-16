@@ -165,14 +165,23 @@ public class UserGUI {
 	void withResolvedEditorUser(Player player, String playerName, Consumer<AdvancedCoreUser> action) {
 		if (playerName == null || !isCurrentEditorTarget(player, playerName)) return;
 		plugin.getUserManager().getUserAsync(playerName,
-				user -> {
+				user -> scheduleEditorCallback(player, () -> {
 					if (isCurrentEditorTarget(player, playerName)) action.accept(user);
-				},
-				failure -> {
+				}),
+				failure -> scheduleEditorCallback(player, () -> {
 					if (isCurrentEditorTarget(player, playerName)) {
 						player.sendMessage("Unable to resolve user; check the server log.");
 					}
-				});
+				}));
+	}
+
+	/** Return deferred identity callbacks to the editor's owning Folia region. */
+	private void scheduleEditorCallback(Player player, Runnable callback) {
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, callback, player);
+		} catch (RuntimeException schedulingFailure) {
+			plugin.debug(schedulingFailure);
+		}
 	}
 
 	/** Build inventories only after a deferred shared-store read returns to Bukkit's thread. */

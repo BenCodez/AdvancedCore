@@ -286,14 +286,11 @@ public final class BedrockNameResolver {
 	}
 
 	private Result resolvePersisted(String incomingName, Result fallback) {
-		try {
-			AdvancedCoreUser user = getPersistedUser(incomingName);
-			if (user != null) {
-				boolean bedrock = user.isBedrockUser();
-				return new Result(addPrefixIfNeeded(incomingName, bedrock), bedrock,
-						"db-" + (bedrock ? "bedrock" : "java"));
-			}
-		} catch (Throwable ignored) {
+		AdvancedCoreUser user = getPersistedUser(incomingName);
+		if (user != null) {
+			boolean bedrock = user.isBedrockUser();
+			return new Result(addPrefixIfNeeded(incomingName, bedrock), bedrock,
+					"db-" + (bedrock ? "bedrock" : "java"));
 		}
 
 		// Match the synchronous ordering: a captured online or cached prefixed
@@ -303,14 +300,11 @@ public final class BedrockNameResolver {
 			return fallback;
 		}
 		String prefixed = buildPrefixedVariant(incomingName);
-		try {
-			AdvancedCoreUser user = prefixed == null ? null : getPersistedUser(prefixed);
-			if (user != null) {
-				boolean bedrock = user.isBedrockUser();
-				return new Result(bedrock ? prefixed : incomingName, bedrock,
-						"db-" + (bedrock ? "bedrock" : "java") + "-prefixed-variant");
-			}
-		} catch (Throwable ignored) {
+		user = prefixed == null ? null : getPersistedUser(prefixed);
+		if (user != null) {
+			boolean bedrock = user.isBedrockUser();
+			return new Result(bedrock ? prefixed : incomingName, bedrock,
+					"db-" + (bedrock ? "bedrock" : "java") + "-prefixed-variant");
 		}
 		return fallback;
 	}

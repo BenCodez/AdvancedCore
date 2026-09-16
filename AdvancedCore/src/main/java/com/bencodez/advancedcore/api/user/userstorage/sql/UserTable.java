@@ -584,6 +584,18 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 	}
 
 	public String getUUID(String playerName) {
+		try {
+			return getUUIDOrThrow(playerName);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		} catch (ArrayIndexOutOfBoundsException e) {
+			return null;
+		}
+	}
+
+	/** Query a persisted UUID while allowing authoritative lookup failures to propagate. */
+	public String getUUIDOrThrow(String playerName) throws SQLException {
 		String query = "SELECT uuid FROM " + getName() + " WHERE PlayerName=?;";
 
 		try (PreparedStatement sql = sqLite.getSQLConnection().prepareStatement(query)) {
@@ -600,9 +612,6 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 				}
 			}
 			rs.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		} catch (ArrayIndexOutOfBoundsException e) {
 		}
 		return null;
 	}
