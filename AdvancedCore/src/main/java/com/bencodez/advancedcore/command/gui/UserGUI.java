@@ -85,6 +85,7 @@ public class UserGUI {
 			player.sendMessage("Not enough permissions");
 			return;
 		}
+		setCurrentPlayer(player, playerName);
 		BInventory inv = new BInventory("UserGUI: " + playerName);
 		inv.addData("player", playerName);
 		inv.addButton(new BInventoryButton("Give Reward File", new String[] {}, new ItemStack(Material.STONE)) {
@@ -117,7 +118,9 @@ public class UserGUI {
 				Player player = clickEvent.getPlayer();
 				final AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
 				if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
-						values -> openEditData(player, playerName, user, values),
+						values -> {
+							if (isCurrentEditorTarget(player, playerName)) openEditData(player, playerName, user, values);
+						},
 						failure -> player.sendMessage("Unable to read user data; check the server log."), player)) return;
 				openEditData(player, playerName, user, user.getData().getValues());
 			}
@@ -141,6 +144,15 @@ public class UserGUI {
 		}
 
 		inv.openInventory(player);
+	}
+
+	/** Reject a deferred editor completion after permission or selection changed. */
+	boolean isCurrentEditorTarget(Player player, String playerName) {
+		if (!player.hasPermission("AdvancedCore.UserEdit")) {
+			player.sendMessage("Not enough permissions");
+			return false;
+		}
+		return playerName.equals(getCurrentPlayer(player));
 	}
 
 	/** Build inventories only after a deferred shared-store read returns to Bukkit's thread. */

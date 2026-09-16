@@ -8,6 +8,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -19,6 +22,7 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.bedrock.BedrockNameResolver;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 
 /**
  * Unit tests for {@link BedrockNameResolver}.
@@ -230,6 +234,48 @@ public class BedrockNameResolverTest {
 		assertTrue(r.isBedrock);
 		assertEquals(".OnlyStored", r.finalName);
 		assertEquals("db-bedrock-prefixed-variant", r.rationale);
+	}
+
+	@Test
+	public void testResolveAsyncChecksPersistedExactIdentityBeforeOnlinePrefixedFallback() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(userManager.getDataManager()).thenReturn(dataManager);
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		DetectStub detect = new DetectStub();
+		setDetect(resolver, detect);
+
+		AdvancedCoreUser javaUser = mock(AdvancedCoreUser.class);
+		when(javaUser.isBedrockUser()).thenReturn(false);
+		when(userManager.userExistStored("SharedName")).thenReturn(true);
+		when(userManager.getUser("SharedName")).thenReturn(javaUser);
+		UUID bedrockUuid = UUID.randomUUID();
+		detect.set(bedrockUuid, true);
+		Player bedrockPlayer = mock(Player.class);
+		when(bedrockPlayer.getName()).thenReturn(".SharedName");
+		when(bedrockPlayer.getUniqueId()).thenReturn(bedrockUuid);
+		mockOnlinePlayers(bedrockPlayer);
+
+		AtomicReference<Runnable> worker = new AtomicReference<>();
+		doAnswer(invocation -> {
+			Supplier<?> storage = invocation.getArgument(0);
+			@SuppressWarnings("unchecked")
+			Consumer<Object> success = invocation.getArgument(1);
+			worker.set(() -> success.accept(storage.get()));
+			return true;
+		}).when(dataManager).deferSharedStorageResult(any(), any(), any());
+		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
+
+		resolver.resolveAsync("SharedName", resolved::set, failure -> fail(failure));
+
+		assertNull(resolved.get(), "persisted identity must complete before an ambiguous fallback is credited");
+		assertNotNull(worker.get());
+		worker.get().run();
+		assertEquals("SharedName", resolved.get().finalName);
+		assertFalse(resolved.get().isBedrock);
+		assertEquals("db-java", resolved.get().rationale);
 	}
 
 	@Test

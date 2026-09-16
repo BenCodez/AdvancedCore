@@ -14,6 +14,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +36,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.bukkit.Bukkit;
+import org.bukkit.Server;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
@@ -54,6 +58,22 @@ import com.bencodez.simpleapi.sql.sqlite.Database;
 import com.bencodez.simpleapi.sql.sqlite.db.SQLite;
 
 class SharedUserStorageReloadSafetyTest {
+	@Test
+	void primaryThreadCompatibilityConversionDelegatesToTheAsyncEntryPoint() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+
+			plugin.convertDataStorage(UserStorage.SQLITE, UserStorage.MYSQL);
+
+			verify(scheduler).runTaskAsynchronously(eq(plugin), any(Runnable.class));
+			verify(plugin, never()).getUserManager();
+		}
+	}
+
 	@Test
 	void sharedStorageReloadExposesAnIncompleteCompletionStageUntilReplacementFinishes() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);

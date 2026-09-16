@@ -541,8 +541,19 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 */
 	public void convertDataStorage(UserStorage from, UserStorage to) {
 		if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
-			throw new IllegalStateException("User storage conversion must run asynchronously; use convertDataStorageAsync");
+			// Preserve the established void entry point for downstream command/plugin
+			// callers, but never perform the conversion's storage work on the server
+			// thread. Callers that need completion/failure reporting can use the stage API.
+			convertDataStorageAsync(from, to).whenComplete((ignored, failure) -> {
+				if (failure != null) getLogger().severe("User storage conversion failed: "
+						+ failure.getClass().getSimpleName());
+			});
+			return;
 		}
+		convertDataStorageOnWorker(from, to);
+	}
+
+	private void convertDataStorageOnWorker(UserStorage from, UserStorage to) {
 		getUserManager().getDataManager().runStorageMaintenance(() -> convertDataStorageNow(from, to));
 	}
 
@@ -556,7 +567,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		try {
 			getBukkitScheduler().runTaskAsynchronously(this, () -> {
 				try {
-					convertDataStorage(from, to);
+					convertDataStorageOnWorker(from, to);
 					result.complete(null);
 				} catch (Throwable failure) { result.completeExceptionally(failure); }
 			});
