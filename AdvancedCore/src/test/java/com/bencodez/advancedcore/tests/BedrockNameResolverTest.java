@@ -408,6 +408,37 @@ public class BedrockNameResolverTest {
 	}
 
 	@Test
+	public void testResolveAsyncMarshalsWorkerCallBeforeReadingBukkitIdentity() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		com.bencodez.simpleapi.scheduler.BukkitScheduler scheduler =
+				mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+		AtomicReference<Runnable> platformTask = new AtomicReference<>();
+		doAnswer(invocation -> {
+			platformTask.set(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		java.util.concurrent.atomic.AtomicBoolean platformLane = new java.util.concurrent.atomic.AtomicBoolean(false);
+		bukkitStatic.when(Bukkit::getServer).thenReturn(mock(org.bukkit.Server.class));
+		bukkitStatic.when(Bukkit::isPrimaryThread).thenAnswer(ignored -> platformLane.get());
+		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
+
+		resolver.resolveAsync("WorkerName", resolved::set, failure -> fail(failure));
+
+		assertNull(resolved.get());
+		assertNotNull(platformTask.get());
+		bukkitStatic.verify(Bukkit::getOnlinePlayers, never());
+		platformLane.set(true);
+		platformTask.get().run();
+		assertEquals("WorkerName", resolved.get().finalName);
+		bukkitStatic.verify(Bukkit::getOnlinePlayers, atLeastOnce());
+	}
+
+	@Test
 	public void testIsBedrock_uuidAuthoritative_true() throws Exception {
 		BedrockNameResolver resolver = newResolverWithPrefix(".");
 		DetectStub detect = new DetectStub();

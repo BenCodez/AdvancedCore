@@ -257,6 +257,20 @@ public final class BedrockNameResolver {
 	 */
 	public void resolveAsync(String incomingName, Consumer<Result> success, Consumer<Throwable> failure) {
 		if (success == null || failure == null) throw new IllegalArgumentException("Resolution callbacks are required");
+		if (Bukkit.getServer() != null && !Bukkit.isPrimaryThread()) {
+			try {
+				plugin.getBukkitScheduler().runTask(plugin,
+						() -> resolveAsyncOnPlatform(incomingName, success, failure));
+			} catch (RuntimeException rejected) {
+				failure.accept(rejected);
+			}
+			return;
+		}
+		resolveAsyncOnPlatform(incomingName, success, failure);
+	}
+
+	/** Capture Bukkit identity evidence only after reaching the platform scheduler. */
+	private void resolveAsyncOnPlatform(String incomingName, Consumer<Result> success, Consumer<Throwable> failure) {
 		if (incomingName == null || incomingName.isEmpty()) {
 			success.accept(new Result(incomingName, false, "empty-name"));
 			return;

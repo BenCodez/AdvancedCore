@@ -345,6 +345,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
 		UserDataCache cache = new UserDataCache(manager, uuid);
 		cache.updateCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(7))));
+		manager.getUserDataCache().put(uuid, cache);
 		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
 		when(user.getPlugin()).thenReturn(plugin);
 		when(user.getUUID()).thenReturn(uuid.toString());
@@ -366,6 +367,35 @@ class SharedCacheCleanupPrimaryThreadTest {
 			assertTrue(stringFailure.getMessage().contains("defer"));
 			assertTrue(keysFailure.getMessage().contains("defer"));
 			assertTrue(valuesFailure.getMessage().contains("defer"));
+			verify(backend, never()).user(any(UUID.class));
+		}
+		manager.getTimer().shutdownNow();
+	}
+
+	@Test
+	void primaryThreadHasDataDoesNotCreateOrPopulateAnUncachedUser() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
+		UserDataManager manager = new UserDataManager(plugin);
+		when(users.getDataManager()).thenReturn(manager);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.storageType()).thenReturn(UserStorage.MYSQL);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> operation.run());
+		UUID uuid = UUID.randomUUID();
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getUUID()).thenReturn(uuid.toString());
+		UserData data = new UserData(user);
+
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			IllegalStateException failure = assertThrows(IllegalStateException.class, data::hasData);
+			assertTrue(failure.getMessage().contains("defer"));
+			assertFalse(manager.containsKey(uuid));
+			verify(user, never()).getCache();
 			verify(backend, never()).user(any(UUID.class));
 		}
 		manager.getTimer().shutdownNow();

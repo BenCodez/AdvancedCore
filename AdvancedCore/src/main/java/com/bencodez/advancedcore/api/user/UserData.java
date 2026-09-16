@@ -654,8 +654,8 @@ public class UserData {
 		if (manager == null || !manager.usesSharedSqlStorage(storage) || !manager.mustDeferSharedStorageAccess()) {
 			return null;
 		}
-		UserDataCache cache = user.getCache();
-		if (!cache.hasPublishedStorageSnapshot()) {
+		UserDataCache cache = manager.getPublishedCache(java.util.UUID.fromString(user.getUUID()));
+		if (cache == null) {
 			throw new IllegalStateException(
 					"Shared user data is still loading; defer this read until cache population completes");
 		}

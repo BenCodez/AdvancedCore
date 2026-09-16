@@ -1032,6 +1032,11 @@ public class UserDataManager {
 	}
 
 	public boolean containsKey(UUID fromString) { return userDataCache.containsKey(fromString); }
+	/** Return an already-published cache snapshot without creating or populating one. */
+	public UserDataCache getPublishedCache(UUID uuid) {
+		UserDataCache cache = userDataCache.get(uuid);
+		return cache != null && cache.hasPublishedStorageSnapshot() ? cache : null;
+	}
 	public UserDataCache getCache(UUID uuid) {
 		if (hasSharedSqlBackend() && Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
 			UserDataCache cache = userDataCache.get(uuid);
