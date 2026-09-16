@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -254,7 +255,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 		try (var bukkit = mockStatic(Bukkit.class); var players = mockStatic(PlayerManager.class);
 				var lookups = mockStatic(UuidLookup.class)) {
 			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
-			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, true, true, false);
 			PlayerManager playerManager = mock(PlayerManager.class);
 			players.when(PlayerManager::getInstance).thenReturn(playerManager);
 			UuidLookup lookup = mock(UuidLookup.class);
@@ -277,12 +278,11 @@ class SharedCacheCleanupPrimaryThreadTest {
 	}
 
 	@Test
-	void uuidUserConstructionDefersNameLookupOnPrimaryThread() throws Exception {
+	void uuidUserResolutionDoesNotReturnBeforePersistedNameCompletes() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
-		UserManager users = mock(UserManager.class);
+		UserManager users = new UserManager(plugin);
 		when(plugin.getUserManager()).thenReturn(users);
-		UserDataManager manager = new UserDataManager(plugin);
-		when(users.getDataManager()).thenReturn(manager);
+		UserDataManager manager = users.getDataManager();
 		manager.getTimer().shutdownNow();
 		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
 		Field timer = UserDataManager.class.getDeclaredField("timer");
@@ -293,9 +293,10 @@ class SharedCacheCleanupPrimaryThreadTest {
 		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
 		UUID uuid = UUID.randomUUID();
+		AtomicBoolean storageLane = new AtomicBoolean(false);
 		try (var bukkit = mockStatic(Bukkit.class); var lookups = mockStatic(UuidLookup.class)) {
 			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
-			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, true, false);
+			bukkit.when(Bukkit::isPrimaryThread).thenAnswer(ignored -> !storageLane.get());
 			UuidLookup lookup = mock(UuidLookup.class);
 			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
 			when(lookup.getCachedName(uuid.toString())).thenReturn("");
@@ -303,18 +304,30 @@ class SharedCacheCleanupPrimaryThreadTest {
 			when(lookup.getPlayerNameFromStorage(any(AdvancedCoreUser.class), eq(uuid.toString()), eq(false)))
 					.thenReturn("StoredName");
 
-			AdvancedCoreUser user = assertDoesNotThrow(() -> new AdvancedCoreUser(plugin, uuid));
-			assertEquals("", user.getPlayerName());
-			verify(lookup).getOnlinePlayerName(uuid.toString());
+			assertThrows(IllegalStateException.class, () -> users.getUser(uuid));
+			AtomicReference<AdvancedCoreUser> resolved = new AtomicReference<>();
+			AtomicReference<Throwable> failed = new AtomicReference<>();
+			users.getUserAsync(uuid, resolved::set, failed::set);
+			assertNull(resolved.get());
+			assertNull(failed.get());
+			verify(lookup, times(2)).getOnlinePlayerName(uuid.toString());
 			verify(lookup, never()).getPlayerNameFromStorage(any(), any(), eq(false));
 			ArgumentCaptor<Runnable> storageTask = ArgumentCaptor.forClass(Runnable.class);
 			verify(worker).execute(storageTask.capture());
-			storageTask.getValue().run();
+			storageLane.set(true);
+			try {
+				storageTask.getValue().run();
+			} finally {
+				storageLane.set(false);
+			}
 			verify(lookup).getPlayerNameFromStorage(any(), eq(uuid.toString()), eq(false));
 			ArgumentCaptor<Runnable> callback = ArgumentCaptor.forClass(Runnable.class);
 			verify(scheduler).runTask(eq(plugin), callback.capture());
+			assertNull(resolved.get());
 			callback.getValue().run();
-			assertEquals("StoredName", user.getPlayerName());
+			assertNotNull(resolved.get());
+			assertEquals("StoredName", resolved.get().getPlayerName());
+			assertNull(failed.get());
 		}
 	}
 

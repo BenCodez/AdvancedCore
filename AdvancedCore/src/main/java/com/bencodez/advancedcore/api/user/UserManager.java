@@ -368,6 +368,48 @@ public class UserManager {
 		}
 	}
 
+	/**
+	 * Resolve a UUID-backed user's persisted name without returning a partially
+	 * initialized user from the Bukkit primary thread.
+	 */
+	public void getUserAsync(UUID uuid, Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
+		if (uuid == null) {
+			failure.accept(new IllegalArgumentException("Player UUID cannot be null"));
+			return;
+		}
+		if (success == null || failure == null) throw new IllegalArgumentException("Resolution callbacks are required");
+		if (dataManager == null || !dataManager.mustDeferSharedStorageAccess()) {
+			try {
+				success.accept(getUser(uuid));
+			} catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+			}
+			return;
+		}
+
+		UuidLookup lookup = UuidLookup.getInstance();
+		String knownName = lookup.getCachedName(uuid.toString());
+		if (knownName.isEmpty()) knownName = lookup.getOnlinePlayerName(uuid.toString());
+		if (!knownName.isEmpty()) {
+			success.accept(getUser(uuid, knownName));
+			return;
+		}
+
+		AdvancedCoreUser user = getUser(uuid, false);
+		try {
+			if (!dataManager.deferSharedStorageResult(
+					() -> lookup.getPlayerNameFromStorage(user, uuid.toString(), false),
+					name -> {
+						user.setPlayerName(name);
+						success.accept(user);
+					}, failure)) {
+				failure.accept(new IllegalStateException("User storage is no longer available"));
+			}
+		} catch (RuntimeException failureReason) {
+			failure.accept(failureReason);
+		}
+	}
+
 	private void deliverStoredOrProfileUser(String uuid, String playerName, Consumer<AdvancedCoreUser> success,
 			Consumer<Throwable> failure) {
 		if (uuid != null && !uuid.isBlank()) {

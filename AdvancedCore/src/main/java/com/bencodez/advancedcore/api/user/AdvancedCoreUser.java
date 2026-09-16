@@ -604,11 +604,8 @@ public class AdvancedCoreUser {
 			updateName(false);
 			return;
 		}
-		if (manager.deferSharedStorageResult(
-				() -> lookup.getPlayerNameFromStorage(this, uuid, useCache),
-				this::setPlayerName, plugin::debug)) return;
-		// Shared storage retired between the eligibility check and admission. Do not
-		// fall back to Bukkit or persisted access on this primary-thread race.
+		throw new IllegalStateException("Cannot synchronously construct an unresolved UUID user on the primary thread; "
+				+ "use UserManager.getUserAsync(UUID, ...)");
 	}
 
 	/**

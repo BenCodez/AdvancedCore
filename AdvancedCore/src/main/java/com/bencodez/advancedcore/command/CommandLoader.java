@@ -426,8 +426,12 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
 
-				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(args[1]));
-				removeUserData(sender, args[1], user, () -> UuidLookup.getInstance().invalidate(args[1]));
+				UUID uuid = UUID.fromString(args[1]);
+				plugin.getUserManager().getUserAsync(uuid,
+						user -> runRecipientCallback(uuid, () -> removeUserData(sender, args[1], user,
+								() -> UuidLookup.getInstance().invalidate(args[1]))),
+						failure -> runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
+								"&cUnable to resolve user for " + args[1] + "; check the server log."))));
 			}
 		});
 
