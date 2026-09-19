@@ -75,6 +75,29 @@ class SharedUserStorageReloadSafetyTest {
 	}
 
 	@Test
+	void properNameUsesPersistedCasingWhenCalledOnTheSharedStorageWorker() {
+		UserManager users = mock(UserManager.class, CALLS_REAL_METHODS);
+		UserDataManager manager = mock(UserDataManager.class);
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.hasSharedSqlBackend()).thenReturn(true);
+		when(manager.mustDeferSharedStorageAccess()).thenReturn(false);
+		doReturn(new ArrayList<>(List.of("Alice"))).when(users).getAllPlayerNames();
+		var lookup = mock(com.bencodez.advancedcore.api.player.UuidLookup.class);
+		try (MockedStatic<com.bencodez.advancedcore.api.player.UuidLookup> mocked =
+				mockStatic(com.bencodez.advancedcore.api.player.UuidLookup.class);
+				MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			mocked.when(com.bencodez.advancedcore.api.player.UuidLookup::getInstance).thenReturn(lookup);
+			when(lookup.getCachedName("alice")).thenReturn(null);
+			when(lookup.getCachedUUID("alice")).thenReturn(null);
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+
+			assertEquals("Alice", users.getProperName("alice"));
+			verify(users).getAllPlayerNames();
+		}
+	}
+
+	@Test
 	void sharedStorageReloadExposesAnIncompleteCompletionStageUntilReplacementFinishes() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
 		UserManager users = mock(UserManager.class);

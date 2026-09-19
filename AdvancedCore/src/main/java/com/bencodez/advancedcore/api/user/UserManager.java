@@ -266,7 +266,7 @@ public class UserManager {
 		// identifies the same player and cache-backed lookups above preserve known
 		// casing.  A worker (or a non-shared runtime) may retain the historical
 		// storage fallback below.
-		if (dataManager != null && dataManager.hasSharedSqlBackend()) {
+		if (dataManager != null && dataManager.mustDeferSharedStorageAccess()) {
 			return name;
 		}
 
