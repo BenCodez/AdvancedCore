@@ -206,6 +206,35 @@ class CoreRuntimeTest {
 		assertEquals(List.of("unload"), events);
 	}
 
+	@Test void watchdogRunsTerminalCleanupWhenQueuedRetirementIsCancelled() throws Exception {
+		RuntimePlatform platform = platform();
+		var timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+		CountDownLatch occupied = new CountDownLatch(1);
+		CountDownLatch terminal = new CountDownLatch(1);
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		timer.execute(() -> {
+			occupied.countDown();
+			try { new CountDownLatch(1).await(); }
+			catch (InterruptedException expected) { Thread.currentThread().interrupt(); }
+		});
+		assertTrue(occupied.await(2, TimeUnit.SECONDS));
+		timer.execute(() -> retirement.complete(null));
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retirement);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(20L);
+		when(platform.getTimer()).thenReturn(timer);
+		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("terminal storage", terminal::countDown)));
+		try {
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertTrue(terminal.await(3, TimeUnit.SECONDS),
+					"cancelled retirement cannot complete its stage, but native cleanup must finish");
+			assertFalse(retirement.isDone());
+			verify(platform).cleanupFailed(eq("pre-executor shutdown"), any(java.util.concurrent.TimeoutException.class));
+			assertTrue(timer.isTerminated());
+		} finally { timer.shutdownNow(); }
+	}
+
 	@Test void deferredRetirementFailureTerminatesItsWorkerAfterReportingTheFailure() {
 		RuntimePlatform platform = platform();
 		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);

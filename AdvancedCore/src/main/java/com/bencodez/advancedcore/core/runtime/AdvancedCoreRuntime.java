@@ -181,10 +181,10 @@ public final class AdvancedCoreRuntime {
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
 			shutdownNow(timer);
-			// The retirement result is not known yet. Do not close its native owner
-			// merely because the watchdog expired; an eventual exceptional completion
-			// will run terminal cleanup after this forced worker retirement.
-			finishDeferredStorageTimer(timer, true, false, terminalStorageCleanup);
+			// The queued retirement may have been removed by shutdownNow and therefore
+			// cannot complete its stage. Run terminal cleanup explicitly after the
+			// bounded worker wait so native owners are not stranded behind that stage.
+			finishDeferredStorageTimer(timer, true, true, terminalStorageCleanup);
 		};
 		try { CompletableFuture.delayedExecutor(timeoutMillis, TimeUnit.MILLISECONDS).execute(timeout); }
 		catch (RuntimeException | Error schedulingFailure) {
@@ -219,6 +219,9 @@ public final class AdvancedCoreRuntime {
 		catch (RuntimeException | Error startFailure) {
 			platform.cleanupFailed("deferred storage shutdown continuation", startFailure);
 			shutdownNow(timer);
+			if (runTerminalCleanup && terminalStorageCleanup.compareAndSet(false, true)) {
+				clean(platform.afterStorageExecutorShutdown());
+			}
 		}
 	}
 

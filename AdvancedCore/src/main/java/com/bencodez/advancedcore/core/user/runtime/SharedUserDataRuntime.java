@@ -178,9 +178,6 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 				flushAllInternal();
 				cacheOwner.clearAfterFlush();
 				SqlUserBackend previous = backend;
-				// Publish the native owner before its route. The cache owner captures the
-				// owner snapshot together with the new route, so public bulk APIs never
-				// combine a new route type with the old mutable provider fields.
 				afterReplacement.run();
 				cacheOwner.bindBackend(replacement);
 				backend = replacement;
