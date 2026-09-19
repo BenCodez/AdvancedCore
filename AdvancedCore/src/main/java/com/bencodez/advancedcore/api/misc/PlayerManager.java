@@ -260,6 +260,21 @@ public class PlayerManager {
 			success.accept(false);
 			return;
 		}
+		if (Bukkit.getServer() != null && !Bukkit.isPrimaryThread()) {
+			try {
+				plugin.getBukkitScheduler().runTask(plugin,
+						() -> isValidUserAsyncOnPlatform(candidate, checkServer, success, failure));
+			} catch (RuntimeException rejected) {
+				failure.accept(rejected);
+			}
+			return;
+		}
+		isValidUserAsyncOnPlatform(candidate, checkServer, success, failure);
+	}
+
+	/** Capture Bukkit online-player evidence only after reaching the platform scheduler. */
+	private void isValidUserAsyncOnPlatform(String candidate, boolean checkServer, Consumer<Boolean> success,
+			Consumer<Throwable> failure) {
 		Player online = Bukkit.getPlayerExact(candidate);
 		if (online != null) {
 			success.accept(true);

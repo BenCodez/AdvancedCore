@@ -439,6 +439,53 @@ public class BedrockNameResolverTest {
 	}
 
 	@Test
+	public void testResolveAsyncDefersSharedStorageFromFoliaGlobalPlatformLane() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(userManager.getDataManager()).thenReturn(dataManager);
+		when(dataManager.hasSharedSqlBackend()).thenReturn(true);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		com.bencodez.simpleapi.scheduler.BukkitScheduler scheduler =
+				mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+		AtomicReference<Runnable> platformTask = new AtomicReference<>();
+		doAnswer(invocation -> {
+			platformTask.set(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		AtomicReference<Runnable> storageTask = new AtomicReference<>();
+		doAnswer(invocation -> {
+			Supplier<?> storage = invocation.getArgument(0);
+			@SuppressWarnings("unchecked") Consumer<Object> success = invocation.getArgument(1);
+			storageTask.set(() -> success.accept(storage.get()));
+			return true;
+		}).when(dataManager).deferSharedStorageResultFromPlatform(any(), any(), any());
+		bukkitStatic.when(Bukkit::getServer).thenReturn(mock(org.bukkit.Server.class));
+		bukkitStatic.when(Bukkit::isPrimaryThread).thenReturn(false);
+		AtomicReference<BedrockNameResolver.Result> resolved = new AtomicReference<>();
+		UuidLookup lookup = mock(UuidLookup.class);
+		when(lookup.getUUIDFromStorage("GlobalName")).thenReturn(null);
+		when(lookup.getUUIDFromStorage(".GlobalName")).thenReturn(null);
+
+		try (MockedStatic<UuidLookup> lookups = mockStatic(UuidLookup.class)) {
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			resolver.resolveAsync("GlobalName", resolved::set, failure -> fail(failure));
+			assertNotNull(platformTask.get());
+			platformTask.get().run();
+			assertNotNull(storageTask.get(), "global platform work must admit the persisted read to the worker");
+			verify(dataManager, never()).deferSharedStorageResult(any(), any(), any());
+			verify(lookup, never()).getUUIDFromStorage("GlobalName");
+			storageTask.get().run();
+		}
+
+		assertEquals("GlobalName", resolved.get().finalName);
+		verify(lookup).getUUIDFromStorage("GlobalName");
+	}
+
+	@Test
 	public void testIsBedrock_uuidAuthoritative_true() throws Exception {
 		BedrockNameResolver resolver = newResolverWithPrefix(".");
 		DetectStub detect = new DetectStub();

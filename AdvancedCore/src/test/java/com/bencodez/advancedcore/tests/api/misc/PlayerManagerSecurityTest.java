@@ -59,6 +59,43 @@ class PlayerManagerSecurityTest {
 	}
 
 	@Test
+	void asynchronousValidationMarshalsInitialOnlineLookupFromWorker() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		BedrockNameResolver resolver = mock(BedrockNameResolver.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.getBedrockHandle()).thenReturn(resolver);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		org.mockito.Mockito.doAnswer(call -> {
+			@SuppressWarnings("unchecked") java.util.function.Consumer<BedrockNameResolver.Result> success =
+					call.getArgument(1);
+			success.accept(new BedrockNameResolver.Result("WorkerName", false, "cache-java"));
+			return null;
+		}).when(resolver).resolveAsync(org.mockito.ArgumentMatchers.eq("WorkerName"),
+				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+		AtomicReference<Runnable> platformTask = new AtomicReference<>();
+		org.mockito.Mockito.doAnswer(call -> {
+			platformTask.set(call.getArgument(1));
+			return null;
+		}).when(scheduler).runTask(org.mockito.ArgumentMatchers.eq(plugin), org.mockito.ArgumentMatchers.any());
+		PlayerManager.getInstance().setPlugin(plugin);
+		AtomicReference<Boolean> valid = new AtomicReference<>();
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			bukkit.when(() -> Bukkit.getPlayerExact("WorkerName")).thenReturn(null);
+			PlayerManager.getInstance().isValidUserAsync("WorkerName", false, valid::set,
+					failure -> org.junit.jupiter.api.Assertions.fail(failure));
+			assertEquals(null, valid.get());
+			assertTrue(platformTask.get() != null);
+			bukkit.verify(() -> Bukkit.getPlayerExact("WorkerName"), never());
+			platformTask.get().run();
+			assertTrue(valid.get());
+			bukkit.verify(() -> Bukkit.getPlayerExact("WorkerName"));
+		}
+	}
+
+	@Test
 	void legacyValidationKeepsPersistedResolutionOffTheSharedPrimaryPath() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		BedrockNameResolver resolver = mock(BedrockNameResolver.class);
@@ -143,6 +180,7 @@ class PlayerManagerSecurityTest {
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getPlayerExact("NewJava")).thenReturn(null);
 			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
 			bukkit.when(() -> Bukkit.createPlayerProfile("NewJava")).thenReturn(pendingProfile);
 			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(offline);
 			PlayerManager.getInstance().isValidUserAsync("NewJava", true, valid::set,
@@ -187,6 +225,7 @@ class PlayerManagerSecurityTest {
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getPlayerExact("OfflineUser")).thenReturn(null);
 			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
 			bukkit.when(() -> Bukkit.getOfflinePlayer(offlineUuid)).thenReturn(offline);
 			PlayerManager.getInstance().isValidUserAsync("OfflineUser", true, valid::set,
 					failure -> org.junit.jupiter.api.Assertions.fail(failure));
@@ -316,6 +355,7 @@ class PlayerManagerSecurityTest {
 			bukkit.when(() -> Bukkit.getPlayerExact("NewJava")).thenReturn(null);
 			bukkit.when(() -> Bukkit.createPlayerProfile("NewJava")).thenReturn(pendingProfile);
 			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
 			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenThrow(historyFailure);
 			PlayerManager.getInstance().isValidUserAsync("NewJava", true, success::set, failure::set);
 			update.complete(resolvedProfile);

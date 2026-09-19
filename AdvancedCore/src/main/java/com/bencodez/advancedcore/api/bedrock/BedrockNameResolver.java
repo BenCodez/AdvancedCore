@@ -275,7 +275,13 @@ public final class BedrockNameResolver {
 			success.accept(new Result(incomingName, false, "empty-name"));
 			return;
 		}
-		if (userManager.getDataManager() == null || !userManager.getDataManager().mustDeferSharedStorageAccess()) {
+		var dataManager = userManager.getDataManager();
+		boolean deferFromPrimary = dataManager != null && dataManager.mustDeferSharedStorageAccess();
+		// Folia's global scheduler is a platform lane, but Bukkit does not report it
+		// as the primary thread. Shared SQL must still stay on the storage worker.
+		boolean deferFromPlatform = !deferFromPrimary && dataManager != null
+				&& Bukkit.getServer() != null && dataManager.hasSharedSqlBackend();
+		if (!deferFromPrimary && !deferFromPlatform) {
 			try { success.accept(resolve(incomingName)); }
 			catch (RuntimeException problem) { failure.accept(problem); }
 			return;
@@ -290,8 +296,12 @@ public final class BedrockNameResolver {
 		// worker performs only persisted lookups and then applies this fallback.
 		Result fallback = resolveWithoutDb(incomingName);
 		try {
-			if (!userManager.getDataManager().deferSharedStorageResult(
-					() -> resolvePersisted(incomingName, fallback), success, failure)) {
+			boolean deferred = deferFromPlatform
+					? dataManager.deferSharedStorageResultFromPlatform(
+							() -> resolvePersisted(incomingName, fallback), success, failure)
+					: dataManager.deferSharedStorageResult(
+							() -> resolvePersisted(incomingName, fallback), success, failure);
+			if (!deferred) {
 				success.accept(resolve(incomingName));
 			}
 		} catch (RuntimeException rejected) {
