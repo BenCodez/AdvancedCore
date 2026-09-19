@@ -253,7 +253,7 @@ public final class BedrockNameResolver {
 	 *
 	 * @param incomingName player name to resolve
 	 * @param success resolved identity callback
-	 * @param failure worker-admission failure callback
+	 * @param failure platform-safe resolution failure callback
 	 */
 	public void resolveAsync(String incomingName, Consumer<Result> success, Consumer<Throwable> failure) {
 		if (success == null || failure == null) throw new IllegalArgumentException("Resolution callbacks are required");
@@ -262,7 +262,7 @@ public final class BedrockNameResolver {
 				plugin.getBukkitScheduler().runTask(plugin,
 						() -> resolveAsyncOnPlatform(incomingName, success, failure));
 			} catch (RuntimeException rejected) {
-				failure.accept(rejected);
+				reportUndeliverablePlatformCallback(rejected);
 			}
 			return;
 		}
@@ -306,6 +306,14 @@ public final class BedrockNameResolver {
 			}
 		} catch (RuntimeException rejected) {
 			failure.accept(rejected);
+		}
+	}
+
+	/** A resolver callback may use Bukkit, so a rejected platform task has no safe fallback thread. */
+	private void reportUndeliverablePlatformCallback(Throwable failure) {
+		if (plugin != null && plugin.getLogger() != null) {
+			plugin.getLogger().log(java.util.logging.Level.SEVERE,
+					"Unable to deliver async Bedrock resolution on the platform scheduler", failure);
 		}
 	}
 

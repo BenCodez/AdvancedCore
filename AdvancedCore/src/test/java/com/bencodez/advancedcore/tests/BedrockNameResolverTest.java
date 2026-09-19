@@ -439,6 +439,28 @@ public class BedrockNameResolverTest {
 	}
 
 	@Test
+	public void testResolveAsyncDoesNotInvokeWorkerFailureWhenPlatformSchedulerRejects() throws Exception {
+		UserManager userManager = mock(UserManager.class);
+		AdvancedCorePlugin plugin = mockPlugin(".", userManager);
+		com.bencodez.simpleapi.scheduler.BukkitScheduler scheduler =
+				mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		BedrockNameResolver resolver = new BedrockNameResolver(plugin);
+		setDetect(resolver, new DetectStub());
+		mockNoOnlinePlayers();
+		RuntimeException rejected = new IllegalStateException("scheduler stopped");
+		doThrow(rejected).when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		bukkitStatic.when(Bukkit::getServer).thenReturn(mock(org.bukkit.Server.class));
+		bukkitStatic.when(Bukkit::isPrimaryThread).thenReturn(false);
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+
+		resolver.resolveAsync("WorkerName", ignored -> fail("unexpected success"), failed::set);
+
+		assertNull(failed.get());
+		bukkitStatic.verify(Bukkit::getOnlinePlayers, never());
+	}
+
+	@Test
 	public void testResolveAsyncDefersSharedStorageFromFoliaGlobalPlatformLane() throws Exception {
 		UserManager userManager = mock(UserManager.class);
 		UserDataManager dataManager = mock(UserDataManager.class);

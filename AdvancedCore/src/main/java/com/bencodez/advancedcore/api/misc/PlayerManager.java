@@ -265,7 +265,7 @@ public class PlayerManager {
 				plugin.getBukkitScheduler().runTask(plugin,
 						() -> isValidUserAsyncOnPlatform(candidate, checkServer, success, failure));
 			} catch (RuntimeException rejected) {
-				failure.accept(rejected);
+				reportUndeliverablePlatformCallback(rejected);
 			}
 			return;
 		}
@@ -321,7 +321,7 @@ public class PlayerManager {
 							return;
 						}
 						completeServerHistory(uuid, success, failure);
-					}, failure));
+						}, failure));
 		} catch (RuntimeException failureReason) {
 			failure.accept(failureReason);
 		}
@@ -343,7 +343,8 @@ public class PlayerManager {
 			Runnable callback, Consumer<Throwable> failure) {
 		try {
 			if (Bukkit.getServer() == null) {
-				failure.accept(new IllegalStateException("Server stopped before player validation completed"));
+				reportUndeliverablePlatformCallback(
+						new IllegalStateException("Server stopped before player validation completed"));
 				return;
 			}
 			scheduler.runTask(plugin, () -> {
@@ -354,7 +355,15 @@ public class PlayerManager {
 				callback.run();
 			});
 		} catch (RuntimeException failureReason) {
-			failure.accept(failureReason);
+			reportUndeliverablePlatformCallback(failureReason);
+		}
+	}
+
+	/** A validation callback may access Bukkit, so scheduler rejection has no safe fallback thread. */
+	private void reportUndeliverablePlatformCallback(Throwable failure) {
+		if (plugin != null && plugin.getLogger() != null) {
+			plugin.getLogger().log(java.util.logging.Level.SEVERE,
+					"Unable to deliver async player validation on the platform scheduler", failure);
 		}
 	}
 

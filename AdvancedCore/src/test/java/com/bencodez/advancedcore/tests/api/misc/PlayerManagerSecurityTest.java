@@ -96,6 +96,71 @@ class PlayerManagerSecurityTest {
 	}
 
 	@Test
+	void asynchronousValidationDoesNotInvokeWorkerFailureWhenInitialPlatformTaskRejects() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		BedrockNameResolver resolver = mock(BedrockNameResolver.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.getBedrockHandle()).thenReturn(resolver);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		RuntimeException rejected = new IllegalStateException("scheduler stopped");
+		org.mockito.Mockito.doThrow(rejected).when(scheduler)
+				.runTask(org.mockito.ArgumentMatchers.eq(plugin), org.mockito.ArgumentMatchers.any());
+		PlayerManager.getInstance().setPlugin(plugin);
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			PlayerManager.getInstance().isValidUserAsync("WorkerName", false,
+					ignored -> org.junit.jupiter.api.Assertions.fail("unexpected success"), failed::set);
+			assertEquals(null, failed.get());
+			bukkit.verify(() -> Bukkit.getPlayerExact("WorkerName"), never());
+		}
+
+		verify(resolver, never()).resolveAsync(org.mockito.ArgumentMatchers.anyString(),
+				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+	}
+
+	@Test
+	void asynchronousValidationDoesNotInvokeCompletionWorkerFailureWhenPlatformDeliveryRejects() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		BedrockNameResolver resolver = mock(BedrockNameResolver.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		PlayerProfile pendingProfile = mock(PlayerProfile.class);
+		CompletableFuture<PlayerProfile> update = new CompletableFuture<>();
+		when(plugin.getBedrockHandle()).thenReturn(resolver);
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(options.isOnlineMode()).thenReturn(true);
+		when(options.getBedrockPlayerPrefix()).thenReturn(".");
+		when(pendingProfile.update()).thenReturn(update);
+		org.mockito.Mockito.doAnswer(call -> {
+			@SuppressWarnings("unchecked") java.util.function.Consumer<BedrockNameResolver.Result> success =
+					call.getArgument(1);
+			success.accept(new BedrockNameResolver.Result("WorkerName", false, "none"));
+			return null;
+		}).when(resolver).resolveAsync(org.mockito.ArgumentMatchers.eq("WorkerName"),
+				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+		RuntimeException rejected = new IllegalStateException("scheduler stopped");
+		org.mockito.Mockito.doThrow(rejected).when(scheduler)
+				.runTask(org.mockito.ArgumentMatchers.eq(plugin), org.mockito.ArgumentMatchers.any());
+		PlayerManager.getInstance().setPlugin(plugin);
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			bukkit.when(() -> Bukkit.getPlayerExact("WorkerName")).thenReturn(null);
+			bukkit.when(() -> Bukkit.createPlayerProfile("WorkerName")).thenReturn(pendingProfile);
+			PlayerManager.getInstance().isValidUserAsync("WorkerName", true,
+					ignored -> org.junit.jupiter.api.Assertions.fail("unexpected success"), failed::set);
+			update.complete(mock(PlayerProfile.class));
+			assertEquals(null, failed.get());
+		}
+	}
+
+	@Test
 	void legacyValidationKeepsPersistedResolutionOffTheSharedPrimaryPath() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		BedrockNameResolver resolver = mock(BedrockNameResolver.class);
@@ -238,7 +303,7 @@ class PlayerManagerSecurityTest {
 	}
 
 	@Test
-	void asynchronousServerHistoryDoesNotTouchBukkitAfterShutdown() {
+	void asynchronousServerHistoryDoesNotTouchBukkitOrInvokeWorkerCallbacksAfterShutdown() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		BedrockNameResolver resolver = mock(BedrockNameResolver.class);
@@ -270,7 +335,7 @@ class PlayerManagerSecurityTest {
 			PlayerManager.getInstance().isValidUserAsync("NewJava", true,
 					ignored -> org.junit.jupiter.api.Assertions.fail("unexpected success"), failure::set);
 			update.complete(resolvedProfile);
-			assertTrue(failure.get() instanceof IllegalStateException);
+			assertEquals(null, failure.get());
 			bukkit.verify(() -> Bukkit.getOfflinePlayer(org.mockito.ArgumentMatchers.any(UUID.class)), never());
 			verify(scheduler, never()).runTask(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
 		}
@@ -308,7 +373,8 @@ class PlayerManagerSecurityTest {
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getPlayerExact("NewJava")).thenReturn(null);
 			bukkit.when(() -> Bukkit.createPlayerProfile("NewJava")).thenReturn(pendingProfile);
-			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class), (Server) null);
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class), mock(Server.class), (Server) null);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
 			PlayerManager.getInstance().isValidUserAsync("NewJava", true,
 					ignored -> org.junit.jupiter.api.Assertions.fail("unexpected success"), failure::set);
 			update.complete(resolvedProfile);
