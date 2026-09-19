@@ -65,7 +65,13 @@ public class UuidLookup {
 	 * @return UUID string, or "" if not found / invalid input
 	 */
 	public String getUUID(String playerName) {
-		return resolveUUID(playerName, true);
+		// Preserve the historical non-throwing API on Bukkit's primary thread. A
+		// shared SQL lookup is authoritative only from the storage worker; callers
+		// needing that result should use the asynchronous user API.
+		boolean deferSharedStorage = plugin != null && plugin.getUserManager() != null
+				&& plugin.getUserManager().getDataManager() != null
+				&& plugin.getUserManager().getDataManager().mustDeferSharedStorageAccess();
+		return resolveUUID(playerName, !deferSharedStorage);
 	}
 
 	/**

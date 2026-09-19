@@ -136,6 +136,31 @@ class SharedCacheCleanupPrimaryThreadTest {
 	}
 
 	@Test
+	void publicUuidLookupRemainsNonThrowingOnPrimaryThreadWithSharedSql() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.isOnlineMode()).thenReturn(true);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.mustDeferSharedStorageAccess()).thenReturn(true);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			var constructor = UuidLookup.class.getDeclaredConstructor(AdvancedCorePlugin.class);
+			constructor.setAccessible(true);
+			UuidLookup lookup = constructor.newInstance(plugin);
+			String unknown = "PrimaryUnknown" + UUID.randomUUID().toString().replace("-", "");
+
+			assertDoesNotThrow(() -> assertEquals("", lookup.getUUID(unknown)));
+			verify(plugin, never()).getMysql();
+			verify(plugin, never()).getSQLiteUserTable();
+		}
+	}
+
+	@Test
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	void persistedUuidLookupUsesLifecycleAdmittedNativeOwner() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
@@ -410,6 +435,8 @@ class SharedCacheCleanupPrimaryThreadTest {
 			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
 			when(lookup.getUUIDWithoutStorage(playerName)).thenReturn("");
 			when(lookup.getUUIDFromStorage(playerName)).thenReturn(uuid.toString());
+			when(lookup.getPlayerNameFromStorage(any(AdvancedCoreUser.class), eq(uuid.toString()), eq(false)))
+				.thenReturn("PersistedWorkerName");
 
 			users.getUserAsync(playerName, resolved::set, failed::set);
 			verify(lookup, never()).getUUIDWithoutStorage(playerName);
@@ -425,9 +452,15 @@ class SharedCacheCleanupPrimaryThreadTest {
 			ArgumentCaptor<Runnable> completion = ArgumentCaptor.forClass(Runnable.class);
 			verify(scheduler, times(2)).runTask(eq(plugin), completion.capture());
 			completion.getAllValues().get(1).run();
+			ArgumentCaptor<Runnable> nameStorageTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker, times(2)).execute(nameStorageTask.capture());
+			nameStorageTask.getAllValues().get(1).run();
+			verify(scheduler, times(3)).runTask(eq(plugin), completion.capture());
+			completion.getAllValues().get(completion.getAllValues().size() - 1).run();
 
 			assertNotNull(resolved.get());
 			assertEquals(uuid.toString(), resolved.get().getUUID());
+			assertEquals("PersistedWorkerName", resolved.get().getPlayerName());
 			assertNull(failed.get());
 		}
 		manager.getTimer().shutdownNow();

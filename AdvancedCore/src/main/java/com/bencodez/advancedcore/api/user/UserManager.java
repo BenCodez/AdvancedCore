@@ -377,7 +377,18 @@ public class UserManager {
 				return;
 			}
 			if (resolved != null && !resolved.isEmpty()) {
-				deliverResolvedUser(resolved, getProperName(playerName), success, failure);
+				try {
+					String knownName = getProperName(playerName);
+					UUID resolvedUuid = UUID.fromString(resolved);
+					if (!dataManager.deferSharedStorageResultFromPlatform(
+							() -> UuidLookup.getInstance().getPlayerNameFromStorage(getUser(resolvedUuid, false), resolved, false),
+							storedName -> deliverResolvedUser(resolved,
+									storedName == null || storedName.isBlank() ? knownName : storedName, success, failure), failure)) {
+						failure.accept(new IllegalStateException("User storage is no longer available"));
+					}
+				} catch (RuntimeException failureReason) {
+					failure.accept(failureReason);
+				}
 				return;
 			}
 			try {
@@ -458,7 +469,17 @@ public class UserManager {
 	private void deliverStoredOrProfileUser(String uuid, String playerName, Consumer<AdvancedCoreUser> success,
 			Consumer<Throwable> failure) {
 		if (uuid != null && !uuid.isBlank()) {
-			deliverResolvedUser(uuid, playerName, success, failure);
+			try {
+				UUID resolvedUuid = UUID.fromString(uuid);
+				if (!dataManager.deferSharedStorageResultFromPlatform(
+						() -> UuidLookup.getInstance().getPlayerNameFromStorage(getUser(resolvedUuid, false), uuid, false),
+						storedName -> deliverResolvedUser(uuid,
+								storedName == null || storedName.isBlank() ? playerName : storedName, success, failure), failure)) {
+					failure.accept(new IllegalStateException("User storage is no longer available"));
+				}
+			} catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+			}
 			return;
 		}
 		// This callback is back on the platform scheduler. Creating the profile is a
