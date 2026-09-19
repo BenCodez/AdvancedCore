@@ -59,6 +59,34 @@ class PlayerManagerSecurityTest {
 	}
 
 	@Test
+	void invalidNamesFromWorkerCompleteOnlyOnPlatform() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		PlayerManager.getInstance().setPlugin(plugin);
+		java.util.List<Runnable> platformTasks = new java.util.ArrayList<>();
+		org.mockito.Mockito.doAnswer(call -> {
+			platformTasks.add(call.getArgument(1));
+			return null;
+		}).when(scheduler).runTask(org.mockito.ArgumentMatchers.eq(plugin), org.mockito.ArgumentMatchers.any());
+		java.util.List<Boolean> results = new java.util.ArrayList<>();
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			PlayerManager.getInstance().isValidUserAsync(null, false, results::add,
+					failure -> org.junit.jupiter.api.Assertions.fail(failure));
+			PlayerManager.getInstance().isValidUserAsync(" \t ", false, results::add,
+					failure -> org.junit.jupiter.api.Assertions.fail(failure));
+			assertTrue(results.isEmpty(), "worker must not receive validation callbacks");
+			assertEquals(2, platformTasks.size());
+			platformTasks.forEach(Runnable::run);
+			assertEquals(java.util.List.of(false, false), results);
+			bukkit.verify(() -> Bukkit.getPlayerExact(org.mockito.ArgumentMatchers.anyString()), never());
+		}
+	}
+
+	@Test
 	void asynchronousValidationMarshalsInitialOnlineLookupFromWorker() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		BedrockNameResolver resolver = mock(BedrockNameResolver.class);

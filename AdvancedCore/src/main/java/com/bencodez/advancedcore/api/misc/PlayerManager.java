@@ -251,15 +251,7 @@ public class PlayerManager {
 	public void isValidUserAsync(String name, boolean checkServer, Consumer<Boolean> success,
 			Consumer<Throwable> failure) {
 		if (success == null || failure == null) throw new IllegalArgumentException("Validation callbacks are required");
-		if (name == null) {
-			success.accept(false);
-			return;
-		}
-		String candidate = name.trim();
-		if (candidate.isEmpty()) {
-			success.accept(false);
-			return;
-		}
+		String candidate = name == null ? "" : name.trim();
 		if (Bukkit.getServer() != null && !Bukkit.isPrimaryThread()) {
 			try {
 				plugin.getBukkitScheduler().runTask(plugin,
@@ -275,6 +267,10 @@ public class PlayerManager {
 	/** Capture Bukkit online-player evidence only after reaching the platform scheduler. */
 	private void isValidUserAsyncOnPlatform(String candidate, boolean checkServer, Consumer<Boolean> success,
 			Consumer<Throwable> failure) {
+		if (candidate.isEmpty()) {
+			success.accept(false);
+			return;
+		}
 		Player online = Bukkit.getPlayerExact(candidate);
 		if (online != null) {
 			success.accept(true);
