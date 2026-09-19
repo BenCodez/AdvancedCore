@@ -21,6 +21,8 @@ import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.data.DataValue;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
+import com.bencodez.simpleapi.sql.data.DataValueString;
 
 /**
  * Tests for {@link UserData}.
@@ -107,6 +109,7 @@ public class UserDataTest {
 		when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
 		when(manager.mustDeferSharedStorageAccess()).thenReturn(true);
 		when(placeholder.hasPublishedStorageSnapshot()).thenReturn(false);
+		when(placeholder.snapshotIfPublished()).thenReturn(null);
 
 		UserData data = new UserData(user);
 		assertThrows(IllegalStateException.class,
@@ -117,9 +120,35 @@ public class UserDataTest {
 		assertThrows(IllegalStateException.class, data::hasData);
 
 		when(placeholder.hasPublishedStorageSnapshot()).thenReturn(true);
+		when(placeholder.snapshotIfPublished()).thenReturn(new HashMap<>());
 		assertEquals(17, data.getInt("Points", 17, UserDataFetchMode.DEFAULT));
 		assertEquals("", data.getString("PlayerName", UserDataFetchMode.DEFAULT));
 		assertThrows(IllegalStateException.class,
 				() -> data.getInt("Points", 17, UserDataFetchMode.NO_CACHE));
+	}
+
+	@Test
+	public void deferredReadReturnsValuesPublishedAfterItsInitialCacheMiss() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		UserDataCache cache = mock(UserDataCache.class);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getCache()).thenReturn(cache);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
+		when(manager.mustDeferSharedStorageAccess()).thenReturn(true);
+		when(cache.isCached(anyString())).thenReturn(false);
+		HashMap<String, DataValue> published = new HashMap<>();
+		published.put("Points", new DataValueInt(42));
+		published.put("PlayerName", new DataValueString("FreshName"));
+		when(cache.snapshotIfPublished()).thenReturn(published);
+
+		UserData data = new UserData(user);
+		assertEquals(42, data.getInt("Points", 17, UserDataFetchMode.DEFAULT));
+		assertEquals("FreshName", data.getString("PlayerName", UserDataFetchMode.DEFAULT));
 	}
 }

@@ -290,6 +290,10 @@ public class UserDataCache {
 	public synchronized boolean hasCache() { return cache != null && !cache.isEmpty(); }
 	public synchronized boolean hasStoredData() { return storedDataPresent; }
 	public synchronized boolean hasPublishedStorageSnapshot() { return storageSnapshotPublished; }
+	/** Observe publication and values under the same cache monitor. */
+	public synchronized HashMap<String, DataValue> snapshotIfPublished() {
+		return storageSnapshotPublished ? (cache == null ? new HashMap<>() : new HashMap<>(cache)) : null;
+	}
 	public synchronized HashMap<String, DataValue> snapshot() {
 		return cache == null ? new HashMap<>() : new HashMap<>(cache);
 	}

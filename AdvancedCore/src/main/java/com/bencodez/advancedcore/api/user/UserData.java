@@ -197,7 +197,15 @@ public class UserData {
 
 		// 3) Storage lookup
 		if (mustDeferSharedStorageAccess()) {
-			rejectUnavailableFreshRead(mode, sharedReadCache);
+			DataValue published = requirePublishedSnapshot(mode, sharedReadCache).get(key);
+			if (published != null) {
+				if (published.isInt()) return published.getInt();
+				String value = published.getString();
+				if (value != null && !value.equalsIgnoreCase("null")) {
+					try { return Integer.parseInt(value); }
+					catch (NumberFormatException ignored) { }
+				}
+			}
 			return def;
 		}
 		return sqlData.getInt(storage, key, def);
@@ -305,14 +313,16 @@ public class UserData {
 
 		// 3) Storage lookup
 		if (mustDeferSharedStorageAccess()) {
-			rejectUnavailableFreshRead(mode, sharedReadCache);
-			return "";
+			DataValue published = requirePublishedSnapshot(mode, sharedReadCache).get(key);
+			return published == null || published.getString() == null ? "" : published.getString();
 		}
 		return sqlData.getString(storage, key);
 	}
 
-	private void rejectUnavailableFreshRead(UserDataFetchMode mode, UserDataCache cache) {
-		if (mode.allowUserCache() && cache != null && cache.hasPublishedStorageSnapshot()) return;
+	private HashMap<String, DataValue> requirePublishedSnapshot(UserDataFetchMode mode, UserDataCache cache) {
+		HashMap<String, DataValue> published = mode.allowUserCache() && cache != null
+				? cache.snapshotIfPublished() : null;
+		if (published != null) return published;
 		throw new IllegalStateException(
 				"Shared user data is still loading; defer this read until cache population completes");
 	}
