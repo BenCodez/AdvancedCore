@@ -421,6 +421,35 @@ class CoreRuntimeTest {
 		verify(plugin).closePendingNativeUserStorageOwners();
 	}
 
+	@Test void bukkitAdapterClosesOwnerAfterWatchdogCancelsQueuedRetirement() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		MySQL mysql = mock(MySQL.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(plugin.getNativeUserStorageOwner()).thenReturn(
+				new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, mysql, null));
+		when(users.getDataManager()).thenReturn(dataManager);
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		AtomicReference<Runnable> lateCompletion = new AtomicReference<>();
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenAnswer(call -> {
+			lateCompletion.set(call.getArgument(0, Runnable.class));
+			return retirement;
+		});
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+
+		platform.afterStorageExecutorShutdown().get(0).action().run();
+		verify(mysql).close();
+		verify(plugin).closePendingNativeUserStorageOwners();
+		assertFalse(retirement.isDone());
+		lateCompletion.get().run();
+		verify(mysql, times(1)).close();
+	}
+
 	@Test void bukkitAdapterClosesSqliteOwnerAfterTerminalFlushFailure() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		UserManager users = mock(UserManager.class);

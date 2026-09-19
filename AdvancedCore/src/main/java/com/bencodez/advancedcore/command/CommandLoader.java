@@ -134,21 +134,17 @@ public class CommandLoader {
 					}
 				}
 
-				AdvancedCorePlugin.UserStorageOwner owner = plugin.getNativeUserStorageOwner();
-				switch (owner == null ? plugin.getStorageType() : owner.storageType()) {
-				case MYSQL:
-					sendMessage(sender, "Running query: " + str);
-					(owner == null ? plugin.getMysql() : owner.mysql()).executeQuery(str);
-					sendMessage(sender, "Query finished: " + str);
-					break;
-				case SQLITE:
-					sendMessage(sender, "Running query: " + str);
-					(owner == null ? plugin.getSQLiteUserTable() : owner.table()).executeQuery(str);
-					sendMessage(sender, "Query finished: " + str);
-					break;
-				default:
-					break;
-				}
+				String query = str;
+				sendMessage(sender, "Running query: " + query);
+				runUserStorageCommand(sender, () -> plugin.getUserManager().getDataManager()
+						.withSharedNativeUserStorage(owner -> {
+							switch (owner == null ? plugin.getStorageType() : owner.storageType()) {
+							case MYSQL -> (owner == null ? plugin.getMysql() : owner.mysql()).executeQuery(query);
+							case SQLITE -> (owner == null ? plugin.getSQLiteUserTable() : owner.table()).executeQuery(query);
+							default -> { }
+							}
+							return null;
+						}), () -> sendMessage(sender, "Query finished: " + query));
 
 			}
 		});

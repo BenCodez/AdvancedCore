@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.bukkit.Bukkit;
 
@@ -20,6 +21,7 @@ import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 public final class BukkitRuntimePlatform implements RuntimePlatform {
     private final AdvancedCorePlugin plugin;
     private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
+    private final AtomicBoolean userStorageOwnerClosed = new AtomicBoolean();
 
     public BukkitRuntimePlatform(AdvancedCorePlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
@@ -64,8 +66,9 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
 	@Override public List<Cleanup> afterStorageExecutorShutdown() {
 		return List.of(new Cleanup("terminal user storage", () -> {
-			if (userStorageRetirement != null
-					&& userStorageRetirement.toCompletableFuture().isCompletedExceptionally()) {
+			CompletionStage<Void> retirement = userStorageRetirement;
+			if (retirement != null && (!retirement.toCompletableFuture().isDone()
+					|| retirement.toCompletableFuture().isCompletedExceptionally())) {
 				closeCurrentUserStorageOwner(plugin.getLoadedUserManager());
 			}
 		}));
@@ -117,6 +120,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 	}
 
 	private void closeCurrentUserStorageOwner(UserManager users) {
+		if (!userStorageOwnerClosed.compareAndSet(false, true)) return;
 		try {
 			AdvancedCorePlugin.UserStorageOwner owner = plugin.getNativeUserStorageOwner();
 			if (owner != null) {
@@ -129,6 +133,9 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 					? users.getDataManager().usesSharedSqlStorage(UserStorage.MYSQL)
 					: plugin.getOptions() != null && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType());
 			if (ownsMysql && plugin.getMysql() != null) plugin.getMysql().close();
+		} catch (RuntimeException | Error failure) {
+			userStorageOwnerClosed.set(false);
+			throw failure;
 		} finally { plugin.closePendingNativeUserStorageOwners(); }
 	}
 }
