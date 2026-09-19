@@ -1554,7 +1554,7 @@ public class Reward {
 			return CompletableFuture.completedFuture(null);
 		}
 
-		if (rewardOptions == null) rewardOptions = new RewardOptions();
+		rewardOptions = rewardOptions == null ? new RewardOptions() : rewardOptions.copyForDispatch();
 		if (!rewardOptions.getPlaceholders().containsKey("ExecDate")) {
 			rewardOptions.addPlaceholder("ExecDate", "" + System.currentTimeMillis());
 		}

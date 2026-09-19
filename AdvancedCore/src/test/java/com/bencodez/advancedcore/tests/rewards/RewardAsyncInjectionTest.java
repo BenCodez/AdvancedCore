@@ -558,6 +558,40 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void reusedBuilderOptionsCaptureFreshLiveStateForEachAsyncDispatch() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.isPauseRewards()).thenReturn(false);
+		when(config.isTreatVanishAsOffline()).thenReturn(false);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getPlayerName()).thenReturn("recipient");
+		when(user.getUUID()).thenReturn("00000000-0000-0000-0000-000000000001");
+		when(user.isOnline()).thenReturn(true, true, false, false);
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).runTaskAsynchronously(eq(plugin), any(Runnable.class));
+		Reward spyReward = org.mockito.Mockito.spy(reward);
+		doReturn(CompletableFuture.completedFuture(null)).when(spyReward)
+				.giveRewardUserAsync(eq(user), any(HashMap.class), any(RewardOptions.class));
+		RewardOptions reusable = new RewardOptions().setCheckTimed(false).setIgnoreRequirements(true);
+		RewardBuilder builder = new RewardBuilder(spyReward, reusable);
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			builder.sendAsync(user).toCompletableFuture().join();
+			builder.sendAsync(user).toCompletableFuture().join();
+		}
+
+		verify(spyReward, times(1)).giveRewardUserAsync(eq(user), any(HashMap.class), any(RewardOptions.class));
+		verify(user).addOfflineRewards(eq(spyReward), any(HashMap.class), any(RewardOptions.class));
+		assertFalse(reusable.isLivePlayerStateSet());
+	}
+
+	@Test
 	void rewardPreparationRunsOnPlayerOwnerScheduler() {
 		Player player = mock(Player.class);
 		AtomicReference<Thread> playerAccessThread = new AtomicReference<>();

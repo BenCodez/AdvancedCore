@@ -111,7 +111,8 @@ public class RewardExecutor {
      */
     public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, ConfigurationSection data, String path,
             RewardOptions rewardOptions) {
-        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        RewardExecutionContext context = new RewardExecutionContext(
+                rewardOptions == null ? null : rewardOptions.copyForDispatch()).initializeOnlineState(user);
         RewardOptions options = context.getOptions();
         if (path == null || data == null) return CompletableFuture.completedFuture(null);
         if (!plugin.isEnabled()) return disabledDispatch();
@@ -189,7 +190,8 @@ public class RewardExecutor {
     public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, Reward reward, RewardOptions rewardOptions) {
         if (reward == null) return CompletableFuture.completedFuture(null);
         if (!plugin.isEnabled()) return disabledDispatch();
-        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        RewardExecutionContext context = new RewardExecutionContext(
+                rewardOptions == null ? null : rewardOptions.copyForDispatch()).initializeOnlineState(user);
         RewardOptions options = context.getOptions();
         Reward.ReplayState activeState = Reward.currentReplayState();
         if (options.getAsyncReplayState() == null && activeState != null) options.setAsyncReplayState(activeState);
@@ -261,7 +263,8 @@ public class RewardExecutor {
     }
 
     public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, String reward, RewardOptions rewardOptions) {
-        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        RewardExecutionContext context = new RewardExecutionContext(
+                rewardOptions == null ? null : rewardOptions.copyForDispatch()).initializeOnlineState(user);
         if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
 		if (!plugin.isEnabled()) return disabledDispatch();
 		if (reward.startsWith("/")) {
@@ -329,7 +332,8 @@ public class RewardExecutor {
     /** Resolves and awaits a persisted queue item so a failed async injection can be requeued. */
     public CompletionStage<Void> givePersistedQueueRewardAsync(AdvancedCoreUser user, String reward,
             RewardOptions rewardOptions) {
-        RewardExecutionContext context = new RewardExecutionContext(rewardOptions).initializeOnlineState(user);
+        RewardExecutionContext context = new RewardExecutionContext(
+                rewardOptions == null ? null : rewardOptions.copyForDispatch()).initializeOnlineState(user);
         if (reward == null || reward.isEmpty()) return CompletableFuture.completedFuture(null);
         if (!plugin.isEnabled()) return disabledDispatch();
 

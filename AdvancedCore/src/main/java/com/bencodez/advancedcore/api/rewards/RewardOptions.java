@@ -248,11 +248,11 @@ public class RewardOptions {
 	}
 
 	/**
-	 * Makes an isolated option object for one member of an asynchronously
-	 * dispatched list. Mutable placeholders and replay metadata must not leak
-	 * from one list member into the next.
+	 * Makes an isolated option object for one reward dispatch. Public callers may
+	 * reuse an options object for several recipients, while dispatch populates
+	 * online state, dynamic placeholders, and replay progress.
 	 */
-	RewardOptions copyForNestedDispatch(String replayKey) {
+	RewardOptions copyForDispatch() {
 		RewardOptions copy = new RewardOptions().setCheckTimed(checkTimed).setGiveOffline(giveOffline)
 				.setIgnoreChance(ignoreChance).setIgnoreRequirements(ignoreRequirements).setPrefix(prefix).setSuffix(suffix)
 				.orginalTrigger(orginalTrigger).setPlaceholders(new HashMap<>(placeholders));
@@ -262,14 +262,31 @@ public class RewardOptions {
 		if (livePlayerStateSet) copy.captureLivePlayerState(online, livePlayerVanished);
 		if (!server.isEmpty()) copy.setServer(server);
 		copy.setAsyncReplayState(asyncReplayState);
+		copy.setCompletedAsyncInjections(completedAsyncInjections);
+		copy.setAsyncReplayProgress(new HashMap<>(asyncReplayProgress));
 		copy.setAsyncReplayRegistryFingerprints(new HashMap<>(asyncReplayRegistryFingerprints));
 		copy.setLegacyAsyncReplayCheckpoint(legacyAsyncReplayCheckpoint);
-		copy.setAsyncReplayKey(replayKey);
+		copy.setAsyncReplayCheckpointConsumer(asyncReplayCheckpointConsumer);
+		copy.setAsyncReplayKey(asyncReplayKey);
 		copy.setAsyncReplayOccurrenceId(asyncReplayOccurrenceId);
+		copy.setTimedQueueReplay(timedQueueReplay);
+		return copy;
+	}
+
+	/**
+	 * Makes an isolated option object for one member of an asynchronously
+	 * dispatched list. Mutable placeholders and replay metadata must not leak
+	 * from one list member into the next.
+	 */
+	RewardOptions copyForNestedDispatch(String replayKey) {
+		RewardOptions copy = copyForDispatch();
+		copy.setCompletedAsyncInjections(0);
+		copy.setAsyncReplayProgress(new HashMap<>());
 		// The checkpoint consumer belongs to the queued parent occurrence. Nested
 		// children share its ReplayState but must never replace or complete that
 		// queue entry independently.
-		copy.setTimedQueueReplay(timedQueueReplay);
+		copy.setAsyncReplayCheckpointConsumer(null);
+		copy.setAsyncReplayKey(replayKey);
 		return copy;
 	}
 
