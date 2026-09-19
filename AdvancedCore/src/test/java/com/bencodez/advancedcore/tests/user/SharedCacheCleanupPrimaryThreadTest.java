@@ -281,7 +281,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	}
 
 	@Test
-	void profileFallbackSchedulerRejectionCompletesFailureOnce() throws Exception {
+	void profileFallbackSchedulerRejectionDoesNotInvokeFailureFromProfileWorker() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		when(plugin.getOptions()).thenReturn(options);
@@ -324,7 +324,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 			profileResult.complete(mock(PlayerProfile.class));
 		}
 		assertFalse(succeeded.get());
-		assertEquals(1, failures.get());
+		assertEquals(0, failures.get());
 		manager.getTimer().shutdownNow();
 	}
 
@@ -605,7 +605,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	}
 
 	@Test
-	void rejectedStorageCompletionSchedulerCallsFailureExactlyOnce() throws Exception {
+	void rejectedStorageCompletionSchedulerRecordsUndeliverableCompletionWithoutWorkerCallback() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		UserDataManager manager = new UserDataManager(plugin);
 		manager.getTimer().shutdownNow();
@@ -629,7 +629,8 @@ class SharedCacheCleanupPrimaryThreadTest {
 			storage.getValue().run();
 		}
 		assertFalse(succeeded.get());
-		assertTrue(failed.get() instanceof RejectedExecutionException);
+		assertNull(failed.get());
+		assertTrue(manager.getLastDeferredStorageFailure() instanceof RejectedExecutionException);
 		manager.getTimer().shutdownNow();
 	}
 

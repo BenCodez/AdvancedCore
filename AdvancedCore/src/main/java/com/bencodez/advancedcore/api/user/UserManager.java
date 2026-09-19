@@ -332,11 +332,13 @@ public class UserManager {
 	 * the platform scheduler.
 	 *
 	 * <p>Callers that may run on the primary thread should use this instead of
-	 * {@link #getUser(String)} when they need to act on an uncached name.</p>
+	 * {@link #getUser(String)} when they need to act on an uncached name. Both
+	 * callbacks run only on the platform scheduler. If that scheduler has stopped,
+	 * the undeliverable completion is recorded in the server log instead.</p>
 	 */
 	public void getUserAsync(String playerName, Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
 		if (playerName == null || playerName.trim().isEmpty()) {
-			failure.accept(new IllegalArgumentException("Player name cannot be blank"));
+			runOnPlatform(() -> failure.accept(new IllegalArgumentException("Player name cannot be blank")));
 			return;
 		}
 		if (dataManager == null || !dataManager.hasSharedSqlBackend()) {
@@ -348,11 +350,13 @@ public class UserManager {
 
 	/**
 	 * Resolve a UUID-backed user's persisted name without returning a partially
-	 * initialized user from the Bukkit primary thread.
+	 * initialized user from the Bukkit primary thread. Both callbacks run only on
+	 * the platform scheduler; an unavailable scheduler records the undeliverable
+	 * completion rather than invoking a Bukkit-affine callback from a worker.
 	 */
 	public void getUserAsync(UUID uuid, Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
 		if (uuid == null) {
-			failure.accept(new IllegalArgumentException("Player UUID cannot be null"));
+			runOnPlatform(() -> failure.accept(new IllegalArgumentException("Player UUID cannot be null")));
 			return;
 		}
 		if (success == null || failure == null) throw new IllegalArgumentException("Resolution callbacks are required");
@@ -385,7 +389,7 @@ public class UserManager {
 			} catch (RuntimeException failureReason) {
 				failure.accept(failureReason);
 			}
-		}, failure);
+		});
 	}
 
 	private void resolveSharedUuidOnPlatform(UUID uuid, Consumer<AdvancedCoreUser> success,
@@ -419,7 +423,7 @@ public class UserManager {
 			} catch (RuntimeException failureReason) {
 				failure.accept(failureReason);
 			}
-		}, failure);
+		});
 	}
 
 	private void resolveUserOnPlatform(java.util.function.Supplier<AdvancedCoreUser> resolve,
@@ -432,23 +436,22 @@ public class UserManager {
 				return;
 			}
 			success.accept(user);
-		}, failure);
+		});
 	}
 
-	private void runOnPlatform(Runnable deliver, Consumer<Throwable> failure) {
+	private void runOnPlatform(Runnable deliver) {
 		if (Bukkit.getServer() == null || Bukkit.isPrimaryThread()) {
 			deliver.run();
 			return;
 		}
-		java.util.concurrent.atomic.AtomicBoolean taskStarted = new java.util.concurrent.atomic.AtomicBoolean();
+		java.util.concurrent.atomic.AtomicBoolean completionClaimed = new java.util.concurrent.atomic.AtomicBoolean();
 		try {
 			plugin.getBukkitScheduler().runTask(plugin, () -> {
-				taskStarted.set(true);
+				if (!completionClaimed.compareAndSet(false, true)) return;
 				deliver.run();
 			});
 		} catch (RuntimeException rejected) {
-			if (taskStarted.get()) throw rejected;
-			failure.accept(rejected);
+			if (completionClaimed.compareAndSet(false, true)) reportUndeliverablePlatformCallback(rejected);
 		}
 	}
 
@@ -489,8 +492,19 @@ public class UserManager {
 		try {
 			dataManager.dispatchSharedStorageNotification(deliver);
 		} catch (RuntimeException rejected) {
-			if (completionClaimed.compareAndSet(false, true)) failure.accept(rejected);
-			else throw rejected;
+			if (completionClaimed.compareAndSet(false, true)) reportUndeliverablePlatformCallback(rejected);
+		}
+	}
+
+	/**
+	 * A callback supplied to this API may touch Bukkit. Once the platform scheduler
+	 * has stopped there is no safe fallback thread for it, so retain the terminal
+	 * failure for the server log instead of invoking it from an async worker.
+	 */
+	private void reportUndeliverablePlatformCallback(Throwable failure) {
+		if (plugin != null && plugin.getLogger() != null) {
+			plugin.getLogger().log(java.util.logging.Level.SEVERE,
+					"Unable to deliver async user resolution on the platform scheduler", failure);
 		}
 	}
 

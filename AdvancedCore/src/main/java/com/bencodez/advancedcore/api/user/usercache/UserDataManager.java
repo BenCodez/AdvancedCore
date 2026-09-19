@@ -936,7 +936,6 @@ public class UserDataManager {
 				} catch (RuntimeException rejected) {
 					if (completionClaimed.compareAndSet(false, true)) {
 						reportDeferredStorageFailure(rejected);
-						failure.accept(rejected);
 					} else throw rejected;
 				}
 			});
@@ -947,7 +946,11 @@ public class UserDataManager {
 		return true;
 	}
 
-	/** Return a deferred storage completion to Bukkit/Folia's safe scheduler. */
+	/**
+	 * Return a deferred storage completion to Bukkit/Folia's safe scheduler. If the
+	 * scheduler has stopped, the manager records the terminal delivery failure;
+	 * it never invokes a callback from the storage worker as a fallback.
+	 */
 	public final void dispatchSharedStorageNotification(Runnable notification) {
 		dispatchSharedStorageNotification(notification, null);
 	}

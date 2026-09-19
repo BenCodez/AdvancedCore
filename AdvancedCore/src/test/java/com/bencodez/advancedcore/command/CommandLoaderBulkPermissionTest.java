@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.command;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -17,10 +18,13 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -110,6 +114,43 @@ class CommandLoaderBulkPermissionTest {
 		loader.cacheUserAndReport(sender, "stopped", user);
 		verify(user, org.mockito.Mockito.times(1)).cache();
 		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Unable to cache stopped"));
+	}
+
+	@Test
+	void deferredCommandFailureDoesNotCallPlayerFromWorkerWhenEntitySchedulerStops() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = new UserDataManager(plugin);
+		dataManager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		java.lang.reflect.Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(dataManager, worker);
+		dataManager.bindSharedSqlBackend(mock(com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend.class),
+				(user, operation) -> operation.run());
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		Player sender = mock(Player.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		RejectedExecutionException rejected = new RejectedExecutionException("scheduler stopped");
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(users.getDataManager()).thenReturn(dataManager);
+		doAnswer(call -> { throw rejected; }).when(scheduler).runTask(any(), any(Runnable.class),
+				org.mockito.ArgumentMatchers.same(sender));
+
+		try (org.mockito.MockedStatic<org.bukkit.Bukkit> bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
+			bukkit.when(org.bukkit.Bukkit::getServer).thenReturn(mock(org.bukkit.Server.class));
+			bukkit.when(org.bukkit.Bukkit::isPrimaryThread).thenReturn(true, false);
+			new CommandLoader(plugin).cacheUserAndReport(sender, "voter", user);
+			ArgumentCaptor<Runnable> storage = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(storage.capture());
+			storage.getValue().run();
+		}
+
+		verify(user).cache();
+		verify(sender, never()).sendMessage(any(String.class));
+		assertSame(rejected, dataManager.getLastDeferredStorageFailure());
+		dataManager.getTimer().shutdownNow();
 	}
 
 	@Test
