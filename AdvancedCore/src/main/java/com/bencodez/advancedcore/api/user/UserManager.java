@@ -266,7 +266,7 @@ public class UserManager {
 		// identifies the same player and cache-backed lookups above preserve known
 		// casing.  A worker (or a non-shared runtime) may retain the historical
 		// storage fallback below.
-		if (dataManager != null && dataManager.mustDeferSharedStorageAccess()) {
+		if (dataManager != null && dataManager.hasSharedSqlBackend()) {
 			return name;
 		}
 
@@ -339,33 +339,11 @@ public class UserManager {
 			failure.accept(new IllegalArgumentException("Player name cannot be blank"));
 			return;
 		}
-		if (dataManager == null || !dataManager.mustDeferSharedStorageAccess()) {
-			try {
-				success.accept(getUser(playerName));
-			} catch (RuntimeException failureReason) {
-				failure.accept(failureReason);
-			}
+		if (dataManager == null || !dataManager.hasSharedSqlBackend()) {
+			resolveUserOnPlatform(() -> getUser(playerName), success, failure);
 			return;
 		}
-
-		String resolved = UuidLookup.getInstance().getUUIDWithoutStorage(playerName);
-		if (resolved != null && !resolved.isEmpty()) {
-			deliverResolvedUser(resolved, getProperName(playerName), success, failure);
-			return;
-		}
-		try {
-			if (!dataManager.deferSharedStorageResult(() -> UuidLookup.getInstance().getUUIDFromStorage(playerName),
-					uuid -> deliverStoredOrProfileUser(uuid, playerName, success, failure), failure)) {
-				// The shared backend was retired between the eligibility check and
-				// admission. Do not fall back to a synchronous profile/storage lookup on
-				// the primary thread during that shutdown race.
-				failure.accept(new IllegalStateException("User storage is no longer available"));
-			}
-		} catch (RuntimeException failureReason) {
-			// Rejection during disable is an asynchronous resolution failure, not an
-			// exception that should escape this callback-based API.
-			failure.accept(failureReason);
-		}
+		resolveSharedNameOnPlatform(playerName, success, failure);
 	}
 
 	/**
@@ -378,35 +356,99 @@ public class UserManager {
 			return;
 		}
 		if (success == null || failure == null) throw new IllegalArgumentException("Resolution callbacks are required");
-		if (dataManager == null || !dataManager.mustDeferSharedStorageAccess()) {
+		if (dataManager == null || !dataManager.hasSharedSqlBackend()) {
+			resolveUserOnPlatform(() -> getUser(uuid), success, failure);
+			return;
+		}
+		resolveSharedUuidOnPlatform(uuid, success, failure);
+	}
+
+	private void resolveSharedNameOnPlatform(String playerName, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		runOnPlatform(() -> {
+			String resolved;
+			try { resolved = UuidLookup.getInstance().getUUIDWithoutStorage(playerName); }
+			catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+				return;
+			}
+			if (resolved != null && !resolved.isEmpty()) {
+				deliverResolvedUser(resolved, getProperName(playerName), success, failure);
+				return;
+			}
 			try {
-				success.accept(getUser(uuid));
+				if (!dataManager.deferSharedStorageResultFromPlatform(
+						() -> UuidLookup.getInstance().getUUIDFromStorage(playerName),
+						uuid -> deliverStoredOrProfileUser(uuid, playerName, success, failure), failure)) {
+					failure.accept(new IllegalStateException("User storage is no longer available"));
+				}
 			} catch (RuntimeException failureReason) {
 				failure.accept(failureReason);
 			}
-			return;
-		}
+		}, failure);
+	}
 
-		UuidLookup lookup = UuidLookup.getInstance();
-		String knownName = lookup.getCachedName(uuid.toString());
-		if (knownName.isEmpty()) knownName = lookup.getOnlinePlayerName(uuid.toString());
-		if (!knownName.isEmpty()) {
-			success.accept(getUser(uuid, knownName));
-			return;
-		}
-
-		AdvancedCoreUser user = getUser(uuid, false);
-		try {
-			if (!dataManager.deferSharedStorageResult(
-					() -> lookup.getPlayerNameFromStorage(user, uuid.toString(), false),
-					name -> {
-						user.setPlayerName(name);
-						success.accept(user);
-					}, failure)) {
-				failure.accept(new IllegalStateException("User storage is no longer available"));
+	private void resolveSharedUuidOnPlatform(UUID uuid, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		runOnPlatform(() -> {
+			UuidLookup lookup = UuidLookup.getInstance();
+			String knownName;
+			try {
+				knownName = lookup.getCachedName(uuid.toString());
+				if (knownName.isEmpty()) knownName = lookup.getOnlinePlayerName(uuid.toString());
+			} catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+				return;
 			}
-		} catch (RuntimeException failureReason) {
-			failure.accept(failureReason);
+			if (!knownName.isEmpty()) {
+				deliverResolvedUser(uuid.toString(), knownName, success, failure);
+				return;
+			}
+			AdvancedCoreUser user;
+			try { user = getUser(uuid, false); }
+			catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+				return;
+			}
+			try {
+				if (!dataManager.deferSharedStorageResultFromPlatform(
+						() -> lookup.getPlayerNameFromStorage(user, uuid.toString(), false),
+						name -> deliverResolvedUuidUser(user, name, success, failure), failure)) {
+					failure.accept(new IllegalStateException("User storage is no longer available"));
+				}
+			} catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+			}
+		}, failure);
+	}
+
+	private void resolveUserOnPlatform(java.util.function.Supplier<AdvancedCoreUser> resolve,
+			Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
+		runOnPlatform(() -> {
+			AdvancedCoreUser user;
+			try { user = resolve.get(); }
+			catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+				return;
+			}
+			success.accept(user);
+		}, failure);
+	}
+
+	private void runOnPlatform(Runnable deliver, Consumer<Throwable> failure) {
+		if (Bukkit.getServer() == null || Bukkit.isPrimaryThread()) {
+			deliver.run();
+			return;
+		}
+		java.util.concurrent.atomic.AtomicBoolean taskStarted = new java.util.concurrent.atomic.AtomicBoolean();
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, () -> {
+				taskStarted.set(true);
+				deliver.run();
+			});
+		} catch (RuntimeException rejected) {
+			if (taskStarted.get()) throw rejected;
+			failure.accept(rejected);
 		}
 	}
 
@@ -421,35 +463,61 @@ public class UserManager {
 		// asynchronously and therefore never blocks the server thread.
 		try {
 			Bukkit.createPlayerProfile(playerName).update().whenComplete((profile, problem) ->
-					dataManager.dispatchSharedStorageNotification(() -> {
-						if (problem != null) {
-							failure.accept(problem);
-							return;
-						}
-						UUID profileUuid = profile == null ? null : profile.getUniqueId();
-						if (profileUuid == null) {
-							failure.accept(new IllegalArgumentException("Unable to resolve UUID for " + playerName));
-							return;
-						}
-						UuidLookup.getInstance().cacheMapping(profileUuid.toString(), playerName);
-						deliverResolvedUser(profileUuid.toString(), playerName, success, failure);
-					}));
+					deliverProfileResult(playerName, profile, problem, success, failure));
 		} catch (RuntimeException failureReason) {
 			failure.accept(failureReason);
 		}
 	}
 
+	private void deliverProfileResult(String playerName, org.bukkit.profile.PlayerProfile profile, Throwable problem,
+			Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
+		java.util.concurrent.atomic.AtomicBoolean completionClaimed = new java.util.concurrent.atomic.AtomicBoolean();
+		Runnable deliver = () -> {
+			if (!completionClaimed.compareAndSet(false, true)) return;
+			if (problem != null) {
+				failure.accept(problem);
+				return;
+			}
+			UUID profileUuid = profile == null ? null : profile.getUniqueId();
+			if (profileUuid == null) {
+				failure.accept(new IllegalArgumentException("Unable to resolve UUID for " + playerName));
+				return;
+			}
+			UuidLookup.getInstance().cacheMapping(profileUuid.toString(), playerName);
+			deliverResolvedUser(profileUuid.toString(), playerName, success, failure);
+		};
+		try {
+			dataManager.dispatchSharedStorageNotification(deliver);
+		} catch (RuntimeException rejected) {
+			if (completionClaimed.compareAndSet(false, true)) failure.accept(rejected);
+			else throw rejected;
+		}
+	}
+
+	private void deliverResolvedUuidUser(AdvancedCoreUser user, String name, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		try { user.setPlayerName(name); }
+		catch (RuntimeException failureReason) {
+			failure.accept(failureReason);
+			return;
+		}
+		success.accept(user);
+	}
+
 	private void deliverResolvedUser(String uuid, String playerName, Consumer<AdvancedCoreUser> success,
 			Consumer<Throwable> failure) {
+		AdvancedCoreUser user;
 		try {
 			if (uuid == null || uuid.isBlank()) {
 				failure.accept(new IllegalArgumentException("Unable to resolve UUID for " + playerName));
 				return;
 			}
-			success.accept(getUser(UUID.fromString(uuid), playerName));
+			user = getUser(UUID.fromString(uuid), playerName);
 		} catch (RuntimeException failureReason) {
 			failure.accept(failureReason);
+			return;
 		}
+		success.accept(user);
 	}
 
 	/**

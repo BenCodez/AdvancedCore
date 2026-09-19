@@ -13,6 +13,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -35,6 +37,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -211,7 +214,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 		String playerName = "PreviouslyUnseen";
 		try (var bukkit = mockStatic(Bukkit.class); var lookups = mockStatic(UuidLookup.class)) {
 			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
-			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, true, false, false);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false, false);
 			bukkit.when(() -> Bukkit.createPlayerProfile(playerName)).thenReturn(pendingProfile);
 			UuidLookup lookup = mock(UuidLookup.class);
 			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
@@ -278,6 +281,54 @@ class SharedCacheCleanupPrimaryThreadTest {
 	}
 
 	@Test
+	void profileFallbackSchedulerRejectionCompletesFailureOnce() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.isOnlineMode()).thenReturn(true);
+		UserManager users = new UserManager(plugin);
+		when(plugin.getUserManager()).thenReturn(users);
+		UserDataManager manager = users.getDataManager();
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		manager.bindSharedSqlBackend(mock(SqlUserBackend.class), (user, operation) -> operation.run());
+		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		doNothing().doThrow(new RejectedExecutionException("scheduler stopped")).when(scheduler)
+				.runTask(eq(plugin), any(Runnable.class));
+		PlayerProfile pendingProfile = mock(PlayerProfile.class);
+		CompletableFuture<PlayerProfile> profileResult = new CompletableFuture<>();
+		when(pendingProfile.update()).thenReturn(profileResult);
+		AtomicInteger failures = new AtomicInteger();
+		AtomicBoolean succeeded = new AtomicBoolean();
+		String playerName = "ProfileRejected";
+		try (var bukkit = mockStatic(Bukkit.class); var lookups = mockStatic(UuidLookup.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false, false);
+			bukkit.when(() -> Bukkit.createPlayerProfile(playerName)).thenReturn(pendingProfile);
+			UuidLookup lookup = mock(UuidLookup.class);
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			when(lookup.getUUIDWithoutStorage(playerName)).thenReturn("");
+			when(lookup.getUUIDFromStorage(playerName)).thenReturn("");
+
+			users.getUserAsync(playerName, ignored -> succeeded.set(true), ignored -> failures.incrementAndGet());
+			ArgumentCaptor<Runnable> storageTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(storageTask.capture());
+			storageTask.getValue().run();
+			ArgumentCaptor<Runnable> storageCompletion = ArgumentCaptor.forClass(Runnable.class);
+			verify(scheduler).runTask(eq(plugin), storageCompletion.capture());
+			storageCompletion.getValue().run();
+			profileResult.complete(mock(PlayerProfile.class));
+		}
+		assertFalse(succeeded.get());
+		assertEquals(1, failures.get());
+		manager.getTimer().shutdownNow();
+	}
+
+	@Test
 	void uuidUserResolutionDoesNotReturnBeforePersistedNameCompletes() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		UserManager users = new UserManager(plugin);
@@ -329,6 +380,57 @@ class SharedCacheCleanupPrimaryThreadTest {
 			assertEquals("StoredName", resolved.get().getPlayerName());
 			assertNull(failed.get());
 		}
+	}
+
+	@Test
+	void workerStringUserResolutionCapturesIdentityOnPlatformThenReadsSharedStorageOnWorker() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getOptions()).thenReturn(options);
+		when(options.isOnlineMode()).thenReturn(true);
+		UserManager users = new UserManager(plugin);
+		when(plugin.getUserManager()).thenReturn(users);
+		UserDataManager manager = users.getDataManager();
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		manager.bindSharedSqlBackend(mock(SqlUserBackend.class), (user, operation) -> operation.run());
+		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		String playerName = "WorkerResolved";
+		UUID uuid = UUID.randomUUID();
+		AtomicReference<AdvancedCoreUser> resolved = new AtomicReference<>();
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+		try (var bukkit = mockStatic(Bukkit.class); var lookups = mockStatic(UuidLookup.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			UuidLookup lookup = mock(UuidLookup.class);
+			lookups.when(UuidLookup::getInstance).thenReturn(lookup);
+			when(lookup.getUUIDWithoutStorage(playerName)).thenReturn("");
+			when(lookup.getUUIDFromStorage(playerName)).thenReturn(uuid.toString());
+
+			users.getUserAsync(playerName, resolved::set, failed::set);
+			verify(lookup, never()).getUUIDWithoutStorage(playerName);
+			ArgumentCaptor<Runnable> platformIdentity = ArgumentCaptor.forClass(Runnable.class);
+			verify(scheduler).runTask(eq(plugin), platformIdentity.capture());
+			platformIdentity.getValue().run();
+			verify(lookup).getUUIDWithoutStorage(playerName);
+			verify(lookup, never()).getUUIDFromStorage(playerName);
+			ArgumentCaptor<Runnable> storageTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(storageTask.capture());
+			storageTask.getValue().run();
+			verify(lookup).getUUIDFromStorage(playerName);
+			ArgumentCaptor<Runnable> completion = ArgumentCaptor.forClass(Runnable.class);
+			verify(scheduler, times(2)).runTask(eq(plugin), completion.capture());
+			completion.getAllValues().get(1).run();
+
+			assertNotNull(resolved.get());
+			assertEquals(uuid.toString(), resolved.get().getUUID());
+			assertNull(failed.get());
+		}
+		manager.getTimer().shutdownNow();
 	}
 
 	@Test
@@ -499,6 +601,35 @@ class SharedCacheCleanupPrimaryThreadTest {
 			failedCallback.getAllValues().get(1).run();
 			assertTrue(failed.get());
 		}
+		manager.getTimer().shutdownNow();
+	}
+
+	@Test
+	void rejectedStorageCompletionSchedulerCallsFailureExactlyOnce() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		manager.bindSharedSqlBackend(mock(SqlUserBackend.class), (user, operation) -> operation.run());
+		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		doThrow(new RejectedExecutionException("scheduler stopped")).when(scheduler)
+				.runTask(eq(plugin), any(Runnable.class));
+		AtomicBoolean succeeded = new AtomicBoolean();
+		AtomicReference<Throwable> failed = new AtomicReference<>();
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true, false);
+			assertTrue(manager.deferSharedStorageResult(() -> "row", value -> succeeded.set(true), failed::set));
+			ArgumentCaptor<Runnable> storage = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(storage.capture());
+			storage.getValue().run();
+		}
+		assertFalse(succeeded.get());
+		assertTrue(failed.get() instanceof RejectedExecutionException);
 		manager.getTimer().shutdownNow();
 	}
 

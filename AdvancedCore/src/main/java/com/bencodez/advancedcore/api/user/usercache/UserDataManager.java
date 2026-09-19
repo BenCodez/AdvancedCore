@@ -896,6 +896,25 @@ public class UserDataManager {
 		Objects.requireNonNull(success, "success");
 		Objects.requireNonNull(failure, "failure");
 		if (!mustDeferSharedStorageAccess()) return false;
+		return submitSharedStorageResult(storageWork, success, failure, callbackOwner);
+	}
+
+	/**
+	 * Submit a shared-storage read after a platform task has captured any Bukkit
+	 * identity evidence. Folia's global scheduler is not Bukkit's primary thread,
+	 * so it must not synchronously enter the shared store there.
+	 */
+	public final <T> boolean deferSharedStorageResultFromPlatform(Supplier<T> storageWork, Consumer<T> success,
+			Consumer<Throwable> failure) {
+		Objects.requireNonNull(storageWork, "storageWork");
+		Objects.requireNonNull(success, "success");
+		Objects.requireNonNull(failure, "failure");
+		if (!hasSharedSqlBackend()) return false;
+		return submitSharedStorageResult(storageWork, success, failure, null);
+	}
+
+	private <T> boolean submitSharedStorageResult(Supplier<T> storageWork, Consumer<T> success,
+			Consumer<Throwable> failure, org.bukkit.entity.Entity callbackOwner) {
 		try {
 			timer.execute(() -> {
 				T result = null;
@@ -907,10 +926,19 @@ public class UserDataManager {
 				}
 				T completed = result;
 				Throwable completedFailure = problem;
-				dispatchSharedStorageNotification(() -> {
-					if (completedFailure == null) success.accept(completed);
-					else failure.accept(completedFailure);
-				}, callbackOwner);
+				java.util.concurrent.atomic.AtomicBoolean completionClaimed = new java.util.concurrent.atomic.AtomicBoolean();
+				try {
+					dispatchSharedStorageNotification(() -> {
+						if (!completionClaimed.compareAndSet(false, true)) return;
+						if (completedFailure == null) success.accept(completed);
+						else failure.accept(completedFailure);
+					}, callbackOwner);
+				} catch (RuntimeException rejected) {
+					if (completionClaimed.compareAndSet(false, true)) {
+						reportDeferredStorageFailure(rejected);
+						failure.accept(rejected);
+					} else throw rejected;
+				}
 			});
 		} catch (RejectedExecutionException rejected) {
 			reportDeferredStorageFailure(rejected);
