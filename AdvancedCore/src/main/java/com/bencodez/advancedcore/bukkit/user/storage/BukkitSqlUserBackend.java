@@ -171,12 +171,7 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
             user.writeValues(storage, new HashMap<>(updates));
             return null;
         });
-        if (storage == UserStorage.MYSQL) {
-            DataValue name = updates.entrySet().stream()
-                    .filter(entry -> "PlayerName".equalsIgnoreCase(entry.getKey()))
-                    .map(java.util.Map.Entry::getValue).findFirst().orElse(null);
-            mysql().recordCommittedUser(uuid, name != null && name.isString() ? name.getString() : null);
-        }
+        if (storage == UserStorage.MYSQL) mysql().recordCommittedUser(uuid);
     }
 
     private <T> T transaction(UserStorage storage, UUID uuid, java.util.Map<String, DataValue> initialValues, SqlUserStorage.TransactionWork<T> work) {
@@ -185,18 +180,8 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         Objects.requireNonNull(work, "work");
         return withSqlUser(storage, uuid, java.util.Map.of(), user -> {
             if (storage != UserStorage.MYSQL) return user.transaction(storage, initialValues, work);
-            String[] committedName = new String[1];
-            T result = user.transaction(storage, initialValues, scope -> {
-                T value = work.run(scope);
-                for (Column column : scope.readRow()) {
-                    if ("PlayerName".equalsIgnoreCase(column.getName()) && column.getValue() != null) {
-                        committedName[0] = column.getValue().getString();
-                        break;
-                    }
-                }
-                return value;
-            });
-            mysql().recordCommittedUser(uuid, committedName[0]);
+            T result = user.transaction(storage, initialValues, work);
+            mysql().recordCommittedUser(uuid);
             return result;
         });
     }

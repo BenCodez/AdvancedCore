@@ -8,7 +8,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
@@ -408,10 +407,7 @@ class SqliteUserTransactionTest {
         UserDataManager manager = mock(UserDataManager.class);
         Connection connection = mock(Connection.class);
         PreparedStatement exists = mock(PreparedStatement.class);
-        PreparedStatement row = mock(PreparedStatement.class);
         ResultSet existsResult = mock(ResultSet.class);
-        ResultSet rowResult = mock(ResultSet.class);
-        ResultSetMetaData metadata = mock(ResultSetMetaData.class);
         when(plugin.getUserManager()).thenReturn(users);
         when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
         when(users.getDataManager()).thenReturn(manager);
@@ -420,25 +416,37 @@ class SqliteUserTransactionTest {
         when(mysql.getMysql().getConnectionManager().getConnection()).thenReturn(connection);
         when(mysql.getMysql().getConnectionManager().getDbType()).thenReturn(DbType.MYSQL);
         when(connection.prepareStatement(org.mockito.ArgumentMatchers.contains("FOR UPDATE"))).thenReturn(exists);
-        when(connection.prepareStatement(org.mockito.ArgumentMatchers.startsWith("SELECT *"))).thenReturn(row);
         when(exists.executeQuery()).thenReturn(existsResult);
         when(existsResult.next()).thenReturn(true);
-        when(row.executeQuery()).thenReturn(rowResult);
-        when(rowResult.next()).thenReturn(true);
-        when(rowResult.getMetaData()).thenReturn(metadata);
-        when(metadata.getColumnCount()).thenReturn(1);
-        when(metadata.getColumnLabel(1)).thenReturn("PlayerName");
-        when(rowResult.getString(1)).thenReturn("Ben");
         BukkitSqlUserBackend backend = new BukkitSqlUserBackend(plugin, UserStorage.MYSQL, mysql, null);
         assertEquals("accepted", backend.user(uuid).transaction(UserStorage.MYSQL, scope -> "accepted"));
         org.mockito.InOrder order = inOrder(connection, mysql);
         order.verify(connection).commit();
-        order.verify(mysql).recordCommittedUser(uuid, "Ben");
+        order.verify(mysql).recordCommittedUser(uuid);
         clearInvocations(connection, mysql);
         assertThrows(IllegalStateException.class, () -> backend.user(uuid).transaction(UserStorage.MYSQL,
                 scope -> { throw new SQLException("receipt failed"); }));
         verify(connection).rollback();
-        verify(mysql, never()).recordCommittedUser(any(), any());
+        verify(mysql, never()).recordCommittedUser(any());
+    }
+
+    @Test void committedMysqlIdentityInvalidatesStaleNameCache() throws Exception {
+        MySQL mysql = mock(MySQL.class, CALLS_REAL_METHODS);
+        Set<String> names = java.util.concurrent.ConcurrentHashMap.newKeySet();
+        Set<String> uuids = java.util.concurrent.ConcurrentHashMap.newKeySet();
+        java.lang.reflect.Field namesField = MySQL.class.getDeclaredField("names");
+        java.lang.reflect.Field uuidsField = MySQL.class.getDeclaredField("uuids");
+        namesField.setAccessible(true);
+        uuidsField.setAccessible(true);
+        namesField.set(mysql, names);
+        uuidsField.set(mysql, uuids);
+        doReturn(new java.util.ArrayList<>(List.of("New"))).when(mysql).getNamesQuery();
+        names.add("Old");
+        UUID uuid = UUID.randomUUID();
+        mysql.recordCommittedUser(uuid);
+        assertTrue(uuids.contains(uuid.toString()));
+        assertFalse(names.contains("Old"));
+        assertEquals(Set.of("New"), mysql.getNames());
     }
 
     @Test void transactionFencesBypassPublishersAndReopensCacheAfterRollback() throws Exception {

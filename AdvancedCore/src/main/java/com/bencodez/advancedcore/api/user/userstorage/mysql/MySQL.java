@@ -361,9 +361,11 @@ public class MySQL extends AbstractSqlTable {
 	// -------------------------
 
 	/** Publish a user committed through the shared JDBC transaction route. */
-	public void recordCommittedUser(UUID uuid, String playerName) {
+	public void recordCommittedUser(UUID uuid) {
 		uuids.add(uuid.toString());
-		if (playerName != null && !playerName.isEmpty()) names.add(playerName);
+		// A prior name may belong to this UUID. Reload the complete set from
+		// committed SQL on its next read instead of retaining that stale name.
+		synchronized (names) { names.clear(); }
 	}
 
 	public Set<String> getUuids() {
@@ -392,11 +394,10 @@ public class MySQL extends AbstractSqlTable {
 	}
 
 	public Set<String> getNames() {
-		if (names == null || names.isEmpty()) {
-			names.clear();
-			names.addAll(getNamesQuery());
+		synchronized (names) {
+			if (names.isEmpty()) names.addAll(getNamesQuery());
+			return names;
 		}
-		return names;
 	}
 
 	public ArrayList<String> getNamesQuery() {
