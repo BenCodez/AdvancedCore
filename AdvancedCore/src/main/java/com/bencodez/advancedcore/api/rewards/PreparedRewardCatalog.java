@@ -110,6 +110,11 @@ public final class PreparedRewardCatalog {
         TreeMap<String, PreparedRewardDefinition> direct = new TreeMap<>();
         LinkedHashMap<String, PreparedRewardDefinition> files = new LinkedHashMap<>();
         if (!records.isEmpty()) {
+            long recordCount = 1L + records.chars().filter(value -> value == '\n').count();
+            if (recordCount > MAX_DEFINITIONS - 1L) {
+                throw new PreparedRewardDefinitionException(
+                        "Prepared reward catalog exceeds " + MAX_DEFINITIONS + " definitions");
+            }
             for (String record : records.split("\n", -1)) {
                 String[] parts = record.split("\\|", -1);
                 if (parts.length != 3) throw new PreparedRewardDefinitionException("Malformed prepared reward catalog record");

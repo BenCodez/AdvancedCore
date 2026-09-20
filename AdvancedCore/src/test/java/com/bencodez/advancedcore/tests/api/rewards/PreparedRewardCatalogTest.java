@@ -2,6 +2,11 @@ package com.bencodez.advancedcore.tests.api.rewards;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Base64;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -183,6 +188,24 @@ class PreparedRewardCatalogTest {
 
         assertThrows(PreparedRewardDefinitionException.class,
                 () -> handler.prepareCatalog(new Reward("Root", rewardData("root"))));
+    }
+
+    @Test
+    void decodeRejectsExcessRecordsBeforeSplittingThem() throws Exception {
+        String[] parts = handler.prepareCatalog(new Reward("Root", rewardData("root"))).encode().split("/", -1);
+        String rootEncoded = new String(Base64.getUrlDecoder().decode(parts[2]), StandardCharsets.UTF_8);
+        String records = "\n".repeat(1024);
+        String hashInput = "2\n" + rootEncoded + "\n" + records;
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(hashInput.getBytes(StandardCharsets.UTF_8));
+        StringBuilder hash = new StringBuilder();
+        for (byte value : digest) hash.append(String.format("%02x", value));
+        String encoded = "AdvancedCorePreparedRewardCatalog/2/" + parts[2] + "/"
+                + Base64.getUrlEncoder().withoutPadding().encodeToString(records.getBytes(StandardCharsets.UTF_8))
+                + "/" + hash;
+
+        PreparedRewardDefinitionException failure = assertThrows(PreparedRewardDefinitionException.class,
+                () -> PreparedRewardCatalog.decode(encoded));
+        assertTrue(failure.getMessage().contains("definitions"));
     }
 
     @Test
