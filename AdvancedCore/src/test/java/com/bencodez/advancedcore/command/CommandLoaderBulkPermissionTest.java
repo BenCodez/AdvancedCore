@@ -34,11 +34,51 @@ import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.UserData;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 class CommandLoaderBulkPermissionTest {
+	@Test void bulkSetDataAcknowledgesOnlyAfterSynchronousStorageWritesFinish() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		UserManager users = mock(UserManager.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		CommandSender sender = mock(CommandSender.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserData data = mock(UserData.class);
+		UUID uuid = UUID.randomUUID();
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(users.getUser(uuid, false)).thenReturn(user);
+		when(user.getData()).thenReturn(data);
+		doAnswer(call -> {
+			@SuppressWarnings("unchecked") BiConsumer<UUID, ArrayList<Column>> each = call.getArgument(0);
+			each.accept(uuid, new ArrayList<>());
+			return null;
+		}).when(users).forEachUserKeys(any(), any());
+		ArrayList<Runnable> workers = new ArrayList<>();
+		ArrayList<Runnable> callbacks = new ArrayList<>();
+		doAnswer(call -> { workers.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTaskAsynchronously(any(), any());
+		doAnswer(call -> { callbacks.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTask(any(), any());
+		PlayerCommandHandler command = (PlayerCommandHandler) find(new CommandLoader(plugin),
+				"User", "(player)", "SetData", "(text)", "(text)");
+		String[] args = {"User", "all", "SetData", "rank", "trusted"};
+		command.executeAll(sender, args);
+		assertEquals(1, workers.size());
+		assertTrue(callbacks.isEmpty());
+		workers.remove(0).run();
+		verify(data).setString("rank", "trusted", false);
+		assertEquals(1, callbacks.size());
+		verify(sender, never()).sendMessage(any(String.class));
+		callbacks.remove(0).run();
+		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Set all users rank"));
+	}
+
 	@Test
 	void clearCacheReportsOnlyAfterCompletion() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);

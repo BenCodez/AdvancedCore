@@ -538,7 +538,9 @@ public class CommandLoader {
 				runUserStorageCommand(sender, () -> plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-					user.getData().setString(key, value);
+					// The bulk success callback means durable completion, not merely a
+					// queued shared-cache mutation for each enumerated user.
+					user.getData().setString(key, value, false);
 				}, null), () -> sender.sendMessage(MessageAPI.colorize("&cSet all users " + key + " to " + args[4])));
 			}
 
@@ -547,11 +549,10 @@ public class CommandLoader {
 				String data = args[4];
 				if (data.equalsIgnoreCase("\"\"")) data = "";
 				final String value = data;
-				withResolvedUser(sender, args[1], user -> {
-					user.getData().setString(args[3], value);
-					runCommandCallback(sender, () -> sender.sendMessage(
-							MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4])));
-				});
+				withResolvedUser(sender, args[1], user -> runUserStorageCommand(sender,
+						() -> user.getData().setString(args[3], value, false),
+						() -> sender.sendMessage(MessageAPI.colorize(
+								"&cSet " + args[3] + " for " + args[1] + " to " + args[4]))));
 			}
 		}.withLegacyAllPermissionAliases(permPrefix + ".SetAllData"));
 
