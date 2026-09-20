@@ -137,6 +137,37 @@ public class RewardHandler {
         return rewardExecutor.getReward(data, path, rewardOptions);
     }
 
+    /**
+     * Resolves and snapshots one named reward. The returned definition freezes
+     * only this reward; nested definitions are resolved individually by their
+     * owning injectors.
+     */
+    public PreparedRewardDefinition prepareReward(String reward) {
+        if (!rewardRegistry.rewardExist(reward) && !rewardRegistry.hasDirectRewardHandle(reward)) {
+            throw new IllegalArgumentException("Resolved reward does not exist: " + reward);
+        }
+        return prepareReward(getReward(reward));
+    }
+
+    /** Resolves and snapshots one inline configuration-section reward. */
+    public PreparedRewardDefinition prepareReward(ConfigurationSection data, String path, RewardOptions rewardOptions) {
+        return prepareReward(getReward(data, path, rewardOptions));
+    }
+
+    /** Snapshots an already resolved reward definition. */
+    public PreparedRewardDefinition prepareReward(Reward reward) {
+        return PreparedRewardDefinition.capture(reward);
+    }
+
+    /**
+     * Captures a bounded catalog for a resolved root and all current named
+     * registry entries. Dispatch remains unchanged; callers opt in explicitly.
+     */
+    public PreparedRewardCatalog prepareCatalog(Reward root) {
+        return PreparedRewardCatalog.capture(root, rewardRegistry.getDirectlyDefinedRewards(),
+                rewardRegistry.getSubDirectlyDefinedRewards(), rewardRegistry.getRewards());
+    }
+
     public Reward getReward(String reward) {
         return rewardRegistry.getReward(reward);
     }
