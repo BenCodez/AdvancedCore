@@ -148,10 +148,12 @@ public class RewardHandler {
      */
     public PreparedRewardDefinition prepareReward(String reward) {
         synchronized (rewardRegistry) {
-            if (!rewardRegistry.rewardExist(reward) && !rewardRegistry.hasDirectRewardHandle(reward)) {
+            String lookup = RewardRegistry.normalizeLookupName(reward);
+            if (lookup.isEmpty()) lookup = "EmptyName";
+            if (!rewardRegistry.rewardExist(lookup) && !rewardRegistry.hasDirectRewardHandle(lookup)) {
                 throw new IllegalArgumentException("Resolved reward does not exist: " + reward);
             }
-            return prepareReward(getReward(reward));
+            return prepareReward(getReward(lookup));
         }
     }
 

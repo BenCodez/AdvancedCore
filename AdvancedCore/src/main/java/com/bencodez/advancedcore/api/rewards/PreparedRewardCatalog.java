@@ -54,6 +54,7 @@ public final class PreparedRewardCatalog {
         TreeMap<String, PreparedRewardDefinition> direct = new TreeMap<>();
         LinkedHashMap<String, PreparedRewardDefinition> files = new LinkedHashMap<>();
         int count = 1;
+        int recordBytes = 0;
 
         for (DirectlyDefinedReward entry : directlyDefined) {
             if (entry == null) continue;
@@ -61,7 +62,9 @@ public final class PreparedRewardCatalog {
             String key = directKey(entry.getPath());
             if (!direct.containsKey(key)) {
                 Reward reward = entry.getReward();
-                direct.put(key, reward == null ? null : definitionFor(reward, key));
+                PreparedRewardDefinition definition = reward == null ? null : definitionFor(reward, key);
+                recordBytes = addRecordBytes(recordBytes, "D", key, definition);
+                direct.put(key, definition);
             }
         }
         for (SubDirectlyDefinedReward entry : subDirectlyDefined) {
@@ -70,13 +73,19 @@ public final class PreparedRewardCatalog {
             String key = directKey(entry.getFullPath());
             if (!direct.containsKey(key)) {
                 Reward reward = entry.getReward();
-                direct.put(key, reward == null ? null : definitionFor(reward, key));
+                PreparedRewardDefinition definition = reward == null ? null : definitionFor(reward, key);
+                recordBytes = addRecordBytes(recordBytes, "D", key, definition);
+                direct.put(key, definition);
             }
         }
         for (Reward entry : rewardFiles) {
             count = checkCount(count + 1);
             String key = fileKey(entry == null ? null : entry.getRewardName());
-            files.putIfAbsent(key, definitionFor(entry, key));
+            if (!files.containsKey(key)) {
+                PreparedRewardDefinition definition = definitionFor(entry, key);
+                recordBytes = addRecordBytes(recordBytes, "F", key, definition);
+                files.put(key, definition);
+            }
         }
 
         String records = encodeRecords(direct, files);
@@ -207,6 +216,17 @@ public final class PreparedRewardCatalog {
             throw new PreparedRewardDefinitionException("Prepared reward catalog exceeds " + MAX_DEFINITIONS + " definitions");
         }
         return count;
+    }
+
+    private static int addRecordBytes(int used, String type, String key, PreparedRewardDefinition definition) {
+        // Records are ASCII: Base64 URL fields separated by two pipes and newlines.
+        String record = type + "|" + encodeField(key) + "|"
+                + (definition == null ? "" : encodeField(definition.encode()));
+        long next = (long) used + (used == 0 ? 0 : 1) + record.length();
+        if (next > MAX_CATALOG_BYTES) {
+            throw new PreparedRewardDefinitionException("Prepared reward catalog exceeds " + MAX_CATALOG_BYTES + " bytes");
+        }
+        return (int) next;
     }
 
     private static String encodeRecords(Map<String, PreparedRewardDefinition> direct,

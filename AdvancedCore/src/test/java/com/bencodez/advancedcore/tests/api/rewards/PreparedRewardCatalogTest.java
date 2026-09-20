@@ -8,6 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -184,6 +187,8 @@ class PreparedRewardCatalogTest {
         PreparedRewardCatalog catalog = handler.prepareCatalog(new Reward("Root", rewardData("root")));
 
         assertMessage("fallback", handler.getReward(""));
+        assertMessage("fallback", handler.prepareReward("").instantiate());
+        assertMessage("fallback", handler.prepareReward((String) null).instantiate());
         assertMessage("fallback", catalog.instantiate(""));
         assertMessage("fallback", catalog.instantiate(null));
     }
@@ -196,9 +201,12 @@ class PreparedRewardCatalogTest {
             data.set("Payload", largeValue);
             handler.getRewards().add(new Reward("Large" + index, data));
         }
+        Reward late = spy(new Reward("Late", rewardData("must not capture")));
+        handler.getRewards().add(late);
 
         assertThrows(PreparedRewardDefinitionException.class,
                 () -> handler.prepareCatalog(new Reward("Root", rewardData("root"))));
+        verify(late, never()).getConfig();
     }
 
     @Test
