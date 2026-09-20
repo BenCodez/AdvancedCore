@@ -217,12 +217,19 @@ public class UuidLookup {
 		// Online player
 		Player player = Bukkit.getPlayer(u);
 
-		String storedName = (user == null) ? ""
-				: safeString(user.getData().getString("PlayerName", UserDataFetchMode.fromBooleans(useCache, true)));
-
 		if (player != null) {
 			String liveName = player.getName();
 			cacheMapping(uuid, liveName);
+			String storedName = "";
+			if (user != null) {
+				try {
+					storedName = safeString(user.getData().getString("PlayerName",
+							UserDataFetchMode.fromBooleans(useCache, true)));
+				} catch (IllegalStateException ignored) {
+					// Shared SQL cannot be read from the platform thread; the live name is authoritative.
+					return liveName;
+				}
+			}
 
 			// Update stored PlayerName if it changed / missing
 			if (user != null && (storedName.isEmpty() || storedName.equalsIgnoreCase("Error getting name")
@@ -231,6 +238,16 @@ public class UuidLookup {
 				user.updateName(false);
 			}
 			return liveName;
+		}
+
+		String storedName = "";
+		if (user != null) {
+			try {
+				storedName = safeString(user.getData().getString("PlayerName",
+						UserDataFetchMode.fromBooleans(useCache, true)));
+			} catch (IllegalStateException ignored) {
+				return "";
+			}
 		}
 
 		// Fall back to stored name if available

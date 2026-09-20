@@ -67,6 +67,28 @@ import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class SharedCacheCleanupPrimaryThreadTest {
 	@Test
+	void publicPlayerNameLookupUsesOnlineNameWhenColdSharedCacheThrows() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.getOptions()).thenReturn(mock(AdvancedCoreConfigOptions.class));
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserData data = mock(UserData.class);
+		Player player = mock(Player.class);
+		UUID uuid = UUID.randomUUID();
+		when(user.getData()).thenReturn(data);
+		when(data.getString(eq("PlayerName"), any())).thenThrow(new IllegalStateException("shared storage"));
+		when(player.getName()).thenReturn("LiveName");
+		Constructor<UuidLookup> constructor = UuidLookup.class.getDeclaredConstructor(AdvancedCorePlugin.class);
+		constructor.setAccessible(true);
+		UuidLookup lookup = constructor.newInstance(plugin);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			assertEquals("LiveName", lookup.getPlayerName(user, uuid.toString(), true));
+			verify(user, never()).setPlayerName(any());
+			verify(user, never()).updateName(any(Boolean.class));
+		}
+	}
+
+	@Test
 	void userStorageWorkerCannotRetainJvmDuringHungRetirement() throws Exception {
 		UserDataManager manager = new UserDataManager(mock(AdvancedCorePlugin.class));
 		try {
