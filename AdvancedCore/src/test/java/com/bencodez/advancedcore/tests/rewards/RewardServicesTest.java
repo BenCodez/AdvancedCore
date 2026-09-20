@@ -4,9 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +19,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -23,7 +30,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.MockedStatic;
 
+import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.DefinedReward;
 import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
@@ -47,8 +56,10 @@ public class RewardServicesTest {
 	public void setUp() {
 		plugin = mock(AdvancedCorePlugin.class);
 		logger = mock(Logger.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		when(plugin.getDataFolder()).thenReturn(tempDir);
 		when(plugin.getLogger()).thenReturn(logger);
+		when(plugin.getOptions()).thenReturn(options);
 		AdvancedCorePlugin.setInstance(plugin);
 		handler = new RewardHandler(plugin);
 	}
@@ -178,5 +189,41 @@ public class RewardServicesTest {
 
 		assertTrue(fileBacked.isNeedsRewardFile());
 		assertFalse(directlyDefined.isNeedsRewardFile());
+	}
+
+	@Test
+	public void registryRebuildAndSubRewardChecksUseTheSameMonitor() throws Exception {
+		DefinedReward direct = mock(DefinedReward.class);
+		when(direct.getFullPath()).thenReturn("Direct");
+
+		assertWaitsForRegistryMonitor(handler.getRewardLoader()::loadRewards);
+		assertWaitsForRegistryMonitor(handler::loadRewards);
+		assertWaitsForRegistryMonitor(handler::checkSubRewards);
+		assertWaitsForRegistryMonitor(() -> handler.checkSubRewards(direct));
+	}
+
+	private void assertWaitsForRegistryMonitor(Runnable operation) throws Exception {
+		CountDownLatch monitorAcquisitionAttempted = new CountDownLatch(1);
+		FutureTask<Void> invocation = new FutureTask<>(() -> {
+			try (MockedStatic<AdvancedCorePlugin> pluginClass = mockStatic(AdvancedCorePlugin.class,
+					CALLS_REAL_METHODS)) {
+				pluginClass.when(AdvancedCorePlugin::getInstance).thenReturn(plugin);
+				monitorAcquisitionAttempted.countDown();
+				operation.run();
+			}
+			return null;
+		});
+		Thread worker = new Thread(invocation, "reward-registry-monitor-test");
+		synchronized (handler.getRewardRegistry()) {
+			worker.start();
+			assertTrue(monitorAcquisitionAttempted.await(5, TimeUnit.SECONDS));
+			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+			while (worker.getState() != Thread.State.BLOCKED && System.nanoTime() < deadline) {
+				Thread.yield();
+			}
+			assertEquals(Thread.State.BLOCKED, worker.getState());
+			assertThrows(TimeoutException.class, () -> invocation.get(100, TimeUnit.MILLISECONDS));
+		}
+		invocation.get(5, TimeUnit.SECONDS);
 	}
 }

@@ -141,50 +141,6 @@ public class RewardHandler {
         return rewardExecutor.getReward(data, path, rewardOptions);
     }
 
-    /**
-     * Resolves and snapshots one named reward. The returned definition freezes
-     * only this reward; nested definitions are resolved individually by their
-     * owning injectors.
-     */
-    public PreparedRewardDefinition prepareReward(String reward) {
-        synchronized (rewardRegistry) {
-            String lookup = RewardRegistry.normalizeLookupName(reward);
-            if (lookup.isEmpty()) lookup = "EmptyName";
-            if (!rewardRegistry.rewardExist(lookup) && !rewardRegistry.hasDirectRewardHandle(lookup)) {
-                throw new IllegalArgumentException("Resolved reward does not exist: " + reward);
-            }
-            return prepareReward(getReward(lookup));
-        }
-    }
-
-    /** Resolves and snapshots one inline configuration-section reward. */
-    public PreparedRewardDefinition prepareReward(ConfigurationSection data, String path, RewardOptions rewardOptions) {
-        return prepareReward(getReward(data, path, rewardOptions));
-    }
-
-    /** Snapshots an already resolved reward definition. */
-    public PreparedRewardDefinition prepareReward(Reward reward) {
-        return PreparedRewardDefinition.capture(reward);
-    }
-
-    /**
-     * Captures a bounded catalog for a resolved root and all current named
-     * registry entries. Dispatch remains unchanged; callers opt in explicitly.
-     */
-    public PreparedRewardCatalog prepareCatalog(Reward root) {
-        List<Reward> filesSnapshot;
-        // loadRewards holds the registry monitor from reset through publication.
-        // Also hold the synchronized list's monitor while copying its iterator.
-        synchronized (rewardRegistry) {
-            List<Reward> rewardFiles = rewardRegistry.getRewards();
-            synchronized (rewardFiles) {
-                filesSnapshot = new ArrayList<>(rewardFiles);
-            }
-            return PreparedRewardCatalog.capture(root, rewardRegistry.getDirectlyDefinedRewards(),
-                    rewardRegistry.getSubDirectlyDefinedRewards(), filesSnapshot);
-        }
-    }
-
     public Reward getReward(String reward) {
         return rewardRegistry.getReward(reward);
     }
@@ -289,7 +245,6 @@ public class RewardHandler {
     public void loadRewards() {
         synchronized (rewardRegistry) {
             rewardLoader.loadRewards();
-            subRewardResolver.checkSubRewards();
         }
     }
 
