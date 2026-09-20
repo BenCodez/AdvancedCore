@@ -2191,8 +2191,9 @@ public class AdvancedCoreUser {
 		// cache is the only safe synchronous storage evidence here; callers needing
 		// a definitive database answer must perform the lookup on a worker.
 		UserDataManager manager = plugin.getUserManager().getDataManager();
-		if (manager.mustDeferSharedStorageAccess()) {
-			return manager.isCached(java.util.UUID.fromString(uuid));
+		if (manager.hasSharedSqlBackend()) {
+			UserDataCache published = manager.getPublishedCache(java.util.UUID.fromString(uuid));
+			return published != null && published.hasStoredData();
 		}
 		ArrayList<String> uuids = plugin.getUserManager().getAllUUIDs();
 		if (uuids.contains(getUUID())) {
@@ -2872,6 +2873,11 @@ public class AdvancedCoreUser {
 	 * @param preference the preference
 	 */
 	public void setChoicePreference(String reward, String preference) {
+		setChoicePreference(reward, preference, true);
+	}
+
+	/** Persist immediately when a command must acknowledge a completed update. */
+	public void setChoicePreference(String reward, String preference, boolean queue) {
 		ArrayList<String> data = getChoicePreferenceData();
 		ArrayList<String> choices = new ArrayList<>();
 
@@ -2890,7 +2896,7 @@ public class AdvancedCoreUser {
 		if (!added) {
 			choices.add(reward + ":" + preference);
 		}
-		getData().setStringList("ChoicePreference", choices);
+		getData().setStringList("ChoicePreference", choices, queue);
 	}
 
 	/**

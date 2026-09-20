@@ -40,6 +40,112 @@ import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 class CommandLoaderBulkPermissionTest {
+	@Test void forceCacheDefersSharedStorageFromFoliaGlobalScheduler() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		CommandSender sender = mock(CommandSender.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.hasSharedSqlBackend()).thenReturn(true);
+		ArrayList<java.util.function.Supplier<Boolean>> storage = new ArrayList<>();
+		ArrayList<Consumer<Boolean>> success = new ArrayList<>();
+		ArrayList<Runnable> callbacks = new ArrayList<>();
+		doAnswer(call -> {
+			storage.add(call.getArgument(0));
+			success.add(call.getArgument(1));
+			return true;
+		}).when(manager).deferSharedStorageResultFromPlatform(any(), any(), any());
+		doAnswer(call -> { callbacks.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTask(any(), any());
+		new CommandLoader(plugin).cacheUserAndReport(sender, "voter", user);
+		verify(user, never()).cache();
+		assertEquals(1, storage.size());
+		Boolean result = storage.remove(0).get();
+		verify(user).cache();
+		verify(sender, never()).sendMessage(any(String.class));
+		success.remove(0).accept(result);
+		verify(sender, never()).sendMessage(any(String.class));
+		callbacks.remove(0).run();
+		verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Forced cached voter"));
+	}
+	@Test void viewDataReadsPersistedRowsOnlyOnStorageWorker() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		CommandSender sender = mock(CommandSender.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserData data = mock(UserData.class);
+		when(plugin.getOptions()).thenReturn(mock(AdvancedCoreConfigOptions.class));
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(user.getUUID()).thenReturn(UUID.randomUUID().toString());
+		when(user.getData()).thenReturn(data);
+		doAnswer(call -> { call.<Consumer<AdvancedCoreUser>>getArgument(1).accept(user); return null; })
+				.when(users).getUserAsync(org.mockito.ArgumentMatchers.eq("voter"), any(), any());
+		ArrayList<Runnable> workers = new ArrayList<>();
+		ArrayList<Runnable> callbacks = new ArrayList<>();
+		doAnswer(call -> { workers.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTaskAsynchronously(any(), any());
+		doAnswer(call -> { callbacks.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTask(any(), any());
+		try (org.mockito.MockedStatic<org.bukkit.Bukkit> bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
+			find(new CommandLoader(plugin), "User", "(Player)", "ViewData")
+					.execute(sender, new String[] {"User", "voter", "ViewData"});
+			assertEquals(1, callbacks.size());
+			verify(data, never()).getValues();
+			callbacks.remove(0).run();
+			assertEquals(1, workers.size());
+			verify(data, never()).getValues();
+			workers.remove(0).run();
+			verify(data).getValues();
+		}
+	}
+
+	@Test void bothPreferenceCommandsWriteOnlyOnWorkerBeforeAcknowledgement() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		Player sender = mock(Player.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		when(plugin.getOptions()).thenReturn(mock(AdvancedCoreConfigOptions.class));
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(users.getUser(sender)).thenReturn(user);
+		when(user.getUUID()).thenReturn(UUID.randomUUID().toString());
+		doAnswer(call -> { call.<Consumer<AdvancedCoreUser>>getArgument(1).accept(user); return null; })
+				.when(users).getUserAsync(org.mockito.ArgumentMatchers.eq("voter"), any(), any());
+		ArrayList<Runnable> workers = new ArrayList<>();
+		ArrayList<Runnable> callbacks = new ArrayList<>();
+		doAnswer(call -> { workers.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTaskAsynchronously(any(), any());
+		doAnswer(call -> { callbacks.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTask(any(), any());
+		doAnswer(call -> { callbacks.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTask(any(), any(), any(Player.class));
+		CommandLoader loader = new CommandLoader(plugin);
+		find(loader, "Choices", "SetPreference", "(ChoiceReward)", "(String)", "(Player)")
+				.execute(sender, new String[] {"Choices", "SetPreference", "daily", "one", "voter"});
+		try (org.mockito.MockedStatic<org.bukkit.Bukkit> bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
+			callbacks.remove(0).run();
+			verify(user, never()).setChoicePreference(any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+			assertEquals(1, workers.size());
+			workers.remove(0).run();
+			verify(user).setChoicePreference("daily", "one", false);
+		}
+		loader.getBasicCommands("Example").stream()
+				.filter(handler -> Arrays.equals(handler.getArgs(),
+						new String[] {"Choices", "SetPreference", "(ChoiceReward)", "(String)"}))
+				.findFirst().orElseThrow()
+				.execute(sender, new String[] {"Choices", "SetPreference", "daily", "two"});
+		assertEquals(1, workers.size());
+		verify(user, never()).setChoicePreference("daily", "two", false);
+		workers.remove(0).run();
+		verify(user).setChoicePreference("daily", "two", false);
+	}
 	@Test void bulkSetDataAcknowledgesOnlyAfterSynchronousStorageWritesFinish() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
@@ -180,7 +286,7 @@ class CommandLoaderBulkPermissionTest {
 
 		try (org.mockito.MockedStatic<org.bukkit.Bukkit> bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
 			bukkit.when(org.bukkit.Bukkit::getServer).thenReturn(mock(org.bukkit.Server.class));
-			bukkit.when(org.bukkit.Bukkit::isPrimaryThread).thenReturn(true, false);
+			bukkit.when(org.bukkit.Bukkit::isPrimaryThread).thenReturn(true, true, false);
 			new CommandLoader(plugin).cacheUserAndReport(sender, "voter", user);
 			ArgumentCaptor<Runnable> storage = ArgumentCaptor.forClass(Runnable.class);
 			verify(worker).execute(storage.capture());

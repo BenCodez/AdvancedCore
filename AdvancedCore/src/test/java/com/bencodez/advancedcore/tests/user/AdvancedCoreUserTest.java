@@ -56,10 +56,15 @@ public class AdvancedCoreUserTest {
 		org.bukkit.OfflinePlayer offline = mock(org.bukkit.OfflinePlayer.class);
 		try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getOfflinePlayer(UUID.fromString(user.getUUID()))).thenReturn(offline);
-			when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
-			when(dataManager.isCached(UUID.fromString(user.getUUID()))).thenReturn(true);
+			when(dataManager.hasSharedSqlBackend()).thenReturn(true);
+			com.bencodez.advancedcore.api.user.usercache.UserDataCache published =
+					mock(com.bencodez.advancedcore.api.user.usercache.UserDataCache.class);
+			when(dataManager.getPublishedCache(UUID.fromString(user.getUUID()))).thenReturn(published);
+			when(published.hasStoredData()).thenReturn(true);
 			assertTrue(user.hasLoggedOnBefore());
-			when(dataManager.isCached(UUID.fromString(user.getUUID()))).thenReturn(false);
+			when(published.hasStoredData()).thenReturn(false);
+			assertFalse(user.hasLoggedOnBefore());
+			when(dataManager.getPublishedCache(UUID.fromString(user.getUUID()))).thenReturn(null);
 			assertFalse(user.hasLoggedOnBefore());
 			verify(userManager, never()).getAllUUIDs();
 		}

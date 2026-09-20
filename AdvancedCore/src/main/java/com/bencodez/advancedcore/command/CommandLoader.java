@@ -1,7 +1,6 @@
 package com.bencodez.advancedcore.command;
 
 import java.util.ArrayList;
-import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -30,7 +29,6 @@ import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import com.bencodez.advancedcore.command.gui.UserGUI;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.sql.DataType;
-import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.valuerequest.InputMethod;
 import com.bencodez.simpleapi.valuerequest.PlayerInputManager;
 import com.bencodez.simpleapi.valuerequest.ValueRequest;
@@ -561,16 +559,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				withResolvedUser(sender, args[1], user -> {
-					if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
-							values -> values.forEach((key, value) ->
-									sendMessage(sender, "&c&l" + key + " &c" + value.toString())),
-							failure -> sendMessage(sender, "&cUnable to read user data; check the server log."),
-							callbackOwner(sender))) return;
-					for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
-						sendMessage(sender, "&c&l" + entry.getKey() + " &c" + entry.getValue().toString());
-					}
-				});
+				withResolvedUser(sender, args[1], user -> runUserStorageCommand(sender, () -> {
+					var values = user.getData().getValues();
+					runCommandCallback(sender, () -> values.forEach((key, value) ->
+							sendMessage(sender, "&c&l" + key + " &c" + value.toString())));
+				}, null));
 			}
 		});
 
@@ -579,10 +572,10 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				withResolvedUser(sender, args[1], user -> {
+				withResolvedUser(sender, args[1], user -> runUserStorageCommand(sender, () -> {
 					java.util.List<String> entries = user.getCache().displayCacheStringList();
 					runCommandCallback(sender, () -> entries.forEach(sender::sendMessage));
-				});
+				}, null));
 
 			}
 		});
@@ -615,10 +608,10 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				withResolvedUser(sender, args[4], user -> {
-					user.setChoicePreference(args[2], args[3]);
-					user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);
-				});
+				withResolvedUser(sender, args[4], user -> runUserStorageCommand(sender,
+						() -> user.setChoicePreference(args[2], args[3], false),
+						() -> runRecipientCallback(UUID.fromString(user.getUUID()),
+								() -> user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]))));
 			}
 		});
 
@@ -791,7 +784,20 @@ public class CommandLoader {
 		};
 		java.util.function.Consumer<Throwable> failed = ignored ->
 			sender.sendMessage(MessageAPI.colorize("&cUnable to remove " + identifier + "; check the server log."));
-		if (plugin.getUserManager().getDataManager().deferSharedStorageResult(remove, succeeded, failed,
+		var manager = plugin.getUserManager().getDataManager();
+		if (manager.hasSharedSqlBackend() && !manager.mustDeferSharedStorageAccess()) {
+			try {
+				if (!manager.deferSharedStorageResultFromPlatform(remove,
+						ignored -> runCommandCallback(sender, () -> succeeded.accept(Boolean.TRUE)),
+						failure -> runCommandCallback(sender, () -> failed.accept(failure)))) {
+					runCommandCallback(sender, () -> failed.accept(new IllegalStateException("storage unavailable")));
+				}
+			} catch (RuntimeException failure) {
+				runCommandCallback(sender, () -> failed.accept(failure));
+			}
+			return;
+		}
+		if (manager.deferSharedStorageResult(remove, succeeded, failed,
 				callbackOwner(sender))) return;
 		try { succeeded.accept(remove.get()); }
 		catch (RuntimeException failure) {
@@ -809,10 +815,19 @@ public class CommandLoader {
 		java.util.function.Consumer<Boolean> succeeded = ignored ->
 				sender.sendMessage(MessageAPI.colorize("&aForced cached " + identifier));
 		java.util.function.Consumer<Throwable> failed = ignored ->
-				sender.sendMessage(MessageAPI.colorize(
+			sender.sendMessage(MessageAPI.colorize(
 						"&cUnable to cache " + identifier + "; check the server log."));
+		var manager = plugin.getUserManager().getDataManager();
 		try {
-			if (plugin.getUserManager().getDataManager().deferSharedStorageResult(populate, succeeded, failed,
+			if (manager.hasSharedSqlBackend() && !manager.mustDeferSharedStorageAccess()) {
+				if (!manager.deferSharedStorageResultFromPlatform(populate,
+						ignored -> runCommandCallback(sender, () -> succeeded.accept(Boolean.TRUE)),
+						failure -> runCommandCallback(sender, () -> failed.accept(failure)))) {
+					runCommandCallback(sender, () -> failed.accept(new IllegalStateException("storage unavailable")));
+				}
+				return;
+			}
+			if (manager.deferSharedStorageResult(populate, succeeded, failed,
 					callbackOwner(sender))) return;
 			succeeded.accept(populate.get());
 		}
@@ -859,9 +874,8 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser((Player) sender);
-				user.setChoicePreference(args[2], args[3]);
-
-				user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice", args[3]);
+				runUserStorageCommand(sender, () -> user.setChoicePreference(args[2], args[3], false),
+						() -> user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice", args[3]));
 			}
 		});
 
