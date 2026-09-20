@@ -258,6 +258,10 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 		for (UUID uuid : Set.copyOf(pendingNotifications.keySet())) dispatchNotifications(uuid);
 	}
 
+    @Override public void reportCommittedFailure(UUID uuid, Throwable failure) {
+        manager.recordSharedStorageFailure(failure);
+    }
+
 	@Override public void discardAllNotifications() { pendingNotifications.clear(); }
 
     @Override public Set<UUID> cachedUsers() { return new HashSet<>(manager.getUserDataCache().keySet()); }

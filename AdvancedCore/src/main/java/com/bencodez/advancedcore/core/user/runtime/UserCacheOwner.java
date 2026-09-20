@@ -59,7 +59,10 @@ public interface UserCacheOwner {
     default void requireBlockingAllowed() {}
 
 	/** Deliver callbacks accumulated by a flush after its user admission is released. */
-	default void dispatchNotifications(UUID uuid) {}
+    default void dispatchNotifications(UUID uuid) {}
+
+    /** Record a cache failure after SQL has committed without making it retryable. */
+    default void reportCommittedFailure(UUID uuid, Throwable failure) {}
 
 	/** Deliver callbacks accumulated by a lifecycle-wide flush after all admission is released. */
 	default void dispatchAllNotifications() {}

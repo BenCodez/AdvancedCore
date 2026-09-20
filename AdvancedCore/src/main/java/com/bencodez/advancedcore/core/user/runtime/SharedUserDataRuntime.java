@@ -166,13 +166,34 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                         backend.user(uuid).transaction(backend.storageType(), initialValues, scope -> null);
                     }
                     flushInternal(uuid);
-                    T result = backend.user(uuid).transaction(backend.storageType(), initialValues, work);
-                    cacheOwner.remove(uuid);
-                    return result;
                 } catch (RuntimeException | Error failure) {
                     cacheOwner.cancelRemoval(uuid);
                     throw failure;
                 }
+                // SQL has committed. Cache retirement can fail, but reporting a
+                // transaction failure here would invite a duplicate caller retry.
+                T result;
+                try {
+                    result = backend.user(uuid).transaction(backend.storageType(), initialValues, work);
+                } catch (RuntimeException | Error failure) {
+                    cacheOwner.cancelRemoval(uuid);
+                    throw failure;
+                }
+                try {
+                    cacheOwner.remove(uuid);
+                } catch (RuntimeException | Error failure) {
+                    try {
+                        cacheOwner.populate(uuid, SqlUserDataAccess.convert(readStorageRow(uuid)));
+                    } catch (RuntimeException | Error recoveryFailure) {
+                        failure.addSuppressed(recoveryFailure);
+                    } finally {
+                        try { cacheOwner.cancelRemoval(uuid); }
+                        catch (RuntimeException | Error recoveryFailure) { failure.addSuppressed(recoveryFailure); }
+                    }
+                    try { cacheOwner.reportCommittedFailure(uuid, failure); }
+                    catch (RuntimeException | Error reportingFailure) { failure.addSuppressed(reportingFailure); }
+                }
+                return result;
             });
         } finally { cacheOwner.dispatchNotifications(uuid); }
     }

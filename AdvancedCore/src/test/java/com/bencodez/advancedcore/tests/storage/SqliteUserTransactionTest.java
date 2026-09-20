@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +31,8 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyInt;
+import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKeyString;
+import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.advancedcore.bukkit.user.storage.BukkitSqlUserBackend;
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
@@ -45,6 +48,7 @@ import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 import com.bencodez.simpleapi.sql.data.DataValueString;
 import com.bencodez.simpleapi.sql.sqlite.db.SQLite;
+import com.bencodez.simpleapi.sql.mysql.DbType;
 
 @Timeout(20)
 class SqliteUserTransactionTest {
@@ -268,6 +272,75 @@ class SqliteUserTransactionTest {
         }
     }
 
+    @Test void committedReceiptIsReturnedWhenCacheRetirementFails() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        try (SqliteUserBackend backend = backend()) {
+            createReceipts(backend.databaseFile());
+            backend.user(uuid).writeValues(TYPE, values(2, 3));
+            FailingRetirementCacheOwner cache = new FailingRetirementCacheOwner();
+            SharedUserDataRuntime runtime = new SharedUserDataRuntime(backend, cache);
+            runtime.populate(uuid);
+            boolean applied = runtime.transaction(uuid, scope -> {
+                if (receipt(scope.connection(), "accepted")) return false;
+                scope.writeValues(values(3, 4));
+                insert(scope.connection(), "accepted");
+                return true;
+            });
+            assertTrue(applied);
+            assertEquals(3, runtime.read(uuid, "Points", UserDataFetchMode.CACHE_ONLY,
+                    null, new DataValueInt(-1)).getInt());
+            assertNotNull(cache.committedFailure);
+            boolean repeated = runtime.transaction(uuid, scope -> {
+                if (receipt(scope.connection(), "accepted")) return false;
+                scope.writeValues(values(4, 5));
+                return true;
+            });
+            assertFalse(repeated);
+            assertEquals(3, value(backend.user(uuid).readRow(TYPE), "Points"));
+        }
+    }
+
+    @Test void productionMysqlRoutePublishesIdentityOnlyAfterCommit() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        MySQL mysql = mock(MySQL.class, RETURNS_DEEP_STUBS);
+        UserManager users = mock(UserManager.class);
+        UserDataManager manager = mock(UserDataManager.class);
+        Connection connection = mock(Connection.class);
+        PreparedStatement exists = mock(PreparedStatement.class);
+        PreparedStatement row = mock(PreparedStatement.class);
+        ResultSet existsResult = mock(ResultSet.class);
+        ResultSet rowResult = mock(ResultSet.class);
+        ResultSetMetaData metadata = mock(ResultSetMetaData.class);
+        when(plugin.getUserManager()).thenReturn(users);
+        when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
+        when(users.getDataManager()).thenReturn(manager);
+        when(manager.getKeys()).thenReturn(new java.util.ArrayList<>(List.of(new UserDataKeyString("PlayerName"))));
+        when(mysql.getTableName()).thenReturn("Users");
+        when(mysql.getMysql().getConnectionManager().getConnection()).thenReturn(connection);
+        when(mysql.getMysql().getConnectionManager().getDbType()).thenReturn(DbType.MYSQL);
+        when(connection.prepareStatement(org.mockito.ArgumentMatchers.contains("FOR UPDATE"))).thenReturn(exists);
+        when(connection.prepareStatement(org.mockito.ArgumentMatchers.startsWith("SELECT *"))).thenReturn(row);
+        when(exists.executeQuery()).thenReturn(existsResult);
+        when(existsResult.next()).thenReturn(true);
+        when(row.executeQuery()).thenReturn(rowResult);
+        when(rowResult.next()).thenReturn(true);
+        when(rowResult.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(1);
+        when(metadata.getColumnLabel(1)).thenReturn("PlayerName");
+        when(rowResult.getString(1)).thenReturn("Ben");
+        BukkitSqlUserBackend backend = new BukkitSqlUserBackend(plugin, UserStorage.MYSQL, mysql, null);
+        assertEquals("accepted", backend.user(uuid).transaction(UserStorage.MYSQL, scope -> "accepted"));
+        org.mockito.InOrder order = inOrder(connection, mysql);
+        order.verify(connection).commit();
+        order.verify(mysql).recordCommittedUser(uuid, "Ben");
+        clearInvocations(connection, mysql);
+        assertThrows(IllegalStateException.class, () -> backend.user(uuid).transaction(UserStorage.MYSQL,
+                scope -> { throw new SQLException("receipt failed"); }));
+        verify(connection).rollback();
+        verify(mysql, never()).recordCommittedUser(any(), any());
+    }
+
     @Test void transactionFencesBypassPublishersAndReopensCacheAfterRollback() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend backend = backend()) {
@@ -364,6 +437,12 @@ class SqliteUserTransactionTest {
         @Override public void remove(UUID uuid) { cached.remove(uuid); }
         @Override public void clearAfterFlush() { cached.clear(); }
         @Override public void shutdown() {}
+    }
+
+    private static final class FailingRetirementCacheOwner extends SimpleCacheOwner {
+        private Throwable committedFailure;
+        @Override public void remove(UUID uuid) { throw new IllegalStateException("cache retirement failed"); }
+        @Override public void reportCommittedFailure(UUID uuid, Throwable failure) { committedFailure = failure; }
     }
 
     private static final class FencedCacheOwner extends SimpleCacheOwner {

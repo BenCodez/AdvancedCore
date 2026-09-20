@@ -360,6 +360,12 @@ public class MySQL extends AbstractSqlTable {
 	// Keep existing methods (getUuids / getUUID / etc.)
 	// -------------------------
 
+	/** Publish a user committed through the shared JDBC transaction route. */
+	public void recordCommittedUser(UUID uuid, String playerName) {
+		uuids.add(uuid.toString());
+		if (playerName != null && !playerName.isEmpty()) names.add(playerName);
+	}
+
 	public Set<String> getUuids() {
 		if (uuids == null || uuids.isEmpty()) {
 			uuids.clear();

@@ -181,8 +181,22 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         };
         if (storage == UserStorage.MYSQL) {
             var manager = mysql().getMysql().getConnectionManager();
-            return SqlUserBackendFactory.existingUser(storage, uuid, mysql().getTableName(), schema,
-                    manager::getConnection, manager.getDbType(), logger).transaction(storage, initialValues, work);
+            String[] committedName = new String[1];
+            T result = SqlUserBackendFactory.existingUser(storage, uuid, mysql().getTableName(), schema,
+                    manager::getConnection, manager.getDbType(), logger).transaction(storage, initialValues, scope -> {
+                        T value = work.run(scope);
+                        for (Column column : scope.readRow()) {
+                            if ("PlayerName".equalsIgnoreCase(column.getName()) && column.getValue() != null) {
+                                committedName[0] = column.getValue().getString();
+                                break;
+                            }
+                        }
+                        return value;
+                    });
+            // The native enumerations are populated by its own write path. This
+            // transaction bypasses that path, so publish only after JDBC commit.
+            mysql().recordCommittedUser(uuid, committedName[0]);
+            return result;
         }
         synchronized (sqliteOperations) {
             // The legacy SQLite provider retains one shared connection. Obtain

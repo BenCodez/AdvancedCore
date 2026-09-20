@@ -985,6 +985,11 @@ public class UserDataManager {
 		}
 	}
 
+	/** Retain a cache reconciliation failure after its SQL transaction committed. */
+	public final void recordSharedStorageFailure(Throwable failure) {
+		reportDeferredStorageFailure(Objects.requireNonNull(failure, "failure"));
+	}
+
 	/** Last asynchronous cache-cleanup failure, retained for diagnosis and recovery. */
 	public Throwable getLastDeferredStorageFailure() { return lastDeferredStorageFailure.get(); }
 
