@@ -1,0 +1,10 @@
+{
+  "setupMode": "code-repo",
+  "aiTools": [
+    "codex"
+  ],
+  "scaffold_id": "b2369e6e-a7ad-49d5-84af-a2a04252d236",
+  "scaffold_name": "AdvancedCore",
+  "origin": null,
+  "upstream": null
+}
