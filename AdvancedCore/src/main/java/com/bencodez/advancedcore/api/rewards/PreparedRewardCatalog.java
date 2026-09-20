@@ -164,13 +164,15 @@ public final class PreparedRewardCatalog {
      * a fresh detached reward. Unknown names fail closed.
      */
     public Reward instantiate(String rewardName) {
-        String directKey = directKeyForLookup(rewardName);
+        String lookupName = RewardRegistry.normalizeLookupName(rewardName);
+        if (lookupName.isEmpty()) lookupName = "EmptyName";
+        String directKey = directKeyForLookup(lookupName);
         if (directDefinitions.containsKey(directKey) && directDefinitions.get(directKey) == null) {
             throw new PreparedRewardDefinitionException("Prepared reward catalog has no definition for: " + rewardName);
         }
         PreparedRewardDefinition definition = directDefinitions.get(directKey);
         if (definition == null) {
-            String lookup = fileKeyForLookup(rewardName);
+            String lookup = fileKeyForLookup(lookupName);
             for (Map.Entry<String, PreparedRewardDefinition> entry : fileDefinitions.entrySet()) {
                 if (entry.getKey().equalsIgnoreCase(lookup)) {
                     definition = entry.getValue();

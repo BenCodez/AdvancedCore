@@ -179,6 +179,16 @@ class PreparedRewardCatalogTest {
     }
 
     @Test
+    void emptyNameUsesTheRegistryFallbackWhenPrepared() {
+        handler.getRewards().add(new Reward("EmptyName", rewardData("fallback")));
+        PreparedRewardCatalog catalog = handler.prepareCatalog(new Reward("Root", rewardData("root")));
+
+        assertMessage("fallback", handler.getReward(""));
+        assertMessage("fallback", catalog.instantiate(""));
+        assertMessage("fallback", catalog.instantiate(null));
+    }
+
+    @Test
     void combinedDefinitionBytesAreBoundedBeforeJoiningRecords() {
         String largeValue = "x".repeat(800_000);
         for (int index = 0; index < 5; index++) {
