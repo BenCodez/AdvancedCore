@@ -5,7 +5,7 @@ triggers: [reward, queue, generated, snapshot]
 last_updated: 2026-09-20
 mex:
   id: mx_01M307CW4VJTMDNFXVDRE3SS1A
-  type: constraint
+  type: component
   status: promoted
   revision: 1
   title: Reward queue boundary
