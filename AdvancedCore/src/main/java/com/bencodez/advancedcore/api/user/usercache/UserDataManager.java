@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.user.usercache;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +37,7 @@ import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.advancedcore.core.user.runtime.SharedUserDataRuntime;
 import com.bencodez.simpleapi.debug.DebugLevel;
 import com.bencodez.simpleapi.array.ArrayUtils;
+import com.bencodez.simpleapi.sql.data.DataValue;
 
 import lombok.Getter;
 
@@ -323,6 +325,20 @@ public class UserDataManager {
 	public final boolean hasSharedRuntime() {
 		SharedUserDataRuntime runtime = sharedRuntime;
 		return runtime != null && !runtime.isClosed();
+	}
+
+	/**
+	 * Cache-safe transaction entry for callers adding their own durable SQL
+	 * record to a user mutation. Initial values are row prerequisites and may
+	 * commit before queued cache work; put operation-specific mutation only in
+	 * the callback. Blocking work must run off the game thread.
+	 */
+	public final <T> T withAtomicUserTransaction(UUID uuid, UserStorage storage,
+			Map<String, DataValue> initialValues,
+			SqlUserStorage.TransactionWork<T> work) {
+		SharedUserDataRuntime runtime = sharedRuntime;
+		if (runtime == null) throw new IllegalStateException("Shared user runtime is unavailable");
+		return runtime.transaction(uuid, storage, initialValues, work);
 	}
 
 	/**

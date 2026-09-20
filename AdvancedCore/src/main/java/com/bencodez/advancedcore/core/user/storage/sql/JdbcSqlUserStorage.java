@@ -69,8 +69,14 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
 
     @Override public List<Column> readRow(UserStorage requestedStorage) {
         requireStorage(requestedStorage);
+        try (Connection connection = connections.open()) {
+            return readRow(connection);
+        } catch (SQLException e) { throw failure("read user row", e); }
+    }
+
+    private List<Column> readRow(Connection connection) throws SQLException {
         String sql = "SELECT * FROM " + quote(tableName) + " WHERE " + quote(SqlUserSchema.UUID_COLUMN) + "=?";
-        try (Connection connection = connections.open(); PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
             dialect.bindUuid(statement, 1, uuid);
             try (ResultSet result = statement.executeQuery()) {
                 if (!result.next()) return new ArrayList<>();
@@ -86,7 +92,7 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
                 }
                 return columns;
             }
-        } catch (SQLException e) { throw failure("read user row", e); }
+        }
     }
 
     @Override public boolean contains(UserStorage requestedStorage) {
@@ -117,15 +123,53 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         Objects.requireNonNull(values, "values");
         Map<String, DataValue> updates = canonicalize(values);
         if (updates.isEmpty()) return;
+        inTransaction("write user values", connection -> {
+            writeValues(connection, updates);
+            return null;
+        });
+    }
+
+    @Override public <T> T transaction(UserStorage requestedStorage, Map<String, DataValue> initialValues, TransactionWork<T> work) {
+        requireStorage(requestedStorage);
+        Objects.requireNonNull(work, "work");
+        Map<String, DataValue> seed = canonicalize(Objects.requireNonNull(initialValues, "initialValues"));
+        return inTransaction("run user transaction", connection -> {
+            ensureRow(connection, seed);
+            Scope scope = new Scope(connection);
+            try { return work.run(scope); }
+            finally { scope.active = false; }
+        });
+    }
+
+    private final class Scope implements TransactionScope {
+        private final Connection connection;
+        private boolean active = true;
+        private Scope(Connection connection) { this.connection = connection; }
+        private void requireActive() { if (!active) throw new IllegalStateException("SQL user transaction scope has ended"); }
+        @Override public Connection connection() { requireActive(); return connection; }
+        @Override public List<Column> readRow() throws SQLException { requireActive(); return JdbcSqlUserStorage.this.readRow(connection); }
+        @Override public void writeValues(Map<String, DataValue> values) throws SQLException {
+            requireActive();
+            JdbcSqlUserStorage.this.writeValues(connection, canonicalize(Objects.requireNonNull(values, "values")));
+        }
+    }
+
+    private void writeValues(Connection connection, Map<String, DataValue> updates) throws SQLException {
+        if (updates.isEmpty()) return;
+        boolean updateExistingRow = ensureRow(connection, updates);
+        if (updateExistingRow) updateValues(connection, updates);
+    }
+
+    private <T> T inTransaction(String operation, TransactionWorkOnConnection<T> work) {
         boolean committed = false;
+        T result = null;
         try (Connection connection = connections.open()) {
             boolean autoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             boolean transactionEnded = false;
             Throwable transactionFailure = null;
             try {
-                boolean updateExistingRow = ensureRow(connection, updates);
-                if (updateExistingRow) updateValues(connection, updates);
+                result = work.run(connection);
                 connection.commit(); committed = true; transactionEnded = true;
             } catch (SQLException | RuntimeException | Error e) {
                 transactionFailure = e;
@@ -141,11 +185,14 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
                 }
             }
         } catch (SQLException e) {
-            if (committed) committedCleanupFailure("close SQL connection", e); else throw failure("write user values", e);
+            if (committed) committedCleanupFailure("close SQL connection", e); else throw failure(operation, e);
         } catch (RuntimeException e) {
             if (committed) committedCleanupFailure("close SQL connection", e); else throw e;
         }
+        return result;
     }
+
+    @FunctionalInterface private interface TransactionWorkOnConnection<T> { T run(Connection connection) throws SQLException; }
 
     private Map<String, DataValue> canonicalize(Map<String, DataValue> values) {
         Map<String, DataValue> updates = new LinkedHashMap<>();

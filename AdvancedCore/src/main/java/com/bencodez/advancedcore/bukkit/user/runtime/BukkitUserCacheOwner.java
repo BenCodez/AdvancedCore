@@ -145,6 +145,11 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 
     @Override public boolean isCached(UUID uuid) { return manager.isCached(uuid); }
 
+    @Override public boolean hasPendingChanges(UUID uuid) {
+        UserDataCache cache = manager.getUserDataCache().get(uuid);
+        return cache != null && cache.hasChangesToProcess();
+    }
+
     @Override public DataValue getIfPresent(UUID uuid, String key) {
         UserDataCache cache = manager.getUserDataCache().get(uuid);
         if (cache == null) return null;
