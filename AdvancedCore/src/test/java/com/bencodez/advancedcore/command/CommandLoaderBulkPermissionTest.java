@@ -388,12 +388,54 @@ class CommandLoaderBulkPermissionTest {
 		}).when(users).forEachUserKeys(any(), any());
 		find(new CommandLoader(plugin), "GiveAll", "(reward)").execute(sender, new String[] { "GiveAll", "daily" });
 		workers.remove(0).run();
-		assertEquals(2, globalCallbacks.size());
+		// The storage completion is held until the asynchronous reward stage finishes;
+		// only the recipient dispatch callback is scheduled at this point.
+		assertEquals(1, globalCallbacks.size());
 		try (org.mockito.MockedStatic<org.bukkit.Bukkit> bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
 			bukkit.when(() -> org.bukkit.Bukkit.getPlayer(uuid)).thenReturn(recipient);
 			globalCallbacks.remove(0).run();
 		}
 		verify(scheduler).runTask(any(), any(Runnable.class), org.mockito.ArgumentMatchers.same(recipient));
+	}
+
+	@Test
+	void giveAllOfflineDispatchWaitsForAsyncRewardStage() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
+		UserManager users = mock(UserManager.class);
+		RewardHandler rewards = mock(RewardHandler.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		CommandSender sender = mock(CommandSender.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		com.bencodez.advancedcore.api.rewards.Reward reward = mock(com.bencodez.advancedcore.api.rewards.Reward.class);
+		UUID uuid = UUID.randomUUID();
+		when(plugin.getOptions()).thenReturn(options);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getRewardHandler()).thenReturn(rewards);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(rewards.getReward("daily")).thenReturn(reward);
+		when(users.getUser(uuid, false)).thenReturn(user);
+		ArrayList<Runnable> workers = new ArrayList<>(), globals = new ArrayList<>();
+		doAnswer(call -> { workers.add(call.getArgument(1)); return null; }).when(scheduler).runTaskAsynchronously(any(), any());
+		doAnswer(call -> { globals.add(call.getArgument(1)); return null; }).when(scheduler).runTask(any(), any());
+		CompletableFuture<Void> rewardDone = new CompletableFuture<>();
+		try (org.mockito.MockedConstruction<com.bencodez.advancedcore.api.rewards.RewardBuilder> builders =
+				org.mockito.Mockito.mockConstruction(com.bencodez.advancedcore.api.rewards.RewardBuilder.class,
+					(builder, context) -> when(builder.sendAsync(user)).thenReturn(rewardDone))) {
+			doAnswer(call -> { @SuppressWarnings("unchecked") BiConsumer<UUID, ArrayList<Column>> each = call.getArgument(0);
+				each.accept(uuid, new ArrayList<>()); ((Consumer<Void>) call.getArgument(1)).accept(null); return null; })
+				.when(users).forEachUserKeys(any(), any());
+			try (org.mockito.MockedStatic<org.bukkit.Bukkit> bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
+				bukkit.when(() -> org.bukkit.Bukkit.getPlayer(uuid)).thenReturn(null);
+				find(new CommandLoader(plugin), "GiveAll", "(reward)").execute(sender, new String[] { "GiveAll", "daily" });
+				workers.remove(0).run();
+				globals.remove(0).run();
+				workers.remove(0).run();
+				assertEquals(1, builders.constructed().size());
+				verify(sender, never()).sendMessage(any(String.class));
+				rewardDone.complete(null);
+			}
+		}
 	}
 
 	@Test

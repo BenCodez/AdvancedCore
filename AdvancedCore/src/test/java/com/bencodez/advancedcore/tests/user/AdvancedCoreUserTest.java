@@ -57,6 +57,7 @@ public class AdvancedCoreUserTest {
 		try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getOfflinePlayer(UUID.fromString(user.getUUID()))).thenReturn(offline);
 			when(dataManager.hasSharedSqlBackend()).thenReturn(true);
+			when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
 			com.bencodez.advancedcore.api.user.usercache.UserDataCache published =
 					mock(com.bencodez.advancedcore.api.user.usercache.UserDataCache.class);
 			when(dataManager.getPublishedCache(UUID.fromString(user.getUUID()))).thenReturn(published);
@@ -67,6 +68,19 @@ public class AdvancedCoreUserTest {
 			when(dataManager.getPublishedCache(UUID.fromString(user.getUUID()))).thenReturn(null);
 			assertFalse(user.hasLoggedOnBefore());
 			verify(userManager, never()).getAllUUIDs();
+		}
+	}
+
+	@Test
+	void loginHistoryUsesPersistedLookupFromStorageWorker() {
+		org.bukkit.OfflinePlayer offline = mock(org.bukkit.OfflinePlayer.class);
+		try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getOfflinePlayer(UUID.fromString(user.getUUID()))).thenReturn(offline);
+			when(dataManager.hasSharedSqlBackend()).thenReturn(true);
+			when(dataManager.mustDeferSharedStorageAccess()).thenReturn(false);
+			when(userManager.getAllUUIDs()).thenReturn(new java.util.ArrayList<>(java.util.List.of(user.getUUID())));
+			assertTrue(user.hasLoggedOnBefore());
+			verify(dataManager, never()).getPublishedCache(any());
 		}
 	}
 

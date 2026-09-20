@@ -188,13 +188,16 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = plugin.getRewardHandler().getReward(args[1]);
 
-				runUserStorageCommand(sender, () -> plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+				runUserStorageCommand(sender, () -> {
+					ForcedReplayBarrier barrier = new ForcedReplayBarrier(
+							failure -> reportBulkRewardCompletion(sender, args[1], failure), true);
+					plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					user.updateTempCacheWithColumns(columns);
-					// Reward actions can touch Bukkit APIs, so return each one to the owner thread.
-					runRecipientCallback(uuid, () -> new RewardBuilder(reward).send(user));
-				}, null), () -> sendMessage(sender, "&cGave all players reward file " + args[1]));
+					dispatchBulkReward(uuid, user, reward, barrier);
+					}, ignored -> barrier.enumerationComplete());
+				}, null);
 			}
 		});
 
@@ -231,12 +234,16 @@ public class CommandLoader {
 			public void executeAll(CommandSender sender, String[] args) {
 				Reward reward = plugin.getRewardHandler().getReward(args[3]);
 
-				runUserStorageCommand(sender, () -> plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+				runUserStorageCommand(sender, () -> {
+					ForcedReplayBarrier barrier = new ForcedReplayBarrier(
+							failure -> reportBulkRewardCompletion(sender, args[3], failure), true);
+					plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					user.updateTempCacheWithColumns(columns);
-					runRecipientCallback(uuid, () -> new RewardBuilder(reward).send(user));
-				}, null), () -> sendMessage(sender, "&cGave all players reward file " + args[3]));
+					dispatchBulkReward(uuid, user, reward, barrier);
+					}, ignored -> barrier.enumerationComplete());
+				}, null);
 			}
 
 			@Override
@@ -714,14 +721,63 @@ public class CommandLoader {
 		});
 	}
 
+	private void reportBulkRewardCompletion(CommandSender sender, String rewardName, Throwable failure) {
+		runCommandCallback(sender, () -> {
+			if (failure == null) {
+				sender.sendMessage(MessageAPI.colorize("&cGave all players reward file " + rewardName));
+				return;
+			}
+			if (plugin.getLogger() != null) plugin.getLogger().severe(
+					"Bulk reward failed (" + failure.getClass().getSimpleName() + ")");
+			sender.sendMessage(MessageAPI.colorize("&cUnable to give all players reward file " + rewardName
+					+ "; check the server log."));
+		});
+	}
+
+	private void dispatchBulkReward(UUID uuid, AdvancedCoreUser user, Reward reward, ForcedReplayBarrier barrier) {
+		barrier.reserve();
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, () -> {
+				try {
+					Player recipient = Bukkit.getPlayer(uuid);
+					RewardBuilder builder = new RewardBuilder(reward).setOnline(recipient != null);
+					if (recipient == null) {
+						plugin.getBukkitScheduler().runTaskAsynchronously(plugin,
+								() -> {
+									try { barrier.completeStage(builder.sendAsync(user)); }
+									catch (Throwable failure) { barrier.recordFailure(failure); }
+								});
+						return;
+					}
+					plugin.getBukkitScheduler().runTask(plugin, () -> {
+						try { barrier.completeStage(builder.sendAsync(user)); }
+						catch (Throwable failure) { barrier.recordFailure(failure); }
+					}, recipient);
+				} catch (Throwable failure) { barrier.recordFailure(failure); }
+			});
+		} catch (Throwable failure) { barrier.recordFailure(failure); }
+	}
+
 	private static final class ForcedReplayBarrier {
 		private final java.util.concurrent.atomic.AtomicInteger pending = new java.util.concurrent.atomic.AtomicInteger(1);
 		private final java.util.concurrent.atomic.AtomicReference<Throwable> firstFailure =
 				new java.util.concurrent.atomic.AtomicReference<>();
+		private final java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean();
 		private final Consumer<Throwable> completion;
 
 		private ForcedReplayBarrier(Consumer<Throwable> completion) {
 			this.completion = completion;
+		}
+
+		private ForcedReplayBarrier(Consumer<Throwable> completion, boolean timeout) {
+			this.completion = completion;
+			if (!timeout) return;
+			java.util.concurrent.CompletableFuture.delayedExecutor(30,
+					java.util.concurrent.TimeUnit.SECONDS).execute(() -> {
+				if (finished.compareAndSet(false, true)) {
+					completion.accept(new java.util.concurrent.TimeoutException("Bulk reward dispatch timed out"));
+				}
+			});
 		}
 
 		private void add(java.util.concurrent.CompletionStage<Void> replay) {
@@ -732,12 +788,30 @@ public class CommandLoader {
 			});
 		}
 
+		private void reserve() { pending.incrementAndGet(); }
+
+		private void completeStage(java.util.concurrent.CompletionStage<Void> replay) {
+			if (replay == null) {
+				recordFailure(new IllegalStateException("Reward dispatch returned no completion stage"));
+				return;
+			}
+			replay.whenComplete((ignored, failure) -> {
+				if (failure != null) firstFailure.compareAndSet(null, failure);
+				completeOne();
+			});
+		}
+
 		private void enumerationComplete() {
 			completeOne();
 		}
 
+		private void recordFailure(Throwable failure) {
+			firstFailure.compareAndSet(null, failure);
+			completeOne();
+		}
+
 		private void completeOne() {
-			if (pending.decrementAndGet() == 0) completion.accept(firstFailure.get());
+			if (pending.decrementAndGet() == 0 && finished.compareAndSet(false, true)) completion.accept(firstFailure.get());
 		}
 	}
 

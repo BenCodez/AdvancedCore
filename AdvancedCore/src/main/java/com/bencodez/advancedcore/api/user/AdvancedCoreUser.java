@@ -2191,7 +2191,7 @@ public class AdvancedCoreUser {
 		// cache is the only safe synchronous storage evidence here; callers needing
 		// a definitive database answer must perform the lookup on a worker.
 		UserDataManager manager = plugin.getUserManager().getDataManager();
-		if (manager.hasSharedSqlBackend()) {
+		if (manager.hasSharedSqlBackend() && (manager.mustDeferSharedStorageAccess() || isGlobalTickThread())) {
 			UserDataCache published = manager.getPublishedCache(java.util.UUID.fromString(uuid));
 			return published != null && published.hasStoredData();
 		}
@@ -2200,6 +2200,21 @@ public class AdvancedCoreUser {
 			return true;
 		}
 		return false;
+	}
+
+	private static boolean isGlobalTickThread() {
+		try {
+			org.bukkit.Server server = Bukkit.getServer();
+			if (server == null) return false;
+			try {
+				java.lang.reflect.Method method = server.getClass().getMethod("isGlobalTickThread");
+				return Boolean.TRUE.equals(method.invoke(server));
+			} catch (NoSuchMethodException ignored) {
+				return false;
+			}
+		} catch (Throwable ignored) {
+			return false;
+		}
 	}
 
 	/**
