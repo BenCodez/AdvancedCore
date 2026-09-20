@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.DirectlyDefinedReward;
 import com.bencodez.advancedcore.api.rewards.PreparedRewardCatalog;
+import com.bencodez.advancedcore.api.rewards.PreparedRewardDefinition;
 import com.bencodez.advancedcore.api.rewards.PreparedRewardDefinitionException;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
@@ -232,6 +233,10 @@ class PreparedRewardCatalogTest {
                     Thread.currentThread().interrupt();
                 }
                 registry.getRewards().add(new Reward("After", rewardData("after")));
+                SubDirectlyDefinedReward sub = mock(SubDirectlyDefinedReward.class);
+                when(sub.getFullPath()).thenReturn("After.Sub");
+                when(sub.getReward()).thenReturn(new Reward("After_Sub", rewardData("sub after")));
+                registry.addSubDirectlyDefined(sub);
             }
         });
         reload.start();
@@ -247,7 +252,39 @@ class PreparedRewardCatalogTest {
             release.countDown();
             PreparedRewardCatalog catalog = capture.get(5, TimeUnit.SECONDS);
             assertMessage("after", catalog.instantiate("After"));
+            assertMessage("sub after", catalog.instantiate("After.Sub"));
             assertThrows(PreparedRewardDefinitionException.class, () -> catalog.instantiate("Before"));
+        } finally {
+            release.countDown();
+            reload.join(5000);
+        }
+    }
+
+    @Test
+    void namedPreparationWaitsForRegistryReloadBeforeResolving() throws Exception {
+        RewardRegistry registry = handler.getRewardRegistry();
+        CountDownLatch lockHeld = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        Thread reload = new Thread(() -> {
+            synchronized (registry) {
+                registry.resetRewards();
+                lockHeld.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException failure) {
+                    Thread.currentThread().interrupt();
+                }
+                registry.getRewards().add(new Reward("After", rewardData("after")));
+            }
+        });
+        reload.start();
+        try {
+            assertTrue(lockHeld.await(5, TimeUnit.SECONDS));
+            CompletableFuture<PreparedRewardDefinition> capture = CompletableFuture.supplyAsync(
+                    () -> handler.prepareReward("After"));
+            assertThrows(TimeoutException.class, () -> capture.get(100, TimeUnit.MILLISECONDS));
+            release.countDown();
+            assertMessage("after", capture.get(5, TimeUnit.SECONDS).instantiate());
         } finally {
             release.countDown();
             reload.join(5000);

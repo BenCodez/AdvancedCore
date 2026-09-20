@@ -102,11 +102,15 @@ public class RewardHandler {
     }
 
     public void checkSubRewards() {
-        subRewardResolver.checkSubRewards();
+        synchronized (rewardRegistry) {
+            subRewardResolver.checkSubRewards();
+        }
     }
 
     public void checkSubRewards(DefinedReward direct) {
-        subRewardResolver.checkSubRewards(direct);
+        synchronized (rewardRegistry) {
+            subRewardResolver.checkSubRewards(direct);
+        }
     }
 
     public File getDefaultFolder() {
@@ -143,10 +147,12 @@ public class RewardHandler {
      * owning injectors.
      */
     public PreparedRewardDefinition prepareReward(String reward) {
-        if (!rewardRegistry.rewardExist(reward) && !rewardRegistry.hasDirectRewardHandle(reward)) {
-            throw new IllegalArgumentException("Resolved reward does not exist: " + reward);
+        synchronized (rewardRegistry) {
+            if (!rewardRegistry.rewardExist(reward) && !rewardRegistry.hasDirectRewardHandle(reward)) {
+                throw new IllegalArgumentException("Resolved reward does not exist: " + reward);
+            }
+            return prepareReward(getReward(reward));
         }
-        return prepareReward(getReward(reward));
     }
 
     /** Resolves and snapshots one inline configuration-section reward. */
@@ -172,9 +178,9 @@ public class RewardHandler {
             synchronized (rewardFiles) {
                 filesSnapshot = new ArrayList<>(rewardFiles);
             }
+            return PreparedRewardCatalog.capture(root, rewardRegistry.getDirectlyDefinedRewards(),
+                    rewardRegistry.getSubDirectlyDefinedRewards(), filesSnapshot);
         }
-        return PreparedRewardCatalog.capture(root, rewardRegistry.getDirectlyDefinedRewards(),
-                rewardRegistry.getSubDirectlyDefinedRewards(), filesSnapshot);
     }
 
     public Reward getReward(String reward) {
@@ -279,7 +285,10 @@ public class RewardHandler {
     }
 
     public void loadRewards() {
-        rewardLoader.loadRewards();
+        synchronized (rewardRegistry) {
+            rewardLoader.loadRewards();
+            subRewardResolver.checkSubRewards();
+        }
     }
 
     public void openSubReward(Player player, String path, RewardEditData reward) {
