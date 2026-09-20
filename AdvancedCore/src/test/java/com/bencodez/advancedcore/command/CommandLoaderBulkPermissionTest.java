@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -42,6 +43,7 @@ import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 class CommandLoaderBulkPermissionTest {
 	@Test void forceCacheDefersSharedStorageFromFoliaGlobalScheduler() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.getOptions()).thenReturn(mock(AdvancedCoreConfigOptions.class));
 		UserManager users = mock(UserManager.class);
 		UserDataManager manager = mock(UserDataManager.class);
 		BukkitScheduler scheduler = mock(BukkitScheduler.class);
@@ -435,6 +437,42 @@ class CommandLoaderBulkPermissionTest {
 				verify(sender, never()).sendMessage(any(String.class));
 				rewardDone.complete(null);
 			}
+		}
+	}
+
+	@Test
+	void giveRewardOfflineDispatchesAsyncAndAcknowledgesAfterCompletion() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.getOptions()).thenReturn(mock(AdvancedCoreConfigOptions.class));
+		UserManager users = mock(UserManager.class);
+		RewardHandler rewards = mock(RewardHandler.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		CommandSender sender = mock(CommandSender.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UUID uuid = UUID.randomUUID();
+		CompletableFuture<Void> done = new CompletableFuture<>();
+		when(plugin.getUserManager()).thenReturn(users); when(plugin.getRewardHandler()).thenReturn(rewards);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler); when(user.getUUID()).thenReturn(uuid.toString());
+		when(rewards.giveRewardAsync(eq(user), eq("daily"), any())).thenReturn(done);
+		ArrayList<Runnable> workers = new ArrayList<>(), globals = new ArrayList<>();
+		doAnswer(call -> { workers.add(call.getArgument(1)); return null; }).when(scheduler).runTaskAsynchronously(any(), any());
+		doAnswer(call -> { globals.add(call.getArgument(1)); return null; }).when(scheduler).runTask(any(), any());
+		doAnswer(call -> { call.<Consumer<AdvancedCoreUser>>getArgument(1).accept(user); return null; })
+				.when(users).getUserAsync(eq("voter"), any(), any());
+		try (var bukkit = org.mockito.Mockito.mockStatic(org.bukkit.Bukkit.class)) {
+			bukkit.when(() -> org.bukkit.Bukkit.getPlayer(uuid)).thenReturn(null);
+			find(new CommandLoader(plugin), "GiveReward", "(Player)", "(Reward)")
+					.execute(sender, new String[] {"GiveReward", "voter", "daily"});
+			globals.remove(0).run();
+			globals.remove(0).run();
+			verify(rewards, never()).giveRewardAsync(eq(user), eq("daily"), any());
+			workers.remove(0).run();
+			verify(rewards).giveRewardAsync(eq(user), eq("daily"), any());
+			verify(sender, never()).sendMessage(any(String.class));
+			done.complete(null);
+			verify(sender, never()).sendMessage(any(String.class));
+			globals.remove(0).run();
+			verify(sender).sendMessage(org.mockito.ArgumentMatchers.contains("Gave voter the reward file daily"));
 		}
 	}
 

@@ -220,9 +220,8 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				withResolvedUser(sender, args[1], user -> {
-					plugin.getRewardHandler().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
-					runCommandCallback(sender,
-							() -> sendMessage(sender, "&cGave " + args[1] + " the reward file " + args[2]));
+					dispatchSingleReward(sender, user, args[2], new RewardOptions(),
+						"&cGave " + args[1] + " the reward file " + args[2]);
 				});
 			}
 		});
@@ -249,8 +248,8 @@ public class CommandLoader {
 			@Override
 			public void executeSinglePlayer(CommandSender sender, String[] args) {
 				withResolvedUser(sender, args[1], user -> {
-					plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
-					runCommandCallback(sender, () -> sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]));
+					dispatchSingleReward(sender, user, args[3], new RewardOptions(),
+						"&cGave " + args[1] + " the reward file " + args[3]);
 				});
 			}
 		});
@@ -261,9 +260,9 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				withResolvedUser(sender, args[1], user -> {
-					plugin.getRewardHandler().giveReward(user, args[2],
-							new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
-					runCommandCallback(sender, () -> sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]));
+					dispatchSingleReward(sender, user, args[2],
+							new RewardOptions().addPlaceholder(args[3], args[4]),
+							"&cGave " + args[1] + " the reward file " + args[2]);
 				});
 			}
 		});
@@ -756,6 +755,38 @@ public class CommandLoader {
 				} catch (Throwable failure) { barrier.recordFailure(failure); }
 			});
 		} catch (Throwable failure) { barrier.recordFailure(failure); }
+	}
+
+	private void dispatchSingleReward(CommandSender sender, AdvancedCoreUser user, String rewardName,
+			RewardOptions options, String successMessage) {
+		UUID uuid = UUID.fromString(user.getUUID());
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, () -> {
+				try {
+					Player recipient = Bukkit.getPlayer(uuid);
+					options.setOnline(recipient != null);
+					Runnable dispatch = () -> {
+						try {
+							plugin.getRewardHandler().giveRewardAsync(user, rewardName, options)
+									.whenComplete((ignored, failure) -> runCommandCallback(sender,
+										() -> sender.sendMessage(MessageAPI.colorize(failure == null ? successMessage
+												: "&cUnable to give reward; check the server log."))));
+						} catch (Throwable failure) {
+							runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
+									"&cUnable to give reward; check the server log.")));
+						}
+					};
+					if (recipient == null) plugin.getBukkitScheduler().runTaskAsynchronously(plugin, dispatch);
+					else plugin.getBukkitScheduler().runTask(plugin, dispatch, recipient);
+				} catch (Throwable failure) {
+					runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
+							"&cUnable to give reward; check the server log.")));
+				}
+			});
+		} catch (Throwable failure) {
+			runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
+					"&cUnable to give reward; check the server log.")));
+		}
 	}
 
 	private static final class ForcedReplayBarrier {
