@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -76,6 +77,50 @@ class SharedRewardKeyedRecoveryTest {
     }
 
     @Test
+    void disconnectWhileClaimIsPendingCannotStartOnlineAction() {
+        Store store = new Store();
+        Platform platform = new Platform();
+        AtomicInteger actions = new AtomicInteger();
+        CompletableFuture<SharedRewardActionClaim> claim = new CompletableFuture<>();
+        store.delayedClaim = claim;
+        SharedRewardPlan plan = plan(new SharedRewardStep("item", true, (context, path) -> {
+            assertTrue(platform.nativeDispatch);
+            actions.incrementAndGet();
+            return done();
+        }));
+
+        CompletableFuture<SharedRewardResult> execution = execute(platform, store, plan, "vote-a");
+        platform.online = false;
+        claim.complete(SharedRewardActionClaim.STARTED);
+
+        CompletionException failure = assertThrows(CompletionException.class, execution::join);
+        assertInstanceOf(SharedRewardIndeterminateException.class, failure.getCause());
+        assertEquals(0, actions.get());
+        assertEquals(0, store.pending.get("vote-a/vote"));
+    }
+
+    @Test
+    void shutdownWhileClaimIsPendingCannotStartNativeAction() {
+        Store store = new Store();
+        Platform platform = new Platform();
+        AtomicInteger actions = new AtomicInteger();
+        CompletableFuture<SharedRewardActionClaim> claim = new CompletableFuture<>();
+        store.delayedClaim = claim;
+        SharedRewardPlan plan = plan(step("command", actions));
+
+        CompletableFuture<SharedRewardResult> execution = execute(platform, store, plan, "vote-a");
+        platform.shuttingDown = true;
+        claim.complete(SharedRewardActionClaim.STARTED);
+
+        CompletionException failure = assertThrows(CompletionException.class, execution::join);
+        assertInstanceOf(SharedRewardIndeterminateException.class, failure.getCause());
+        assertEquals(0, actions.get());
+        assertEquals(0, store.pending.get("vote-a/vote"));
+        assertEquals(USER, platform.lastDispatchUser);
+        assertEquals(false, platform.lastDispatchRequiresOnline);
+    }
+
+    @Test
     void completedNativeEffectWithFailedCheckpointIsIndeterminateOnRetry() {
         Store store = new Store();
         store.failCheckpoint = true;
@@ -132,6 +177,7 @@ class SharedRewardKeyedRecoveryTest {
         platform.online = false;
         AtomicInteger actions = new AtomicInteger();
         SharedRewardPlan plan = plan(new SharedRewardStep("item", true, (context, path) -> {
+            assertTrue(platform.nativeDispatch);
             actions.incrementAndGet();
             return done();
         }));
@@ -142,6 +188,9 @@ class SharedRewardKeyedRecoveryTest {
         assertEquals(SharedRewardResult.COMPLETED, execute(platform, store, plan, "vote-a").join());
         assertEquals(SharedRewardResult.COMPLETED, execute(platform, store, plan, "vote-b").join());
         assertEquals(2, actions.get());
+        assertEquals(5, platform.nativeDispatches);
+        assertEquals(USER, platform.lastDispatchUser);
+        assertTrue(platform.lastDispatchRequiresOnline);
     }
 
     @Test
@@ -191,12 +240,29 @@ class SharedRewardKeyedRecoveryTest {
 
     private static final class Platform implements SharedRewardPlatform {
         boolean online = true;
+        boolean shuttingDown;
+        boolean nativeDispatch;
+        int nativeDispatches;
+        UUID lastDispatchUser;
+        boolean lastDispatchRequiresOnline;
         public Instant now() { return Instant.EPOCH; }
-        public boolean isOnline(UUID uuid) { return online; }
-        public boolean isShuttingDown() { return false; }
+        public boolean isOnline(UUID uuid) {
+            assertTrue(nativeDispatch);
+            return online;
+        }
+        public boolean isShuttingDown() { return shuttingDown; }
         public double nextChanceRoll() { return 0; }
         public CompletionStage<SharedRewardResult> delay(Duration delay,
                 Supplier<CompletionStage<SharedRewardResult>> work) { return work.get(); }
+        public CompletionStage<SharedRewardResult> runClaimedAction(
+                UUID userId, boolean requiresOnlinePlayer, Supplier<CompletionStage<SharedRewardResult>> operation) {
+            nativeDispatches++;
+            lastDispatchUser = userId;
+            lastDispatchRequiresOnline = requiresOnlinePlayer;
+            nativeDispatch = true;
+            try { return operation.get(); }
+            finally { nativeDispatch = false; }
+        }
     }
 
     /** Simulates a caller-owned durable row that survives constructing a new adapter. */
@@ -204,6 +270,7 @@ class SharedRewardKeyedRecoveryTest {
         final Map<String, SharedRewardProgress> progress;
         final Map<String, Integer> pending;
         boolean failCheckpoint, loseClaimAck, loseCheckpointAck;
+        CompletableFuture<SharedRewardActionClaim> delayedClaim;
         int failAtStep = -1;
 
         Store() { this(new HashMap<>(), new HashMap<>()); }
@@ -230,6 +297,7 @@ class SharedRewardKeyedRecoveryTest {
             if (pending.putIfAbsent(path, index) != null) {
                 return CompletableFuture.completedFuture(SharedRewardActionClaim.INDETERMINATE);
             }
+            if (delayedClaim != null) return delayedClaim;
             if (loseClaimAck) return CompletableFuture.failedFuture(new IllegalStateException("lost claim acknowledgement"));
             return CompletableFuture.completedFuture(SharedRewardActionClaim.STARTED);
         }

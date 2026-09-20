@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.core.reward;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
@@ -25,4 +26,17 @@ public interface SharedRewardPlatform {
             Supplier<CompletionStage<SharedRewardResult>> operation);
 
     boolean isShuttingDown();
+
+    /**
+     * Run the post-claim state check and native action on the platform's owner
+     * thread or scheduler. When {@code requiresOnlinePlayer} is true, route to
+     * that player's entity/region owner. Keyed execution fails closed until an
+     * adapter provides this hook; legacy execution does not use it. The returned
+     * stage must cover the whole supplied operation, not just its scheduling.
+     */
+    default CompletionStage<SharedRewardResult> runClaimedAction(
+            UUID userId, boolean requiresOnlinePlayer, Supplier<CompletionStage<SharedRewardResult>> operation) {
+        return CompletableFuture.failedFuture(new UnsupportedOperationException(
+                "Keyed reward execution requires a native action scheduler"));
+    }
 }

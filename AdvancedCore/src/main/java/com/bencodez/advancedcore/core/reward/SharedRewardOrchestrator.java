@@ -195,6 +195,22 @@ public final class SharedRewardOrchestrator {
     private CompletionStage<SharedRewardResult> executeStep(SharedRewardStep step, SharedRewardContext context,
             SharedRewardDurability durability, String executionPath, String fingerprint, int index,
             SharedRewardKeyedDurability keyed) {
+        if (keyed != null) {
+            try {
+                CompletionStage<SharedRewardResult> dispatched = platform.runClaimedAction(context.userId(),
+                        step.requiresOnlinePlayer(), () -> executeStepOnNative(step, context, durability,
+                                executionPath, fingerprint, index, keyed));
+                return dispatched == null ? failed("Reward platform returned null pre-claim action stage") : dispatched;
+            } catch (Throwable failure) {
+                return CompletableFuture.failedFuture(failure);
+            }
+        }
+        return executeStepOnNative(step, context, durability, executionPath, fingerprint, index, null);
+    }
+
+    private CompletionStage<SharedRewardResult> executeStepOnNative(SharedRewardStep step, SharedRewardContext context,
+            SharedRewardDurability durability, String executionPath, String fingerprint, int index,
+            SharedRewardKeyedDurability keyed) {
         if (platform.isShuttingDown()) return failed("Reward platform shut down before execution completed");
         if (step.requiresOnlinePlayer() && !platform.isOnline(context.userId())) {
             if (!durability.durable()) return failed("Player became unavailable during non-durable reward step " + step.id());
@@ -223,7 +239,23 @@ public final class SharedRewardOrchestrator {
                 return CompletableFuture.failedFuture(new SharedRewardIndeterminateException(executionPath, index));
             }
             if (result != SharedRewardActionClaim.STARTED) return failed("Invalid keyed reward action claim");
-            return executeClaimedStep(step, context, durability, executionPath, fingerprint, index, stepPath, true);
+            try {
+                CompletionStage<SharedRewardResult> dispatched = platform.runClaimedAction(context.userId(),
+                        step.requiresOnlinePlayer(), () -> {
+                    // Admission may have awaited storage while the server disabled
+                    // or the player disconnected. Leave the claim for reconciliation.
+                    if (platform.isShuttingDown()
+                            || (step.requiresOnlinePlayer() && !platform.isOnline(context.userId()))) {
+                        return CompletableFuture.failedFuture(
+                                new SharedRewardIndeterminateException(executionPath, index));
+                    }
+                    return executeClaimedStep(step, context, durability, executionPath, fingerprint, index,
+                            stepPath, true);
+                });
+                return dispatched == null ? failed("Reward platform returned null claimed action stage") : dispatched;
+            } catch (Throwable failure) {
+                return CompletableFuture.failedFuture(failure);
+            }
         });
     }
 
