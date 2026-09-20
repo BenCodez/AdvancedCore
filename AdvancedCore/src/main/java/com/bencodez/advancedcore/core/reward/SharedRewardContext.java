@@ -10,6 +10,7 @@ public final class SharedRewardContext {
     private final UUID userId;
     private final String playerName;
     private final HashMap<String, String> placeholders;
+    private volatile boolean keyedExecution;
 
     public SharedRewardContext(UUID userId, String playerName, Map<String, String> placeholders) {
         this.userId = Objects.requireNonNull(userId, "userId");
@@ -31,5 +32,13 @@ public final class SharedRewardContext {
     /** Mutable execution-local placeholders; durable adapters decide when to persist them. */
     public HashMap<String, String> placeholders() {
         return placeholders;
+    }
+
+    void markKeyedExecution() {
+        keyedExecution = true;
+    }
+
+    boolean isKeyedExecution() {
+        return keyedExecution;
     }
 }
