@@ -748,10 +748,13 @@ public class CommandLoader {
 								});
 						return;
 					}
-					plugin.getBukkitScheduler().runTask(plugin, () -> {
+					runOnRecipientOrOffline(recipient, () -> {
 						try { barrier.completeStage(builder.sendAsync(user)); }
 						catch (Throwable failure) { barrier.recordFailure(failure); }
-					}, recipient);
+					}, () -> {
+						try { barrier.completeStage(new RewardBuilder(reward).setOnline(false).sendAsync(user)); }
+						catch (Throwable failure) { barrier.recordFailure(failure); }
+					}, 10_000);
 				} catch (Throwable failure) { barrier.recordFailure(failure); }
 			});
 		} catch (Throwable failure) { barrier.recordFailure(failure); }
@@ -777,7 +780,10 @@ public class CommandLoader {
 						}
 					};
 					if (recipient == null) plugin.getBukkitScheduler().runTaskAsynchronously(plugin, dispatch);
-					else plugin.getBukkitScheduler().runTask(plugin, dispatch, recipient);
+					else runOnRecipientOrOffline(recipient, dispatch, () -> {
+						options.setOnline(false);
+						dispatch.run();
+					}, 10_000);
 				} catch (Throwable failure) {
 					runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
 							"&cUnable to give reward; check the server log.")));
@@ -787,6 +793,17 @@ public class CommandLoader {
 			runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
 					"&cUnable to give reward; check the server log.")));
 		}
+	}
+
+	private void runOnRecipientOrOffline(Player recipient, Runnable online, Runnable offline, long timeoutMillis) {
+		java.util.concurrent.atomic.AtomicBoolean started = new java.util.concurrent.atomic.AtomicBoolean();
+		plugin.getBukkitScheduler().runTask(plugin, () -> {
+			if (started.compareAndSet(false, true)) online.run();
+		}, recipient);
+		java.util.concurrent.CompletableFuture.delayedExecutor(timeoutMillis,
+				java.util.concurrent.TimeUnit.MILLISECONDS).execute(() -> {
+			if (started.compareAndSet(false, true)) offline.run();
+		});
 	}
 
 	private static final class ForcedReplayBarrier {

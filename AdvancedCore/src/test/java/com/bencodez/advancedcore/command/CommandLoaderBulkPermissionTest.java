@@ -477,6 +477,29 @@ class CommandLoaderBulkPermissionTest {
 	}
 
 	@Test
+	void retiredRecipientTaskFallsBackOnceToOfflineDispatch() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		org.bukkit.entity.Player recipient = mock(org.bukkit.entity.Player.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		ArrayList<Runnable> entityTasks = new ArrayList<>();
+		doAnswer(call -> { entityTasks.add(call.getArgument(1)); return null; })
+				.when(scheduler).runTask(eq(plugin), any(Runnable.class), eq(recipient));
+		java.util.concurrent.CountDownLatch fallback = new java.util.concurrent.CountDownLatch(1);
+		java.util.concurrent.atomic.AtomicInteger online = new java.util.concurrent.atomic.AtomicInteger();
+		java.util.concurrent.atomic.AtomicInteger offline = new java.util.concurrent.atomic.AtomicInteger();
+		var method = CommandLoader.class.getDeclaredMethod("runOnRecipientOrOffline",
+				org.bukkit.entity.Player.class, Runnable.class, Runnable.class, long.class);
+		method.setAccessible(true);
+		method.invoke(new CommandLoader(plugin), recipient, (Runnable) online::incrementAndGet,
+				(Runnable) () -> { offline.incrementAndGet(); fallback.countDown(); }, 1L);
+		assertTrue(fallback.await(5, java.util.concurrent.TimeUnit.SECONDS));
+		entityTasks.get(0).run();
+		assertEquals(0, online.get());
+		assertEquals(1, offline.get());
+	}
+
+	@Test
 	void runCmdAllUsesTheGlobalSchedulerEvenForAPlayerIssuer() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
