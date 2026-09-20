@@ -102,11 +102,15 @@ public class RewardHandler {
     }
 
     public void checkSubRewards() {
-        subRewardResolver.checkSubRewards();
+        synchronized (rewardRegistry) {
+            subRewardResolver.checkSubRewards();
+        }
     }
 
     public void checkSubRewards(DefinedReward direct) {
-        subRewardResolver.checkSubRewards(direct);
+        synchronized (rewardRegistry) {
+            subRewardResolver.checkSubRewards(direct);
+        }
     }
 
     public File getDefaultFolder() {
@@ -239,7 +243,9 @@ public class RewardHandler {
     }
 
     public void loadRewards() {
-        rewardLoader.loadRewards();
+        synchronized (rewardRegistry) {
+            rewardLoader.loadRewards();
+        }
     }
 
     public void openSubReward(Player player, String path, RewardEditData reward) {
