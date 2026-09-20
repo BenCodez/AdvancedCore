@@ -145,6 +145,11 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 
     @Override public boolean isCached(UUID uuid) { return manager.isCached(uuid); }
 
+    @Override public boolean hasPendingChanges(UUID uuid) {
+        UserDataCache cache = manager.getUserDataCache().get(uuid);
+        return cache != null && cache.hasChangesToProcess();
+    }
+
     @Override public DataValue getIfPresent(UUID uuid, String key) {
         UserDataCache cache = manager.getUserDataCache().get(uuid);
         if (cache == null) return null;
@@ -252,6 +257,10 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 	@Override public void dispatchAllNotifications() {
 		for (UUID uuid : Set.copyOf(pendingNotifications.keySet())) dispatchNotifications(uuid);
 	}
+
+    @Override public void reportCommittedFailure(UUID uuid, Throwable failure) {
+        manager.recordSharedStorageFailure(failure);
+    }
 
 	@Override public void discardAllNotifications() { pendingNotifications.clear(); }
 

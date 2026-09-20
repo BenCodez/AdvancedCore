@@ -14,6 +14,8 @@ import com.bencodez.simpleapi.sql.data.DataValue;
 /** Port for the existing cache/queue owner. No parallel cache is allocated. */
 public interface UserCacheOwner {
     boolean isCached(UUID uuid);
+    /** True when a cached user has queued values that need a pre-transaction flush. */
+    default boolean hasPendingChanges(UUID uuid) { return false; }
     DataValue getIfPresent(UUID uuid, String key);
     void populate(UUID uuid, HashMap<String, DataValue> values);
 
@@ -57,7 +59,10 @@ public interface UserCacheOwner {
     default void requireBlockingAllowed() {}
 
 	/** Deliver callbacks accumulated by a flush after its user admission is released. */
-	default void dispatchNotifications(UUID uuid) {}
+    default void dispatchNotifications(UUID uuid) {}
+
+    /** Record a cache failure after SQL has committed without making it retryable. */
+    default void reportCommittedFailure(UUID uuid, Throwable failure) {}
 
 	/** Deliver callbacks accumulated by a lifecycle-wide flush after all admission is released. */
 	default void dispatchAllNotifications() {}

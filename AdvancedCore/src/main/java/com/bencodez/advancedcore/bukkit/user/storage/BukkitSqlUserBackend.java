@@ -7,13 +7,18 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
+import com.bencodez.advancedcore.core.user.storage.sql.SqlBackendLogger;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
+import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackendFactory;
+import com.bencodez.advancedcore.core.user.storage.sql.SqlUserSchema;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueString;
@@ -73,6 +78,12 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
             }
             @Override public void writeValues(UserStorage storage, HashMap<String, DataValue> values) {
                 BukkitSqlUserBackend.this.writeValues(storage, uuid, values);
+            }
+            @Override public <T> T transaction(UserStorage storage, TransactionWork<T> work) {
+                return BukkitSqlUserBackend.this.transaction(storage, uuid, java.util.Map.of(), work);
+            }
+            @Override public <T> T transaction(UserStorage storage, java.util.Map<String, DataValue> initialValues, TransactionWork<T> work) {
+                return BukkitSqlUserBackend.this.transaction(storage, uuid, initialValues, work);
             }
         };
     }
@@ -148,13 +159,88 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         Objects.requireNonNull(values, "values");
         requireOpen();
         requireStorage(storage);
-        ArrayList<Column> columns = new ArrayList<>();
+        java.util.Map<String, DataValue> updates = new HashMap<>();
         values.forEach((key, value) -> {
-            if (!"uuid".equalsIgnoreCase(key) && value != null) columns.add(new Column(key, value));
+            if (!"uuid".equalsIgnoreCase(key) && value != null) updates.put(key, value);
         });
-        if (columns.isEmpty()) return;
-        if (storage == UserStorage.MYSQL) mysql().update(uuid.toString(), columns, false);
-        else synchronized (sqliteOperations) { table().update(primary(uuid), columns); }
+        if (updates.isEmpty()) return;
+        // Shared cache flushes must surface SQL failures. The legacy update
+        // methods log and swallow them, which could acknowledge a later caller
+        // transaction while its prerequisite queued values were never stored.
+        withSqlUser(storage, uuid, updates, user -> {
+            user.writeValues(storage, new HashMap<>(updates));
+            return null;
+        });
+        if (storage == UserStorage.MYSQL) mysql().recordCommittedUser(uuid, containsPlayerName(updates));
+    }
+
+    private <T> T transaction(UserStorage storage, UUID uuid, java.util.Map<String, DataValue> initialValues, SqlUserStorage.TransactionWork<T> work) {
+        requireOpen();
+        requireStorage(storage);
+        Objects.requireNonNull(work, "work");
+        return withSqlUser(storage, uuid, initialValues, user -> {
+            if (storage != UserStorage.MYSQL) return user.transaction(storage, initialValues, work);
+            boolean[] nameTouched = {false};
+            T result = user.transaction(storage, initialValues, scope -> {
+                nameTouched[0] = scope.createdUserRow() && containsPlayerName(initialValues);
+                return work.run(new SqlUserStorage.TransactionScope() {
+                    @Override public boolean createdUserRow() { return scope.createdUserRow(); }
+                    @Override public java.sql.Connection connection() { return scope.connection(); }
+                    @Override public List<Column> readRow() throws SQLException { return scope.readRow(); }
+                    @Override public void writeValues(java.util.Map<String, DataValue> values) throws SQLException {
+                        scope.writeValues(values);
+                        if (containsPlayerName(values)) nameTouched[0] = true;
+                    }
+                });
+            });
+            mysql().recordCommittedUser(uuid, nameTouched[0]);
+            return result;
+        });
+    }
+
+    private static boolean containsPlayerName(java.util.Map<String, DataValue> values) {
+        return values.keySet().stream().anyMatch("PlayerName"::equalsIgnoreCase);
+    }
+
+    private <T> T withSqlUser(UserStorage storage, UUID uuid, java.util.Map<String, DataValue> updates,
+            java.util.function.Function<SqlUserStorage, T> work) {
+        SqlUserSchema registered = SqlUserSchema.fromKeys(plugin.getUserManager().getDataManager().getKeys());
+        SqlUserSchema.Builder builder = SqlUserSchema.builder();
+        for (SqlUserSchema.ColumnDefinition column : registered.columns()) {
+            if (!"uuid".equalsIgnoreCase(column.name())) builder.column(column.name(), column.sqlType(), column.dataType());
+        }
+        ArrayList<Column> dynamic = new ArrayList<>();
+        for (java.util.Map.Entry<String, DataValue> entry : updates.entrySet()) {
+            if (registered.contains(entry.getKey())) continue;
+            com.bencodez.simpleapi.sql.DataType type = entry.getValue().getType();
+            builder.column(entry.getKey(), type == com.bencodez.simpleapi.sql.DataType.STRING ? "TEXT" :
+                    type == com.bencodez.simpleapi.sql.DataType.INTEGER ? "INTEGER" : "BOOLEAN", type);
+            dynamic.add(new Column(entry.getKey(), type));
+        }
+        SqlUserSchema schema = builder.build();
+        SqlBackendLogger logger = new SqlBackendLogger() {
+            @Override public void info(String message) { plugin.getLogger().info(message); }
+            @Override public void warn(String message, Throwable error) {
+                plugin.getLogger().warning(message + (error == null ? "" : ": " + error.getMessage()));
+            }
+        };
+        if (storage == UserStorage.MYSQL) {
+            for (Column column : dynamic) mysql().checkColumn(column.getName(), column.getDataType());
+            var manager = mysql().getMysql().getConnectionManager();
+            return work.apply(SqlUserBackendFactory.existingUser(storage, uuid, mysql().getTableName(), schema,
+                    manager::getConnection, manager.getDbType(), logger));
+        }
+        synchronized (sqliteOperations) {
+            for (Column column : dynamic) table().checkColumn(column);
+            // The legacy SQLite provider retains one shared connection. Obtain
+            // its actual database URL, then open a separate transaction-owned
+            // connection so AdvancedCore can close it after commit/rollback.
+            String url;
+            try { url = table().getSqLite().getSQLConnection().getMetaData().getURL(); }
+            catch (SQLException failure) { throw new IllegalStateException("Failed to locate Bukkit SQLite user database", failure); }
+            return work.apply(SqlUserBackendFactory.existingUser(storage, uuid, table().getName(), schema,
+                    () -> DriverManager.getConnection(url), null, logger));
+        }
     }
 
     private Column primary(UUID uuid) { return new Column("uuid", new DataValueString(uuid.toString())); }

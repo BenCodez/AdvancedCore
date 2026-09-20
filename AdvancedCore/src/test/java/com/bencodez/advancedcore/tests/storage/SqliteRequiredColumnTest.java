@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,23 @@ class SqliteRequiredColumnTest {
         }
         try (SqliteUserBackend backend = open()) {
             var values = new SqlUserDataAccess(backend.user(uuid)).getValues(UserStorage.SQLITE);
+            assertEquals("Ben", values.get("PlayerName").getString());
+            assertEquals(12, values.get("Points").getInt());
+        }
+    }
+
+    @Test void firstAtomicTransactionCanSupplyRequiredColumnWithoutChangingExistingRows() {
+        UUID uuid = UUID.randomUUID();
+        try (SqliteUserBackend backend = open()) {
+            var user = backend.user(uuid);
+            assertThrows(IllegalStateException.class, () -> user.transaction(UserStorage.SQLITE, scope -> null));
+            assertFalse(user.contains(UserStorage.SQLITE));
+            user.transaction(UserStorage.SQLITE, Map.of("PlayerName", new DataValueString("Ben")), scope -> {
+                scope.writeValues(Map.of("Points", new DataValueInt(12)));
+                return null;
+            });
+            user.transaction(UserStorage.SQLITE, Map.of("PlayerName", new DataValueString("Other")), scope -> null);
+            var values = new SqlUserDataAccess(user).getValues(UserStorage.SQLITE);
             assertEquals("Ben", values.get("PlayerName").getString());
             assertEquals(12, values.get("Points").getInt());
         }

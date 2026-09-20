@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.core.user.runtime;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -16,7 +17,9 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
+import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.core.user.storage.SqlUserDataAccess;
+import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.data.DataValue;
@@ -118,6 +121,82 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     private void flushInternal(UUID uuid) { cacheOwner.flush(uuid, backend.storageType(), backend.user(uuid)); }
+
+    /**
+     * Extend the active SQL backend's user transaction with caller-owned SQL.
+     * Pending cache changes are flushed first. Only after commit is the old
+     * cache generation retired, so a later load observes committed values and
+     * a rolled-back callback cannot publish speculative values.
+     */
+    public <T> T transaction(UUID uuid, SqlUserStorage.TransactionWork<T> work) {
+        return transactionInternal(uuid, null, Map.of(), work);
+    }
+
+    /**
+     * Require the selected physical store. Initial values are prerequisites
+     * for creating a row with required columns, not part of the caller's atomic
+     * mutation. When a cache already exists, they can commit before its queued
+     * changes are flushed; callers must write operation-specific values only
+     * inside the transaction callback.
+     */
+    public <T> T transaction(UUID uuid, UserStorage expectedStorage, Map<String, DataValue> initialValues,
+            SqlUserStorage.TransactionWork<T> work) {
+        Objects.requireNonNull(expectedStorage, "expectedStorage");
+        return transactionInternal(uuid, expectedStorage, initialValues, work);
+    }
+
+    private <T> T transactionInternal(UUID uuid, UserStorage expectedStorage, Map<String, DataValue> initialValues,
+            SqlUserStorage.TransactionWork<T> work) {
+        Objects.requireNonNull(uuid, "uuid");
+        Objects.requireNonNull(initialValues, "initialValues");
+        Objects.requireNonNull(work, "work");
+        cacheOwner.requireBlockingAllowed();
+        try {
+            return userExclusiveAccess(uuid, () -> {
+                if (expectedStorage != null && backend.storageType() != expectedStorage) {
+                    throw new IllegalStateException("Cannot access " + expectedStorage
+                            + " user storage while the shared runtime owns " + backend.storageType());
+                }
+                cacheOwner.beginRemoval(uuid);
+                try {
+                    if (cacheOwner.hasPendingChanges(uuid) && !initialValues.isEmpty()) {
+                        // Existing queued changes may need a required column on
+                        // first write. Establish only row prerequisites before
+                        // their ordinary, independently durable cache flush.
+                        backend.user(uuid).transaction(backend.storageType(), initialValues, scope -> null);
+                    }
+                    flushInternal(uuid);
+                } catch (RuntimeException | Error failure) {
+                    cacheOwner.cancelRemoval(uuid);
+                    throw failure;
+                }
+                // SQL has committed. Cache retirement can fail, but reporting a
+                // transaction failure here would invite a duplicate caller retry.
+                T result;
+                try {
+                    result = backend.user(uuid).transaction(backend.storageType(), initialValues, work);
+                } catch (RuntimeException | Error failure) {
+                    cacheOwner.cancelRemoval(uuid);
+                    throw failure;
+                }
+                try {
+                    cacheOwner.remove(uuid);
+                } catch (RuntimeException | Error failure) {
+                    try {
+                        cacheOwner.populate(uuid, SqlUserDataAccess.convert(readStorageRow(uuid)));
+                    } catch (RuntimeException | Error recoveryFailure) {
+                        failure.addSuppressed(recoveryFailure);
+                    } finally {
+                        try { cacheOwner.cancelRemoval(uuid); }
+                        catch (RuntimeException | Error recoveryFailure) { failure.addSuppressed(recoveryFailure); }
+                    }
+                    try { cacheOwner.reportCommittedFailure(uuid, failure); }
+                    catch (RuntimeException | Error reportingFailure) { failure.addSuppressed(reportingFailure); }
+                }
+                return result;
+            });
+        } finally { cacheOwner.dispatchNotifications(uuid); }
+    }
 
     public void flushAll() {
 		try { storageAccess(() -> {

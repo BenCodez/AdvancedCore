@@ -62,6 +62,10 @@ public final class MysqlUserBackend implements SqlUserBackend {
             @Override public void delete(UserStorage storage) { withOperation(() -> { delegate.delete(storage); return null; }); }
             @Override public void write(UserStorage storage, String key, DataValue value) { withOperation(() -> { delegate.write(storage, key, value); return null; }); }
             @Override public void writeValues(UserStorage storage, HashMap<String, DataValue> values) { withOperation(() -> { delegate.writeValues(storage, values); return null; }); }
+            @Override public <T> T transaction(UserStorage storage, TransactionWork<T> work) { return withOperation(() -> delegate.transaction(storage, work)); }
+            @Override public <T> T transaction(UserStorage storage, java.util.Map<String, DataValue> initialValues, TransactionWork<T> work) {
+                return withOperation(() -> delegate.transaction(storage, initialValues, work));
+            }
         };
     }
 

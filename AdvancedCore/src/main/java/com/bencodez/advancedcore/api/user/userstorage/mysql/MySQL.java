@@ -125,16 +125,20 @@ public class MySQL extends AbstractSqlTable {
 		uuids.clear();
 		uuids.addAll(getUuidsQuery());
 
-		names.clear();
-		names.addAll(getNamesQuery());
+		synchronized (names) {
+			names.clear();
+			names.addAll(getNamesQuery());
+		}
 	}
 
 	public void clearCacheBasic() {
 		clearCaches();
 		uuids.clear();
 		uuids.addAll(getUuidsQuery());
-		names.clear();
-		names.addAll(getNamesQuery());
+		synchronized (names) {
+			names.clear();
+			names.addAll(getNamesQuery());
+		}
 	}
 
 	// -------------------------
@@ -360,6 +364,12 @@ public class MySQL extends AbstractSqlTable {
 	// Keep existing methods (getUuids / getUUID / etc.)
 	// -------------------------
 
+	/** Publish a committed UUID; refresh names only when PlayerName may have changed. */
+	public void recordCommittedUser(UUID uuid, boolean nameMayHaveChanged) {
+		uuids.add(uuid.toString());
+		if (nameMayHaveChanged) synchronized (names) { names.clear(); }
+	}
+
 	public Set<String> getUuids() {
 		if (uuids == null || uuids.isEmpty()) {
 			uuids.clear();
@@ -386,11 +396,10 @@ public class MySQL extends AbstractSqlTable {
 	}
 
 	public Set<String> getNames() {
-		if (names == null || names.isEmpty()) {
-			names.clear();
-			names.addAll(getNamesQuery());
+		synchronized (names) {
+			if (names.isEmpty()) names.addAll(getNamesQuery());
+			return new java.util.HashSet<>(names);
 		}
-		return names;
 	}
 
 	public ArrayList<String> getNamesQuery() {
@@ -576,7 +585,7 @@ public class MySQL extends AbstractSqlTable {
 		}
 
 		uuids.remove(uuid);
-		names.remove(UuidLookup.getInstance().getCachedName(uuid));
+		synchronized (names) { names.remove(UuidLookup.getInstance().getCachedName(uuid)); }
 		clearCacheBasic();
 	}
 
@@ -816,12 +825,11 @@ public class MySQL extends AbstractSqlTable {
 				playerName = col.getValue().toString();
 			}
 		}
-		if (playerName == null || playerName.isEmpty()) {
-			names.add(UuidLookup.getInstance().getPlayerName(
-					plugin.getUserManager().getUser(java.util.UUID.fromString(index), false), index, false));
-		} else {
-			names.add(playerName);
-		}
+		String committedName = playerName == null || playerName.isEmpty()
+				? UuidLookup.getInstance().getPlayerName(
+						plugin.getUserManager().getUser(java.util.UUID.fromString(index), false), index, false)
+				: playerName;
+		synchronized (names) { names.add(committedName); }
 
 		uuids.add(index);
 		plugin.devDebug("Inserting " + index + " into database");
