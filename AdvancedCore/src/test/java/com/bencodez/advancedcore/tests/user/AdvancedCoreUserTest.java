@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +51,39 @@ import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 
 public class AdvancedCoreUserTest {
+	@Test
+	void loginHistoryUsesOnlyPublishedCacheWhenSharedSqlNeedsWorker() {
+		org.bukkit.OfflinePlayer offline = mock(org.bukkit.OfflinePlayer.class);
+		try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getOfflinePlayer(UUID.fromString(user.getUUID()))).thenReturn(offline);
+			when(dataManager.hasSharedSqlBackend()).thenReturn(true);
+			when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+			com.bencodez.advancedcore.api.user.usercache.UserDataCache published =
+					mock(com.bencodez.advancedcore.api.user.usercache.UserDataCache.class);
+			when(dataManager.getPublishedCache(UUID.fromString(user.getUUID()))).thenReturn(published);
+			when(published.hasStoredData()).thenReturn(true);
+			assertTrue(user.hasLoggedOnBefore());
+			when(published.hasStoredData()).thenReturn(false);
+			assertFalse(user.hasLoggedOnBefore());
+			when(dataManager.getPublishedCache(UUID.fromString(user.getUUID()))).thenReturn(null);
+			assertFalse(user.hasLoggedOnBefore());
+			verify(userManager, never()).getAllUUIDs();
+		}
+	}
+
+	@Test
+	void loginHistoryUsesPersistedLookupFromStorageWorker() {
+		org.bukkit.OfflinePlayer offline = mock(org.bukkit.OfflinePlayer.class);
+		try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getOfflinePlayer(UUID.fromString(user.getUUID()))).thenReturn(offline);
+			when(dataManager.hasSharedSqlBackend()).thenReturn(true);
+			when(dataManager.mustDeferSharedStorageAccess()).thenReturn(false);
+			when(userManager.getAllUUIDs()).thenReturn(new java.util.ArrayList<>(java.util.List.of(user.getUUID())));
+			assertTrue(user.hasLoggedOnBefore());
+			verify(dataManager, never()).getPublishedCache(any());
+		}
+	}
+
 	private AdvancedCorePlugin plugin;
 	private UserManager userManager;
 	private UserDataManager dataManager;
@@ -83,6 +117,36 @@ public class AdvancedCoreUserTest {
 
 		user = new AdvancedCoreUser(plugin, UUID.randomUUID(),"Test");
 		user.setData(data); // Inject the mocked UserData object
+	}
+
+	@Test
+	void updateNameDoesNotPersistABlankResolvedName() {
+		AdvancedCoreUser unnamed = new AdvancedCoreUser(plugin, UUID.randomUUID(), null);
+		unnamed.setData(data);
+		when(data.hasData()).thenReturn(true);
+		when(data.getString("PlayerName", UserDataFetchMode.TEMP_ONLY)).thenReturn("");
+		when(data.getString("PlayerName", UserDataFetchMode.DEFAULT)).thenReturn("StoredName");
+
+		unnamed.updateName(false);
+
+		verify(data, never()).getString("PlayerName", UserDataFetchMode.DEFAULT);
+		verify(data, never()).setString(eq("PlayerName"), any(String.class), eq(true));
+	}
+
+	@Test
+	void replayEntryPointsDeferCompleteSharedStorageWork() {
+		AdvancedCoreUser replayUser = org.mockito.Mockito.spy(user);
+		org.mockito.Mockito.doReturn(true).when(replayUser).isOnline();
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		when(dataManager.deferSharedStorageWork(any(Runnable.class))).thenReturn(true);
+
+		replayUser.checkOfflineRewards();
+		replayUser.checkDelayedTimedRewards();
+		replayUser.forceRunOfflineRewards();
+
+		verify(dataManager, org.mockito.Mockito.times(3)).deferSharedStorageWork(any(Runnable.class));
+		verify(replayUser, org.mockito.Mockito.times(3)).isOnline();
+		verify(data, never()).getStringList(any(String.class), any(UserDataFetchMode.class));
 	}
 
 	@Test
@@ -226,6 +290,57 @@ public class AdvancedCoreUserTest {
 		assertFalse(options.isGiveOffline());
 		assertFalse(options.isCheckTimed());
 		assertEquals("server-a", options.getPlaceholders().get("Server"));
+	}
+
+	@Test
+	void forcedReplayCompletionWaitsForDeferredStorageAndRewardHandling() {
+		AdvancedCoreUser replayUser = org.mockito.Mockito.spy(user);
+		org.mockito.Mockito.doReturn(true).when(replayUser).isOnline();
+		when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+		ArgumentCaptor<Runnable> deferred = ArgumentCaptor.forClass(Runnable.class);
+		when(dataManager.deferSharedStorageWork(deferred.capture())).thenReturn(true);
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenReturn(new ArrayList<>(List.of("VoteReward")));
+		CompletableFuture<Void> rewardCompletion = new CompletableFuture<>();
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(replayUser), any(PersistedQueueReference.class),
+				any(RewardOptions.class))).thenReturn(rewardCompletion);
+
+		CompletableFuture<Void> completion = replayUser.forceRunOfflineRewardsAsync().toCompletableFuture();
+		assertFalse(completion.isDone());
+
+		deferred.getValue().run();
+		assertFalse(completion.isDone());
+
+		rewardCompletion.complete(null);
+		assertTrue(completion.isDone());
+	}
+
+	@Test
+	void forcedReplaySurfacesRecoveryFailureWithoutBlockingTheNextOccurrence() {
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenReturn(new ArrayList<>(List.of("FirstReward", "SecondReward")));
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class),
+				any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.failedFuture(new IllegalStateException("delivery failed")))
+				.thenReturn(CompletableFuture.completedFuture(null));
+		org.mockito.Mockito.doThrow(new IllegalStateException("restore failed"))
+				.when(data).setStringList(eq("offlineRewardsPath"), any());
+
+		CompletableFuture<Void> completion = user.forceRunOfflineRewardsAsync().toCompletableFuture();
+
+		assertTrue(completion.isCompletedExceptionally());
+		verify(rewardHandler, org.mockito.Mockito.times(2)).givePersistedQueueRewardAsync(
+				eq(user), any(PersistedQueueReference.class), any(RewardOptions.class));
+	}
+
+	@Test
+	void forcedReplayReturnsAnExceptionalStageWhenStorageReadFails() {
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT))
+				.thenThrow(new IllegalStateException("storage unavailable"));
+
+		CompletableFuture<Void> completion = user.forceRunOfflineRewardsAsync().toCompletableFuture();
+
+		assertTrue(completion.isCompletedExceptionally());
 	}
 
 	@Test

@@ -1,8 +1,8 @@
 package com.bencodez.advancedcore.command;
 
 import java.util.ArrayList;
-import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
@@ -29,7 +29,6 @@ import com.bencodez.advancedcore.command.gui.RewardEditGUI;
 import com.bencodez.advancedcore.command.gui.UserGUI;
 import com.bencodez.simpleapi.messages.MessageAPI;
 import com.bencodez.simpleapi.sql.DataType;
-import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.valuerequest.InputMethod;
 import com.bencodez.simpleapi.valuerequest.PlayerInputManager;
 import com.bencodez.simpleapi.valuerequest.ValueRequest;
@@ -53,6 +52,13 @@ public class CommandLoader {
 
 	private static boolean isBlank(String s) {
 		return s == null || s.trim().isEmpty() || "null".equalsIgnoreCase(s.trim());
+	}
+
+	private void withResolvedUser(CommandSender sender, String playerName, Consumer<AdvancedCoreUser> action) {
+		plugin.getUserManager().getUserAsync(playerName,
+				user -> runRecipientCallback(UUID.fromString(user.getUUID()), () -> action.accept(user)),
+				failure -> runCommandCallback(sender,
+						() -> sender.sendMessage(MessageAPI.colorize("&cUnable to resolve UUID for " + playerName))));
 	}
 
 	private ArrayList<String> perms = new ArrayList<>();
@@ -99,20 +105,16 @@ public class CommandLoader {
 				}
 				final String cmd = str;
 
-				// Stream instead of building a huge users list
-				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+				// Stream instead of building a huge users list. Shared storage rejects
+				// primary-thread reads, so enumeration stays on the worker.
+				runUserStorageCommand(sender, () -> plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					user.updateTempCacheWithColumns(columns);
-
-					plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
-						@Override
-						public void run() {
-							Bukkit.getServer().dispatchCommand(sender,
-									PlaceholderUtils.replacePlaceHolder(cmd, "player", user.getPlayerName()));
-						}
-					});
-				}, null);
+					String playerName = user.getPlayerName();
+					plugin.getBukkitScheduler().runTask(plugin, () -> Bukkit.getServer().dispatchCommand(sender,
+							PlaceholderUtils.replacePlaceHolder(cmd, "player", playerName)));
+				}, null), null);
 			}
 		});
 
@@ -130,20 +132,17 @@ public class CommandLoader {
 					}
 				}
 
-				switch (plugin.getStorageType()) {
-				case MYSQL:
-					sendMessage(sender, "Running query: " + str);
-					plugin.getMysql().executeQuery(str);
-					sendMessage(sender, "Query finished: " + str);
-					break;
-				case SQLITE:
-					sendMessage(sender, "Running query: " + str);
-					plugin.getSQLiteUserTable().executeQuery(str);
-					sendMessage(sender, "Query finished: " + str);
-					break;
-				default:
-					break;
-				}
+				String query = str;
+				sendMessage(sender, "Running query: " + query);
+				runUserStorageCommand(sender, () -> plugin.getUserManager().getDataManager()
+						.withSharedNativeUserStorage(owner -> {
+							switch (owner == null ? plugin.getStorageType() : owner.storageType()) {
+							case MYSQL -> (owner == null ? plugin.getMysql() : owner.mysql()).executeQuery(query);
+							case SQLITE -> (owner == null ? plugin.getSQLiteUserTable() : owner.table()).executeQuery(query);
+							default -> { }
+							}
+							return null;
+						}), () -> sendMessage(sender, "Query finished: " + query));
 
 			}
 		});
@@ -153,14 +152,19 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				if (plugin.getOptions().getStorageType().equals(UserStorage.MYSQL)) {
-					for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
-						plugin.getMysql().alterColumnType(key.getKey(), key.getColumnType());
-					}
-					sendMessage(sender, "&cColumn sizes updated");
-				} else {
-					sendMessage(sender, "&cNot using MySQL");
-				}
+				runUserStorageCommand(sender, () -> {
+					boolean updated = plugin.getUserManager().getDataManager().withSharedNativeUserStorage(owner -> {
+						UserStorage storage = owner == null ? plugin.getStorageType() : owner.storageType();
+						if (storage != UserStorage.MYSQL) return false;
+						var mysql = owner == null ? plugin.getMysql() : owner.mysql();
+						for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
+							mysql.alterColumnType(key.getKey(), key.getColumnType());
+						}
+						return true;
+					});
+					runCommandCallback(sender, () -> sendMessage(sender,
+							updated ? "&cColumn sizes updated" : "&cNot using MySQL"));
+				}, null);
 
 			}
 		});
@@ -170,7 +174,10 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				sendMessage(sender, "Total number of users: " + plugin.getUserManager().getAllUUIDs().size());
+				runUserStorageCommand(sender, () -> {
+					int count = plugin.getUserManager().getAllUUIDs().size();
+					runCommandCallback(sender, () -> sendMessage(sender, "Total number of users: " + count));
+				}, null);
 			}
 		});
 
@@ -181,21 +188,16 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				Reward reward = plugin.getRewardHandler().getReward(args[1]);
 
-				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+				runUserStorageCommand(sender, () -> {
+					ForcedReplayBarrier barrier = new ForcedReplayBarrier(
+							failure -> reportBulkRewardCompletion(sender, args[1], failure), true);
+					plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					user.updateTempCacheWithColumns(columns);
-
-					// safest: many reward actions touch Bukkit API
-					plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
-						@Override
-						public void run() {
-							new RewardBuilder(reward).send(user);
-						}
-					});
-				}, (count) -> {
-					sendMessage(sender, "&cGave all players reward file " + args[1]);
-				});
+					dispatchBulkReward(uuid, user, reward, barrier);
+					}, ignored -> barrier.enumerationComplete());
+				}, null);
 			}
 		});
 
@@ -217,9 +219,10 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				plugin.getRewardHandler().giveReward(user, args[2], new RewardOptions().setOnline(user.isOnline()));
-				sendMessage(sender, "&cGave " + args[1] + " the reward file " + args[2]);
+				withResolvedUser(sender, args[1], user -> {
+					dispatchSingleReward(sender, user, args[2], new RewardOptions(),
+						"&cGave " + args[1] + " the reward file " + args[2]);
+				});
 			}
 		});
 
@@ -230,27 +233,24 @@ public class CommandLoader {
 			public void executeAll(CommandSender sender, String[] args) {
 				Reward reward = plugin.getRewardHandler().getReward(args[3]);
 
-				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+				runUserStorageCommand(sender, () -> {
+					ForcedReplayBarrier barrier = new ForcedReplayBarrier(
+							failure -> reportBulkRewardCompletion(sender, args[3], failure), true);
+					plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
 					user.updateTempCacheWithColumns(columns);
-
-					plugin.getBukkitScheduler().runTask(plugin, new Runnable() {
-						@Override
-						public void run() {
-							new RewardBuilder(reward).send(user);
-						}
-					});
-				}, (count) -> {
-					sendMessage(sender, "&cGave all players reward file " + args[3]);
-				});
+					dispatchBulkReward(uuid, user, reward, barrier);
+					}, ignored -> barrier.enumerationComplete());
+				}, null);
 			}
 
 			@Override
 			public void executeSinglePlayer(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				plugin.getRewardHandler().giveReward(user, args[3], new RewardOptions().setOnline(user.isOnline()));
-				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[3]);
+				withResolvedUser(sender, args[1], user -> {
+					dispatchSingleReward(sender, user, args[3], new RewardOptions(),
+						"&cGave " + args[1] + " the reward file " + args[3]);
+				});
 			}
 		});
 
@@ -259,10 +259,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				plugin.getRewardHandler().giveReward(user, args[2],
-						new RewardOptions().setOnline(user.isOnline()).addPlaceholder(args[3], args[4]));
-				sender.sendMessage("&cGave " + args[1] + " the reward file " + args[2]);
+				withResolvedUser(sender, args[1], user -> {
+					dispatchSingleReward(sender, user, args[2],
+							new RewardOptions().addPlaceholder(args[3], args[4]),
+							"&cGave " + args[1] + " the reward file " + args[2]);
+				});
 			}
 		});
 
@@ -281,9 +282,10 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cStarting to clear offline rewards");
-				plugin.getUserManager().removeAllKeyValues(plugin.getUserManager().getOfflineRewardsPath(),
-						DataType.STRING);
-				sendMessage(sender, "&cFinished clearing offline rewards");
+				runUserStorageCommand(sender,
+						() -> plugin.getUserManager().removeAllKeyValues(plugin.getUserManager().getOfflineRewardsPath(),
+								DataType.STRING),
+						() -> sendMessage(sender, "&cFinished clearing offline rewards"));
 			}
 		});
 
@@ -295,15 +297,16 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cStarting to run offline rewards");
 
-				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
-					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
-					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-					user.updateTempCacheWithColumns(columns);
-
-					user.forceRunOfflineRewards();
-				}, (count) -> {
-					sendMessage(sender, "&cFinished running offline rewards");
-				});
+				runUserStorageCommand(sender, () -> {
+					ForcedReplayBarrier barrier = new ForcedReplayBarrier(
+							failure -> reportForcedReplayCompletion(sender, null, failure));
+					plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+						AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
+						user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
+						user.updateTempCacheWithColumns(columns);
+						barrier.add(user.forceRunOfflineRewardsAsync());
+					}, ignored -> barrier.enumerationComplete());
+				}, null);
 			}
 		});
 
@@ -315,12 +318,11 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cStarting to run offline rewards for " + args[1]);
 
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-
-				user.forceRunOfflineRewards();
-
-				sendMessage(sender, "&cFinished running offline rewards for " + args[1]);
+				withResolvedUser(sender, args[1], user -> {
+					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
+					user.forceRunOfflineRewardsAsync().whenComplete((ignored, failure) ->
+							reportForcedReplayCompletion(sender, args[1], failure));
+				});
 			}
 		});
 
@@ -365,13 +367,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
-				if (isBlank(uuidStr)) {
-					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
-					return;
-				}
-				plugin.getPermissionHandler().removePermission(UUID.fromString(uuidStr));
-				sendMessage(sender, "&cRemoved temporary permissions from " + args[1]);
+				withResolvedUser(sender, args[1], user -> {
+					plugin.getPermissionHandler().removePermission(UUID.fromString(user.getUUID()));
+					runCommandCallback(sender,
+							() -> sendMessage(sender, "&cRemoved temporary permissions from " + args[1]));
+				});
 			}
 		});
 
@@ -381,14 +381,12 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
-				if (isBlank(uuidStr)) {
-					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
-					return;
-				}
-				plugin.getPermissionHandler().addPermission(UUID.fromString(uuidStr), args[3],
-						Integer.valueOf(args[4]));
-				sendMessage(sender, "&cAdded temporary permission to " + args[1] + " for " + args[4]);
+				withResolvedUser(sender, args[1], user -> {
+					plugin.getPermissionHandler().addPermission(UUID.fromString(user.getUUID()), args[3],
+							Integer.valueOf(args[4]));
+					runCommandCallback(sender,
+							() -> sendMessage(sender, "&cAdded temporary permission to " + args[1] + " for " + args[4]));
+				});
 			}
 		});
 
@@ -397,13 +395,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
-				if (isBlank(uuidStr)) {
-					sendMessage(sender, "&cUnable to resolve UUID for " + args[1]);
-					return;
-				}
-				plugin.getPermissionHandler().addPermission(UUID.fromString(uuidStr), args[3]);
-				sendMessage(sender, "&cAdded temporary permission to " + args[1]);
+				withResolvedUser(sender, args[1], user -> {
+					plugin.getPermissionHandler().addPermission(UUID.fromString(user.getUUID()), args[3]);
+					runCommandCallback(sender,
+							() -> sendMessage(sender, "&cAdded temporary permission to " + args[1]));
+				});
 			}
 		});
 
@@ -424,20 +420,8 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
 
-				// Remove user data (DB/flatfile/etc)
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				user.getData().remove();
-
-				// Remove any cached mappings (UuidLookup maintains the name<->uuid cache now)
-				String uuidStr = UuidLookup.getInstance().getUUID(args[1]);
-				if (!isBlank(uuidStr)) {
-					UuidLookup.getInstance().invalidate(uuidStr);
-				} else {
-					// still invalidate by name key in case it exists
-					UuidLookup.getInstance().invalidate(args[1]);
-				}
-
-				sendMessage(sender, "&cRemoved " + args[1]);
+				withResolvedUser(sender, args[1], user -> removeUserData(sender, args[1], user,
+						() -> UuidLookup.getInstance().invalidate(user.getUUID())));
 			}
 		});
 
@@ -448,13 +432,12 @@ public class CommandLoader {
 			public void execute(CommandSender sender, String[] args) {
 				sendMessage(sender, "&cRemoving " + args[1]);
 
-				AdvancedCoreUser user = plugin.getUserManager().getUser(UUID.fromString(args[1]));
-				user.getData().remove();
-
-				// Clear mapping from UuidLookup (no plugin uuidNameCache anymore)
-				UuidLookup.getInstance().invalidate(args[1]);
-
-				sendMessage(sender, "&cRemoved " + args[1]);
+				UUID uuid = UUID.fromString(args[1]);
+				plugin.getUserManager().getUserAsync(uuid,
+						user -> runRecipientCallback(uuid, () -> removeUserData(sender, args[1], user,
+								() -> UuidLookup.getInstance().invalidate(args[1]))),
+						failure -> runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
+								"&cUnable to resolve user for " + args[1] + "; check the server log."))));
 			}
 		});
 
@@ -471,9 +454,16 @@ public class CommandLoader {
 					}
 				}
 
-				plugin.getUserManager().getDataManager().clearCache();
-
-				sender.sendMessage(MessageAPI.colorize("&cCache cleared"));
+				plugin.getUserManager().getDataManager().clearCacheAsyncCompletion().whenComplete((ignored, failure) ->
+						runCommandCallback(sender, () -> {
+							if (failure == null) sender.sendMessage(MessageAPI.colorize("&cCache cleared"));
+							else {
+								Throwable cause = failure.getCause() == null ? failure : failure.getCause();
+								if (plugin.getLogger() != null) plugin.getLogger().severe(
+										"Cache clear failed (" + cause.getClass().getSimpleName() + ")");
+								sender.sendMessage(MessageAPI.colorize("&cFailed to clear cache; see the server log"));
+							}
+						}));
 
 			}
 		});
@@ -482,8 +472,8 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				plugin.getUserManager().purgeOldPlayersNow();
-				sendMessage(sender, "&cPurged data");
+				runUserStorageCommand(sender, () -> plugin.getUserManager().purgeOldPlayersNow(),
+						() -> sendMessage(sender, "&cPurged data"));
 			}
 		});
 
@@ -549,24 +539,24 @@ public class CommandLoader {
 				final String key = args[3];
 				final String value = data;
 
-				plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
+				runUserStorageCommand(sender, () -> plugin.getUserManager().forEachUserKeys((uuid, columns) -> {
 					AdvancedCoreUser user = plugin.getUserManager().getUser(uuid, false);
 					user.userDataFetechMode(UserDataFetchMode.NO_CACHE);
-					user.getData().setString(key, value);
-				}, (count) -> {
-					sender.sendMessage(MessageAPI.colorize("&cSet all users " + key + " to " + args[4]));
-				});
+					// The bulk success callback means durable completion, not merely a
+					// queued shared-cache mutation for each enumerated user.
+					user.getData().setString(key, value, false);
+				}, null), () -> sender.sendMessage(MessageAPI.colorize("&cSet all users " + key + " to " + args[4])));
 			}
 
 			@Override
 			public void executeSinglePlayer(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
 				String data = args[4];
-				if (data.equalsIgnoreCase("\"\"")) {
-					data = "";
-				}
-				user.getData().setString(args[3], data);
-				sender.sendMessage(MessageAPI.colorize("&cSet " + args[3] + " for " + args[1] + " to " + args[4]));
+				if (data.equalsIgnoreCase("\"\"")) data = "";
+				final String value = data;
+				withResolvedUser(sender, args[1], user -> runUserStorageCommand(sender,
+						() -> user.getData().setString(args[3], value, false),
+						() -> sender.sendMessage(MessageAPI.colorize(
+								"&cSet " + args[3] + " for " + args[1] + " to " + args[4]))));
 			}
 		}.withLegacyAllPermissionAliases(permPrefix + ".SetAllData"));
 
@@ -575,10 +565,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				for (Entry<String, DataValue> entry : user.getData().getValues().entrySet()) {
-					sendMessage(sender, "&c&l" + entry.getKey() + " &c" + entry.getValue().toString());
-				}
+				withResolvedUser(sender, args[1], user -> runUserStorageCommand(sender, () -> {
+					var values = user.getData().getValues();
+					runCommandCallback(sender, () -> values.forEach((key, value) ->
+							sendMessage(sender, "&c&l" + key + " &c" + value.toString())));
+				}, null));
 			}
 		});
 
@@ -587,10 +578,10 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				for (String str : user.getCache().displayCacheStringList()) {
-					sender.sendMessage(str);
-				}
+				withResolvedUser(sender, args[1], user -> runUserStorageCommand(sender, () -> {
+					java.util.List<String> entries = user.getCache().displayCacheStringList();
+					runCommandCallback(sender, () -> entries.forEach(sender::sendMessage));
+				}, null));
 
 			}
 		});
@@ -600,9 +591,7 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				user.cache();
-				sendMessage(sender, "&aForced cached " + args[1]);
+				withResolvedUser(sender, args[1], user -> cacheUserAndReport(sender, args[1], user));
 			}
 		});
 
@@ -611,8 +600,11 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[1]);
-				sendMessage(sender, "User " + args[1] + " permission " + args[3] + ":" + user.hasPermission(args[3]));
+				withResolvedUser(sender, args[1], user -> {
+					boolean hasPermission = user.hasPermission(args[3]);
+					runCommandCallback(sender, () -> sendMessage(sender,
+							"User " + args[1] + " permission " + args[3] + ":" + hasPermission));
+				});
 			}
 		});
 
@@ -622,10 +614,10 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(args[4]);
-				user.setChoicePreference(args[2], args[3]);
-
-				user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]);
+				withResolvedUser(sender, args[4], user -> runUserStorageCommand(sender,
+						() -> user.setChoicePreference(args[2], args[3], false),
+						() -> runRecipientCallback(UUID.fromString(user.getUUID()),
+								() -> user.sendMessage("&cPreference set to " + args[3] + " for " + args[4]))));
 			}
 		});
 
@@ -636,10 +628,7 @@ public class CommandLoader {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					sendMessage(sender,
-							"&cStarting convert from " + plugin.getStorageType().toString() + " to " + args[1]);
-					plugin.convertDataStorage(plugin.getStorageType(), UserStorage.value(args[1]));
-					sendMessage(sender, "&cFinished converting");
+					startStorageConversion(sender, plugin.getStorageType(), UserStorage.value(args[1]));
 				}
 			});
 
@@ -649,10 +638,7 @@ public class CommandLoader {
 
 				@Override
 				public void execute(CommandSender sender, String[] args) {
-					sendMessage(sender,
-							"&cStarting convert from " + args[1] + " to " + plugin.getStorageType().toString());
-					plugin.convertDataStorage(UserStorage.value(args[1]), plugin.getStorageType());
-					sendMessage(sender, "&cFinished converting");
+					startStorageConversion(sender, UserStorage.value(args[1]), plugin.getStorageType());
 				}
 			});
 		}
@@ -692,6 +678,291 @@ public class CommandLoader {
 		return cmds;
 	}
 
+	/** Run a shared-storage command off the primary thread and return UI work safely. */
+	private void runUserStorageCommand(CommandSender sender, Runnable storageWork, Runnable onSuccess) {
+		try {
+			plugin.getBukkitScheduler().runTaskAsynchronously(plugin, () -> {
+				try {
+					storageWork.run();
+					if (onSuccess != null) runCommandCallback(sender, onSuccess);
+				} catch (RuntimeException | Error failure) {
+					if (plugin.getLogger() != null) {
+						plugin.getLogger().severe("Bulk user operation failed (" + failure.getClass().getSimpleName() + ")");
+					}
+					runCommandCallback(sender, () -> sender.sendMessage(
+							MessageAPI.colorize("&cUnable to process user storage; check the server log.")));
+				}
+			});
+		} catch (RuntimeException | Error failure) {
+			if (plugin.getLogger() != null) {
+				plugin.getLogger().severe("Unable to schedule bulk user operation (" + failure.getClass().getSimpleName() + ")");
+			}
+			sender.sendMessage(MessageAPI.colorize("&cUnable to process user storage; check the server log."));
+		}
+	}
+
+	private void runCommandCallback(CommandSender sender, Runnable callback) {
+		org.bukkit.entity.Entity owner = callbackOwner(sender);
+		if (owner == null) plugin.getBukkitScheduler().runTask(plugin, callback);
+		else plugin.getBukkitScheduler().runTask(plugin, callback, owner);
+	}
+
+	private void reportForcedReplayCompletion(CommandSender sender, String playerName, Throwable failure) {
+		runCommandCallback(sender, () -> {
+			if (failure == null) {
+				sender.sendMessage(MessageAPI.colorize(playerName == null ? "&cFinished running offline rewards"
+						: "&cFinished running offline rewards for " + playerName));
+				return;
+			}
+			if (plugin.getLogger() != null) plugin.getLogger().severe(
+					"Forced offline reward replay failed (" + failure.getClass().getSimpleName() + ")");
+			sender.sendMessage(MessageAPI.colorize("&cUnable to run offline rewards; check the server log."));
+		});
+	}
+
+	private void reportBulkRewardCompletion(CommandSender sender, String rewardName, Throwable failure) {
+		runCommandCallback(sender, () -> {
+			if (failure == null) {
+				sender.sendMessage(MessageAPI.colorize("&cGave all players reward file " + rewardName));
+				return;
+			}
+			if (plugin.getLogger() != null) plugin.getLogger().severe(
+					"Bulk reward failed (" + failure.getClass().getSimpleName() + ")");
+			sender.sendMessage(MessageAPI.colorize("&cUnable to give all players reward file " + rewardName
+					+ "; check the server log."));
+		});
+	}
+
+	private void dispatchBulkReward(UUID uuid, AdvancedCoreUser user, Reward reward, ForcedReplayBarrier barrier) {
+		barrier.reserve();
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, () -> {
+				try {
+					Player recipient = Bukkit.getPlayer(uuid);
+					RewardBuilder builder = new RewardBuilder(reward).setOnline(recipient != null);
+					if (recipient == null) {
+						plugin.getBukkitScheduler().runTaskAsynchronously(plugin,
+								() -> {
+									try { barrier.completeStage(builder.sendAsync(user)); }
+									catch (Throwable failure) { barrier.recordFailure(failure); }
+								});
+						return;
+					}
+					runOnRecipientOrOffline(recipient, () -> {
+						try { barrier.completeStage(builder.sendAsync(user)); }
+						catch (Throwable failure) { barrier.recordFailure(failure); }
+					}, () -> {
+						try { barrier.completeStage(new RewardBuilder(reward).setOnline(false).sendAsync(user)); }
+						catch (Throwable failure) { barrier.recordFailure(failure); }
+					}, 10_000);
+				} catch (Throwable failure) { barrier.recordFailure(failure); }
+			});
+		} catch (Throwable failure) { barrier.recordFailure(failure); }
+	}
+
+	private void dispatchSingleReward(CommandSender sender, AdvancedCoreUser user, String rewardName,
+			RewardOptions options, String successMessage) {
+		UUID uuid = UUID.fromString(user.getUUID());
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, () -> {
+				try {
+					Player recipient = Bukkit.getPlayer(uuid);
+					options.setOnline(recipient != null);
+					Runnable dispatch = () -> {
+						try {
+							plugin.getRewardHandler().giveRewardAsync(user, rewardName, options)
+									.whenComplete((ignored, failure) -> runCommandCallback(sender,
+										() -> sender.sendMessage(MessageAPI.colorize(failure == null ? successMessage
+												: "&cUnable to give reward; check the server log."))));
+						} catch (Throwable failure) {
+							runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
+									"&cUnable to give reward; check the server log.")));
+						}
+					};
+					if (recipient == null) plugin.getBukkitScheduler().runTaskAsynchronously(plugin, dispatch);
+					else runOnRecipientOrOffline(recipient, dispatch, () -> {
+						options.setOnline(false);
+						dispatch.run();
+					}, 10_000);
+				} catch (Throwable failure) {
+					runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
+							"&cUnable to give reward; check the server log.")));
+				}
+			});
+		} catch (Throwable failure) {
+			runCommandCallback(sender, () -> sender.sendMessage(MessageAPI.colorize(
+					"&cUnable to give reward; check the server log.")));
+		}
+	}
+
+	private void runOnRecipientOrOffline(Player recipient, Runnable online, Runnable offline, long timeoutMillis) {
+		java.util.concurrent.atomic.AtomicBoolean started = new java.util.concurrent.atomic.AtomicBoolean();
+		plugin.getBukkitScheduler().runTask(plugin, () -> {
+			if (started.compareAndSet(false, true)) online.run();
+		}, recipient);
+		java.util.concurrent.CompletableFuture.delayedExecutor(timeoutMillis,
+				java.util.concurrent.TimeUnit.MILLISECONDS).execute(() -> {
+			if (started.compareAndSet(false, true)) offline.run();
+		});
+	}
+
+	private static final class ForcedReplayBarrier {
+		private final java.util.concurrent.atomic.AtomicInteger pending = new java.util.concurrent.atomic.AtomicInteger(1);
+		private final java.util.concurrent.atomic.AtomicReference<Throwable> firstFailure =
+				new java.util.concurrent.atomic.AtomicReference<>();
+		private final java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean();
+		private final Consumer<Throwable> completion;
+
+		private ForcedReplayBarrier(Consumer<Throwable> completion) {
+			this.completion = completion;
+		}
+
+		private ForcedReplayBarrier(Consumer<Throwable> completion, boolean timeout) {
+			this.completion = completion;
+			if (!timeout) return;
+			java.util.concurrent.CompletableFuture.delayedExecutor(30,
+					java.util.concurrent.TimeUnit.SECONDS).execute(() -> {
+				if (finished.compareAndSet(false, true)) {
+					completion.accept(new java.util.concurrent.TimeoutException("Bulk reward dispatch timed out"));
+				}
+			});
+		}
+
+		private void add(java.util.concurrent.CompletionStage<Void> replay) {
+			pending.incrementAndGet();
+			replay.whenComplete((ignored, failure) -> {
+				if (failure != null) firstFailure.compareAndSet(null, failure);
+				completeOne();
+			});
+		}
+
+		private void reserve() { pending.incrementAndGet(); }
+
+		private void completeStage(java.util.concurrent.CompletionStage<Void> replay) {
+			if (replay == null) {
+				recordFailure(new IllegalStateException("Reward dispatch returned no completion stage"));
+				return;
+			}
+			replay.whenComplete((ignored, failure) -> {
+				if (failure != null) firstFailure.compareAndSet(null, failure);
+				completeOne();
+			});
+		}
+
+		private void enumerationComplete() {
+			completeOne();
+		}
+
+		private void recordFailure(Throwable failure) {
+			firstFailure.compareAndSet(null, failure);
+			completeOne();
+		}
+
+		private void completeOne() {
+			if (pending.decrementAndGet() == 0 && finished.compareAndSet(false, true)) completion.accept(firstFailure.get());
+		}
+	}
+
+	/**
+	 * Resolve a recipient from the global scheduler, then run player-affine work
+	 * on that recipient's region. Offline users retain the global fallback.
+	 */
+	private void runRecipientCallback(UUID uuid, Runnable callback) {
+		plugin.getBukkitScheduler().runTask(plugin, () -> {
+			Player recipient = Bukkit.getPlayer(uuid);
+			if (recipient == null) callback.run();
+			else plugin.getBukkitScheduler().runTask(plugin, callback, recipient);
+		});
+	}
+
+	private void startStorageConversion(CommandSender sender, UserStorage from, UserStorage to) {
+		sender.sendMessage(MessageAPI.colorize("&cStarting convert from " + from + " to " + to));
+		plugin.convertDataStorageAsync(from, to).whenComplete((ignored, failure) -> {
+			Runnable completion = () -> {
+				if (failure == null) {
+					sender.sendMessage(MessageAPI.colorize("&cFinished converting"));
+					return;
+				}
+				// JDBC/provider exceptions can embed connection details. The storage
+				// layer records safe diagnostics; do not expose the raw exception here.
+				plugin.getLogger().severe("User storage conversion failed ("
+						+ failure.getClass().getSimpleName() + ")");
+				sender.sendMessage(MessageAPI.colorize("&cUser storage conversion failed; see the server log"));
+			};
+			runCommandCallback(sender, completion);
+		});
+	}
+
+	/** Complete destructive user removal before reporting success or clearing identity mappings. */
+	private void removeUserData(CommandSender sender, String identifier, AdvancedCoreUser user,
+			Runnable afterRemoval) {
+		java.util.function.Supplier<Boolean> remove = () -> {
+			user.getData().remove();
+			return Boolean.TRUE;
+		};
+		java.util.function.Consumer<Boolean> succeeded = ignored -> {
+			afterRemoval.run();
+			sender.sendMessage(MessageAPI.colorize("&cRemoved " + identifier));
+		};
+		java.util.function.Consumer<Throwable> failed = ignored ->
+			sender.sendMessage(MessageAPI.colorize("&cUnable to remove " + identifier + "; check the server log."));
+		var manager = plugin.getUserManager().getDataManager();
+		if (manager.hasSharedSqlBackend() && !manager.mustDeferSharedStorageAccess()) {
+			try {
+				if (!manager.deferSharedStorageResultFromPlatform(remove,
+						ignored -> runCommandCallback(sender, () -> succeeded.accept(Boolean.TRUE)),
+						failure -> runCommandCallback(sender, () -> failed.accept(failure)))) {
+					runCommandCallback(sender, () -> failed.accept(new IllegalStateException("storage unavailable")));
+				}
+			} catch (RuntimeException failure) {
+				runCommandCallback(sender, () -> failed.accept(failure));
+			}
+			return;
+		}
+		if (manager.deferSharedStorageResult(remove, succeeded, failed,
+				callbackOwner(sender))) return;
+		try { succeeded.accept(remove.get()); }
+		catch (RuntimeException failure) {
+			plugin.getLogger().severe("User removal failed (" + failure.getClass().getSimpleName() + ")");
+			failed.accept(failure);
+		}
+	}
+
+	/** Complete cache population before acknowledging the administrative command. */
+	void cacheUserAndReport(CommandSender sender, String identifier, AdvancedCoreUser user) {
+		java.util.function.Supplier<Boolean> populate = () -> {
+			user.cache();
+			return Boolean.TRUE;
+		};
+		java.util.function.Consumer<Boolean> succeeded = ignored ->
+				sender.sendMessage(MessageAPI.colorize("&aForced cached " + identifier));
+		java.util.function.Consumer<Throwable> failed = ignored ->
+			sender.sendMessage(MessageAPI.colorize(
+						"&cUnable to cache " + identifier + "; check the server log."));
+		var manager = plugin.getUserManager().getDataManager();
+		try {
+			if (manager.hasSharedSqlBackend() && !manager.mustDeferSharedStorageAccess()) {
+				if (!manager.deferSharedStorageResultFromPlatform(populate,
+						ignored -> runCommandCallback(sender, () -> succeeded.accept(Boolean.TRUE)),
+						failure -> runCommandCallback(sender, () -> failed.accept(failure)))) {
+					runCommandCallback(sender, () -> failed.accept(new IllegalStateException("storage unavailable")));
+				}
+				return;
+			}
+			if (manager.deferSharedStorageResult(populate, succeeded, failed,
+					callbackOwner(sender))) return;
+			succeeded.accept(populate.get());
+		}
+		catch (RuntimeException | Error failure) {
+			plugin.getLogger().severe("User cache population failed (" + failure.getClass().getSimpleName() + ")");
+			failed.accept(failure);
+		}
+	}
+
+	private org.bukkit.entity.Entity callbackOwner(CommandSender sender) {
+		return sender instanceof Player player ? player : null;
+	}
+
 	/**
 	 * Gets the basic commands.
 	 *
@@ -725,9 +996,8 @@ public class CommandLoader {
 			@Override
 			public void execute(CommandSender sender, String[] args) {
 				AdvancedCoreUser user = plugin.getUserManager().getUser((Player) sender);
-				user.setChoicePreference(args[2], args[3]);
-
-				user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice", args[3]);
+				runUserStorageCommand(sender, () -> user.setChoicePreference(args[2], args[3], false),
+						() -> user.sendMessage(plugin.getOptions().getFormatChoiceRewardsPreferenceSet(), "choice", args[3]));
 			}
 		});
 

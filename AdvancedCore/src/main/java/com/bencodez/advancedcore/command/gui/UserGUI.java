@@ -2,6 +2,8 @@ package com.bencodez.advancedcore.command.gui;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map.Entry;
+import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -21,6 +23,7 @@ import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.simpleapi.player.PlayerUtils;
+import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.valuerequest.StringListener;
 import com.bencodez.simpleapi.valuerequest.ValueRequest;
 
@@ -83,6 +86,7 @@ public class UserGUI {
 			player.sendMessage("Not enough permissions");
 			return;
 		}
+		setCurrentPlayer(player, playerName);
 		BInventory inv = new BInventory("UserGUI: " + playerName);
 		inv.addData("player", playerName);
 		inv.addButton(new BInventoryButton("Give Reward File", new String[] {}, new ItemStack(Material.STONE)) {
@@ -97,12 +101,13 @@ public class UserGUI {
 				new ValueRequest(plugin, plugin.getDialogService()).requestString(clickEvent.getPlayer(), "",
 						rewards, true, null, new StringListener() {
 
-							@Override
+						@Override
 							public void onInput(Player player, String value) {
-								AdvancedCoreUser user = plugin.getUserManager()
-										.getUser(UserGUI.getInstance().getCurrentPlayer(player));
-								plugin.getRewardHandler().giveReward(user, value, new RewardOptions());
-								player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
+								String target = UserGUI.getInstance().getCurrentPlayer(player);
+								withResolvedEditorUser(player, target, user -> {
+									plugin.getRewardHandler().giveReward(user, value, new RewardOptions());
+									player.sendMessage("Given " + user.getPlayerName() + " reward file " + value);
+								});
 							}
 						});
 			}
@@ -113,25 +118,14 @@ public class UserGUI {
 			@Override
 			public void onClick(ClickEvent clickEvent) {
 				Player player = clickEvent.getPlayer();
-				EditGUI inv = new EditGUI("Edit Data, click to change");
-				final AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
-				for (final String key : user.getData().getKeys()) {
-					String value = user.getData().getValue(key);
-					inv.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value),
-							new EditGUIValueString(key, value) {
-
-								@Override
-								public void setValue(Player player, String value) {
-									if (value.equals("\"\"")) {
-										value = "";
-									}
-									user.getData().setString(key, value);
-									openUserGUI(player, playerName);
-								}
-							}));
-				}
-
-				inv.openInventory(player);
+				withResolvedEditorUser(player, playerName, user -> {
+					if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
+							values -> {
+								if (isCurrentEditorTarget(player, playerName)) openEditData(player, playerName, user, values);
+							},
+							failure -> player.sendMessage("Unable to read user data; check the server log."), player)) return;
+					openEditData(player, playerName, user, user.getData().getValues());
+				});
 			}
 		});
 
@@ -139,11 +133,15 @@ public class UserGUI {
 
 			@Override
 			public void onClick(ClickEvent clickEvent) {
-				AdvancedCoreUser user = plugin.getUserManager().getUser(playerName);
-				for (String key : user.getData().getKeys()) {
-					String str = user.getData().getValue(key);
-					user.sendMessage("&c&l" + key + " &c" + str);
-				}
+				Player player = clickEvent.getPlayer();
+				withResolvedEditorUser(player, playerName, user -> {
+					if (plugin.getUserManager().getDataManager().deferSharedStorageResult(user.getData()::getValues,
+							values -> {
+								if (isCurrentEditorTarget(player, playerName)) sendUserData(user, values);
+							},
+							failure -> player.sendMessage("Unable to read user data; check the server log."), player)) return;
+					sendUserData(user, user.getData().getValues());
+				});
 			}
 		});
 
@@ -152,6 +150,72 @@ public class UserGUI {
 		}
 
 		inv.openInventory(player);
+	}
+
+	/** Reject a deferred editor completion after permission or selection changed. */
+	boolean isCurrentEditorTarget(Player player, String playerName) {
+		if (!player.hasPermission("AdvancedCore.UserEdit")) {
+			player.sendMessage("Not enough permissions");
+			return false;
+		}
+		return playerName.equals(getCurrentPlayer(player));
+	}
+
+	/** Resolve an editor target without blocking Bukkit and reject stale callbacks. */
+	void withResolvedEditorUser(Player player, String playerName, Consumer<AdvancedCoreUser> action) {
+		if (playerName == null || !isCurrentEditorTarget(player, playerName)) return;
+		plugin.getUserManager().getUserAsync(playerName,
+				user -> scheduleEditorCallback(player, () -> {
+					if (isCurrentEditorTarget(player, playerName)) action.accept(user);
+				}),
+				failure -> scheduleEditorCallback(player, () -> {
+					if (isCurrentEditorTarget(player, playerName)) {
+						player.sendMessage("Unable to resolve user; check the server log.");
+					}
+				}));
+	}
+
+	/** Return deferred identity callbacks to the editor's owning Folia region. */
+	private void scheduleEditorCallback(Player player, Runnable callback) {
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, callback, player);
+		} catch (RuntimeException schedulingFailure) {
+			plugin.debug(schedulingFailure);
+		}
+	}
+
+	/** Build inventories only after a deferred shared-store read returns to Bukkit's thread. */
+	private void openEditData(Player player, String playerName, AdvancedCoreUser user,
+			HashMap<String, DataValue> values) {
+		EditGUI edit = new EditGUI("Edit Data, click to change");
+		for (Entry<String, DataValue> entry : values.entrySet()) {
+			final String key = entry.getKey();
+			String value = displayValue(entry.getValue());
+			edit.addButton(new EditGUIButton(new ItemBuilder(Material.STONE).setName(key + " = " + value),
+					new EditGUIValueString(key, value) {
+
+						@Override
+						public void setValue(Player player, String value) {
+							if (value.equals("\"\"")) value = "";
+							user.getData().setString(key, value);
+							openUserGUI(player, playerName);
+						}
+					}));
+		}
+		edit.openInventory(player);
+	}
+
+	private void sendUserData(AdvancedCoreUser user, HashMap<String, DataValue> values) {
+		for (Entry<String, DataValue> entry : values.entrySet()) {
+			user.sendMessage("&c&l" + entry.getKey() + " &c" + displayValue(entry.getValue()));
+		}
+	}
+
+	private String displayValue(DataValue value) {
+		if (value == null) return "";
+		if (value.isInt()) return String.valueOf(value.getInt());
+		String string = value.getString();
+		return string == null ? "" : string;
 	}
 
 	/**

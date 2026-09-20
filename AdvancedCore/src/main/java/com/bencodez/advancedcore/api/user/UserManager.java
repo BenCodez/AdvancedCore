@@ -7,7 +7,9 @@ import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
@@ -16,6 +18,8 @@ import com.bencodez.advancedcore.api.player.UuidLookup;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.api.user.validation.UserValidationFactory;
 import com.bencodez.advancedcore.api.user.validation.UserValidationService;
+import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
+import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.sql.Column;
 import com.bencodez.simpleapi.sql.DataType;
@@ -47,52 +51,93 @@ public class UserManager {
 		load();
 	}
 
-	public void copyColumnData(String columnFromName, String columnToName) {
-		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			plugin.getMysql().copyColumnData(columnFromName, columnToName, DataType.STRING);
-		} else if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			plugin.getSQLiteUserTable().copyColumnData(columnFromName, columnToName, DataType.STRING);
+	/**
+	 * Capture the type and native owner as one observation. During shared-runtime
+	 * replacement the manager publishes this pair atomically with its route;
+	 * callers must not combine plugin.getStorageType() with a later provider read.
+	 */
+	private <T> T withActiveStorageOwner(Function<AdvancedCorePlugin.UserStorageOwner, T> operation) {
+		return dataManager == null ? operation.apply(plugin.getNativeUserStorageOwner())
+				: dataManager.withSharedNativeUserStorage(operation);
+	}
+
+	private UserStorage activeStorageType(AdvancedCorePlugin.UserStorageOwner owner) {
+		return owner == null ? plugin.getStorageType() : owner.storageType();
+	}
+
+	private MySQL activeMysql(AdvancedCorePlugin.UserStorageOwner owner) {
+		return owner != null && owner.storageType() == UserStorage.MYSQL && owner.mysql() != null
+				? owner.mysql() : plugin.getMysql();
+	}
+
+	private UserTable activeTable(AdvancedCorePlugin.UserStorageOwner owner) {
+		return owner != null && owner.storageType() == UserStorage.SQLITE && owner.table() != null
+				? owner.table() : plugin.getSQLiteUserTable();
+	}
+
+	private AdvancedCorePlugin.UserStorageOwner ownerFor(UserStorage storage, AdvancedCorePlugin.UserStorageOwner owner) {
+		if (owner != null && owner.storageType() != storage && dataManager != null && dataManager.hasSharedSqlBackend()
+				&& !dataManager.isStorageMaintenanceActive()) {
+			throw new IllegalStateException("Cannot access " + storage
+					+ " user storage while the shared runtime owns " + owner.storageType());
 		}
+		return owner != null && owner.storageType() == storage ? owner : null;
+	}
+
+	public void copyColumnData(String columnFromName, String columnToName) {
+		withActiveStorageOwner(owner -> {
+			if (activeStorageType(owner).equals(UserStorage.MYSQL)) {
+				activeMysql(owner).copyColumnData(columnFromName, columnToName, DataType.STRING);
+			} else if (activeStorageType(owner).equals(UserStorage.SQLITE)) {
+				activeTable(owner).copyColumnData(columnFromName, columnToName, DataType.STRING);
+			}
+			return null;
+		});
 	}
 
 	public List<String> getAllColumns() {
-		UserStorage storage = plugin.getStorageType();
-		if (storage.equals(UserStorage.SQLITE)) {
-			return plugin.getSQLiteUserTable().getColumnsString();
-		}
-		if (storage.equals(UserStorage.MYSQL)) {
-			return plugin.getMysql().getColumns();
-		}
-		return new ArrayList<>();
+		return withActiveStorageOwner(owner -> {
+			UserStorage storage = activeStorageType(owner);
+			if (storage.equals(UserStorage.SQLITE)) return activeTable(owner).getColumnsString();
+			if (storage.equals(UserStorage.MYSQL)) return activeMysql(owner).getColumns();
+			return new ArrayList<>();
+		});
 	}
 
 	@Deprecated
 	public HashMap<UUID, ArrayList<Column>> getAllKeys() {
-		return getAllKeys(plugin.getStorageType());
+		return withActiveStorageOwner(owner -> getAllKeys(activeStorageType(owner), owner));
 	}
 
 	public HashMap<UUID, ArrayList<Column>> getAllKeys(UserStorage storage) {
+		return withActiveStorageOwner(owner -> getAllKeys(storage, owner));
+	}
+
+	private HashMap<UUID, ArrayList<Column>> getAllKeys(UserStorage storage, AdvancedCorePlugin.UserStorageOwner owner) {
+		owner = ownerFor(storage, owner);
 		if (storage.equals(UserStorage.SQLITE)) {
-			return plugin.getSQLiteUserTable().getAllQuery();
+			return activeTable(owner).getAllQuery();
 		}
 		if (storage.equals(UserStorage.MYSQL)) {
-			return plugin.getMysql().getAllQuery();
+			return activeMysql(owner).getAllQuery();
 		}
 		return new HashMap<>();
 	}
 
 	public ArrayList<String> getAllPlayerNames() {
-		if (plugin.isLoadUserData()) {
+		return withActiveStorageOwner(owner -> {
+			if (!plugin.isLoadUserData()) return new ArrayList<>();
+			UserStorage storage = activeStorageType(owner);
 			ArrayList<String> names = new ArrayList<>();
-			if (AdvancedCorePlugin.getInstance().getStorageType().equals(UserStorage.SQLITE)) {
-				ArrayList<String> data = plugin.getSQLiteUserTable().getNames();
+			if (storage.equals(UserStorage.SQLITE)) {
+				ArrayList<String> data = activeTable(owner).getNames();
 				for (String name : data) {
 					if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 						names.add(name);
 					}
 				}
-			} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-				ArrayList<String> data = ArrayUtils.convert(plugin.getMysql().getNames());
+			} else if (storage.equals(UserStorage.MYSQL)) {
+				ArrayList<String> data = ArrayUtils.convert(activeMysql(owner).getNames());
 				for (String name : data) {
 					if (name != null && !name.isEmpty() && !name.equalsIgnoreCase("Error getting name")) {
 						names.add(name);
@@ -100,8 +145,7 @@ public class UserManager {
 				}
 			}
 			return ArrayUtils.removeDuplicates(names);
-		}
-		return new ArrayList<>();
+		});
 	}
 
 	/**
@@ -114,37 +158,41 @@ public class UserManager {
 	 * @param onFinished Consumer called once after all users processed with total
 	 */
 	public void forEachUserKeys(BiConsumer<UUID, ArrayList<Column>> perUser, Consumer<Integer> onFinished) {
-		UserStorage storage = plugin.getStorageType();
-
-		if (storage == UserStorage.MYSQL) {
-			plugin.getMysql().forEachUser((uuid, cols) -> perUser.accept(uuid, cols), (count) -> {
+		withActiveStorageOwner(owner -> {
+			UserStorage storage = activeStorageType(owner);
+			if (storage == UserStorage.MYSQL) {
+				activeMysql(owner).forEachUser((uuid, cols) -> perUser.accept(uuid, cols), (count) -> {
 				if (onFinished != null) {
 					onFinished.accept(count);
 				}
 			});
-			return;
-		}
-
-		if (storage == UserStorage.SQLITE) {
-			plugin.getSQLiteUserTable().forEachUser((uuid, cols) -> perUser.accept(uuid, cols), (count) -> {
+				return null;
+			}
+			if (storage == UserStorage.SQLITE) {
+				activeTable(owner).forEachUser((uuid, cols) -> perUser.accept(uuid, cols), (count) -> {
 				if (onFinished != null) {
 					onFinished.accept(count);
 				}
 			});
-			return;
-		}
-
-		throw new IllegalStateException("User storage is not configured");
+				return null;
+			}
+			throw new IllegalStateException("User storage is not configured");
+		});
 	}
 
 	public ArrayList<String> getAllUUIDs() {
-		return ArrayUtils.removeDuplicates(getAllUUIDs(plugin.getStorageType()));
+		return withActiveStorageOwner(owner -> ArrayUtils.removeDuplicates(getAllUUIDs(activeStorageType(owner), owner)));
 	}
 
 	public ArrayList<String> getAllUUIDs(UserStorage storage) {
+		return withActiveStorageOwner(owner -> getAllUUIDs(storage, owner));
+	}
+
+	private ArrayList<String> getAllUUIDs(UserStorage storage, AdvancedCorePlugin.UserStorageOwner owner) {
 		if (plugin.isLoadUserData()) {
+			owner = ownerFor(storage, owner);
 			if (storage.equals(UserStorage.SQLITE)) {
-				List<Column> cols = plugin.getSQLiteUserTable().getRows();
+				List<Column> cols = activeTable(owner).getRows();
 				ArrayList<String> uuids = new ArrayList<>();
 				for (Column col : cols) {
 					if (col.getValue().isString()) {
@@ -156,7 +204,7 @@ public class UserManager {
 				synchronized (obj) {
 					ArrayList<String> uuids = new ArrayList<>();
 					try {
-						for (String uuid : plugin.getMysql().getUuids()) {
+						for (String uuid : activeMysql(owner).getUuids()) {
 							uuids.add(uuid);
 						}
 					} catch (NullPointerException e) {
@@ -170,13 +218,11 @@ public class UserManager {
 	}
 
 	public ArrayList<Integer> getNumbersInColumn(String columnName) {
-		if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			return plugin.getMysql().getNumbersInColumn(columnName);
-		}
-		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			return plugin.getSQLiteUserTable().getNumbersInColumn(columnName);
-		}
-		return new ArrayList<>();
+		return withActiveStorageOwner(owner -> {
+			if (activeStorageType(owner).equals(UserStorage.MYSQL)) return activeMysql(owner).getNumbersInColumn(columnName);
+			if (activeStorageType(owner).equals(UserStorage.SQLITE)) return activeTable(owner).getNumbersInColumn(columnName);
+			return new ArrayList<>();
+		});
 	}
 
 	public String getOfflineRewardsPath() {
@@ -214,7 +260,17 @@ public class UserManager {
 			}
 		}
 
-		// Fall back to storage-derived player-name lists
+		// A String-based user lookup is frequently constructed by a synchronous
+		// command before that command can defer its storage work.  Do not turn that
+		// construction into a native shared-store scan; the supplied spelling still
+		// identifies the same player and cache-backed lookups above preserve known
+		// casing.  A worker (or a non-shared runtime) may retain the historical
+		// storage fallback below.
+		if (dataManager != null && dataManager.mustDeferSharedStorageAccess()) {
+			return name;
+		}
+
+		// Fall back to storage-derived player-name lists.
 		for (String s : getAllPlayerNames()) {
 			if (s.equalsIgnoreCase(name)) {
 				return s;
@@ -270,6 +326,236 @@ public class UserManager {
 	}
 
 	/**
+	 * Resolve a name and deliver a UUID-backed user without blocking Bukkit's
+	 * primary thread.  The fast identity sources remain synchronous; an unknown
+	 * online-mode name is resolved on the shared-storage worker and delivered on
+	 * the platform scheduler.
+	 *
+	 * <p>Callers that may run on the primary thread should use this instead of
+	 * {@link #getUser(String)} when they need to act on an uncached name. Both
+	 * callbacks run only on the platform scheduler. If that scheduler has stopped,
+	 * the undeliverable completion is recorded in the server log instead.</p>
+	 */
+	public void getUserAsync(String playerName, Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
+		if (playerName == null || playerName.trim().isEmpty()) {
+			runOnPlatform(() -> failure.accept(new IllegalArgumentException("Player name cannot be blank")));
+			return;
+		}
+		if (dataManager == null || !dataManager.hasSharedSqlBackend()) {
+			resolveUserOnPlatform(() -> getUser(playerName), success, failure);
+			return;
+		}
+		resolveSharedNameOnPlatform(playerName, success, failure);
+	}
+
+	/**
+	 * Resolve a UUID-backed user's persisted name without returning a partially
+	 * initialized user from the Bukkit primary thread. Both callbacks run only on
+	 * the platform scheduler; an unavailable scheduler records the undeliverable
+	 * completion rather than invoking a Bukkit-affine callback from a worker.
+	 */
+	public void getUserAsync(UUID uuid, Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
+		if (uuid == null) {
+			runOnPlatform(() -> failure.accept(new IllegalArgumentException("Player UUID cannot be null")));
+			return;
+		}
+		if (success == null || failure == null) throw new IllegalArgumentException("Resolution callbacks are required");
+		if (dataManager == null || !dataManager.hasSharedSqlBackend()) {
+			resolveUserOnPlatform(() -> getUser(uuid), success, failure);
+			return;
+		}
+		resolveSharedUuidOnPlatform(uuid, success, failure);
+	}
+
+	private void resolveSharedNameOnPlatform(String playerName, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		runOnPlatform(() -> {
+			String resolved;
+			try { resolved = UuidLookup.getInstance().getUUIDWithoutStorage(playerName); }
+			catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+				return;
+			}
+			if (resolved != null && !resolved.isEmpty()) {
+				try {
+					String knownName = getProperName(playerName);
+					UUID resolvedUuid = UUID.fromString(resolved);
+					if (!dataManager.deferSharedStorageResultFromPlatform(
+							() -> UuidLookup.getInstance().getPlayerNameFromStorage(getUser(resolvedUuid, false), resolved, false),
+							storedName -> deliverResolvedUser(resolved,
+									storedName == null || storedName.isBlank() ? knownName : storedName, success, failure), failure)) {
+						failure.accept(new IllegalStateException("User storage is no longer available"));
+					}
+				} catch (RuntimeException failureReason) {
+					failure.accept(failureReason);
+				}
+				return;
+			}
+			try {
+				if (!dataManager.deferSharedStorageResultFromPlatform(
+						() -> UuidLookup.getInstance().getUUIDFromStorage(playerName),
+						uuid -> deliverStoredOrProfileUser(uuid, playerName, success, failure), failure)) {
+					failure.accept(new IllegalStateException("User storage is no longer available"));
+				}
+			} catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+			}
+		});
+	}
+
+	private void resolveSharedUuidOnPlatform(UUID uuid, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		runOnPlatform(() -> {
+			UuidLookup lookup = UuidLookup.getInstance();
+			String knownName;
+			try {
+				knownName = lookup.getCachedName(uuid.toString());
+				if (knownName.isEmpty()) knownName = lookup.getOnlinePlayerName(uuid.toString());
+			} catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+				return;
+			}
+			if (!knownName.isEmpty()) {
+				deliverResolvedUser(uuid.toString(), knownName, success, failure);
+				return;
+			}
+			AdvancedCoreUser user;
+			try { user = getUser(uuid, false); }
+			catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+				return;
+			}
+			try {
+				if (!dataManager.deferSharedStorageResultFromPlatform(
+						() -> lookup.getPlayerNameFromStorage(user, uuid.toString(), false),
+						name -> deliverResolvedUuidUser(user, name, success, failure), failure)) {
+					failure.accept(new IllegalStateException("User storage is no longer available"));
+				}
+			} catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+			}
+		});
+	}
+
+	private void resolveUserOnPlatform(java.util.function.Supplier<AdvancedCoreUser> resolve,
+			Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
+		runOnPlatform(() -> {
+			AdvancedCoreUser user;
+			try { user = resolve.get(); }
+			catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+				return;
+			}
+			success.accept(user);
+		});
+	}
+
+	private void runOnPlatform(Runnable deliver) {
+		if (Bukkit.getServer() == null || Bukkit.isPrimaryThread()) {
+			deliver.run();
+			return;
+		}
+		java.util.concurrent.atomic.AtomicBoolean completionClaimed = new java.util.concurrent.atomic.AtomicBoolean();
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, () -> {
+				if (!completionClaimed.compareAndSet(false, true)) return;
+				deliver.run();
+			});
+		} catch (RuntimeException rejected) {
+			if (completionClaimed.compareAndSet(false, true)) reportUndeliverablePlatformCallback(rejected);
+		}
+	}
+
+	private void deliverStoredOrProfileUser(String uuid, String playerName, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		if (uuid != null && !uuid.isBlank()) {
+			try {
+				UUID resolvedUuid = UUID.fromString(uuid);
+				if (!dataManager.deferSharedStorageResultFromPlatform(
+						() -> UuidLookup.getInstance().getPlayerNameFromStorage(getUser(resolvedUuid, false), uuid, false),
+						storedName -> deliverResolvedUser(uuid,
+								storedName == null || storedName.isBlank() ? playerName : storedName, success, failure), failure)) {
+					failure.accept(new IllegalStateException("User storage is no longer available"));
+				}
+			} catch (RuntimeException failureReason) {
+				failure.accept(failureReason);
+			}
+			return;
+		}
+		// This callback is back on the platform scheduler. Creating the profile is a
+		// Bukkit operation, while update performs the remote profile lookup
+		// asynchronously and therefore never blocks the server thread.
+		try {
+			Bukkit.createPlayerProfile(playerName).update().whenComplete((profile, problem) ->
+					deliverProfileResult(playerName, profile, problem, success, failure));
+		} catch (RuntimeException failureReason) {
+			failure.accept(failureReason);
+		}
+	}
+
+	private void deliverProfileResult(String playerName, org.bukkit.profile.PlayerProfile profile, Throwable problem,
+			Consumer<AdvancedCoreUser> success, Consumer<Throwable> failure) {
+		java.util.concurrent.atomic.AtomicBoolean completionClaimed = new java.util.concurrent.atomic.AtomicBoolean();
+		Runnable deliver = () -> {
+			if (!completionClaimed.compareAndSet(false, true)) return;
+			if (problem != null) {
+				failure.accept(problem);
+				return;
+			}
+			UUID profileUuid = profile == null ? null : profile.getUniqueId();
+			if (profileUuid == null) {
+				failure.accept(new IllegalArgumentException("Unable to resolve UUID for " + playerName));
+				return;
+			}
+			UuidLookup.getInstance().cacheMapping(profileUuid.toString(), playerName);
+			deliverResolvedUser(profileUuid.toString(), playerName, success, failure);
+		};
+		try {
+			dataManager.dispatchSharedStorageNotification(deliver);
+		} catch (RuntimeException rejected) {
+			if (completionClaimed.compareAndSet(false, true)) reportUndeliverablePlatformCallback(rejected);
+		}
+	}
+
+	/**
+	 * A callback supplied to this API may touch Bukkit. Once the platform scheduler
+	 * has stopped there is no safe fallback thread for it, so retain the terminal
+	 * failure for the server log instead of invoking it from an async worker.
+	 */
+	private void reportUndeliverablePlatformCallback(Throwable failure) {
+		if (plugin != null && plugin.getLogger() != null) {
+			plugin.getLogger().log(java.util.logging.Level.SEVERE,
+					"Unable to deliver async user resolution on the platform scheduler", failure);
+		}
+	}
+
+	private void deliverResolvedUuidUser(AdvancedCoreUser user, String name, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		try { user.setPlayerName(name); }
+		catch (RuntimeException failureReason) {
+			failure.accept(failureReason);
+			return;
+		}
+		success.accept(user);
+	}
+
+	private void deliverResolvedUser(String uuid, String playerName, Consumer<AdvancedCoreUser> success,
+			Consumer<Throwable> failure) {
+		AdvancedCoreUser user;
+		try {
+			if (uuid == null || uuid.isBlank()) {
+				failure.accept(new IllegalArgumentException("Unable to resolve UUID for " + playerName));
+				return;
+			}
+			user = getUser(UUID.fromString(uuid), playerName);
+		} catch (RuntimeException failureReason) {
+			failure.accept(failureReason);
+			return;
+		}
+		success.accept(user);
+	}
+
+	/**
 	 * Gets the user.
 	 *
 	 * @param uuid the uuid
@@ -291,7 +577,7 @@ public class UserManager {
 	}
 
 	public void load() {
-		dataManager = new UserDataManager(AdvancedCorePlugin.getInstance());
+		dataManager = new UserDataManager(plugin);
 		validationService = UserValidationFactory.create(plugin);
 	}
 
@@ -364,11 +650,11 @@ public class UserManager {
 	}
 
 	public void removeAllKeyValues(String key, DataType type) {
-		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			plugin.getSQLiteUserTable().wipeColumnData(key, type);
-		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			plugin.getMysql().wipeColumnData(key, type);
-		}
+		withActiveStorageOwner(owner -> {
+			if (activeStorageType(owner).equals(UserStorage.SQLITE)) activeTable(owner).wipeColumnData(key, type);
+			else if (activeStorageType(owner).equals(UserStorage.MYSQL)) activeMysql(owner).wipeColumnData(key, type);
+			return null;
+		});
 	}
 
 	public boolean userExistStored(String name) {
@@ -391,11 +677,14 @@ public class UserManager {
 	}
 
 	public void removeUUID(UUID key) {
-		if (plugin.getStorageType().equals(UserStorage.SQLITE)) {
-			plugin.getSQLiteUserTable().delete(new Column("uuid", new DataValueString(key.toString())));
-		} else if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-			plugin.getMysql().deletePlayer(key.toString());
-		}
+		withActiveStorageOwner(owner -> {
+			if (activeStorageType(owner).equals(UserStorage.SQLITE)) {
+				activeTable(owner).delete(new Column("uuid", new DataValueString(key.toString())));
+			} else if (activeStorageType(owner).equals(UserStorage.MYSQL)) {
+				activeMysql(owner).deletePlayer(key.toString());
+			}
+			return null;
+		});
 	}
 
 	public boolean userExist(String name) {

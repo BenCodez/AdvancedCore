@@ -107,6 +107,10 @@ class RewardAsyncInjectionTest {
 			invocation.getArgument(1, Runnable.class).run();
 			return null;
 		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), any(Player.class));
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
 		AdvancedCorePlugin.setInstance(plugin);
 		try {
@@ -531,6 +535,129 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void capturedReplayStateAvoidsWorkerThreadBukkitPlayerReads() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.isPauseRewards()).thenReturn(false);
+		when(config.isTreatVanishAsOffline()).thenReturn(true);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		RewardOptions options = new RewardOptions().setCheckTimed(false).setIgnoreRequirements(true);
+		options.captureLivePlayerState(false, true);
+		options.setTimedQueueReplay(true);
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			assertThrows(java.util.concurrent.CompletionException.class,
+					() -> reward.giveRewardAsync(user, options).toCompletableFuture().join());
+		}
+
+		verify(user, never()).isOnline();
+		verify(user, never()).isVanished();
+	}
+
+	@Test
+	void reusedBuilderOptionsCaptureFreshLiveStateForEachAsyncDispatch() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.isPauseRewards()).thenReturn(false);
+		when(config.isTreatVanishAsOffline()).thenReturn(false);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getPlayerName()).thenReturn("recipient");
+		when(user.getUUID()).thenReturn("00000000-0000-0000-0000-000000000001");
+		when(user.isOnline()).thenReturn(true, true, false, false);
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).runTaskAsynchronously(eq(plugin), any(Runnable.class));
+		Reward spyReward = org.mockito.Mockito.spy(reward);
+		doReturn(CompletableFuture.completedFuture(null)).when(spyReward)
+				.giveRewardUserAsync(eq(user), any(HashMap.class), any(RewardOptions.class));
+		RewardOptions reusable = new RewardOptions().setCheckTimed(false).setIgnoreRequirements(true);
+		RewardBuilder builder = new RewardBuilder(spyReward, reusable);
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			builder.sendAsync(user).toCompletableFuture().join();
+			builder.sendAsync(user).toCompletableFuture().join();
+		}
+
+		verify(spyReward, times(1)).giveRewardUserAsync(eq(user), any(HashMap.class), any(RewardOptions.class));
+		verify(user).addOfflineRewards(eq(spyReward), any(HashMap.class), any(RewardOptions.class));
+		assertFalse(reusable.isLivePlayerStateSet());
+	}
+
+	@Test
+	void rewardPreparationRunsOnPlayerOwnerScheduler() {
+		Player player = mock(Player.class);
+		AtomicReference<Thread> playerAccessThread = new AtomicReference<>();
+		when(user.getPlayer()).thenAnswer(invocation -> {
+			playerAccessThread.set(Thread.currentThread());
+			return player;
+		});
+		when(player.getDisplayName()).thenReturn("Display");
+		when(user.getPlayerName()).thenReturn("Queued");
+		when(user.getUUID()).thenReturn(UUID.randomUUID().toString());
+		doAnswer(invocation -> {
+			Thread ownerThread = new Thread(invocation.getArgument(1, Runnable.class), "reward-owner-thread");
+			ownerThread.start();
+			ownerThread.join();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), eq(player));
+
+		reward.giveRewardUserAsync(user, new HashMap<>(), new RewardOptions()).toCompletableFuture().join();
+
+		assertNotNull(playerAccessThread.get());
+		assertEquals("reward-owner-thread", playerAccessThread.get().getName());
+	}
+
+	@Test
+	void asyncRewardSnapshotsCallerPlaceholdersBeforeOwnerSchedulerHandoff() {
+		Player player = mock(Player.class);
+		when(user.getPlayer()).thenReturn(player);
+		when(user.getPlayerName()).thenReturn("Queued");
+		when(user.getUUID()).thenReturn(UUID.randomUUID().toString());
+		when(player.getDisplayName()).thenReturn("Display");
+		ArrayList<Runnable> queued = new ArrayList<>();
+		doAnswer(invocation -> {
+			queued.add(invocation.getArgument(1, Runnable.class));
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		AtomicReference<String> observed = new AtomicReference<>();
+		handler.getInjectedRewards().add(new RewardInject("Async") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, HashMap<String, String> ignoredPlaceholders) {
+				observed.set(ignoredPlaceholders.get("custom"));
+				return CompletableFuture.completedFuture(null);
+			}
+		});
+		HashMap<String, String> callerPlaceholders = new HashMap<>();
+		callerPlaceholders.put("custom", "original");
+
+		CompletionStage<Void> delivery = reward.giveRewardUserAsync(user, callerPlaceholders, new RewardOptions());
+		callerPlaceholders.clear();
+		callerPlaceholders.put("custom", "mutated");
+		assertFalse(delivery.toCompletableFuture().isDone());
+		assertEquals(1, queued.size());
+
+		while (!delivery.toCompletableFuture().isDone() && !queued.isEmpty()) queued.remove(0).run();
+
+		delivery.toCompletableFuture().join();
+		assertEquals("original", observed.get());
+	}
+
+	@Test
 	void offlineRequeueRetainsReplayStateAndLegacyActionMarkers() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isProcessRewards()).thenReturn(true);
@@ -670,6 +797,72 @@ class RewardAsyncInjectionTest {
 			result.toCompletableFuture().join();
 			verify(pluginManager).callEvent(any());
 		}
+	}
+
+	@Test
+	void asyncRewardRequirementsRunOnPlayerOwnerScheduler() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		Player player = mock(Player.class);
+		when(user.getPlayer()).thenReturn(player);
+		when(user.isOnline()).thenReturn(true);
+		AtomicReference<String> requirementThread = new AtomicReference<>();
+		handler.getInjectedRequirements().add(new RequirementInject("OwnerThread") {
+			@Override
+			public boolean onRequirementRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, RewardOptions ignoredOptions) {
+				requirementThread.set(Thread.currentThread().getName());
+				return false;
+			}
+		});
+		ArgumentCaptor<Runnable> asyncTask = ArgumentCaptor.forClass(Runnable.class);
+		doAnswer(invocation -> {
+			Thread ownerThread = new Thread(invocation.getArgument(1, Runnable.class), "player-owner-thread");
+			ownerThread.start();
+			ownerThread.join();
+			return null;
+		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			CompletionStage<Void> result = reward.giveRewardAsync(user, new RewardOptions().setCheckTimed(false));
+
+			verify(scheduler).runTaskAsynchronously(eq(plugin), asyncTask.capture());
+			asyncTask.getValue().run();
+			result.toCompletableFuture().join();
+		}
+
+		assertEquals("player-owner-thread", requirementThread.get());
+	}
+
+	@Test
+	void terminalRequirementDenialDoesNotEnterPauseDeferral() {
+		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
+		when(config.isProcessRewards()).thenReturn(true);
+		when(config.isPauseRewards()).thenReturn(true);
+		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
+		when(plugin.getOptions()).thenReturn(config);
+		when(user.getPlayer()).thenReturn(mock(Player.class));
+		when(user.isOnline()).thenReturn(true);
+		handler.getInjectedRequirements().add(new RequirementInject("Denied") {
+			@Override
+			public boolean onRequirementRequest(Reward ignored, AdvancedCoreUser ignoredUser,
+					ConfigurationSection ignoredData, RewardOptions ignoredOptions) {
+				return false;
+			}
+		});
+		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
+
+		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
+			reward.giveRewardAsync(user, new RewardOptions().setCheckTimed(false)).toCompletableFuture().join();
+		}
+
+		verify(user, never()).addOfflineRewards(any(), any(), any());
 	}
 
 	@Test

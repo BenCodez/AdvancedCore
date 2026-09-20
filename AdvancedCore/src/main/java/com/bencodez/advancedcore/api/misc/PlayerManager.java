@@ -1,7 +1,9 @@
 package com.bencodez.advancedcore.api.misc;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -235,10 +237,140 @@ public class PlayerManager {
 		return false;
 	}
 
+	/** @deprecated Use {@link #isValidUserAsync(String, boolean, Consumer, Consumer)} for persisted identity. */
+	@Deprecated
 	public boolean isValidUser(String name) {
 		return isValidUser(name, false);
 	}
 
+	/**
+	 * Validates online, persisted Java, and persisted Bedrock identities without
+	 * blocking the primary thread. The callback is returned through the resolver's
+	 * platform-safe completion path when shared storage must be consulted.
+	 */
+	public void isValidUserAsync(String name, boolean checkServer, Consumer<Boolean> success,
+			Consumer<Throwable> failure) {
+		if (success == null || failure == null) throw new IllegalArgumentException("Validation callbacks are required");
+		String candidate = name == null ? "" : name.trim();
+		if (Bukkit.getServer() != null && !Bukkit.isPrimaryThread()) {
+			try {
+				plugin.getBukkitScheduler().runTask(plugin,
+						() -> isValidUserAsyncOnPlatform(candidate, checkServer, success, failure));
+			} catch (RuntimeException rejected) {
+				reportUndeliverablePlatformCallback(rejected);
+			}
+			return;
+		}
+		isValidUserAsyncOnPlatform(candidate, checkServer, success, failure);
+	}
+
+	/** Capture Bukkit online-player evidence only after reaching the platform scheduler. */
+	private void isValidUserAsyncOnPlatform(String candidate, boolean checkServer, Consumer<Boolean> success,
+			Consumer<Throwable> failure) {
+		if (candidate.isEmpty()) {
+			success.accept(false);
+			return;
+		}
+		Player online = Bukkit.getPlayerExact(candidate);
+		if (online != null) {
+			success.accept(true);
+			return;
+		}
+		plugin.getBedrockHandle().resolveAsync(candidate, resolved -> {
+			String rationale = resolved.rationale == null ? "" : resolved.rationale;
+			boolean exactPersisted = "db-java".equals(rationale) || "cache-java".equals(rationale)
+					|| rationale.startsWith("db-bedrock") || rationale.startsWith("cache-bedrock");
+			if (resolved.isBedrock || exactPersisted) {
+				success.accept(true);
+				return;
+			}
+			if (!checkServer) {
+				success.accept(false);
+				return;
+			}
+			String prefix = plugin.getOptions().getBedrockPlayerPrefix();
+			if (prefix != null && !prefix.isEmpty() && candidate.startsWith(prefix)) {
+				success.accept(false);
+				return;
+			}
+			checkServerHistoryAsync(candidate, success, failure);
+		}, failure);
+	}
+
+	private void checkServerHistoryAsync(String candidate, Consumer<Boolean> success, Consumer<Throwable> failure) {
+		try {
+			var scheduler = plugin.getBukkitScheduler();
+			if (!plugin.getOptions().isOnlineMode()) {
+				UUID offlineUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + candidate).getBytes(StandardCharsets.UTF_8));
+				dispatchValidationResult(scheduler, () -> completeServerHistory(offlineUuid, success, failure), failure);
+				return;
+			}
+			Bukkit.createPlayerProfile(candidate).update().whenComplete((profile, problem) ->
+					dispatchValidationResult(scheduler, () -> {
+						if (problem != null) {
+							failure.accept(problem);
+							return;
+						}
+						UUID uuid = profile == null ? null : profile.getUniqueId();
+						if (uuid == null) {
+							success.accept(false);
+							return;
+						}
+						completeServerHistory(uuid, success, failure);
+						}, failure));
+		} catch (RuntimeException failureReason) {
+			failure.accept(failureReason);
+		}
+	}
+
+	private void completeServerHistory(UUID uuid, Consumer<Boolean> success, Consumer<Throwable> failure) {
+		boolean valid;
+		try {
+			OfflinePlayer offline = Bukkit.getOfflinePlayer(uuid);
+			valid = offline.hasPlayedBefore() || offline.isOnline() || offline.getLastPlayed() != 0;
+		} catch (RuntimeException | Error historyFailure) {
+			failure.accept(historyFailure);
+			return;
+		}
+		success.accept(valid);
+	}
+
+	private void dispatchValidationResult(com.bencodez.simpleapi.scheduler.BukkitScheduler scheduler,
+			Runnable callback, Consumer<Throwable> failure) {
+		try {
+			if (Bukkit.getServer() == null) {
+				reportUndeliverablePlatformCallback(
+						new IllegalStateException("Server stopped before player validation completed"));
+				return;
+			}
+			scheduler.runTask(plugin, () -> {
+				if (Bukkit.getServer() == null) {
+					failure.accept(new IllegalStateException("Server stopped before player validation completed"));
+					return;
+				}
+				callback.run();
+			});
+		} catch (RuntimeException failureReason) {
+			reportUndeliverablePlatformCallback(failureReason);
+		}
+	}
+
+	/** A validation callback may access Bukkit, so scheduler rejection has no safe fallback thread. */
+	private void reportUndeliverablePlatformCallback(Throwable failure) {
+		if (plugin != null && plugin.getLogger() != null) {
+			plugin.getLogger().log(java.util.logging.Level.SEVERE,
+					"Unable to deliver async player validation on the platform scheduler", failure);
+		}
+	}
+
+	/**
+	 * Immediate compatibility validation. On shared-storage server threads this
+	 * intentionally uses only online/cache Bedrock evidence; callers requiring an
+	 * authoritative offline result must use {@link #isValidUserAsync}.
+	 *
+	 * @deprecated Use {@link #isValidUserAsync(String, boolean, Consumer, Consumer)}.
+	 */
+	@Deprecated
 	@SuppressWarnings("deprecation")
 	public boolean isValidUser(String name, boolean checkServer) {
 		plugin.extraDebug("isValidUser START: name=" + name + ", checkServer=" + checkServer);
@@ -256,16 +388,26 @@ public class PlayerManager {
 			return true;
 		}
 
+		if (name.isEmpty()) {
+			plugin.extraDebug("isValidUser: empty name -> false");
+			return false;
+		}
+
+		boolean sharedPrimary = plugin.getUserManager().getDataManager() != null
+				&& plugin.getUserManager().getDataManager().mustDeferSharedStorageAccess();
+		if (sharedPrimary) {
+			var resolved = plugin.getBedrockHandle().resolveWithoutDb(name);
+			String rationale = resolved.rationale == null ? "" : resolved.rationale;
+			boolean exactCached = "cache-java".equals(rationale) || rationale.startsWith("cache-bedrock");
+			plugin.extraDebug("isValidUser: shared-primary cache result=" + rationale);
+			return resolved.isBedrock || exactCached;
+		}
+
 		boolean userExist = plugin.getUserManager().userExist(name);
 		plugin.extraDebug("isValidUser: userExist(" + name + ")=" + userExist);
 		if (userExist) {
 			plugin.extraDebug("isValidUser: returning true from userExist");
 			return true;
-		}
-
-		if (name.isEmpty()) {
-			plugin.extraDebug("isValidUser: empty name -> false");
-			return false;
 		}
 
 		boolean isBedrock = plugin.getBedrockHandle().isBedrock(name);
