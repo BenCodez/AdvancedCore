@@ -369,21 +369,32 @@ class SqliteUserTransactionTest {
             when(table.getSqLite()).thenReturn(sqlite);
             when(table.getName()).thenReturn("Users");
             when(sqlite.getSQLConnection()).thenReturn(legacyConnection);
+            doAnswer(call -> {
+                Column column = call.getArgument(0);
+                if ("RepeatSpecial".equals(column.getName())) {
+                    try (PreparedStatement alter = legacyConnection.prepareStatement(
+                            "ALTER TABLE Users ADD COLUMN RepeatSpecial INTEGER")) { alter.executeUpdate(); }
+                }
+                return null;
+            }).when(table).checkColumn(any(Column.class));
             PendingCacheOwner cache = new PendingCacheOwner();
             SharedUserDataRuntime runtime = new SharedUserDataRuntime(
                     new BukkitSqlUserBackend(plugin, TYPE, null, table), cache);
             cache.populate(uuid, new HashMap<>());
             cache.queueChange(uuid, "PlayerName", new DataValueString("Ben"));
             cache.queueChange(uuid, "Points", new DataValueInt(7));
+            cache.queueChange(uuid, "RepeatSpecial", new DataValueInt(3));
             runtime.flush(uuid);
             assertFalse(cache.hasPendingChanges(uuid));
             try (Connection check = DriverManager.getConnection(url);
-                 PreparedStatement select = check.prepareStatement("SELECT PlayerName, Points FROM Users WHERE uuid=?")) {
+                 PreparedStatement select = check.prepareStatement(
+                         "SELECT PlayerName, Points, RepeatSpecial FROM Users WHERE uuid=?")) {
                 select.setString(1, uuid.toString());
                 try (ResultSet row = select.executeQuery()) {
                     assertTrue(row.next());
                     assertEquals("Ben", row.getString(1));
                     assertEquals(7, row.getInt(2));
+                    assertEquals(3, row.getInt(3));
                 }
             }
         }

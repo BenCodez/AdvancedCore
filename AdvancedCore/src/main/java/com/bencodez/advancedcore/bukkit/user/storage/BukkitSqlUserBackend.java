@@ -167,7 +167,7 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         // Shared cache flushes must surface SQL failures. The legacy update
         // methods log and swallow them, which could acknowledge a later caller
         // transaction while its prerequisite queued values were never stored.
-        withSqlUser(storage, uuid, user -> {
+        withSqlUser(storage, uuid, updates, user -> {
             user.writeValues(storage, new HashMap<>(updates));
             return null;
         });
@@ -183,7 +183,7 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         requireOpen();
         requireStorage(storage);
         Objects.requireNonNull(work, "work");
-        return withSqlUser(storage, uuid, user -> {
+        return withSqlUser(storage, uuid, java.util.Map.of(), user -> {
             if (storage != UserStorage.MYSQL) return user.transaction(storage, initialValues, work);
             String[] committedName = new String[1];
             T result = user.transaction(storage, initialValues, scope -> {
@@ -201,8 +201,22 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         });
     }
 
-    private <T> T withSqlUser(UserStorage storage, UUID uuid, java.util.function.Function<SqlUserStorage, T> work) {
-        SqlUserSchema schema = SqlUserSchema.fromKeys(plugin.getUserManager().getDataManager().getKeys());
+    private <T> T withSqlUser(UserStorage storage, UUID uuid, java.util.Map<String, DataValue> updates,
+            java.util.function.Function<SqlUserStorage, T> work) {
+        SqlUserSchema registered = SqlUserSchema.fromKeys(plugin.getUserManager().getDataManager().getKeys());
+        SqlUserSchema.Builder builder = SqlUserSchema.builder();
+        for (SqlUserSchema.ColumnDefinition column : registered.columns()) {
+            if (!"uuid".equalsIgnoreCase(column.name())) builder.column(column.name(), column.sqlType(), column.dataType());
+        }
+        ArrayList<Column> dynamic = new ArrayList<>();
+        for (java.util.Map.Entry<String, DataValue> entry : updates.entrySet()) {
+            if (registered.contains(entry.getKey())) continue;
+            com.bencodez.simpleapi.sql.DataType type = entry.getValue().getType();
+            builder.column(entry.getKey(), type == com.bencodez.simpleapi.sql.DataType.STRING ? "TEXT" :
+                    type == com.bencodez.simpleapi.sql.DataType.INTEGER ? "INTEGER" : "BOOLEAN", type);
+            dynamic.add(new Column(entry.getKey(), type));
+        }
+        SqlUserSchema schema = builder.build();
         SqlBackendLogger logger = new SqlBackendLogger() {
             @Override public void info(String message) { plugin.getLogger().info(message); }
             @Override public void warn(String message, Throwable error) {
@@ -210,11 +224,13 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
             }
         };
         if (storage == UserStorage.MYSQL) {
+            for (Column column : dynamic) mysql().checkColumn(column.getName(), column.getDataType());
             var manager = mysql().getMysql().getConnectionManager();
             return work.apply(SqlUserBackendFactory.existingUser(storage, uuid, mysql().getTableName(), schema,
                     manager::getConnection, manager.getDbType(), logger));
         }
         synchronized (sqliteOperations) {
+            for (Column column : dynamic) table().checkColumn(column);
             // The legacy SQLite provider retains one shared connection. Obtain
             // its actual database URL, then open a separate transaction-owned
             // connection so AdvancedCore can close it after commit/rollback.
