@@ -198,22 +198,20 @@ public class RewardLoader {
 	}
 
 	public void loadRewards() {
-		synchronized (handler.getRewardRegistry()) {
-			suppressGeneratedDirectlyDefinedFiles();
-			handler.getRewardRegistry().resetRewards();
-			setupExample();
-			handler.addValidPath("DirectlyDefinedReward");
-			handler.addValidPath("Delayed");
-			handler.addValidPath("Timed");
-			handler.addValidPath("DisplayItem");
-			handler.addValidPath("ForceOffline");
-			for (File file : rewardFolders) {
-				loadRewards(file);
-			}
-			handler.sortInjectedRewards();
-			handler.sortInjectedRequirements();
-			plugin.debug("Loaded rewards");
+		suppressGeneratedDirectlyDefinedFiles();
+		handler.getRewardRegistry().resetRewards();
+		setupExample();
+		handler.addValidPath("DirectlyDefinedReward");
+		handler.addValidPath("Delayed");
+		handler.addValidPath("Timed");
+		handler.addValidPath("DisplayItem");
+		handler.addValidPath("ForceOffline");
+		for (File file : rewardFolders) {
+			loadRewards(file);
 		}
+		handler.sortInjectedRewards();
+		handler.sortInjectedRequirements();
+		plugin.debug("Loaded rewards");
 	}
 
 	private void loadRewards(File file) {
