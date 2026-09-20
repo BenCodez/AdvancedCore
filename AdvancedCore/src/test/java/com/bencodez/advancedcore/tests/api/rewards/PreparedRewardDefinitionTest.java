@@ -32,7 +32,8 @@ class PreparedRewardDefinitionTest {
     @BeforeEach
     void setUp() {
         plugin = mock(AdvancedCorePlugin.class);
-        when(plugin.getLogger()).thenReturn(mock(Logger.class));
+        Logger logger = mock(Logger.class);
+        when(plugin.getLogger()).thenReturn(logger);
         AdvancedCorePlugin.setInstance(plugin);
         handler = new RewardHandler(plugin);
         when(plugin.getRewardHandler()).thenReturn(handler);

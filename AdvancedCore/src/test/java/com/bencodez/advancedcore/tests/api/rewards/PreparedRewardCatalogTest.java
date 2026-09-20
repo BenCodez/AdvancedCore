@@ -29,7 +29,8 @@ class PreparedRewardCatalogTest {
     @BeforeEach
     void setUp() {
         plugin = mock(AdvancedCorePlugin.class);
-        when(plugin.getLogger()).thenReturn(mock(Logger.class));
+        Logger logger = mock(Logger.class);
+        when(plugin.getLogger()).thenReturn(logger);
         AdvancedCorePlugin.setInstance(plugin);
         handler = new RewardHandler(plugin);
         when(plugin.getRewardHandler()).thenReturn(handler);
@@ -50,12 +51,14 @@ class PreparedRewardCatalogTest {
 
         DirectlyDefinedReward direct = mock(DirectlyDefinedReward.class);
         when(direct.getPath()).thenReturn("Direct.Child");
-        when(direct.getReward()).thenReturn(new Reward("Direct_Child", directData));
+        Reward directReward = new Reward("Direct_Child", directData);
+        when(direct.getReward()).thenReturn(directReward);
         handler.addDirectlyDefined(direct);
 
         SubDirectlyDefinedReward sub = mock(SubDirectlyDefinedReward.class);
         when(sub.getFullPath()).thenReturn("Sub.Child");
-        when(sub.getReward()).thenReturn(new Reward("Sub_Child", subData));
+        Reward subReward = new Reward("Sub_Child", subData);
+        when(sub.getReward()).thenReturn(subReward);
         handler.addSubDirectlyDefined(sub);
 
         handler.getRewards().add(new Reward("File_Child", fileData));
