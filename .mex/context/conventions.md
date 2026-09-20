@@ -13,4 +13,4 @@ mex:
 
 # Rule ownership
 
-Applicable workspace guidance is in `/root/dev/AGENTS.md`. `README.md`, `AdvancedCore/pom.xml`, CI, and tests describe current build and public behavior. MEX stores unusual constraints, not generic Java/Maven or code-review checklists.
+Repository guidance is in root `AGENTS.md`. `README.md`, `AdvancedCore/pom.xml`, CI, and tests describe current build and public behavior. MEX stores unusual constraints, not generic Java/Maven or code-review checklists.
