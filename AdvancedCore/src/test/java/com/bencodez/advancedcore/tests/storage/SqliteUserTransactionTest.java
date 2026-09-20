@@ -300,6 +300,95 @@ class SqliteUserTransactionTest {
         }
     }
 
+    @Test void productionCacheFlushFailureStopsCallerTransaction() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        try (SqliteUserBackend standalone = backend()) {
+            createReceipts(standalone.databaseFile());
+            standalone.user(uuid).writeValues(TYPE, values(2, 3));
+            String url = "jdbc:sqlite:" + standalone.databaseFile();
+            try (Connection legacyConnection = DriverManager.getConnection(url);
+                 Connection setup = DriverManager.getConnection(url);
+                 PreparedStatement trigger = setup.prepareStatement(
+                         "CREATE TRIGGER reject_points BEFORE UPDATE ON Users "
+                         + "BEGIN SELECT RAISE(ABORT, 'write rejected'); END")) {
+                trigger.executeUpdate();
+                AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+                UserTable table = mock(UserTable.class);
+                SQLite sqlite = mock(SQLite.class);
+                UserManager users = mock(UserManager.class);
+                UserDataManager manager = mock(UserDataManager.class);
+                when(plugin.getSQLiteUserTable()).thenReturn(table);
+                when(plugin.getUserManager()).thenReturn(users);
+                when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
+                when(users.getDataManager()).thenReturn(manager);
+                when(manager.getKeys()).thenReturn(new java.util.ArrayList<>(List.of(
+                        new UserDataKeyInt("Points"), new UserDataKeyInt("Votes"))));
+                when(table.getSqLite()).thenReturn(sqlite);
+                when(table.getName()).thenReturn("Users");
+                when(sqlite.getSQLConnection()).thenReturn(legacyConnection);
+                PendingCacheOwner cache = new PendingCacheOwner();
+                SharedUserDataRuntime runtime = new SharedUserDataRuntime(
+                        new BukkitSqlUserBackend(plugin, TYPE, null, table), cache);
+                cache.populate(uuid, values(2, 3));
+                cache.queueChange(uuid, "Points", new DataValueInt(7));
+                java.util.concurrent.atomic.AtomicBoolean callbackRan = new java.util.concurrent.atomic.AtomicBoolean();
+                assertThrows(IllegalStateException.class, () -> runtime.transaction(uuid, scope -> {
+                    callbackRan.set(true);
+                    insert(scope.connection(), "should-not-commit");
+                    return null;
+                }));
+                assertFalse(callbackRan.get());
+                assertEquals(2, value(standalone.user(uuid).readRow(TYPE), "Points"));
+                try (Connection check = DriverManager.getConnection(url)) {
+                    assertFalse(receipt(check, "should-not-commit"));
+                }
+                assertTrue(cache.hasPendingChanges(uuid));
+            }
+        }
+    }
+
+    @Test void productionFirstCacheFlushSuppliesRequiredColumns() throws Exception {
+        UUID uuid = UUID.randomUUID();
+        String url = "jdbc:sqlite:" + tempDir.resolve("required-users.db");
+        try (Connection setup = DriverManager.getConnection(url);
+             PreparedStatement create = setup.prepareStatement(
+                     "CREATE TABLE Users (uuid TEXT PRIMARY KEY, PlayerName TEXT NOT NULL, Points INTEGER)")) {
+            create.executeUpdate();
+        }
+        try (Connection legacyConnection = DriverManager.getConnection(url)) {
+            AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+            UserTable table = mock(UserTable.class);
+            SQLite sqlite = mock(SQLite.class);
+            UserManager users = mock(UserManager.class);
+            UserDataManager manager = mock(UserDataManager.class);
+            when(plugin.getUserManager()).thenReturn(users);
+            when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
+            when(users.getDataManager()).thenReturn(manager);
+            when(manager.getKeys()).thenReturn(new java.util.ArrayList<>(List.of(
+                    new UserDataKeyString("PlayerName"), new UserDataKeyInt("Points"))));
+            when(table.getSqLite()).thenReturn(sqlite);
+            when(table.getName()).thenReturn("Users");
+            when(sqlite.getSQLConnection()).thenReturn(legacyConnection);
+            PendingCacheOwner cache = new PendingCacheOwner();
+            SharedUserDataRuntime runtime = new SharedUserDataRuntime(
+                    new BukkitSqlUserBackend(plugin, TYPE, null, table), cache);
+            cache.populate(uuid, new HashMap<>());
+            cache.queueChange(uuid, "PlayerName", new DataValueString("Ben"));
+            cache.queueChange(uuid, "Points", new DataValueInt(7));
+            runtime.flush(uuid);
+            assertFalse(cache.hasPendingChanges(uuid));
+            try (Connection check = DriverManager.getConnection(url);
+                 PreparedStatement select = check.prepareStatement("SELECT PlayerName, Points FROM Users WHERE uuid=?")) {
+                select.setString(1, uuid.toString());
+                try (ResultSet row = select.executeQuery()) {
+                    assertTrue(row.next());
+                    assertEquals("Ben", row.getString(1));
+                    assertEquals(7, row.getInt(2));
+                }
+            }
+        }
+    }
+
     @Test void productionMysqlRoutePublishesIdentityOnlyAfterCommit() throws Exception {
         UUID uuid = UUID.randomUUID();
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);

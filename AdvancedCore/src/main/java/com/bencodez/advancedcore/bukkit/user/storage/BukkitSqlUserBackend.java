@@ -159,19 +159,49 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         Objects.requireNonNull(values, "values");
         requireOpen();
         requireStorage(storage);
-        ArrayList<Column> columns = new ArrayList<>();
+        java.util.Map<String, DataValue> updates = new HashMap<>();
         values.forEach((key, value) -> {
-            if (!"uuid".equalsIgnoreCase(key) && value != null) columns.add(new Column(key, value));
+            if (!"uuid".equalsIgnoreCase(key) && value != null) updates.put(key, value);
         });
-        if (columns.isEmpty()) return;
-        if (storage == UserStorage.MYSQL) mysql().update(uuid.toString(), columns, false);
-        else synchronized (sqliteOperations) { table().update(primary(uuid), columns); }
+        if (updates.isEmpty()) return;
+        // Shared cache flushes must surface SQL failures. The legacy update
+        // methods log and swallow them, which could acknowledge a later caller
+        // transaction while its prerequisite queued values were never stored.
+        withSqlUser(storage, uuid, user -> {
+            user.writeValues(storage, new HashMap<>(updates));
+            return null;
+        });
+        if (storage == UserStorage.MYSQL) {
+            DataValue name = updates.entrySet().stream()
+                    .filter(entry -> "PlayerName".equalsIgnoreCase(entry.getKey()))
+                    .map(java.util.Map.Entry::getValue).findFirst().orElse(null);
+            mysql().recordCommittedUser(uuid, name != null && name.isString() ? name.getString() : null);
+        }
     }
 
     private <T> T transaction(UserStorage storage, UUID uuid, java.util.Map<String, DataValue> initialValues, SqlUserStorage.TransactionWork<T> work) {
         requireOpen();
         requireStorage(storage);
         Objects.requireNonNull(work, "work");
+        return withSqlUser(storage, uuid, user -> {
+            if (storage != UserStorage.MYSQL) return user.transaction(storage, initialValues, work);
+            String[] committedName = new String[1];
+            T result = user.transaction(storage, initialValues, scope -> {
+                T value = work.run(scope);
+                for (Column column : scope.readRow()) {
+                    if ("PlayerName".equalsIgnoreCase(column.getName()) && column.getValue() != null) {
+                        committedName[0] = column.getValue().getString();
+                        break;
+                    }
+                }
+                return value;
+            });
+            mysql().recordCommittedUser(uuid, committedName[0]);
+            return result;
+        });
+    }
+
+    private <T> T withSqlUser(UserStorage storage, UUID uuid, java.util.function.Function<SqlUserStorage, T> work) {
         SqlUserSchema schema = SqlUserSchema.fromKeys(plugin.getUserManager().getDataManager().getKeys());
         SqlBackendLogger logger = new SqlBackendLogger() {
             @Override public void info(String message) { plugin.getLogger().info(message); }
@@ -181,22 +211,8 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         };
         if (storage == UserStorage.MYSQL) {
             var manager = mysql().getMysql().getConnectionManager();
-            String[] committedName = new String[1];
-            T result = SqlUserBackendFactory.existingUser(storage, uuid, mysql().getTableName(), schema,
-                    manager::getConnection, manager.getDbType(), logger).transaction(storage, initialValues, scope -> {
-                        T value = work.run(scope);
-                        for (Column column : scope.readRow()) {
-                            if ("PlayerName".equalsIgnoreCase(column.getName()) && column.getValue() != null) {
-                                committedName[0] = column.getValue().getString();
-                                break;
-                            }
-                        }
-                        return value;
-                    });
-            // The native enumerations are populated by its own write path. This
-            // transaction bypasses that path, so publish only after JDBC commit.
-            mysql().recordCommittedUser(uuid, committedName[0]);
-            return result;
+            return work.apply(SqlUserBackendFactory.existingUser(storage, uuid, mysql().getTableName(), schema,
+                    manager::getConnection, manager.getDbType(), logger));
         }
         synchronized (sqliteOperations) {
             // The legacy SQLite provider retains one shared connection. Obtain
@@ -205,8 +221,8 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
             String url;
             try { url = table().getSqLite().getSQLConnection().getMetaData().getURL(); }
             catch (SQLException failure) { throw new IllegalStateException("Failed to locate Bukkit SQLite user database", failure); }
-            return SqlUserBackendFactory.existingUser(storage, uuid, table().getName(), schema,
-                    () -> DriverManager.getConnection(url), null, logger).transaction(storage, initialValues, work);
+            return work.apply(SqlUserBackendFactory.existingUser(storage, uuid, table().getName(), schema,
+                    () -> DriverManager.getConnection(url), null, logger));
         }
     }
 
