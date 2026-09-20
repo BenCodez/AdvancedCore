@@ -60,6 +60,9 @@ public interface SqlUserStorage {
     }
 
     interface TransactionScope {
+        /** True only when this transaction inserted the user row. */
+        default boolean createdUserRow() { return false; }
+
         /**
          * Active connection for caller-owned tables. Never commit, roll back,
          * close, or change auto-commit. AdvancedCore owns its lifecycle. Do not

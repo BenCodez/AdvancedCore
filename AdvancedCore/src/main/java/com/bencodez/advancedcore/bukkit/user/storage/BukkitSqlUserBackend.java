@@ -171,7 +171,7 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
             user.writeValues(storage, new HashMap<>(updates));
             return null;
         });
-        if (storage == UserStorage.MYSQL) mysql().recordCommittedUser(uuid);
+        if (storage == UserStorage.MYSQL) mysql().recordCommittedUser(uuid, containsPlayerName(updates));
     }
 
     private <T> T transaction(UserStorage storage, UUID uuid, java.util.Map<String, DataValue> initialValues, SqlUserStorage.TransactionWork<T> work) {
@@ -180,10 +180,26 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         Objects.requireNonNull(work, "work");
         return withSqlUser(storage, uuid, java.util.Map.of(), user -> {
             if (storage != UserStorage.MYSQL) return user.transaction(storage, initialValues, work);
-            T result = user.transaction(storage, initialValues, work);
-            mysql().recordCommittedUser(uuid);
+            boolean[] nameTouched = {false};
+            T result = user.transaction(storage, initialValues, scope -> {
+                nameTouched[0] = scope.createdUserRow() && containsPlayerName(initialValues);
+                return work.run(new SqlUserStorage.TransactionScope() {
+                    @Override public boolean createdUserRow() { return scope.createdUserRow(); }
+                    @Override public java.sql.Connection connection() { return scope.connection(); }
+                    @Override public List<Column> readRow() throws SQLException { return scope.readRow(); }
+                    @Override public void writeValues(java.util.Map<String, DataValue> values) throws SQLException {
+                        scope.writeValues(values);
+                        if (containsPlayerName(values)) nameTouched[0] = true;
+                    }
+                });
+            });
+            mysql().recordCommittedUser(uuid, nameTouched[0]);
             return result;
         });
+    }
+
+    private static boolean containsPlayerName(java.util.Map<String, DataValue> values) {
+        return values.keySet().stream().anyMatch("PlayerName"::equalsIgnoreCase);
     }
 
     private <T> T withSqlUser(UserStorage storage, UUID uuid, java.util.Map<String, DataValue> updates,

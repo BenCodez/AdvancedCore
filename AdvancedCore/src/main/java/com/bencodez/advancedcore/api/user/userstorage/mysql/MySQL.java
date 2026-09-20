@@ -360,12 +360,10 @@ public class MySQL extends AbstractSqlTable {
 	// Keep existing methods (getUuids / getUUID / etc.)
 	// -------------------------
 
-	/** Publish a user committed through the shared JDBC transaction route. */
-	public void recordCommittedUser(UUID uuid) {
+	/** Publish a committed UUID; refresh names only when PlayerName may have changed. */
+	public void recordCommittedUser(UUID uuid, boolean nameMayHaveChanged) {
 		uuids.add(uuid.toString());
-		// A prior name may belong to this UUID. Reload the complete set from
-		// committed SQL on its next read instead of retaining that stale name.
-		synchronized (names) { names.clear(); }
+		if (nameMayHaveChanged) synchronized (names) { names.clear(); }
 	}
 
 	public Set<String> getUuids() {
@@ -396,7 +394,7 @@ public class MySQL extends AbstractSqlTable {
 	public Set<String> getNames() {
 		synchronized (names) {
 			if (names.isEmpty()) names.addAll(getNamesQuery());
-			return names;
+			return new java.util.HashSet<>(names);
 		}
 	}
 

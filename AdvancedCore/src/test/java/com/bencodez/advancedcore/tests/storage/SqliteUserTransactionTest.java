@@ -118,6 +118,14 @@ class SqliteUserTransactionTest {
         }
     }
 
+    @Test void transactionScopeReportsWhetherItCreatedTheUserRow() {
+        UUID uuid = UUID.randomUUID();
+        try (SqliteUserBackend backend = backend()) {
+            assertTrue(backend.user(uuid).transaction(TYPE, SqlUserStorage.TransactionScope::createdUserRow));
+            assertFalse(backend.user(uuid).transaction(TYPE, SqlUserStorage.TransactionScope::createdUserRow));
+        }
+    }
+
     @Test void rollsBackBothFailureOrders() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend backend = backend()) {
@@ -422,12 +430,16 @@ class SqliteUserTransactionTest {
         assertEquals("accepted", backend.user(uuid).transaction(UserStorage.MYSQL, scope -> "accepted"));
         org.mockito.InOrder order = inOrder(connection, mysql);
         order.verify(connection).commit();
-        order.verify(mysql).recordCommittedUser(uuid);
+        order.verify(mysql).recordCommittedUser(uuid, false);
+        clearInvocations(connection, mysql);
+        assertEquals("named", backend.user(uuid).transaction(UserStorage.MYSQL,
+                Map.of("PlayerName", new DataValueString("New")), scope -> "named"));
+        verify(mysql).recordCommittedUser(uuid, false);
         clearInvocations(connection, mysql);
         assertThrows(IllegalStateException.class, () -> backend.user(uuid).transaction(UserStorage.MYSQL,
                 scope -> { throw new SQLException("receipt failed"); }));
         verify(connection).rollback();
-        verify(mysql, never()).recordCommittedUser(any());
+        verify(mysql, never()).recordCommittedUser(any(), anyBoolean());
     }
 
     @Test void committedMysqlIdentityInvalidatesStaleNameCache() throws Exception {
@@ -443,9 +455,13 @@ class SqliteUserTransactionTest {
         doReturn(new java.util.ArrayList<>(List.of("New"))).when(mysql).getNamesQuery();
         names.add("Old");
         UUID uuid = UUID.randomUUID();
-        mysql.recordCommittedUser(uuid);
+        Set<String> priorSnapshot = mysql.getNames();
+        mysql.recordCommittedUser(uuid, false);
+        assertTrue(names.contains("Old"));
+        mysql.recordCommittedUser(uuid, true);
         assertTrue(uuids.contains(uuid.toString()));
         assertFalse(names.contains("Old"));
+        assertEquals(Set.of("Old"), priorSnapshot);
         assertEquals(Set.of("New"), mysql.getNames());
     }
 

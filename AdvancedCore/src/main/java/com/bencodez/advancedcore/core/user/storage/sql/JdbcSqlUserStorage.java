@@ -134,8 +134,8 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
         Objects.requireNonNull(work, "work");
         Map<String, DataValue> seed = canonicalize(Objects.requireNonNull(initialValues, "initialValues"));
         return inTransaction("run user transaction", connection -> {
-            ensureRow(connection, seed);
-            Scope scope = new Scope(connection);
+            boolean createdUserRow = !ensureRow(connection, seed);
+            Scope scope = new Scope(connection, createdUserRow);
             try { return work.run(scope); }
             finally { scope.active = false; }
         });
@@ -143,9 +143,14 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
 
     private final class Scope implements TransactionScope {
         private final Connection connection;
+        private final boolean createdUserRow;
         private boolean active = true;
-        private Scope(Connection connection) { this.connection = connection; }
+        private Scope(Connection connection, boolean createdUserRow) {
+            this.connection = connection;
+            this.createdUserRow = createdUserRow;
+        }
         private void requireActive() { if (!active) throw new IllegalStateException("SQL user transaction scope has ended"); }
+        @Override public boolean createdUserRow() { requireActive(); return createdUserRow; }
         @Override public Connection connection() { requireActive(); return connection; }
         @Override public List<Column> readRow() throws SQLException { requireActive(); return JdbcSqlUserStorage.this.readRow(connection); }
         @Override public void writeValues(Map<String, DataValue> values) throws SQLException {
