@@ -178,7 +178,7 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         requireOpen();
         requireStorage(storage);
         Objects.requireNonNull(work, "work");
-        return withSqlUser(storage, uuid, java.util.Map.of(), user -> {
+        return withSqlUser(storage, uuid, initialValues, user -> {
             if (storage != UserStorage.MYSQL) return user.transaction(storage, initialValues, work);
             boolean[] nameTouched = {false};
             T result = user.transaction(storage, initialValues, scope -> {

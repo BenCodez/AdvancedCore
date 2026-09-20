@@ -376,9 +376,10 @@ class SqliteUserTransactionTest {
             when(table.getSqLite()).thenReturn(sqlite);
             when(table.getName()).thenReturn("Users");
             when(sqlite.getSQLConnection()).thenReturn(legacyConnection);
+            java.util.concurrent.atomic.AtomicBoolean dynamicCreated = new java.util.concurrent.atomic.AtomicBoolean();
             doAnswer(call -> {
                 Column column = call.getArgument(0);
-                if ("RepeatSpecial".equals(column.getName())) {
+                if ("RepeatSpecial".equals(column.getName()) && dynamicCreated.compareAndSet(false, true)) {
                     try (PreparedStatement alter = legacyConnection.prepareStatement(
                             "ALTER TABLE Users ADD COLUMN RepeatSpecial INTEGER")) { alter.executeUpdate(); }
                 }
@@ -404,6 +405,12 @@ class SqliteUserTransactionTest {
                     assertEquals(3, row.getInt(3));
                 }
             }
+            UUID seeded = UUID.randomUUID();
+            int seededRepeat = runtime.transaction(seeded, TYPE, Map.of(
+                    "PlayerName", new DataValueString("Other"),
+                    "RepeatSpecial", new DataValueInt(9)),
+                    scope -> value(scope.readRow(), "RepeatSpecial"));
+            assertEquals(9, seededRepeat);
         }
     }
 
@@ -463,6 +470,51 @@ class SqliteUserTransactionTest {
         assertFalse(names.contains("Old"));
         assertEquals(Set.of("Old"), priorSnapshot);
         assertEquals(Set.of("New"), mysql.getNames());
+    }
+
+    @Test void nativeNameRefreshCannotReinsertOldNameAfterCommit() throws Exception {
+        MySQL mysql = mock(MySQL.class, CALLS_REAL_METHODS);
+        Set<String> names = java.util.concurrent.ConcurrentHashMap.newKeySet();
+        Set<String> uuids = java.util.concurrent.ConcurrentHashMap.newKeySet();
+        java.lang.reflect.Field namesField = MySQL.class.getDeclaredField("names");
+        java.lang.reflect.Field uuidsField = MySQL.class.getDeclaredField("uuids");
+        namesField.setAccessible(true);
+        uuidsField.setAccessible(true);
+        namesField.set(mysql, names);
+        uuidsField.set(mysql, uuids);
+        doNothing().when(mysql).clearCaches();
+        doReturn(new java.util.ArrayList<String>()).when(mysql).getUuidsQuery();
+        CountDownLatch oldQueryStarted = new CountDownLatch(1);
+        CountDownLatch finishOldQuery = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicInteger queries = new java.util.concurrent.atomic.AtomicInteger();
+        doAnswer(call -> {
+            if (queries.getAndIncrement() == 0) {
+                oldQueryStarted.countDown();
+                assertTrue(finishOldQuery.await(5, TimeUnit.SECONDS));
+                return new java.util.ArrayList<>(List.of("Old"));
+            }
+            return new java.util.ArrayList<>(List.of("New"));
+        }).when(mysql).getNamesQuery();
+        ExecutorService workers = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> refresh = workers.submit(mysql::clearCacheBasic);
+            assertTrue(oldQueryStarted.await(5, TimeUnit.SECONDS));
+            CountDownLatch commitStarted = new CountDownLatch(1);
+            Future<?> committed = workers.submit(() -> {
+                commitStarted.countDown();
+                mysql.recordCommittedUser(UUID.randomUUID(), true);
+            });
+            assertTrue(commitStarted.await(5, TimeUnit.SECONDS));
+            assertThrows(java.util.concurrent.TimeoutException.class, () -> committed.get(250, TimeUnit.MILLISECONDS));
+            finishOldQuery.countDown();
+            refresh.get(5, TimeUnit.SECONDS);
+            committed.get(5, TimeUnit.SECONDS);
+            assertTrue(names.isEmpty());
+            assertEquals(Set.of("New"), mysql.getNames());
+        } finally {
+            finishOldQuery.countDown();
+            workers.shutdownNow();
+        }
     }
 
     @Test void transactionFencesBypassPublishersAndReopensCacheAfterRollback() throws Exception {
