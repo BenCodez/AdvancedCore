@@ -30,6 +30,60 @@ import com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle;
 import com.bencodez.simpleapi.sql.sqlite.db.SQLite;
 
 class CoreRuntimeTest {
+	@Test void bukkitRuntimeSelectsManagerStorageWorkerRatherThanPluginTimer() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		ScheduledExecutorService pluginTimer = mock(ScheduledExecutorService.class);
+		ScheduledExecutorService storageTimer = mock(ScheduledExecutorService.class);
+		when(plugin.getTimer()).thenReturn(pluginTimer);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.getTimer()).thenReturn(storageTimer);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+		assertSame(pluginTimer, platform.getTimer());
+		assertSame(storageTimer, platform.getUserStorageTimer());
+	}
+
+	@Test void deferredShutdownWaitsForActualStorageWorkerBeforeClosingOwner() throws Exception {
+		RuntimePlatform platform = platform();
+		var pluginTimer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+		var storageTimer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+		CountDownLatch started = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		CountDownLatch terminal = new CountDownLatch(1);
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		storageTimer.execute(() -> {
+			started.countDown();
+			while (release.getCount() > 0) {
+				try { release.await(1, TimeUnit.SECONDS); }
+				catch (InterruptedException ignored) { /* Simulate JDBC ignoring interruption. */ }
+			}
+		});
+		assertTrue(started.await(2, TimeUnit.SECONDS));
+		storageTimer.execute(() -> retirement.complete(null));
+		when(platform.getTimer()).thenReturn(pluginTimer);
+		when(platform.getUserStorageTimer()).thenReturn(storageTimer);
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retirement);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(20L);
+		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("native owner", terminal::countDown)));
+		try {
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertTrue(pluginTimer.isTerminated());
+			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+			while (!storageTimer.isShutdown() && System.nanoTime() < deadline) Thread.yield();
+			assertTrue(storageTimer.isShutdown(), "watchdog must stop the manager worker");
+			assertEquals(1, terminal.getCount(), "native owner must remain open during a running JDBC call");
+		} finally {
+			release.countDown();
+			pluginTimer.shutdownNow();
+			storageTimer.shutdownNow();
+		}
+		assertTrue(terminal.await(3, TimeUnit.SECONDS));
+	}
+
     private RuntimePlatform platform() {
         RuntimePlatform platform = mock(RuntimePlatform.class);
         when(platform.beforeExecutorShutdown()).thenReturn(List.of());
@@ -238,6 +292,12 @@ class CoreRuntimeTest {
 	@Test void deferredRetirementFailureTerminatesItsWorkerAfterReportingTheFailure() {
 		RuntimePlatform platform = platform();
 		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		java.util.concurrent.atomic.AtomicBoolean terminated = new java.util.concurrent.atomic.AtomicBoolean();
+		when(timer.isTerminated()).thenAnswer(ignored -> terminated.get());
+		when(timer.shutdownNow()).thenAnswer(ignored -> {
+			terminated.set(true);
+			return List.of();
+		});
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
 		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);

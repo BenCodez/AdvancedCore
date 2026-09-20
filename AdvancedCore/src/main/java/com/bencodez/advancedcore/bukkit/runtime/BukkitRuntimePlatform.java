@@ -28,6 +28,10 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     }
 
     @Override public ScheduledExecutorService getTimer() { return plugin.getTimer(); }
+	@Override public ScheduledExecutorService getUserStorageTimer() {
+		UserManager users = plugin.getLoadedUserManager();
+		return users == null || users.getDataManager() == null ? null : users.getDataManager().getTimer();
+	}
     @Override public ScheduledExecutorService getLoginTimer() { return plugin.getLoginTimer(); }
     @Override public ScheduledExecutorService getInventoryTimer() { return plugin.getInventoryTimer(); }
     @Override public ScheduledExecutorService getTimeTimer() {

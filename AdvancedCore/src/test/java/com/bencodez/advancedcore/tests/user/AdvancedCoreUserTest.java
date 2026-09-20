@@ -51,6 +51,20 @@ import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 
 public class AdvancedCoreUserTest {
+	@Test
+	void loginHistoryUsesOnlyPublishedCacheWhenSharedSqlNeedsWorker() {
+		org.bukkit.OfflinePlayer offline = mock(org.bukkit.OfflinePlayer.class);
+		try (MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getOfflinePlayer(UUID.fromString(user.getUUID()))).thenReturn(offline);
+			when(dataManager.mustDeferSharedStorageAccess()).thenReturn(true);
+			when(dataManager.isCached(UUID.fromString(user.getUUID()))).thenReturn(true);
+			assertTrue(user.hasLoggedOnBefore());
+			when(dataManager.isCached(UUID.fromString(user.getUUID()))).thenReturn(false);
+			assertFalse(user.hasLoggedOnBefore());
+			verify(userManager, never()).getAllUUIDs();
+		}
+	}
+
 	private AdvancedCorePlugin plugin;
 	private UserManager userManager;
 	private UserDataManager dataManager;

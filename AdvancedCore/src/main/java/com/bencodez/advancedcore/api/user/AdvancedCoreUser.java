@@ -2187,6 +2187,13 @@ public class AdvancedCoreUser {
 			}
 
 		}
+		// The Bukkit thread cannot enumerate persisted SQL users. A published
+		// cache is the only safe synchronous storage evidence here; callers needing
+		// a definitive database answer must perform the lookup on a worker.
+		UserDataManager manager = plugin.getUserManager().getDataManager();
+		if (manager.mustDeferSharedStorageAccess()) {
+			return manager.isCached(java.util.UUID.fromString(uuid));
+		}
 		ArrayList<String> uuids = plugin.getUserManager().getAllUUIDs();
 		if (uuids.contains(getUUID())) {
 			return true;

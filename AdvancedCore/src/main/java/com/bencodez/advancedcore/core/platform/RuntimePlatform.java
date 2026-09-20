@@ -16,6 +16,8 @@ public interface RuntimePlatform {
     }
 
     ScheduledExecutorService getTimer();
+	/** Separate manager worker that executes shared user-storage retirement, if present. */
+	default ScheduledExecutorService getUserStorageTimer() { return null; }
     ScheduledExecutorService getLoginTimer();
     ScheduledExecutorService getInventoryTimer();
     ScheduledExecutorService getTimeTimer();

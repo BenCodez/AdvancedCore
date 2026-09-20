@@ -102,7 +102,14 @@ public final class AdvancedCoreRuntime {
 		await(platform.getTimer(), 1, TimeUnit.SECONDS);
 		await(grace.timeTimer(), 1, TimeUnit.SECONDS);
         await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
-		clean(platform.afterStorageExecutorShutdown());
+		ScheduledExecutorService storageTimer = platform.getUserStorageTimer();
+		if (storageTimer != null && storageTimer != platform.getTimer()) {
+			shutdown(storageTimer);
+			await(storageTimer, 2, TimeUnit.SECONDS);
+			if (!storageTimer.isTerminated()) shutdownNow(storageTimer);
+			await(storageTimer, 1, TimeUnit.SECONDS);
+		}
+		finishTerminalStorageCleanup(storageTimer, new AtomicBoolean());
         clean(platform.afterExecutorShutdown());
     }
 
@@ -155,36 +162,38 @@ public final class AdvancedCoreRuntime {
 
 	/** Finish platform teardown now and bound the remaining storage-worker retirement. */
 	private void finishDeferredCleanup(CompletionStage<Void> completion, String component, ExecutorGrace grace) {
-		ScheduledExecutorService timer = platform.getTimer();
+		ScheduledExecutorService timer = platform.getUserStorageTimer();
+		if (timer == null) timer = platform.getTimer();
+		final ScheduledExecutorService storageTimer = timer;
 		// Bukkit/Folia-facing cleanup must finish on the lifecycle thread before
 		// onDisable returns. Only storage-executor retirement continues later.
-		finishDeferredPlatformCleanup(grace);
+		finishDeferredPlatformCleanup(grace, storageTimer);
 		AtomicBoolean finished = new AtomicBoolean();
 		AtomicBoolean terminalStorageCleanup = new AtomicBoolean();
 		completion.whenComplete((ignored, failure) -> {
 			if (!finished.compareAndSet(false, true)) {
-				if (failure != null) finishDeferredStorageTimer(timer, true, true, terminalStorageCleanup);
+				if (failure != null) finishDeferredStorageTimer(storageTimer, true, true, terminalStorageCleanup);
 				return;
 			}
-			if (failure == null) shutdown(timer);
+			if (failure == null) shutdown(storageTimer);
 			else {
 				Throwable cause = failure instanceof CompletionException && failure.getCause() != null
 						? failure.getCause() : failure;
 				platform.cleanupFailed(component, cause);
-				shutdownNow(timer);
+				shutdownNow(storageTimer);
 			}
-			finishDeferredStorageTimer(timer, failure != null, failure != null, terminalStorageCleanup);
+			finishDeferredStorageTimer(storageTimer, failure != null, failure != null, terminalStorageCleanup);
 		});
 		long timeoutMillis = Math.max(1, platform.deferredShutdownTimeoutMillis());
 		Runnable timeout = () -> {
 			if (!finished.compareAndSet(false, true)) return;
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
-			shutdownNow(timer);
+			shutdownNow(storageTimer);
 			// The queued retirement may have been removed by shutdownNow and therefore
 			// cannot complete its stage. Run terminal cleanup explicitly after the
 			// bounded worker wait so native owners are not stranded behind that stage.
-			finishDeferredStorageTimer(timer, true, true, terminalStorageCleanup);
+			finishDeferredStorageTimer(storageTimer, true, true, terminalStorageCleanup);
 		};
 		try { CompletableFuture.delayedExecutor(timeoutMillis, TimeUnit.MILLISECONDS).execute(timeout); }
 		catch (RuntimeException | Error schedulingFailure) {
@@ -193,12 +202,14 @@ public final class AdvancedCoreRuntime {
 		}
 	}
 
-	private void finishDeferredPlatformCleanup(ExecutorGrace grace) {
+	private void finishDeferredPlatformCleanup(ExecutorGrace grace, ScheduledExecutorService storageTimer) {
 		clean(platform.afterExecutorGrace());
 		shutdownNow(platform.getLoginTimer());
+		if (platform.getTimer() != storageTimer) shutdownNow(platform.getTimer());
 		shutdownNow(grace.timeTimer());
 		shutdownNow(platform.getInventoryTimer());
 		await(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
+		if (platform.getTimer() != storageTimer) await(platform.getTimer(), 1, TimeUnit.SECONDS);
 		await(grace.timeTimer(), 1, TimeUnit.SECONDS);
 		await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
 		clean(platform.afterExecutorShutdown());
@@ -209,9 +220,7 @@ public final class AdvancedCoreRuntime {
 		Runnable retirement = () -> {
 			await(timer, forced ? 1 : 2, TimeUnit.SECONDS);
 			if (!forced && timer != null && !timer.isTerminated()) shutdownNow(timer);
-			if (runTerminalCleanup && terminalStorageCleanup.compareAndSet(false, true)) {
-				clean(platform.afterStorageExecutorShutdown());
-			}
+			if (runTerminalCleanup) finishTerminalStorageCleanup(timer, terminalStorageCleanup);
 		};
 		Thread shutdownThread = new Thread(retirement, "AdvancedCore-Storage-Shutdown");
 		shutdownThread.setDaemon(true);
@@ -219,10 +228,23 @@ public final class AdvancedCoreRuntime {
 		catch (RuntimeException | Error startFailure) {
 			platform.cleanupFailed("deferred storage shutdown continuation", startFailure);
 			shutdownNow(timer);
-			if (runTerminalCleanup && terminalStorageCleanup.compareAndSet(false, true)) {
-				clean(platform.afterStorageExecutorShutdown());
-			}
+			if (runTerminalCleanup) finishTerminalStorageCleanup(timer, terminalStorageCleanup);
 		}
+	}
+
+	private void finishTerminalStorageCleanup(ScheduledExecutorService timer, AtomicBoolean once) {
+		if (timer == null || timer.isTerminated()) {
+			if (once.compareAndSet(false, true)) clean(platform.afterStorageExecutorShutdown());
+			return;
+		}
+		// An interrupt-ignoring JDBC call can outlive the bounded watchdog. Its
+		// native owner must remain open until the actual manager worker exits.
+		Thread waiter = new Thread(() -> {
+			while (!timer.isTerminated()) await(timer, 1, TimeUnit.SECONDS);
+			if (once.compareAndSet(false, true)) clean(platform.afterStorageExecutorShutdown());
+		}, "AdvancedCore-Storage-Owner-Cleanup");
+		waiter.setDaemon(true);
+		waiter.start();
 	}
 
     public static void shutdown(ScheduledExecutorService executor) {

@@ -154,14 +154,19 @@ public class CommandLoader {
 
 			@Override
 			public void execute(CommandSender sender, String[] args) {
-				if (plugin.getStorageType().equals(UserStorage.MYSQL)) {
-					for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
-						plugin.getMysql().alterColumnType(key.getKey(), key.getColumnType());
-					}
-					sendMessage(sender, "&cColumn sizes updated");
-				} else {
-					sendMessage(sender, "&cNot using MySQL");
-				}
+				runUserStorageCommand(sender, () -> {
+					boolean updated = plugin.getUserManager().getDataManager().withSharedNativeUserStorage(owner -> {
+						UserStorage storage = owner == null ? plugin.getStorageType() : owner.storageType();
+						if (storage != UserStorage.MYSQL) return false;
+						var mysql = owner == null ? plugin.getMysql() : owner.mysql();
+						for (UserDataKey key : plugin.getUserManager().getDataManager().getKeys()) {
+							mysql.alterColumnType(key.getKey(), key.getColumnType());
+						}
+						return true;
+					});
+					runCommandCallback(sender, () -> sendMessage(sender,
+							updated ? "&cColumn sizes updated" : "&cNot using MySQL"));
+				}, null);
 
 			}
 		});
