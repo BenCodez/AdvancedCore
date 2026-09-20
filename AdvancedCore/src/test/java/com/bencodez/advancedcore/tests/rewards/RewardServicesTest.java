@@ -19,8 +19,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
@@ -203,18 +203,25 @@ public class RewardServicesTest {
 	}
 
 	private void assertWaitsForRegistryMonitor(Runnable operation) throws Exception {
-		CountDownLatch started = new CountDownLatch(1);
-		CompletableFuture<Void> invocation;
+		CountDownLatch monitorAcquisitionAttempted = new CountDownLatch(1);
+		FutureTask<Void> invocation = new FutureTask<>(() -> {
+			try (MockedStatic<AdvancedCorePlugin> pluginClass = mockStatic(AdvancedCorePlugin.class,
+					CALLS_REAL_METHODS)) {
+				pluginClass.when(AdvancedCorePlugin::getInstance).thenReturn(plugin);
+				monitorAcquisitionAttempted.countDown();
+				operation.run();
+			}
+			return null;
+		});
+		Thread worker = new Thread(invocation, "reward-registry-monitor-test");
 		synchronized (handler.getRewardRegistry()) {
-			invocation = CompletableFuture.runAsync(() -> {
-				try (MockedStatic<AdvancedCorePlugin> pluginClass = mockStatic(AdvancedCorePlugin.class,
-						CALLS_REAL_METHODS)) {
-					pluginClass.when(AdvancedCorePlugin::getInstance).thenReturn(plugin);
-					started.countDown();
-					operation.run();
-				}
-			});
-			assertTrue(started.await(5, TimeUnit.SECONDS));
+			worker.start();
+			assertTrue(monitorAcquisitionAttempted.await(5, TimeUnit.SECONDS));
+			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+			while (worker.getState() != Thread.State.BLOCKED && System.nanoTime() < deadline) {
+				Thread.yield();
+			}
+			assertEquals(Thread.State.BLOCKED, worker.getState());
 			assertThrows(TimeoutException.class, () -> invocation.get(100, TimeUnit.MILLISECONDS));
 		}
 		invocation.get(5, TimeUnit.SECONDS);
