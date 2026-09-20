@@ -33,7 +33,8 @@ public final class SharedRewardOrchestrator {
     /**
      * Execute a prepared plan for one stable logical occurrence. The caller-owned
      * durability adapter must atomically claim each native action before it runs;
-     * an uncertain earlier attempt fails closed for reconciliation.
+     * an uncertain earlier attempt fails closed for reconciliation. Native steps
+     * must be flattened; keyed nested composite plans are not supported.
      */
     public CompletionStage<SharedRewardResult> executeKeyed(SharedRewardPlan plan, SharedRewardContext context,
             SharedRewardKeyedDurability durability, String occurrenceKey) {
@@ -55,7 +56,11 @@ public final class SharedRewardOrchestrator {
         Objects.requireNonNull(parentPath, "parentPath");
         String segment = pathSegment(plan.id());
         String path = parentPath.isBlank() ? segment : parentPath + "/" + segment;
-        return execute(plan, context, durability == null ? SharedRewardDurability.NONE : durability, path, null);
+        SharedRewardDurability replay = durability == null ? SharedRewardDurability.NONE : durability;
+        if (replay instanceof SharedRewardKeyedDurability) {
+            return failed("Keyed nested plans require an explicit composite-step contract; flatten native steps instead");
+        }
+        return execute(plan, context, replay, path, null);
     }
 
     private CompletionStage<SharedRewardResult> execute(SharedRewardPlan plan, SharedRewardContext context,

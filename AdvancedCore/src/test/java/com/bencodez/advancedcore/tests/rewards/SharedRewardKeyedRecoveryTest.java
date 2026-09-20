@@ -77,6 +77,22 @@ class SharedRewardKeyedRecoveryTest {
     }
 
     @Test
+    void keyedNestedPlanIsRejectedBeforeAnyChildSideEffect() {
+        Store store = new Store();
+        Platform platform = new Platform();
+        SharedRewardOrchestrator orchestrator = new SharedRewardOrchestrator(platform);
+        AtomicInteger nestedActions = new AtomicInteger();
+        SharedRewardPlan nested = new SharedRewardPlan("child", 1, Duration.ZERO, List.of(),
+                List.of(step("item", nestedActions)), "child-config-v1");
+
+        assertThrows(CompletionException.class, () -> orchestrator.executeNested(nested,
+                new SharedRewardContext(USER, "Ben", Map.of()), store, "vote-a/vote/nested:0").toCompletableFuture().join());
+        assertEquals(0, nestedActions.get());
+        assertEquals(0, store.completedSteps("vote-a/vote/nested:0/child"));
+        assertNull(store.pending.get("vote-a/vote/nested:0/child"));
+    }
+
+    @Test
     void disconnectWhileClaimIsPendingCannotStartOnlineAction() {
         Store store = new Store();
         Platform platform = new Platform();

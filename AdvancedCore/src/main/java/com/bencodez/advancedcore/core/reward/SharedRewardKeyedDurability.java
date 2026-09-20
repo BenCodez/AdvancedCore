@@ -5,6 +5,8 @@ import java.util.concurrent.CompletionStage;
 /**
  * Durable action admission for one logical reward occurrence. The injected owner
  * serializes the occurrence across processes. Its database is authoritative.
+ * Plans used with this adapter must have flat native steps; nested composite
+ * execution has no durable parent/child admission contract yet.
  */
 public interface SharedRewardKeyedDurability extends SharedRewardDurability {
     /**
