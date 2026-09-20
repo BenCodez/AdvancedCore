@@ -164,8 +164,15 @@ public class RewardHandler {
      * registry entries. Dispatch remains unchanged; callers opt in explicitly.
      */
     public PreparedRewardCatalog prepareCatalog(Reward root) {
+        List<Reward> rewardFiles = rewardRegistry.getRewards();
+        List<Reward> filesSnapshot;
+        // RewardRegistry uses a synchronized list during load/reload. Its
+        // iterator is only safe while holding the list's monitor.
+        synchronized (rewardFiles) {
+            filesSnapshot = new ArrayList<>(rewardFiles);
+        }
         return PreparedRewardCatalog.capture(root, rewardRegistry.getDirectlyDefinedRewards(),
-                rewardRegistry.getSubDirectlyDefinedRewards(), rewardRegistry.getRewards());
+                rewardRegistry.getSubDirectlyDefinedRewards(), filesSnapshot);
     }
 
     public Reward getReward(String reward) {

@@ -25,7 +25,7 @@ import org.bukkit.configuration.serialization.ConfigurationSerializable;
 public final class PreparedRewardDefinition {
 
     private static final String ENCODED_PREFIX = "AdvancedCorePreparedReward/";
-    private static final int FORMAT_VERSION = 1;
+    private static final int FORMAT_VERSION = 2;
     private static final int MAX_REWARD_NAME_BYTES = 256;
     private static final int MAX_YAML_BYTES = 1024 * 1024;
     private static final int MAX_ENCODED_BYTES = 1400000;
@@ -184,7 +184,8 @@ public final class PreparedRewardDefinition {
     private static String hash(String rewardName, String payload) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest((FORMAT_VERSION + "\n" + rewardName + "\n" + payload).getBytes(StandardCharsets.UTF_8));
+                    .digest((FORMAT_VERSION + "\n" + encodeField(rewardName) + "\n" + encodeField(payload))
+                            .getBytes(StandardCharsets.US_ASCII));
             StringBuilder result = new StringBuilder(digest.length * 2);
             for (byte value : digest) result.append(String.format("%02x", value));
             return result.toString();

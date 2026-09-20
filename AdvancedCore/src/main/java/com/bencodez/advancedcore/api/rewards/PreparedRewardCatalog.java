@@ -6,7 +6,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
-import java.util.Locale;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -25,7 +26,7 @@ import java.util.TreeMap;
 public final class PreparedRewardCatalog {
 
     private static final String ENCODED_PREFIX = "AdvancedCorePreparedRewardCatalog/";
-    private static final int FORMAT_VERSION = 1;
+    private static final int FORMAT_VERSION = 2;
     private static final int MAX_DEFINITIONS = 1024;
     private static final int MAX_CATALOG_BYTES = 4 * 1024 * 1024;
     private static final int MAX_ENCODED_BYTES = 8 * 1024 * 1024;
@@ -41,8 +42,8 @@ public final class PreparedRewardCatalog {
             Map<String, PreparedRewardDefinition> fileDefinitions,
             String records, String versionHash) {
         this.root = root;
-        this.directDefinitions = Map.copyOf(directDefinitions);
-        this.fileDefinitions = Map.copyOf(fileDefinitions);
+        this.directDefinitions = Collections.unmodifiableMap(new TreeMap<>(directDefinitions));
+        this.fileDefinitions = Collections.unmodifiableMap(new LinkedHashMap<>(fileDefinitions));
         this.records = records;
         this.versionHash = versionHash;
     }
@@ -52,20 +53,26 @@ public final class PreparedRewardCatalog {
             Collection<SubDirectlyDefinedReward> subDirectlyDefined, Collection<Reward> rewardFiles) {
         PreparedRewardDefinition preparedRoot = PreparedRewardDefinition.capture(root);
         TreeMap<String, PreparedRewardDefinition> direct = new TreeMap<>();
-        TreeMap<String, PreparedRewardDefinition> files = new TreeMap<>();
+        LinkedHashMap<String, PreparedRewardDefinition> files = new LinkedHashMap<>();
         int count = 1;
 
         for (DirectlyDefinedReward entry : directlyDefined) {
+            if (entry == null) continue;
             count = checkCount(count + 1);
-            String key = directKey(entry == null ? null : entry.getPath());
-            PreparedRewardDefinition definition = definitionFor(entry == null ? null : entry.getReward(), key);
-            direct.putIfAbsent(key, definition);
+            String key = directKey(entry.getPath());
+            if (!direct.containsKey(key)) {
+                Reward reward = entry.getReward();
+                direct.put(key, reward == null ? null : definitionFor(reward, key));
+            }
         }
         for (SubDirectlyDefinedReward entry : subDirectlyDefined) {
+            if (entry == null) continue;
             count = checkCount(count + 1);
-            String key = directKey(entry == null ? null : entry.getFullPath());
-            PreparedRewardDefinition definition = definitionFor(entry == null ? null : entry.getReward(), key);
-            direct.putIfAbsent(key, definition);
+            String key = directKey(entry.getFullPath());
+            if (!direct.containsKey(key)) {
+                Reward reward = entry.getReward();
+                direct.put(key, reward == null ? null : definitionFor(reward, key));
+            }
         }
         for (Reward entry : rewardFiles) {
             count = checkCount(count + 1);
@@ -102,30 +109,34 @@ public final class PreparedRewardCatalog {
 
         PreparedRewardDefinition root = PreparedRewardDefinition.decode(rootEncoded);
         TreeMap<String, PreparedRewardDefinition> direct = new TreeMap<>();
-        TreeMap<String, PreparedRewardDefinition> files = new TreeMap<>();
+        LinkedHashMap<String, PreparedRewardDefinition> files = new LinkedHashMap<>();
         if (!records.isEmpty()) {
             for (String record : records.split("\n", -1)) {
                 String[] parts = record.split("\\|", -1);
                 if (parts.length != 3) throw new PreparedRewardDefinitionException("Malformed prepared reward catalog record");
                 String key = decodeField(parts[1], "lookup key");
-                PreparedRewardDefinition definition = PreparedRewardDefinition.decode(decodeField(parts[2], "definition"));
                 Map<String, PreparedRewardDefinition> target;
+                PreparedRewardDefinition definition;
                 if ("D".equals(parts[0])) {
                     if (!key.equals(directKey(key))) {
                         throw new PreparedRewardDefinitionException("Malformed direct prepared reward lookup key");
                     }
                     target = direct;
+                    definition = parts[2].isEmpty() ? null
+                            : PreparedRewardDefinition.decode(decodeField(parts[2], "definition"));
                 } else if ("F".equals(parts[0])) {
                     if (!key.equals(fileKey(key))) {
                         throw new PreparedRewardDefinitionException("Malformed file prepared reward lookup key");
                     }
                     target = files;
+                    definition = PreparedRewardDefinition.decode(decodeField(parts[2], "definition"));
                 } else {
                     throw new PreparedRewardDefinitionException("Malformed prepared reward catalog record type");
                 }
-                if (target.putIfAbsent(key, definition) != null) {
+                if (target.containsKey(key)) {
                     throw new PreparedRewardDefinitionException("Duplicate prepared reward catalog lookup key");
                 }
+                target.put(key, definition);
                 checkCount(1 + direct.size() + files.size());
             }
         }
@@ -149,8 +160,20 @@ public final class PreparedRewardCatalog {
      * a fresh detached reward. Unknown names fail closed.
      */
     public Reward instantiate(String rewardName) {
-        PreparedRewardDefinition definition = directDefinitions.get(directKeyForLookup(rewardName));
-        if (definition == null) definition = fileDefinitions.get(fileKeyForLookup(rewardName));
+        String directKey = directKeyForLookup(rewardName);
+        if (directDefinitions.containsKey(directKey) && directDefinitions.get(directKey) == null) {
+            throw new PreparedRewardDefinitionException("Prepared reward catalog has no definition for: " + rewardName);
+        }
+        PreparedRewardDefinition definition = directDefinitions.get(directKey);
+        if (definition == null) {
+            String lookup = fileKeyForLookup(rewardName);
+            for (Map.Entry<String, PreparedRewardDefinition> entry : fileDefinitions.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(lookup)) {
+                    definition = entry.getValue();
+                    break;
+                }
+            }
+        }
         if (definition == null) {
             throw new PreparedRewardDefinitionException("Prepared reward catalog has no definition for: " + rewardName);
         }
@@ -162,7 +185,8 @@ public final class PreparedRewardCatalog {
     }
 
     public int getDefinitionCount() {
-        return 1 + directDefinitions.size() + fileDefinitions.size();
+        return 1 + (int) directDefinitions.values().stream().filter(java.util.Objects::nonNull).count()
+                + fileDefinitions.size();
     }
 
     private static PreparedRewardDefinition definitionFor(Reward reward, String lookupKey) {
@@ -183,7 +207,8 @@ public final class PreparedRewardCatalog {
             Map<String, PreparedRewardDefinition> files) {
         ArrayList<String> records = new ArrayList<>(direct.size() + files.size());
         for (Map.Entry<String, PreparedRewardDefinition> entry : direct.entrySet()) {
-            records.add("D|" + encodeField(entry.getKey()) + "|" + encodeField(entry.getValue().encode()));
+            records.add("D|" + encodeField(entry.getKey()) + "|"
+                    + (entry.getValue() == null ? "" : encodeField(entry.getValue().encode())));
         }
         for (Map.Entry<String, PreparedRewardDefinition> entry : files.entrySet()) {
             records.add("F|" + encodeField(entry.getKey()) + "|" + encodeField(entry.getValue().encode()));
@@ -206,7 +231,7 @@ public final class PreparedRewardCatalog {
 
     private static String fileKey(String name) {
         validateKey(name);
-        return RewardRegistry.normalizeLookupName(name).toLowerCase(Locale.ROOT);
+        return RewardRegistry.normalizeLookupName(name);
     }
 
     private static void validateKey(String key) {

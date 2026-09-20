@@ -6,6 +6,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -114,6 +118,87 @@ class PreparedRewardCatalogTest {
         List<String> nestedNames = prepared.instantiateRoot().getConfig().getConfigData().getStringList("Rewards");
         assertEquals(List.of("Child"), nestedNames);
         assertMessage("before reload", prepared.instantiate(nestedNames.get(0)));
+    }
+
+    @Test
+    void optionalMissingDirectHandleDoesNotBlockValidRewards() {
+        DirectlyDefinedReward optional = mock(DirectlyDefinedReward.class);
+        when(optional.getPath()).thenReturn("Optional.Absent");
+        handler.addDirectlyDefined(optional);
+        handler.getRewards().add(new Reward("Available", rewardData("available")));
+
+        PreparedRewardCatalog catalog = handler.prepareCatalog(new Reward("Root", rewardData("root")));
+
+        assertEquals(2, catalog.getDefinitionCount());
+        assertMessage("available", catalog.instantiate("Available"));
+        assertThrows(PreparedRewardDefinitionException.class, () -> catalog.instantiate("Optional.Absent"));
+    }
+
+    @Test
+    void missingDirectHandleShadowsSameNamedFileAfterRoundTrip() {
+        DirectlyDefinedReward optional = mock(DirectlyDefinedReward.class);
+        when(optional.getPath()).thenReturn("Optional.Absent");
+        handler.addDirectlyDefined(optional);
+        handler.getRewards().add(new Reward("Optional_Absent", rewardData("file must stay shadowed")));
+        handler.getRewards().add(new Reward("Available", rewardData("available")));
+
+        PreparedRewardCatalog catalog = PreparedRewardCatalog.decode(
+                handler.prepareCatalog(new Reward("Root", rewardData("root"))).encode());
+
+        assertThrows(PreparedRewardDefinitionException.class, () -> catalog.instantiate("Optional.Absent"));
+        assertMessage("available", catalog.instantiate("Available"));
+    }
+
+    @Test
+    void fileLookupMatchesRegistryUnicodeCaseSemanticsAndFirstEntryWins() {
+        handler.getRewards().add(new Reward("İ", rewardData("first")));
+        handler.getRewards().add(new Reward("i", rewardData("second")));
+        PreparedRewardCatalog catalog = PreparedRewardCatalog.decode(
+                handler.prepareCatalog(new Reward("Root", rewardData("root"))).encode());
+
+        assertMessage("first", catalog.instantiate("i"));
+        assertMessage("first", catalog.instantiate("İ"));
+    }
+
+    @Test
+    void oldCatalogFormatIsRejectedBeforeRestoringItsDefinitions() {
+        assertThrows(PreparedRewardDefinitionException.class,
+                () -> PreparedRewardCatalog.decode("AdvancedCorePreparedRewardCatalog/1/eA/eQ/oldhash"));
+    }
+
+    @Test
+    void rewardFileCaptureWaitsForConcurrentRegistryReload() throws Exception {
+        List<Reward> files = handler.getRewards();
+        files.add(new Reward("Available", rewardData("available")));
+        Reward root = new Reward("Root", rewardData("root"));
+        CountDownLatch lockHeld = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        Thread reload = new Thread(() -> {
+            synchronized (files) {
+                lockHeld.countDown();
+                try {
+                    release.await();
+                } catch (InterruptedException failure) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        reload.start();
+        try {
+            org.junit.jupiter.api.Assertions.assertTrue(lockHeld.await(5, TimeUnit.SECONDS));
+            CountDownLatch captureStarted = new CountDownLatch(1);
+            CompletableFuture<PreparedRewardCatalog> capture = CompletableFuture.supplyAsync(() -> {
+                captureStarted.countDown();
+                return handler.prepareCatalog(root);
+            });
+            org.junit.jupiter.api.Assertions.assertTrue(captureStarted.await(5, TimeUnit.SECONDS));
+            assertThrows(TimeoutException.class, () -> capture.get(100, TimeUnit.MILLISECONDS));
+            release.countDown();
+            assertMessage("available", capture.get(5, TimeUnit.SECONDS).instantiate("Available"));
+        } finally {
+            release.countDown();
+            reload.join(5000);
+        }
     }
 
     private static YamlConfiguration rewardData(String message) {

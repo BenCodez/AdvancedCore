@@ -127,4 +127,24 @@ class PreparedRewardDefinitionTest {
 
         assertDoesNotThrow(prepared::checkRewardFile);
     }
+
+    @Test
+    void hashFramesNameAndYamlWithoutDelimiterAmbiguity() {
+        YamlConfiguration shortPayload = new YamlConfiguration();
+        shortPayload.set("other", "thing");
+        YamlConfiguration longPayload = new YamlConfiguration();
+        longPayload.set("key", "value");
+        longPayload.set("other", "thing");
+
+        PreparedRewardDefinition first = PreparedRewardDefinition.capture("foo\nkey: value", shortPayload);
+        PreparedRewardDefinition second = PreparedRewardDefinition.capture("foo", longPayload);
+
+        assertNotEquals(first.getVersionHash(), second.getVersionHash());
+    }
+
+    @Test
+    void oldHashFramingIsRejectedByItsVersionBeforeRestore() {
+        assertThrows(PreparedRewardDefinitionException.class,
+                () -> PreparedRewardDefinition.decode("AdvancedCorePreparedReward/1/Zm9v/eDogeQ/oldhash"));
+    }
 }
