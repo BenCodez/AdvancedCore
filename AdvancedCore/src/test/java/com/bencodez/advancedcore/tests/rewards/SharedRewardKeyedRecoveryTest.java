@@ -84,12 +84,23 @@ class SharedRewardKeyedRecoveryTest {
         AtomicInteger nestedActions = new AtomicInteger();
         SharedRewardPlan nested = new SharedRewardPlan("child", 1, Duration.ZERO, List.of(),
                 List.of(step("item", nestedActions)), "child-config-v1");
+        SharedRewardPlan parent = plan(new SharedRewardStep("nested", false,
+                (context, path) -> orchestrator.executeNested(nested, context, store, path)));
 
-        assertThrows(CompletionException.class, () -> orchestrator.executeNested(nested,
-                new SharedRewardContext(USER, "Ben", Map.of()), store, "vote-a/vote/nested:0").toCompletableFuture().join());
+        assertThrows(CompletionException.class, () -> execute(platform, store, parent, "vote-a").join());
         assertEquals(0, nestedActions.get());
         assertEquals(0, store.completedSteps("vote-a/vote/nested:0/child"));
         assertNull(store.pending.get("vote-a/vote/nested:0/child"));
+    }
+
+    @Test
+    void legacyNestedCallAcceptsAKeyedCapableAdapter() {
+        Store store = new Store();
+        SharedRewardPlan empty = new SharedRewardPlan("child", 1, Duration.ZERO, List.of(), List.of(), "empty");
+
+        assertEquals(SharedRewardResult.COMPLETED, new SharedRewardOrchestrator(new Platform())
+                .executeNested(empty, new SharedRewardContext(USER, "Ben", Map.of()), store, "legacy-parent")
+                .toCompletableFuture().join());
     }
 
     @Test

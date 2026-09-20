@@ -46,6 +46,7 @@ public final class SharedRewardOrchestrator {
             throw new IllegalArgumentException("Occurrence key must contain 1..256 characters");
         }
         if (!durability.durable()) throw new IllegalArgumentException("Keyed rewards require durable action admission");
+        context.markKeyedExecution();
         return execute(plan, context, durability, pathSegment(occurrenceKey) + "/" + pathSegment(plan.id()), durability);
     }
 
@@ -57,7 +58,7 @@ public final class SharedRewardOrchestrator {
         String segment = pathSegment(plan.id());
         String path = parentPath.isBlank() ? segment : parentPath + "/" + segment;
         SharedRewardDurability replay = durability == null ? SharedRewardDurability.NONE : durability;
-        if (replay instanceof SharedRewardKeyedDurability) {
+        if (context.isKeyedExecution()) {
             return failed("Keyed nested plans require an explicit composite-step contract; flatten native steps instead");
         }
         return execute(plan, context, replay, path, null);
