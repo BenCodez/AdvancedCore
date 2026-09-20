@@ -27,7 +27,25 @@ public final class SharedRewardOrchestrator {
         Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(context, "context");
         SharedRewardDurability replay = durability == null ? SharedRewardDurability.NONE : durability;
-        return execute(plan, context, replay, pathSegment(plan.id()));
+        return execute(plan, context, replay, pathSegment(plan.id()), null);
+    }
+
+    /**
+     * Execute a prepared plan for one stable logical occurrence. The caller-owned
+     * durability adapter must atomically claim each native action before it runs;
+     * an uncertain earlier attempt fails closed for reconciliation.
+     */
+    public CompletionStage<SharedRewardResult> executeKeyed(SharedRewardPlan plan, SharedRewardContext context,
+            SharedRewardKeyedDurability durability, String occurrenceKey) {
+        Objects.requireNonNull(plan, "plan");
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(durability, "durability");
+        Objects.requireNonNull(occurrenceKey, "occurrenceKey");
+        if (occurrenceKey.isBlank() || occurrenceKey.length() > 256) {
+            throw new IllegalArgumentException("Occurrence key must contain 1..256 characters");
+        }
+        if (!durability.durable()) throw new IllegalArgumentException("Keyed rewards require durable action admission");
+        return execute(plan, context, durability, pathSegment(occurrenceKey) + "/" + pathSegment(plan.id()), durability);
     }
 
     public CompletionStage<SharedRewardResult> executeNested(SharedRewardPlan plan, SharedRewardContext context,
@@ -37,18 +55,18 @@ public final class SharedRewardOrchestrator {
         Objects.requireNonNull(parentPath, "parentPath");
         String segment = pathSegment(plan.id());
         String path = parentPath.isBlank() ? segment : parentPath + "/" + segment;
-        return execute(plan, context, durability == null ? SharedRewardDurability.NONE : durability, path);
+        return execute(plan, context, durability == null ? SharedRewardDurability.NONE : durability, path, null);
     }
 
     private CompletionStage<SharedRewardResult> execute(SharedRewardPlan plan, SharedRewardContext context,
-            SharedRewardDurability durability, String executionPath) {
+            SharedRewardDurability durability, String executionPath, SharedRewardKeyedDurability keyed) {
         try {
             if (platform.isShuttingDown()) return failed("Reward platform is shutting down");
             String fingerprint = durability.durable() ? plan.fingerprint() : "non-durable";
             SharedRewardProgress saved = durability.durable() ? durability.loadProgress(executionPath) : null;
             if (saved != null) {
                 validateProgress(plan, fingerprint, saved, executionPath);
-                return continueFromProgress(plan, context, durability, executionPath, fingerprint, saved);
+                return continueFromProgress(plan, context, durability, executionPath, fingerprint, saved, keyed);
             }
 
             int legacyCursor = durability.completedSteps(executionPath);
@@ -90,7 +108,7 @@ public final class SharedRewardOrchestrator {
                 }
                 return persisted.thenCompose(progress -> {
                     validateProgress(plan, fingerprint, progress, executionPath);
-                    return continueFromProgress(plan, context, durability, executionPath, fingerprint, progress);
+                    return continueFromProgress(plan, context, durability, executionPath, fingerprint, progress, keyed);
                 });
             });
         } catch (Throwable failure) {
@@ -99,11 +117,12 @@ public final class SharedRewardOrchestrator {
     }
 
     private CompletionStage<SharedRewardResult> continueFromProgress(SharedRewardPlan plan, SharedRewardContext context,
-            SharedRewardDurability durability, String executionPath, String fingerprint, SharedRewardProgress progress) {
+            SharedRewardDurability durability, String executionPath, String fingerprint, SharedRewardProgress progress,
+            SharedRewardKeyedDurability keyed) {
         context.placeholders().clear();
         context.placeholders().putAll(progress.placeholders());
         if (!progress.eligible()) return CompletableFuture.completedFuture(SharedRewardResult.NOT_ELIGIBLE);
-        return executeEligible(plan, context, durability, executionPath, fingerprint, progress);
+        return executeEligible(plan, context, durability, executionPath, fingerprint, progress, keyed);
     }
 
     private void validateProgress(SharedRewardPlan plan, String fingerprint, SharedRewardProgress progress,
@@ -121,10 +140,11 @@ public final class SharedRewardOrchestrator {
     }
 
     private CompletionStage<SharedRewardResult> executeEligible(SharedRewardPlan plan, SharedRewardContext context,
-            SharedRewardDurability durability, String executionPath, String fingerprint, SharedRewardProgress progress) {
+            SharedRewardDurability durability, String executionPath, String fingerprint, SharedRewardProgress progress,
+            SharedRewardKeyedDurability keyed) {
         int resume = progress.completedSteps();
         java.util.function.Supplier<CompletionStage<SharedRewardResult>> work =
-                () -> executeSteps(plan, context, durability, executionPath, fingerprint, resume);
+                () -> executeSteps(plan, context, durability, executionPath, fingerprint, resume, keyed);
         Duration delay = Duration.ZERO;
         if (resume == 0 && !plan.delay().isZero()) {
             delay = durability.durable() ? Duration.between(platform.now(), progress.notBefore()) : plan.delay();
@@ -158,13 +178,14 @@ public final class SharedRewardOrchestrator {
     }
 
     private CompletionStage<SharedRewardResult> executeSteps(SharedRewardPlan plan, SharedRewardContext context,
-            SharedRewardDurability durability, String executionPath, String fingerprint, int index) {
+            SharedRewardDurability durability, String executionPath, String fingerprint, int index,
+            SharedRewardKeyedDurability keyed) {
         CompletionStage<SharedRewardResult> chain = CompletableFuture.completedFuture(SharedRewardResult.COMPLETED);
         for (int current = index; current < plan.steps().size(); current++) {
             final int stepIndex = current;
             chain = chain.thenCompose(previous -> previous == SharedRewardResult.DEFERRED
                     ? CompletableFuture.completedFuture(SharedRewardResult.DEFERRED)
-                    : executeStep(plan.steps().get(stepIndex), context, durability, executionPath, fingerprint, stepIndex));
+                    : executeStep(plan.steps().get(stepIndex), context, durability, executionPath, fingerprint, stepIndex, keyed));
         }
         return chain.thenCompose(result -> result != SharedRewardResult.DEFERRED && platform.isShuttingDown()
                 ? failed("Reward platform shut down before execution completed")
@@ -172,7 +193,8 @@ public final class SharedRewardOrchestrator {
     }
 
     private CompletionStage<SharedRewardResult> executeStep(SharedRewardStep step, SharedRewardContext context,
-            SharedRewardDurability durability, String executionPath, String fingerprint, int index) {
+            SharedRewardDurability durability, String executionPath, String fingerprint, int index,
+            SharedRewardKeyedDurability keyed) {
         if (platform.isShuttingDown()) return failed("Reward platform shut down before execution completed");
         if (step.requiresOnlinePlayer() && !platform.isOnline(context.userId())) {
             if (!durability.durable()) return failed("Player became unavailable during non-durable reward step " + step.id());
@@ -188,6 +210,26 @@ public final class SharedRewardOrchestrator {
         }
 
         String stepPath = executionPath + "/" + pathSegment(step.id()) + ":" + index;
+        if (keyed == null) return executeClaimedStep(step, context, durability, executionPath, fingerprint, index, stepPath, false);
+        CompletionStage<SharedRewardActionClaim> claim;
+        try {
+            claim = keyed.claimAction(executionPath, fingerprint, index, context);
+            if (claim == null) return failed("Keyed reward adapter returned null action claim stage");
+        } catch (Throwable failure) {
+            return CompletableFuture.failedFuture(failure);
+        }
+        return claim.thenCompose(result -> {
+            if (result == SharedRewardActionClaim.INDETERMINATE) {
+                return CompletableFuture.failedFuture(new SharedRewardIndeterminateException(executionPath, index));
+            }
+            if (result != SharedRewardActionClaim.STARTED) return failed("Invalid keyed reward action claim");
+            return executeClaimedStep(step, context, durability, executionPath, fingerprint, index, stepPath, true);
+        });
+    }
+
+    private CompletionStage<SharedRewardResult> executeClaimedStep(SharedRewardStep step, SharedRewardContext context,
+            SharedRewardDurability durability, String executionPath, String fingerprint, int index, String stepPath,
+            boolean claimedStrict) {
         CompletionStage<SharedRewardResult> action;
         try {
             action = step.action().execute(context, stepPath);
@@ -200,7 +242,12 @@ public final class SharedRewardOrchestrator {
         return action.thenCompose(result -> {
             if (result == null) return CompletableFuture.failedFuture(
                     new IllegalStateException("Reward step returned null result: " + step.id()));
-            if (result == SharedRewardResult.DEFERRED) return CompletableFuture.completedFuture(SharedRewardResult.DEFERRED);
+            if (result == SharedRewardResult.DEFERRED) {
+                if (claimedStrict) {
+                    return failed("Keyed reward action deferred after it was claimed: " + step.id());
+                }
+                return CompletableFuture.completedFuture(SharedRewardResult.DEFERRED);
+            }
             CompletionStage<Void> checkpoint;
             try {
                 checkpoint = durability.checkpoint(executionPath, fingerprint, index + 1, context);
