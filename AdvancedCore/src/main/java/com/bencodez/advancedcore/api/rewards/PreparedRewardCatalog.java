@@ -3,7 +3,6 @@ package com.bencodez.advancedcore.api.rewards;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
@@ -205,15 +204,25 @@ public final class PreparedRewardCatalog {
 
     private static String encodeRecords(Map<String, PreparedRewardDefinition> direct,
             Map<String, PreparedRewardDefinition> files) {
-        ArrayList<String> records = new ArrayList<>(direct.size() + files.size());
+        StringBuilder records = new StringBuilder();
         for (Map.Entry<String, PreparedRewardDefinition> entry : direct.entrySet()) {
-            records.add("D|" + encodeField(entry.getKey()) + "|"
+            appendRecord(records, "D|" + encodeField(entry.getKey()) + "|"
                     + (entry.getValue() == null ? "" : encodeField(entry.getValue().encode())));
         }
         for (Map.Entry<String, PreparedRewardDefinition> entry : files.entrySet()) {
-            records.add("F|" + encodeField(entry.getKey()) + "|" + encodeField(entry.getValue().encode()));
+            appendRecord(records, "F|" + encodeField(entry.getKey()) + "|" + encodeField(entry.getValue().encode()));
         }
-        return String.join("\n", records);
+        return records.toString();
+    }
+
+    private static void appendRecord(StringBuilder records, String record) {
+        // All record characters are ASCII (the fields use Base64 URL encoding).
+        int nextLength = records.length() + (records.length() == 0 ? 0 : 1) + record.length();
+        if (nextLength > MAX_CATALOG_BYTES) {
+            throw new PreparedRewardDefinitionException("Prepared reward catalog exceeds " + MAX_CATALOG_BYTES + " bytes");
+        }
+        if (records.length() != 0) records.append('\n');
+        records.append(record);
     }
 
     private static String directKeyForLookup(String name) {
@@ -231,7 +240,7 @@ public final class PreparedRewardCatalog {
 
     private static String fileKey(String name) {
         validateKey(name);
-        return RewardRegistry.normalizeLookupName(name);
+        return name;
     }
 
     private static void validateKey(String key) {

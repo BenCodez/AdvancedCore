@@ -23,6 +23,7 @@ import com.bencodez.advancedcore.api.rewards.PreparedRewardCatalog;
 import com.bencodez.advancedcore.api.rewards.PreparedRewardDefinitionException;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
+import com.bencodez.advancedcore.api.rewards.RewardRegistry;
 import com.bencodez.advancedcore.api.rewards.SubDirectlyDefinedReward;
 
 class PreparedRewardCatalogTest {
@@ -161,6 +162,30 @@ class PreparedRewardCatalogTest {
     }
 
     @Test
+    void fileLookupKeepsRawRegisteredNamesDistinctFromNormalizedRequests() {
+        handler.getRewards().add(new Reward("Foo Bar", rewardData("spaced file")));
+        handler.getRewards().add(new Reward("Foo_Bar", rewardData("underscored file")));
+        PreparedRewardCatalog catalog = PreparedRewardCatalog.decode(
+                handler.prepareCatalog(new Reward("Root", rewardData("root"))).encode());
+
+        assertMessage("underscored file", handler.getReward("Foo Bar"));
+        assertMessage("underscored file", catalog.instantiate("Foo Bar"));
+    }
+
+    @Test
+    void combinedDefinitionBytesAreBoundedBeforeJoiningRecords() {
+        String largeValue = "x".repeat(800_000);
+        for (int index = 0; index < 5; index++) {
+            YamlConfiguration data = new YamlConfiguration();
+            data.set("Payload", largeValue);
+            handler.getRewards().add(new Reward("Large" + index, data));
+        }
+
+        assertThrows(PreparedRewardDefinitionException.class,
+                () -> handler.prepareCatalog(new Reward("Root", rewardData("root"))));
+    }
+
+    @Test
     void oldCatalogFormatIsRejectedBeforeRestoringItsDefinitions() {
         assertThrows(PreparedRewardDefinitionException.class,
                 () -> PreparedRewardCatalog.decode("AdvancedCorePreparedRewardCatalog/1/eA/eQ/oldhash"));
@@ -169,18 +194,21 @@ class PreparedRewardCatalogTest {
     @Test
     void rewardFileCaptureWaitsForConcurrentRegistryReload() throws Exception {
         List<Reward> files = handler.getRewards();
-        files.add(new Reward("Available", rewardData("available")));
+        files.add(new Reward("Before", rewardData("before")));
         Reward root = new Reward("Root", rewardData("root"));
+        RewardRegistry registry = handler.getRewardRegistry();
         CountDownLatch lockHeld = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         Thread reload = new Thread(() -> {
-            synchronized (files) {
+            synchronized (registry) {
+                registry.resetRewards();
                 lockHeld.countDown();
                 try {
                     release.await();
                 } catch (InterruptedException failure) {
                     Thread.currentThread().interrupt();
                 }
+                registry.getRewards().add(new Reward("After", rewardData("after")));
             }
         });
         reload.start();
@@ -194,7 +222,9 @@ class PreparedRewardCatalogTest {
             org.junit.jupiter.api.Assertions.assertTrue(captureStarted.await(5, TimeUnit.SECONDS));
             assertThrows(TimeoutException.class, () -> capture.get(100, TimeUnit.MILLISECONDS));
             release.countDown();
-            assertMessage("available", capture.get(5, TimeUnit.SECONDS).instantiate("Available"));
+            PreparedRewardCatalog catalog = capture.get(5, TimeUnit.SECONDS);
+            assertMessage("after", catalog.instantiate("After"));
+            assertThrows(PreparedRewardDefinitionException.class, () -> catalog.instantiate("Before"));
         } finally {
             release.countDown();
             reload.join(5000);
