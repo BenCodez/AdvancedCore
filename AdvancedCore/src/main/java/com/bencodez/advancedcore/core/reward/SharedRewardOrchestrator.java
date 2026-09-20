@@ -202,23 +202,26 @@ public final class SharedRewardOrchestrator {
             SharedRewardDurability durability, String executionPath, String fingerprint, int index,
             SharedRewardKeyedDurability keyed) {
         if (keyed != null) {
+            if (!step.requiresOnlinePlayer()) {
+                return executeStepOnNative(step, context, durability, executionPath, fingerprint, index, keyed, false);
+            }
             try {
-                CompletionStage<SharedRewardResult> dispatched = platform.runClaimedAction(context.userId(),
-                        step.requiresOnlinePlayer(), () -> executeStepOnNative(step, context, durability,
-                                executionPath, fingerprint, index, keyed));
-                return dispatched == null ? failed("Reward platform returned null pre-claim action stage") : dispatched;
+                CompletionStage<Boolean> availability = platform.checkActionAvailability(context.userId());
+                if (availability == null) return failed("Reward platform returned null availability stage");
+                return availability.thenCompose(online -> executeStepOnNative(step, context, durability,
+                        executionPath, fingerprint, index, keyed, Boolean.TRUE.equals(online)));
             } catch (Throwable failure) {
                 return CompletableFuture.failedFuture(failure);
             }
         }
-        return executeStepOnNative(step, context, durability, executionPath, fingerprint, index, null);
+        return executeStepOnNative(step, context, durability, executionPath, fingerprint, index, null, false);
     }
 
     private CompletionStage<SharedRewardResult> executeStepOnNative(SharedRewardStep step, SharedRewardContext context,
             SharedRewardDurability durability, String executionPath, String fingerprint, int index,
-            SharedRewardKeyedDurability keyed) {
+            SharedRewardKeyedDurability keyed, boolean onlineChecked) {
         if (platform.isShuttingDown()) return failed("Reward platform shut down before execution completed");
-        if (step.requiresOnlinePlayer() && !platform.isOnline(context.userId())) {
+        if (step.requiresOnlinePlayer() && (keyed != null ? !onlineChecked : !platform.isOnline(context.userId()))) {
             if (!durability.durable()) return failed("Player became unavailable during non-durable reward step " + step.id());
             CompletionStage<Void> deferred;
             try {

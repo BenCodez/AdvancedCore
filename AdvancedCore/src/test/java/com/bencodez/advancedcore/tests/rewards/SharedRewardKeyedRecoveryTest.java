@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.tests.rewards;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -216,6 +217,7 @@ class SharedRewardKeyedRecoveryTest {
         assertEquals(SharedRewardResult.COMPLETED, execute(platform, store, plan, "vote-b").join());
         assertEquals(2, actions.get());
         assertEquals(5, platform.nativeDispatches);
+        assertEquals(2, platform.claimedDispatches);
         assertEquals(USER, platform.lastDispatchUser);
         assertTrue(platform.lastDispatchRequiresOnline);
     }
@@ -270,6 +272,7 @@ class SharedRewardKeyedRecoveryTest {
         boolean shuttingDown;
         boolean nativeDispatch;
         int nativeDispatches;
+        int claimedDispatches;
         UUID lastDispatchUser;
         boolean lastDispatchRequiresOnline;
         public Instant now() { return Instant.EPOCH; }
@@ -281,9 +284,18 @@ class SharedRewardKeyedRecoveryTest {
         public double nextChanceRoll() { return 0; }
         public CompletionStage<SharedRewardResult> delay(Duration delay,
                 Supplier<CompletionStage<SharedRewardResult>> work) { return work.get(); }
+        public CompletionStage<Boolean> checkActionAvailability(UUID userId) {
+            assertFalse(nativeDispatch);
+            nativeDispatches++;
+            nativeDispatch = true;
+            try { return CompletableFuture.completedFuture(isOnline(userId)); }
+            finally { nativeDispatch = false; }
+        }
         public CompletionStage<SharedRewardResult> runClaimedAction(
                 UUID userId, boolean requiresOnlinePlayer, Supplier<CompletionStage<SharedRewardResult>> operation) {
+            assertFalse(nativeDispatch);
             nativeDispatches++;
+            claimedDispatches++;
             lastDispatchUser = userId;
             lastDispatchRequiresOnline = requiresOnlinePlayer;
             nativeDispatch = true;

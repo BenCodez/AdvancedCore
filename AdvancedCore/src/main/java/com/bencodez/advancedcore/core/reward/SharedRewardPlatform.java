@@ -28,6 +28,16 @@ public interface SharedRewardPlatform {
     boolean isShuttingDown();
 
     /**
+     * Check online availability on the player's owner thread before claiming a
+     * durable action. The returned stage must finish without waiting for the
+     * action or its claim. A false result permits durable offline deferral.
+     */
+    default CompletionStage<Boolean> checkActionAvailability(UUID userId) {
+        return CompletableFuture.failedFuture(new UnsupportedOperationException(
+                "Keyed online rewards require an owner-thread availability check"));
+    }
+
+    /**
      * Run the post-claim state check and native action on the platform's owner
      * thread or scheduler. When {@code requiresOnlinePlayer} is true, route to
      * that player's entity/region owner. Keyed execution fails closed until an
