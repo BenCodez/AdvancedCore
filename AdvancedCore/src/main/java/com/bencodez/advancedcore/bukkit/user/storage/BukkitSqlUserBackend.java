@@ -246,6 +246,12 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         }
     }
 
+    /**
+     * Captures a snapshot of the currently registered user data schema under the
+     * registration lock to ensure consistency during concurrent key additions.
+     *
+     * @return the schema derived from registered user data keys
+     */
     private SqlUserSchema registeredSchema() {
         UserDataManager dataManager = plugin.getUserManager().getDataManager();
         List<UserDataKey> keys;
@@ -255,6 +261,11 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         return SqlUserSchema.fromKeys(keys);
     }
 
+    /**
+     * Creates a logger adapter that bridges SQL backend events to the plugin logger.
+     *
+     * @return a logger that forwards info and warning messages to the plugin's logger
+     */
     private SqlBackendLogger sqlLogger() {
         return new SqlBackendLogger() {
             @Override public void info(String message) { plugin.getLogger().info(message); }
@@ -264,6 +275,14 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         };
     }
 
+    /**
+     * Reconciles the MySQL user table schema with the registered schema, using cached
+     * signatures to avoid redundant reconciliation. Ensures thread-safe reconciliation
+     * through double-checked locking.
+     *
+     * @param schema the target schema to reconcile against
+     * @param logger the logger for reconciliation events
+     */
     private void reconcileMysqlSchema(SqlUserSchema schema, SqlBackendLogger logger) {
         String signature = schemaSignature(schema);
         if (signature.equals(reconciledMysqlSchemaSignature)) return;
@@ -274,6 +293,12 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         }
     }
 
+    /**
+     * Computes a deterministic signature string from a schema's columns for equality checks.
+     *
+     * @param schema the schema to generate a signature for
+     * @return a signature string encoding column names, SQL types, and data types
+     */
     private static String schemaSignature(SqlUserSchema schema) {
         StringBuilder signature = new StringBuilder();
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) {

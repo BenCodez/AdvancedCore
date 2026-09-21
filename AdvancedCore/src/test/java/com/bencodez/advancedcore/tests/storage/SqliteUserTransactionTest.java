@@ -55,12 +55,23 @@ class SqliteUserTransactionTest {
     @TempDir Path tempDir;
     private static final UserStorage TYPE = UserStorage.SQLITE;
 
+    /**
+     * Creates a SQLite backend for testing with Points and Votes columns.
+     *
+     * @return a new SQLite backend instance
+     */
     private SqliteUserBackend backend() {
         return new SqliteUserBackend(tempDir, "Users", "Users", SqlUserSchema.builder()
                 .column("Points", "INTEGER", DataType.INTEGER)
                 .column("Votes", "INTEGER", DataType.INTEGER).build(), SqlBackendLogger.NO_OP);
     }
 
+    /**
+     * Creates a Receipts table for tracking transaction idempotency.
+     *
+     * @param file the database file path
+     * @throws SQLException if table creation fails
+     */
     private void createReceipts(Path file) throws SQLException {
         try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + file);
              PreparedStatement statement = connection.prepareStatement(
@@ -69,11 +80,25 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Extracts an integer value from a row by column name.
+     *
+     * @param row the row data
+     * @param key the column name
+     * @return the integer value
+     */
     private static int value(List<Column> row, String key) {
         return row.stream().filter(column -> key.equalsIgnoreCase(column.getName()))
                 .findFirst().orElseThrow().getValue().getInt();
     }
 
+    /**
+     * Inserts a receipt record with the given key.
+     *
+     * @param connection the database connection
+     * @param key the operation key
+     * @throws SQLException if insertion fails
+     */
     private static void insert(Connection connection, String key) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "INSERT INTO Receipts (operation_key, intent) VALUES (?, ?)")) {
@@ -83,6 +108,14 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Checks if a receipt with the given key exists.
+     *
+     * @param connection the database connection
+     * @param key the operation key
+     * @return true if the receipt exists
+     * @throws SQLException if query fails
+     */
     private static boolean receipt(Connection connection, String key) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT intent FROM Receipts WHERE operation_key=?")) {
@@ -93,6 +126,13 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Creates a map of user values for Points and Votes.
+     *
+     * @param points the points value
+     * @param votes the votes value
+     * @return a map of column names to data values
+     */
     private static HashMap<String, DataValue> values(int points, int votes) {
         HashMap<String, DataValue> values = new HashMap<>();
         values.put("Points", new DataValueInt(points));
@@ -100,6 +140,11 @@ class SqliteUserTransactionTest {
         return values;
     }
 
+    /**
+     * Verifies that user data and caller receipts are committed atomically and persist across restarts.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void commitsUserValuesAndCallerReceiptTogetherAcrossRestart() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend backend = backend()) {
@@ -119,6 +164,9 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that transaction scope correctly reports whether it created a new user row.
+     */
     @Test void transactionScopeReportsWhetherItCreatedTheUserRow() {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend backend = backend()) {
@@ -127,6 +175,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that transactions roll back correctly regardless of when failures occur,
+     * including before or after user writes and with new user creation.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void rollsBackBothFailureOrders() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend backend = backend()) {
@@ -165,6 +219,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that concurrent duplicate operations result in exactly one application,
+     * with one succeeding and one receiving a duplicate indicator, ensuring idempotency.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void concurrentDuplicateAndLostAcknowledgementApplyOnce() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend backend = backend(); SqliteUserBackend otherBackend = backend()) {
@@ -205,6 +265,13 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Attempts to apply an idempotent operation, returning false if already applied.
+     *
+     * @param user the user storage
+     * @param key the operation key for idempotency tracking
+     * @return true if applied, false if already present
+     */
     private static boolean applyOnce(SqlUserStorage user, String key) {
         return user.transaction(TYPE, scope -> {
             if (receipt(scope.connection(), key)) return false;
@@ -215,6 +282,12 @@ class SqliteUserTransactionTest {
         });
     }
 
+    /**
+     * Verifies that the runtime only publishes successfully committed values to the cache,
+     * not rolled-back changes.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void runtimePublishesOnlyCommittedValuesToItsCacheOwner() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend backend = backend()) {
@@ -243,6 +316,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that the production Bukkit SQLite path can commit caller-specific records
+     * alongside user data changes atomically.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void productionBukkitSqliteRouteCanCommitCallerRecordWithUserValues() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend standalone = backend()) {
@@ -280,6 +359,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that transaction receipts are returned even when cache retirement fails,
+     * ensuring callers receive acknowledgment of committed work.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void committedReceiptIsReturnedWhenCacheRetirementFails() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend backend = backend()) {
@@ -308,6 +393,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that cache flush failures prevent caller transactions from executing,
+     * ensuring consistency when pending cache changes cannot be written.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void productionCacheFlushFailureStopsCallerTransaction() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend standalone = backend()) {
@@ -355,6 +446,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that the first cache flush for a new user supplies all required columns,
+     * including dynamically created ones and seeded initial values.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void productionFirstCacheFlushSuppliesRequiredColumns() throws Exception {
         UUID uuid = UUID.randomUUID();
         String url = "jdbc:sqlite:" + tempDir.resolve("required-users.db");
@@ -415,6 +512,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that MySQL route publishes user identity only after successful commit,
+     * not on rollback, ensuring cache consistency.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void productionMysqlRoutePublishesIdentityOnlyAfterCommit() throws Exception {
         UUID uuid = UUID.randomUUID();
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
@@ -454,6 +557,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that committed user identity changes invalidate stale name caches,
+     * ensuring fresh queries after user updates.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void committedMysqlIdentityInvalidatesStaleNameCache() throws Exception {
         MySQL mysql = mock(MySQL.class, CALLS_REAL_METHODS);
         Set<String> names = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -477,6 +586,12 @@ class SqliteUserTransactionTest {
         assertEquals(Set.of("New"), mysql.getNames());
     }
 
+    /**
+     * Verifies that concurrent native name refresh operations cannot reinsert old names
+     * after a commit has invalidated them, preventing stale cache entries.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void nativeNameRefreshCannotReinsertOldNameAfterCommit() throws Exception {
         MySQL mysql = mock(MySQL.class, CALLS_REAL_METHODS);
         Set<String> names = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -522,6 +637,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that transactions fence bypass publishers during execution and reopen
+     * the cache after rollback, maintaining proper isolation.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void transactionFencesBypassPublishersAndReopensCacheAfterRollback() throws Exception {
         UUID uuid = UUID.randomUUID();
         try (SqliteUserBackend backend = backend()) {
@@ -561,6 +682,12 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Verifies that required row prerequisites allow queued cache changes to be flushed
+     * before atomic transaction work, ensuring proper initialization order.
+     *
+     * @throws Exception if test execution fails
+     */
     @Test void requiredRowPrerequisiteAllowsQueuedCacheFlushBeforeAtomicWork() throws Exception {
         UUID uuid = UUID.randomUUID();
         SqlUserSchema schema = SqlUserSchema.builder()
@@ -604,6 +731,9 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Simple in-memory cache owner implementation for testing.
+     */
     private static class SimpleCacheOwner implements UserCacheOwner {
         private final Map<UUID, HashMap<String, DataValue>> cached = new java.util.concurrent.ConcurrentHashMap<>();
         @Override public boolean isCached(UUID uuid) { return cached.containsKey(uuid); }
@@ -620,12 +750,18 @@ class SqliteUserTransactionTest {
         @Override public void shutdown() {}
     }
 
+    /**
+     * Cache owner that fails on removal to test committed failure handling.
+     */
     private static final class FailingRetirementCacheOwner extends SimpleCacheOwner {
         private Throwable committedFailure;
         @Override public void remove(UUID uuid) { throw new IllegalStateException("cache retirement failed"); }
         @Override public void reportCommittedFailure(UUID uuid, Throwable failure) { committedFailure = failure; }
     }
 
+    /**
+     * Cache owner that tracks removal fencing and queued work state.
+     */
     private static final class FencedCacheOwner extends SimpleCacheOwner {
         private boolean removing;
         private boolean queued;
@@ -643,6 +779,9 @@ class SqliteUserTransactionTest {
         }
     }
 
+    /**
+     * Cache owner that tracks pending changes requiring flush before removal.
+     */
     private static final class PendingCacheOwner extends SimpleCacheOwner {
         private final HashMap<String, DataValue> pending = new HashMap<>();
         @Override public boolean hasPendingChanges(UUID uuid) { return !pending.isEmpty(); }
