@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.data;
 
 import java.io.File;
+import java.time.Month;
 
 import org.bukkit.plugin.Plugin;
 
@@ -161,8 +162,33 @@ public class ServerData extends YMLFile {
 		String id = getData().getString(path + ".Id", "");
 		String period = getData().getString(path + ".Period", "");
 		String marker = getData().getString(path + ".Marker", "");
-		if (id.isEmpty() || period.isEmpty() || marker.isEmpty()) return null;
+		if (id.isEmpty() || period.isEmpty() || !isValidMarker(type, marker)) {
+			getData().set(path + ".Pending", false);
+			saveData();
+			return null;
+		}
 		return new TimeChangeTransitionState(type, id, period, marker, true);
+	}
+
+	private boolean isValidMarker(TimeType type, String marker) {
+		try {
+			return switch (type) {
+			case DAY -> {
+				int value = Integer.parseInt(marker);
+				yield value >= 1 && value <= 31;
+			}
+			case WEEK -> {
+				int value = Integer.parseInt(marker);
+				yield value >= 1 && value <= 53;
+			}
+			case MONTH -> {
+				Month.valueOf(marker);
+				yield true;
+			}
+			};
+		} catch (IllegalArgumentException invalid) {
+			return false;
+		}
 	}
 
 	/**

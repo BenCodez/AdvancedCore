@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.tests.time;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -19,6 +20,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.IsoFields;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
@@ -194,13 +197,96 @@ public class TimeCheckerTest {
 		CompletionStage<Void> drain = checker.beginShutdown();
 		assertFalse(drain.toCompletableFuture().isDone());
 		assertNotNull(lease.get());
-		assertTrue(observed.get().isCancellationRequested());
+		assertFalse(observed.get().isCancellationRequested(),
+				"normal shutdown must give admitted work its bounded completion grace");
 		checker.abortActiveTransitions();
+		assertTrue(observed.get().isCancellationRequested());
 		lease.get().complete();
 
 		assertTrue(drain.toCompletableFuture().isDone());
 		verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
 		verify(serverDataFile, Mockito.atLeastOnce()).failTimeChangeTransition(transition);
+	}
+
+	@Test
+	public void shutdownAdmissionStopDoesNotReplaySuccessfullyFinishingWork() {
+		TimeChangeTransitionState transition = transitionState();
+		PluginManager pluginManager = configureDetectedDay(transition);
+		AtomicReference<TimeChangeTransition.Lease> lease = new AtomicReference<>();
+		Mockito.doAnswer(call -> {
+			if (call.getArgument(0) instanceof DayChangeEvent day) lease.set(day.getTransition().retain());
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		TimeChecker checker = new TimeChecker(plugin, Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+
+		checker.update();
+		CompletionStage<Void> drain = checker.beginShutdown();
+		lease.get().complete();
+
+		assertTrue(drain.toCompletableFuture().isDone());
+		verify(serverDataFile).completeTimeChangeTransition(transition);
+		verify(serverDataFile, Mockito.never()).failTimeChangeTransition(any());
+	}
+
+	@Test
+	public void concurrentManualTransitionsAreSerializedRatherThanDropped() throws Exception {
+		PluginManager pluginManager = configureDetectedDay(transitionState());
+		CountDownLatch firstEntered = new CountDownLatch(1);
+		CountDownLatch releaseFirst = new CountDownLatch(1);
+		CountDownLatch weekObserved = new CountDownLatch(1);
+		Mockito.doAnswer(call -> {
+			Event event = call.getArgument(0);
+			if (event instanceof DayChangeEvent) {
+				firstEntered.countDown();
+				assertTrue(releaseFirst.await(2, TimeUnit.SECONDS));
+			} else if (event instanceof com.bencodez.advancedcore.api.time.events.WeekChangeEvent) {
+				weekObserved.countDown();
+			}
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		TimeChecker checker = new TimeChecker(plugin);
+		Thread first = new Thread(() -> checker.forceChanged(TimeType.DAY, true, false, false));
+		Thread second = new Thread(() -> checker.forceChanged(TimeType.WEEK, true, false, false));
+
+		first.start();
+		assertTrue(firstEntered.await(2, TimeUnit.SECONDS));
+		second.start();
+		assertFalse(weekObserved.await(100, TimeUnit.MILLISECONDS));
+		releaseFirst.countDown();
+		first.join(2_000);
+		second.join(2_000);
+
+		assertFalse(first.isAlive());
+		assertFalse(second.isAlive());
+		assertTrue(weekObserved.await(2, TimeUnit.SECONDS));
+	}
+
+	@Test
+	public void fatalListenerErrorRemainsPendingAndPropagates() {
+		TimeChangeTransitionState transition = transitionState();
+		PluginManager pluginManager = configureDetectedDay(transition);
+		AssertionError fatal = new AssertionError("fatal listener failure");
+		Mockito.doAnswer(call -> {
+			if (call.getArgument(0) instanceof DayChangeEvent) throw fatal;
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		TimeChecker checker = new TimeChecker(plugin, Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+
+		assertEquals(fatal, assertThrows(AssertionError.class, checker::update));
+		verify(serverDataFile).failTimeChangeTransition(transition);
+		verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
+	}
+
+	@Test
+	public void pendingTransitionIsRecoveredBeforeOneTimeIgnoreMarkersAdvance() {
+		TimeChangeTransitionState transition = transitionState();
+		configurePendingTransition(TimeType.DAY, transition);
+		when(serverDataFile.isIgnoreTime()).thenReturn(true);
+
+		new TimeChecker(plugin, Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC)).update();
+
+		verify(serverDataFile).completeTimeChangeTransition(transition);
+		verify(serverDataFile, Mockito.never()).setIgnoreTime(false);
 	}
 
 	@Test

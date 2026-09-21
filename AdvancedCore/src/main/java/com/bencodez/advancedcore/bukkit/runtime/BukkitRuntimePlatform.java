@@ -21,7 +21,9 @@ import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 public final class BukkitRuntimePlatform implements RuntimePlatform {
     private final AdvancedCorePlugin plugin;
     private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
+	private CompletionStage<Void> startedUserStorageRetirement;
 	private volatile CompletionStage<Void> timeChangeRetirement = CompletableFuture.completedFuture(null);
+	private final Object userStorageRetirementLock = new Object();
     private final AtomicBoolean userStorageOwnerClosed = new AtomicBoolean();
 
     public BukkitRuntimePlatform(AdvancedCorePlugin plugin) {
@@ -66,6 +68,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 	@Override public void beforeForcedTimeTimerShutdown() {
 		TimeChecker checker = plugin.getTimeChecker();
 		if (checker != null) checker.abortActiveTransitions();
+		ensureUserStorageRetirementStarted();
 	}
 	@Override public boolean canBlockForPreExecutorShutdown() {
 		return Bukkit.getServer() == null || !Bukkit.isPrimaryThread();
@@ -120,13 +123,22 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 		if (timeRetirement.toCompletableFuture().isDone()) {
 			try {
 				timeRetirement.toCompletableFuture().join();
-				userStorageRetirement = closeUserStorageAfterSharedRetirement();
+				userStorageRetirement = ensureUserStorageRetirementStarted();
 			} catch (java.util.concurrent.CompletionException failure) {
 				userStorageRetirement = CompletableFuture.failedFuture(failure);
 			}
 			return;
 		}
-		userStorageRetirement = timeRetirement.thenCompose(ignored -> closeUserStorageAfterSharedRetirement());
+		userStorageRetirement = timeRetirement.thenCompose(ignored -> ensureUserStorageRetirementStarted());
+	}
+
+	private CompletionStage<Void> ensureUserStorageRetirementStarted() {
+		synchronized (userStorageRetirementLock) {
+			if (startedUserStorageRetirement == null) {
+				startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
+			}
+			return startedUserStorageRetirement;
+		}
 	}
 
 	private CompletionStage<Void> closeUserStorageAfterSharedRetirement() {

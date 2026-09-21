@@ -457,6 +457,36 @@ class CoreRuntimeTest {
 		assertTrue(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
 	}
 
+	@Test void bukkitAdapterStartsStorageRetirementWhenTimeTransitionWatchdogFires() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		TimeChecker checker = mock(TimeChecker.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		CompletableFuture<Void> transitionDrain = new CompletableFuture<>();
+		CompletableFuture<Void> storageRetirement = new CompletableFuture<>();
+		when(plugin.getTimeChecker()).thenReturn(checker);
+		when(checker.beginShutdown()).thenReturn(transitionDrain);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(storageRetirement);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("time change admission"))
+				.findFirst().orElseThrow().action().run();
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+
+		platform.beforeForcedTimeTimerShutdown();
+
+		verify(checker).abortActiveTransitions();
+		verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
+	}
+
 	@Test void bukkitAdapterClosesTheCapturedMysqlOwnerAfterConfigurationChanges() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		MySQL mysql = mock(MySQL.class);

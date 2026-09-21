@@ -61,7 +61,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			return;
 		}
 		try {
-			currentTimer.execute(() -> startTransition(time, true, true, true, null));
+			currentTimer.execute(() -> forceChanged(time, true, true, true));
 		} catch (RejectedExecutionException rejected) {
 			plugin.debug("Ignoring forced time change while the checker is shutting down");
 		}
@@ -69,7 +69,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 
 	/** Executes a legacy/manual transition synchronously without a durable marker. */
 	public void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
-		startTransition(time, fake, preDate, postDate, null);
+		startTransition(time, fake, preDate, postDate, null, true);
 	}
 
 	/**
@@ -77,14 +77,11 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	 * already admitted work has durably recorded success or recovery state.
 	 */
 	public CompletionStage<Void> beginShutdown() {
-		ActiveTransition active;
 		synchronized (transitionLock) {
 			acceptingTransitions = false;
-			active = activeTransition;
-			if (active != null) cancel(active, "Time transition was cancelled because plugin shutdown began");
+			transitionLock.notifyAll();
+			return noActiveTransition;
 		}
-		if (active != null) persistFailure(active);
-		return noActiveTransition;
 	}
 
 	/**
@@ -216,13 +213,6 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	public void update() {
 		if (plugin == null) return;
 		if (hasTimeOffSet()) plugin.extraDebug("TimeHourOffSet: " + getTime().getHour() + ":" + getTime().getMinute());
-		if (plugin.getServerDataFile().isIgnoreTime()) {
-			hasDayChanged(true);
-			hasMonthChanged(true);
-			hasWeekChanged(true);
-			plugin.getServerDataFile().setIgnoreTime(false);
-			plugin.getLogger().info("Ignoring time change events for one time only");
-		}
 		if (isActiveProcessing()) return;
 		for (TimeType type : new TimeType[] { TimeType.MONTH, TimeType.WEEK, TimeType.DAY }) {
 			TimeChangeTransitionState pending = plugin.getServerDataFile().getPendingTimeChangeTransition(type);
@@ -231,6 +221,14 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				startDetectedTransition(type, pending);
 				return;
 			}
+		}
+		if (plugin.getServerDataFile().isIgnoreTime()) {
+			hasDayChanged(true);
+			hasMonthChanged(true);
+			hasWeekChanged(true);
+			plugin.getServerDataFile().setIgnoreTime(false);
+			plugin.getLogger().info("Ignoring time change events for one time only");
+			return;
 		}
 
 		if (hasMonthChanged(false)) {
@@ -261,9 +259,20 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	}
 
 	private void startTransition(TimeType type, boolean fake, boolean preDate, boolean postDate, DurableTransition durable) {
+		startTransition(type, fake, preDate, postDate, durable, false);
+	}
+
+	private void startTransition(TimeType type, boolean fake, boolean preDate, boolean postDate,
+			DurableTransition durable, boolean waitForTurn) {
 		if (type == null) return;
 		ActiveTransition active;
+		boolean interrupted = false;
 		synchronized (transitionLock) {
+			while (waitForTurn && acceptingTransitions && activeTransition != null) {
+				try { transitionLock.wait(); }
+				catch (InterruptedException interruption) { interrupted = true; }
+			}
+			if (interrupted) Thread.currentThread().interrupt();
 			if (!acceptingTransitions) {
 				if (durable != null) persistFailure(durable.persisted);
 				return;
@@ -305,16 +314,20 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				plugin.getServer().getPluginManager().callEvent(event);
 			}
 			plugin.debug("Finished executing time change events: " + type);
-		} catch (Throwable thrown) {
+		} catch (RuntimeException thrown) {
 			failure = thrown;
 			plugin.getLogger().warning("Failed to process time change " + type + ": " + thrown.getMessage());
 			plugin.debug(thrown);
+		} catch (Error fatal) {
+			failure = fatal;
+			throw fatal;
 		} finally {
 			finish(active, failure);
 		}
 	}
 
 	private void finish(ActiveTransition active, Throwable failure) {
+		CompletableFuture<Void> drained;
 		synchronized (transitionLock) {
 			if (active.finished) return;
 			if (failure != null) {
@@ -323,31 +336,35 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			}
 			if (--active.participants > 0) return;
 			active.finished = true;
-			try {
-				if (active.persisted != null) {
-					if (!active.failed) {
-						plugin.getServerDataFile().completeTimeChangeTransition(active.persisted);
-						plugin.getLogger().info("Finished processing " + active.type + " changes");
-					} else {
-						persistFailure(active);
-						Throwable cause = active.failure;
-						plugin.getLogger().warning("Time change " + active.type + " remains pending for retry"
-								+ (cause == null ? "" : ": " + cause.getClass().getSimpleName()
-										+ (cause.getMessage() == null ? "" : ": " + cause.getMessage())));
-					}
+		}
+		try {
+			if (active.persisted != null) {
+				if (!active.failed) {
+					plugin.getServerDataFile().completeTimeChangeTransition(active.persisted);
+					plugin.getLogger().info("Finished processing " + active.type + " changes");
+				} else {
+					persistFailure(active);
+					Throwable cause = active.failure;
+					plugin.getLogger().warning("Time change " + active.type + " remains pending for retry"
+							+ (cause == null ? "" : ": " + cause.getClass().getSimpleName()
+									+ (cause.getMessage() == null ? "" : ": " + cause.getMessage())));
 				}
-			} catch (Throwable persistenceFailure) {
-				persistFailure(active);
-				plugin.getLogger().warning("Failed to record time change transition "
-						+ (active.transition == null ? "" : active.transition.getId()) + ": " + persistenceFailure.getMessage());
-				plugin.debug(persistenceFailure);
-			} finally {
+			}
+		} catch (RuntimeException persistenceFailure) {
+			persistFailure(active);
+			plugin.getLogger().warning("Failed to record time change transition "
+					+ (active.transition == null ? "" : active.transition.getId()) + ": " + persistenceFailure.getMessage());
+			plugin.debug(persistenceFailure);
+		} finally {
+			synchronized (transitionLock) {
 				if (activeTransition == active) {
 					activeTransition = null;
 					activeProcessing = false;
 				}
-				noActiveTransition.complete(null);
+				drained = noActiveTransition;
+				transitionLock.notifyAll();
 			}
+			drained.complete(null);
 		}
 	}
 
