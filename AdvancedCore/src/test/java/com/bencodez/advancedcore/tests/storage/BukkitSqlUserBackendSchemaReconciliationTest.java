@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.tests.storage;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -17,6 +18,7 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 import org.junit.jupiter.api.Test;
@@ -90,6 +92,22 @@ class BukkitSqlUserBackendSchemaReconciliationTest {
 
         verify(fixture.mysql, times(2)).update(eq(uuid.toString()), eq("LastVotes"), any());
         verify(fixture.mysql).update(eq(uuid.toString()), eq("VoteStreakProgress_daily"), any());
+    }
+
+    @Test
+    void registeredSchemaCopiesKeysUnderTheRegistrationLock() {
+        Fixture fixture = new Fixture();
+        AtomicBoolean accessedUnderLock = new AtomicBoolean();
+        when(fixture.dataManager.getKeys()).thenAnswer(ignored -> {
+            accessedUnderLock.set(Thread.holdsLock(fixture.dataManager));
+            return fixture.keys;
+        });
+
+        try (MockedStatic<MysqlUserBackend> reconciler = mockStatic(MysqlUserBackend.class)) {
+            fixture.backend().user(UUID.randomUUID()).write(UserStorage.MYSQL, "LastVotes", new DataValueString("{}"));
+        }
+
+        assertTrue(accessedUnderLock.get());
     }
 
     private static final class Fixture {

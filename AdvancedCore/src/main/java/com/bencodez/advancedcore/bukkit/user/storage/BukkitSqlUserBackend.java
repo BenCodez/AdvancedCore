@@ -12,6 +12,8 @@ import java.sql.SQLException;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
@@ -245,7 +247,12 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
     }
 
     private SqlUserSchema registeredSchema() {
-        return SqlUserSchema.fromKeys(plugin.getUserManager().getDataManager().getKeys());
+        UserDataManager dataManager = plugin.getUserManager().getDataManager();
+        List<UserDataKey> keys;
+        synchronized (dataManager) {
+            keys = new ArrayList<>(dataManager.getKeys());
+        }
+        return SqlUserSchema.fromKeys(keys);
     }
 
     private SqlBackendLogger sqlLogger() {
