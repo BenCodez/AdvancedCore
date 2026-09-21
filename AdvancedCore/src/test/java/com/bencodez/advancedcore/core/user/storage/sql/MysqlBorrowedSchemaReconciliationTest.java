@@ -30,6 +30,12 @@ import com.bencodez.simpleapi.sql.mysql.ConnectionManager;
 import com.bencodez.simpleapi.sql.mysql.DbType;
 
 class MysqlBorrowedSchemaReconciliationTest {
+    /**
+     * Verifies that reconciling a table with only a UUID column adds all registered schema columns
+     * without enumerating existing users, and that subsequent reconciliations are idempotent.
+     *
+     * @throws Exception if test setup or assertions fail
+     */
     @Test
     void proxyFirstUuidOnlyTableGetsVotingPluginColumnsWithRegisteredDefinitions() throws Exception {
         Fixture fixture = new Fixture();
@@ -57,6 +63,11 @@ class MysqlBorrowedSchemaReconciliationTest {
         fixture.assertJdbcClosed();
     }
 
+    /**
+     * Verifies that reconciling a table with some columns already present only adds the missing ones.
+     *
+     * @throws Exception if test setup or assertions fail
+     */
     @Test
     void partiallyExistingRegisteredSchemaAddsOnlyTheMissingColumn() throws Exception {
         Fixture fixture = new Fixture();
@@ -74,6 +85,12 @@ class MysqlBorrowedSchemaReconciliationTest {
         fixture.assertJdbcClosed();
     }
 
+    /**
+     * Verifies that a duplicate column error during DDL is tolerated if a subsequent physical
+     * inspection confirms the column now exists, handling concurrent schema modifications.
+     *
+     * @throws Exception if test setup or assertions fail
+     */
     @Test
     void duplicateColumnRaceIsAcceptedOnlyAfterPhysicalRecheck() throws Exception {
         Fixture fixture = new Fixture();
@@ -88,6 +105,12 @@ class MysqlBorrowedSchemaReconciliationTest {
         fixture.assertJdbcClosed();
     }
 
+    /**
+     * Verifies that a duplicate column error without a corresponding physical column remains
+     * a fatal exception, preventing false-positive recovery.
+     *
+     * @throws Exception if test setup or assertions fail
+     */
     @Test
     void duplicateColumnResponseWithoutPhysicalColumnStillFails() throws Exception {
         Fixture fixture = new Fixture();
@@ -103,6 +126,12 @@ class MysqlBorrowedSchemaReconciliationTest {
         fixture.assertJdbcClosed();
     }
 
+    /**
+     * Verifies that non-duplicate DDL errors remain fatal even if the column appears,
+     * ensuring proper error handling for permission and other database issues.
+     *
+     * @throws Exception if test setup or assertions fail
+     */
     @Test
     void unrelatedDdlFailureRemainsFatalEvenIfColumnAppears() throws Exception {
         Fixture fixture = new Fixture();
@@ -119,6 +148,11 @@ class MysqlBorrowedSchemaReconciliationTest {
         fixture.assertJdbcClosed();
     }
 
+    /**
+     * Creates a sample schema with columns typical of a voting plugin.
+     *
+     * @return a schema with LastVotes and VoteRemindersMap columns
+     */
     private static SqlUserSchema votingPluginSchema() {
         return SqlUserSchema.builder()
                 .column("LastVotes", "TEXT", DataType.STRING)
@@ -138,12 +172,23 @@ class MysqlBorrowedSchemaReconciliationTest {
         SQLException addFailure;
         boolean columnAppearsOnFailure;
 
+        /**
+         * Initializes test fixtures with mocked MySQL connection infrastructure.
+         *
+         * @throws SQLException if mock setup fails
+         */
         Fixture() throws SQLException {
             when(mysql.getConnectionManager()).thenReturn(manager);
             when(manager.getDbType()).thenReturn(DbType.MARIADB);
             when(manager.getConnection()).thenAnswer(ignored -> connection());
         }
 
+        /**
+         * Creates a mocked connection that simulates DDL operations and result sets.
+         *
+         * @return a mocked connection with prepared statement behavior
+         * @throws SQLException if mock setup fails
+         */
         private Connection connection() throws SQLException {
             Connection connection = mock(Connection.class);
             connections.add(connection);
@@ -171,6 +216,13 @@ class MysqlBorrowedSchemaReconciliationTest {
             return connection;
         }
 
+        /**
+         * Creates a mocked result set appropriate for the given query type.
+         *
+         * @param query the SQL query to mock results for
+         * @return a mocked result set with query-appropriate data
+         * @throws SQLException if mock setup fails
+         */
         private ResultSet resultFor(String query) throws SQLException {
             ResultSet result = mock(ResultSet.class);
             results.add(result);
@@ -193,6 +245,12 @@ class MysqlBorrowedSchemaReconciliationTest {
             return result;
         }
 
+        /**
+         * Extracts the column name from an ALTER TABLE ADD COLUMN statement.
+         *
+         * @param query the DDL query containing an ADD COLUMN clause
+         * @return the column name being added
+         */
         private String addedColumn(String query) {
             String marker = " ADD COLUMN `";
             int start = query.indexOf(marker);
@@ -203,11 +261,19 @@ class MysqlBorrowedSchemaReconciliationTest {
             return query.substring(start, end);
         }
 
+        /**
+         * Verifies that the borrowed connection pool was never closed during reconciliation.
+         */
         void assertBorrowedPoolOpen() {
             verify(mysql, never()).disconnect();
             verify(manager, never()).close();
         }
 
+        /**
+         * Verifies that all JDBC resources (connections, statements, result sets) were properly closed.
+         *
+         * @throws SQLException if verification fails
+         */
         void assertJdbcClosed() throws SQLException {
             for (Connection connection : connections) verify(connection, atLeastOnce()).close();
             for (PreparedStatement statement : statements) verify(statement, atLeastOnce()).close();

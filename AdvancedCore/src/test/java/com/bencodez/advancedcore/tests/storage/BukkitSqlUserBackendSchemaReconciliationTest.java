@@ -40,6 +40,10 @@ import com.bencodez.simpleapi.sql.mysql.ConnectionManager;
 import com.bencodez.simpleapi.sql.mysql.DbType;
 
 class BukkitSqlUserBackendSchemaReconciliationTest {
+    /**
+     * Verifies that schema reconciliation failures prevent user data writes from proceeding,
+     * ensuring database integrity when DDL operations fail.
+     */
     @Test
     void registeredSchemaFailureStopsBulkWriteBeforeSharedSqlIsAdmitted() {
         Fixture fixture = new Fixture();
@@ -64,6 +68,10 @@ class BukkitSqlUserBackendSchemaReconciliationTest {
         }
     }
 
+    /**
+     * Verifies that schema reconciliation is cached for identical schemas but triggers
+     * again when new keys are registered, balancing performance with correctness.
+     */
     @Test
     void unchangedSchemaIsCachedButLateRegisteredKeyForcesReconciliation() {
         Fixture fixture = new Fixture();
@@ -94,6 +102,10 @@ class BukkitSqlUserBackendSchemaReconciliationTest {
         verify(fixture.mysql).update(eq(uuid.toString()), eq("VoteStreakProgress_daily"), any());
     }
 
+    /**
+     * Verifies that the registered schema snapshot is captured under the data manager's
+     * synchronization lock to prevent concurrent modification races.
+     */
     @Test
     void registeredSchemaCopiesKeysUnderTheRegistrationLock() {
         Fixture fixture = new Fixture();
@@ -121,6 +133,9 @@ class BukkitSqlUserBackendSchemaReconciliationTest {
         final Logger logger = mock(Logger.class);
         final ArrayList<UserDataKey> keys = new ArrayList<>();
 
+        /**
+         * Initializes test fixtures with mocked plugin and storage infrastructure.
+         */
         Fixture() {
             keys.add(new UserDataKeyString("LastVotes"));
             keys.add(new UserDataKeyString("VoteRemindersMap").setColumnType("LONGTEXT"));
@@ -136,6 +151,11 @@ class BukkitSqlUserBackendSchemaReconciliationTest {
             when(connectionManager.getDbType()).thenReturn(DbType.MARIADB);
         }
 
+        /**
+         * Creates a backend instance using the mocked plugin infrastructure.
+         *
+         * @return a new BukkitSqlUserBackend for testing
+         */
         BukkitSqlUserBackend backend() {
             return new BukkitSqlUserBackend(plugin);
         }

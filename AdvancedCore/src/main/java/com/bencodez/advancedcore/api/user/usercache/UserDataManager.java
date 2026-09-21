@@ -633,6 +633,12 @@ public class UserDataManager {
 		}, 60 * 3, 60 * 60, TimeUnit.SECONDS);
 	}
 
+	/**
+	 * Registers a user data key with the manager. This method is synchronized to ensure
+	 * thread-safe registration when keys are added concurrently with SQL schema snapshot operations.
+	 *
+	 * @param userDataKey the key to register
+	 */
 	public synchronized void addKey(UserDataKey userDataKey) {
 		keys.add(userDataKey);
 		if (userDataKey instanceof UserDataKeyInt) intColumns.add(userDataKey.getKey());
