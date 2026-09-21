@@ -38,6 +38,7 @@ import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.core.user.runtime.SharedUserDataRuntime;
 import com.bencodez.advancedcore.core.user.runtime.UserCacheOwner;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
+import com.bencodez.advancedcore.core.user.storage.sql.MysqlUserBackend;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlBackendLogger;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserSchema;
 import com.bencodez.advancedcore.core.user.storage.sql.SqliteUserBackend;
@@ -434,19 +435,23 @@ class SqliteUserTransactionTest {
         when(exists.executeQuery()).thenReturn(existsResult);
         when(existsResult.next()).thenReturn(true);
         BukkitSqlUserBackend backend = new BukkitSqlUserBackend(plugin, UserStorage.MYSQL, mysql, null);
-        assertEquals("accepted", backend.user(uuid).transaction(UserStorage.MYSQL, scope -> "accepted"));
-        org.mockito.InOrder order = inOrder(connection, mysql);
-        order.verify(connection).commit();
-        order.verify(mysql).recordCommittedUser(uuid, false);
-        clearInvocations(connection, mysql);
-        assertEquals("named", backend.user(uuid).transaction(UserStorage.MYSQL,
-                Map.of("PlayerName", new DataValueString("New")), scope -> "named"));
-        verify(mysql).recordCommittedUser(uuid, false);
-        clearInvocations(connection, mysql);
-        assertThrows(IllegalStateException.class, () -> backend.user(uuid).transaction(UserStorage.MYSQL,
-                scope -> { throw new SQLException("receipt failed"); }));
-        verify(connection).rollback();
-        verify(mysql, never()).recordCommittedUser(any(), anyBoolean());
+        // This test isolates post-commit identity publication. Registered-schema
+        // reconciliation has dedicated JDBC coverage in MysqlBorrowedSchemaReconciliationTest.
+        try (var reconciliation = mockStatic(MysqlUserBackend.class)) {
+            assertEquals("accepted", backend.user(uuid).transaction(UserStorage.MYSQL, scope -> "accepted"));
+            org.mockito.InOrder order = inOrder(connection, mysql);
+            order.verify(connection).commit();
+            order.verify(mysql).recordCommittedUser(uuid, false);
+            clearInvocations(connection, mysql);
+            assertEquals("named", backend.user(uuid).transaction(UserStorage.MYSQL,
+                    Map.of("PlayerName", new DataValueString("New")), scope -> "named"));
+            verify(mysql).recordCommittedUser(uuid, false);
+            clearInvocations(connection, mysql);
+            assertThrows(IllegalStateException.class, () -> backend.user(uuid).transaction(UserStorage.MYSQL,
+                    scope -> { throw new SQLException("receipt failed"); }));
+            verify(connection).rollback();
+            verify(mysql, never()).recordCommittedUser(any(), anyBoolean());
+        }
     }
 
     @Test void committedMysqlIdentityInvalidatesStaleNameCache() throws Exception {
