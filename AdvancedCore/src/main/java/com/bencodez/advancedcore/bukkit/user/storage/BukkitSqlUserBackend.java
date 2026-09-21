@@ -12,9 +12,12 @@ import java.sql.SQLException;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.usercache.keys.UserDataKey;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.api.user.userstorage.sql.UserTable;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
+import com.bencodez.advancedcore.core.user.storage.sql.MysqlUserBackend;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlBackendLogger;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackendFactory;
@@ -34,7 +37,9 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
 	private final MySQL mysql;
 	private final UserTable table;
     private final Object sqliteOperations = new Object();
+    private final Object mysqlSchemaOperations = new Object();
     private final AtomicBoolean open = new AtomicBoolean(true);
+    private volatile String reconciledMysqlSchemaSignature = "";
 
     public BukkitSqlUserBackend(AdvancedCorePlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
@@ -151,8 +156,10 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         Objects.requireNonNull(value, "value");
         requireOpen();
         requireStorage(storage);
-        if (storage == UserStorage.MYSQL) mysql().update(uuid.toString(), key, value);
-        else synchronized (sqliteOperations) { table().update(primary(uuid), new ArrayList<>(List.of(new Column(key, value)))); }
+        if (storage == UserStorage.MYSQL) {
+            reconcileMysqlSchema(registeredSchema(), sqlLogger());
+            mysql().update(uuid.toString(), key, value);
+        } else synchronized (sqliteOperations) { table().update(primary(uuid), new ArrayList<>(List.of(new Column(key, value)))); }
     }
 
     private void writeValues(UserStorage storage, UUID uuid, HashMap<String, DataValue> values) {
@@ -204,7 +211,7 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
 
     private <T> T withSqlUser(UserStorage storage, UUID uuid, java.util.Map<String, DataValue> updates,
             java.util.function.Function<SqlUserStorage, T> work) {
-        SqlUserSchema registered = SqlUserSchema.fromKeys(plugin.getUserManager().getDataManager().getKeys());
+        SqlUserSchema registered = registeredSchema();
         SqlUserSchema.Builder builder = SqlUserSchema.builder();
         for (SqlUserSchema.ColumnDefinition column : registered.columns()) {
             if (!"uuid".equalsIgnoreCase(column.name())) builder.column(column.name(), column.sqlType(), column.dataType());
@@ -218,13 +225,9 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
             dynamic.add(new Column(entry.getKey(), type));
         }
         SqlUserSchema schema = builder.build();
-        SqlBackendLogger logger = new SqlBackendLogger() {
-            @Override public void info(String message) { plugin.getLogger().info(message); }
-            @Override public void warn(String message, Throwable error) {
-                plugin.getLogger().warning(message + (error == null ? "" : ": " + error.getMessage()));
-            }
-        };
+        SqlBackendLogger logger = sqlLogger();
         if (storage == UserStorage.MYSQL) {
+            reconcileMysqlSchema(registered, logger);
             for (Column column : dynamic) mysql().checkColumn(column.getName(), column.getDataType());
             var manager = mysql().getMysql().getConnectionManager();
             return work.apply(SqlUserBackendFactory.existingUser(storage, uuid, mysql().getTableName(), schema,
@@ -241,6 +244,43 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
             return work.apply(SqlUserBackendFactory.existingUser(storage, uuid, table().getName(), schema,
                     () -> DriverManager.getConnection(url), null, logger));
         }
+    }
+
+    private SqlUserSchema registeredSchema() {
+        UserDataManager dataManager = plugin.getUserManager().getDataManager();
+        List<UserDataKey> keys;
+        synchronized (dataManager) {
+            keys = new ArrayList<>(dataManager.getKeys());
+        }
+        return SqlUserSchema.fromKeys(keys);
+    }
+
+    private SqlBackendLogger sqlLogger() {
+        return new SqlBackendLogger() {
+            @Override public void info(String message) { plugin.getLogger().info(message); }
+            @Override public void warn(String message, Throwable error) {
+                plugin.getLogger().warning(message + (error == null ? "" : ": " + error.getMessage()));
+            }
+        };
+    }
+
+    private void reconcileMysqlSchema(SqlUserSchema schema, SqlBackendLogger logger) {
+        String signature = schemaSignature(schema);
+        if (signature.equals(reconciledMysqlSchemaSignature)) return;
+        synchronized (mysqlSchemaOperations) {
+            if (signature.equals(reconciledMysqlSchemaSignature)) return;
+            MysqlUserBackend.reconcileExistingTable(mysql().getTableName(), mysql().getMysql(), schema, logger);
+            reconciledMysqlSchemaSignature = signature;
+        }
+    }
+
+    private static String schemaSignature(SqlUserSchema schema) {
+        StringBuilder signature = new StringBuilder();
+        for (SqlUserSchema.ColumnDefinition column : schema.columns()) {
+            signature.append(column.name().toLowerCase(java.util.Locale.ROOT)).append('\u0000')
+                    .append(column.sqlType()).append('\u0000').append(column.dataType().name()).append('\u0001');
+        }
+        return signature.toString();
     }
 
     private Column primary(UUID uuid) { return new Column("uuid", new DataValueString(uuid.toString())); }

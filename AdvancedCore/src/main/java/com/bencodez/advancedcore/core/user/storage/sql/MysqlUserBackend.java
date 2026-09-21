@@ -152,7 +152,25 @@ public final class MysqlUserBackend implements SqlUserBackend {
         } finally { operations.readLock().unlock(); }
     }
 
+    /**
+     * Reconcile a platform-owned MySQL/MariaDB/PostgreSQL user table without
+     * taking ownership of its connection pool.
+     */
+    public static void reconcileExistingTable(String tableName,
+            com.bencodez.simpleapi.sql.mysql.MySQL mysql, SqlUserSchema schema, SqlBackendLogger logger) {
+        Objects.requireNonNull(tableName, "tableName");
+        Objects.requireNonNull(mysql, "mysql");
+        Objects.requireNonNull(schema, "schema");
+        HeadlessUserTable table = new HeadlessUserTable(tableName, mysql, schema,
+                logger == null ? SqlBackendLogger.NO_OP : logger);
+        ensureRegisteredColumns(table, schema);
+    }
+
     private void ensureRegisteredColumns() {
+        ensureRegisteredColumns(table, schema);
+    }
+
+    private static void ensureRegisteredColumns(HeadlessUserTable table, SqlUserSchema schema) {
         table.ensureUuidType();
         table.ensureUuidUnique();
         for (SqlUserSchema.ColumnDefinition column : schema.columns()) if (!SqlUserSchema.UUID_COLUMN.equalsIgnoreCase(column.name())) table.ensureColumn(column);
@@ -176,6 +194,18 @@ public final class MysqlUserBackend implements SqlUserBackend {
                 catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
                 throw failure;
             }
+        }
+
+        /** Borrow an existing pool; reconciliation must never close or replace it. */
+        HeadlessUserTable(String tableName, com.bencodez.simpleapi.sql.mysql.MySQL mysql,
+                SqlUserSchema schema, SqlBackendLogger logger) {
+            super(tableName, mysql, true);
+            this.schema = schema;
+            this.logger = logger;
+            // Reconciliation needs table DDL and live schema inspection only. Calling
+            // init() here would also load the borrowed table's complete primary-key
+            // cache, needlessly enumerating every user during a schema check.
+            ensureTable();
         }
 
         @Override public String getPrimaryKeyColumn() { return SqlUserSchema.UUID_COLUMN; }

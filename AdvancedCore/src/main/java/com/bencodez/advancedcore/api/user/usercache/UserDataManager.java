@@ -633,7 +633,7 @@ public class UserDataManager {
 		}, 60 * 3, 60 * 60, TimeUnit.SECONDS);
 	}
 
-	public void addKey(UserDataKey userDataKey) {
+	public synchronized void addKey(UserDataKey userDataKey) {
 		keys.add(userDataKey);
 		if (userDataKey instanceof UserDataKeyInt) intColumns.add(userDataKey.getKey());
 		else if (userDataKey instanceof UserDataKeyBoolean) booleanColumns.add(userDataKey.getKey());
