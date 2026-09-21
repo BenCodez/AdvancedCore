@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.api.time.events;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+import com.bencodez.advancedcore.api.time.TimeChangeTransition;
+
 // TODO: Auto-generated Javadoc
 /**
  * The Class MonthChangeEvent.
@@ -22,12 +24,18 @@ public class MonthChangeEvent extends Event {
 	}
 
 	private boolean fake = false;
+	private final TimeChangeTransition transition;
 
 	/**
 	 * Instantiates a new month change event.
 	 */
 	public MonthChangeEvent() {
+		this(null);
+	}
+
+	public MonthChangeEvent(TimeChangeTransition transition) {
 		super(true);
+		this.transition = transition;
 	}
 
 	/*
@@ -42,6 +50,11 @@ public class MonthChangeEvent extends Event {
 
 	public boolean isFake() {
 		return fake;
+	}
+
+	/** See {@link TimeChangeTransition} for durable listener acknowledgement. */
+	public TimeChangeTransition getTransition() {
+		return transition;
 	}
 
 	public void setFake(boolean fake) {

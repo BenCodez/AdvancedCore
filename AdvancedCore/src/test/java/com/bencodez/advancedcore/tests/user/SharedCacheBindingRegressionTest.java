@@ -942,6 +942,7 @@ class SharedCacheBindingRegressionTest {
         final ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
 
         Fixture() throws Exception {
+			when(plugin.isEnabled()).thenReturn(true);
             when(plugin.getNativeUserStorageOwner()).thenReturn(null);
             when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
             manager = spy(new UserDataManager(plugin));

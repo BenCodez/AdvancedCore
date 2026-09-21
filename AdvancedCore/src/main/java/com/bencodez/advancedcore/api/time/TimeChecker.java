@@ -2,10 +2,15 @@ package com.bencodez.advancedcore.api.time;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.temporal.WeekFields;
 import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.time.events.DateChangedEvent;
@@ -13,16 +18,22 @@ import com.bencodez.advancedcore.api.time.events.DayChangeEvent;
 import com.bencodez.advancedcore.api.time.events.MonthChangeEvent;
 import com.bencodez.advancedcore.api.time.events.PreDateChangedEvent;
 import com.bencodez.advancedcore.api.time.events.WeekChangeEvent;
+import com.bencodez.advancedcore.data.ServerData.TimeChangeTransitionState;
 
 import lombok.Getter;
 import lombok.Setter;
 
-public class TimeChecker {
+/** Checks and dispatches local calendar transitions. */
+public class TimeChecker implements TimeChangeTransition.Owner {
 	private final AdvancedCorePlugin plugin;
 	private final Clock clock;
+	private final Object transitionLock = new Object();
+	private volatile ActiveTransition activeTransition;
+	private CompletableFuture<Void> noActiveTransition = CompletableFuture.completedFuture(null);
+	private boolean acceptingTransitions = true;
 
 	@Getter
-	private boolean activeProcessing = false;
+	private volatile boolean activeProcessing = false;
 
 	@Getter
 	@Setter
@@ -31,7 +42,7 @@ public class TimeChecker {
 	private boolean timerLoaded = false;
 
 	@Getter
-	private boolean processingEnabled = true;
+	private volatile boolean processingEnabled = true;
 
 	public TimeChecker(AdvancedCorePlugin plugin) {
 		this(plugin, Clock.systemDefaultZone());
@@ -42,44 +53,78 @@ public class TimeChecker {
 		this.clock = clock == null ? Clock.systemDefaultZone() : clock;
 	}
 
+	/** Queues a manual transition while this checker still accepts work. */
 	public void forceChanged(TimeType time) {
-		timer.execute(() -> forceChanged(time, true, true, true));
+		ScheduledExecutorService currentTimer = timer;
+		if (currentTimer == null) {
+			plugin.debug("Unable to force a time change before the time checker timer is loaded");
+			return;
+		}
+		try {
+			currentTimer.execute(() -> startTransition(time, true, true, true, null));
+		} catch (RejectedExecutionException rejected) {
+			plugin.debug("Ignoring forced time change while the checker is shutting down");
+		}
 	}
 
-	public synchronized void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
-		activeProcessing = true;
-		try {
-			plugin.debug("Executing time change events: " + time);
-			plugin.getLogger().info("Time change event: " + time + ", Fake: " + fake);
-			if (preDate) {
-				PreDateChangedEvent preDateChanged = new PreDateChangedEvent(time);
-				preDateChanged.setFake(fake);
-				plugin.getServer().getPluginManager().callEvent(preDateChanged);
+	/** Executes a legacy/manual transition synchronously without a durable marker. */
+	public void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
+		startTransition(time, fake, preDate, postDate, null);
+	}
+
+	/**
+	 * Stops new admission and returns a non-blocking stage which completes once
+	 * already admitted work has durably recorded success or recovery state.
+	 */
+	public CompletionStage<Void> beginShutdown() {
+		ActiveTransition active;
+		synchronized (transitionLock) {
+			acceptingTransitions = false;
+			active = activeTransition;
+			if (active != null) cancel(active, "Time transition was cancelled because plugin shutdown began");
+		}
+		if (active != null) persistFailure(active);
+		return noActiveTransition;
+	}
+
+	/**
+	 * Retains active work as recoverable before the lifecycle watchdog interrupts
+	 * the time executor. The drain stage stays active until leases release.
+	 */
+	public void abortActiveTransitions() {
+		ActiveTransition active;
+		synchronized (transitionLock) {
+			active = activeTransition;
+			if (active == null) return;
+			cancel(active, "Time transition was cancelled by bounded shutdown");
+		}
+		persistFailure(active);
+	}
+
+	private void cancel(ActiveTransition active, String message) {
+		active.failed = true;
+		active.cancellationRequested = true;
+		active.failure = new java.util.concurrent.CancellationException(message);
+	}
+
+	@Override
+	public TimeChangeTransition.Lease retain(TimeChangeTransition transition) {
+		ActiveTransition active;
+		synchronized (transitionLock) {
+			active = activeTransition;
+			if (active == null || active.transition != transition || active.finished) {
+				throw new IllegalStateException("The time transition is no longer active");
 			}
-			if (TimeType.DAY.equals(time)) {
-				DayChangeEvent event = new DayChangeEvent();
-				event.setFake(fake);
-				plugin.getServer().getPluginManager().callEvent(event);
-			} else if (TimeType.WEEK.equals(time)) {
-				WeekChangeEvent event = new WeekChangeEvent();
-				event.setFake(fake);
-				plugin.getServer().getPluginManager().callEvent(event);
-			} else if (TimeType.MONTH.equals(time)) {
-				MonthChangeEvent event = new MonthChangeEvent();
-				event.setFake(fake);
-				plugin.getServer().getPluginManager().callEvent(event);
-			}
-			if (postDate) {
-				DateChangedEvent event = new DateChangedEvent(time);
-				event.setFake(fake);
-				plugin.getServer().getPluginManager().callEvent(event);
-			}
-			plugin.debug("Finished executing time change events: " + time);
-		} catch (Exception e) {
-			plugin.getLogger().warning("Failed to process time change " + time + ": " + e.getMessage());
-			plugin.debug(e);
-		} finally {
-			activeProcessing = false;
+			active.participants++;
+		}
+		return new Lease(active);
+	}
+
+	@Override
+	public boolean isCancellationRequested(TimeChangeTransition transition) {
+		synchronized (transitionLock) {
+			ActiveTransition active = activeTransition;
+			return active == null || active.transition != transition || active.cancellationRequested;
 		}
 	}
 
@@ -98,24 +143,16 @@ public class TimeChecker {
 	public boolean hasDayChanged(boolean set) {
 		int prevDay = plugin.getServerDataFile().getPrevDay();
 		int day = getTime().getDayOfMonth();
-		if (prevDay == day) {
-			return false;
-		}
-		if (set) {
-			plugin.getServerDataFile().setPrevDay(day);
-		}
+		if (prevDay == day) return false;
+		if (set) plugin.getServerDataFile().setPrevDay(day);
 		return true;
 	}
 
 	public boolean hasMonthChanged(boolean set) {
 		String prevMonth = plugin.getServerDataFile().getPrevMonth();
 		String month = getTime().getMonth().toString();
-		if (prevMonth.equals(month)) {
-			return false;
-		}
-		if (set) {
-			plugin.getServerDataFile().setPrevMonth(month);
-		}
+		if (prevMonth.equals(month)) return false;
+		if (set) plugin.getServerDataFile().setPrevMonth(month);
 		if (!plugin.getOptions().isTimeChangeFailSafeBypass() && getTime().getDayOfMonth() > 3) {
 			plugin.getLogger().warning(
 					"Detected a month change, but current day is not near end of a month, ignoring month change, "
@@ -133,12 +170,8 @@ public class TimeChecker {
 	public boolean hasWeekChanged(boolean set) {
 		int prevDate = plugin.getServerDataFile().getPrevWeekDay();
 		int weekNumber = TimeCalculation.weekNumber(getTime(), plugin.getOptions().getTimeWeekOffSet(), Locale.getDefault());
-		if (weekNumber == prevDate) {
-			return false;
-		}
-		if (set) {
-			plugin.getServerDataFile().setPrevWeekDay(weekNumber);
-		}
+		if (weekNumber == prevDate) return false;
+		if (set) plugin.getServerDataFile().setPrevWeekDay(weekNumber);
 		return true;
 	}
 
@@ -158,9 +191,7 @@ public class TimeChecker {
 		plugin.getServerDataFile().setLastUpdated();
 		timer.scheduleWithFixedDelay(() -> {
 			if (plugin != null && plugin.isEnabled()) {
-				if (!isActiveProcessing() && isProcessingEnabled()) {
-					update();
-				}
+				if (!isActiveProcessing() && isProcessingEnabled()) update();
 			} else {
 				timer.shutdown();
 				timerLoaded = false;
@@ -170,15 +201,9 @@ public class TimeChecker {
 			plugin.getServerDataFile().setLastUpdated();
 			if (!isProcessingEnabled()) {
 				plugin.debug("Processing time changes locally disabled");
-				if (hasDayChanged(false)) {
-					hasDayChanged(true);
-				}
-				if (hasWeekChanged(false)) {
-					hasWeekChanged(true);
-				}
-				if (hasMonthChanged(false)) {
-					hasMonthChanged(true);
-				}
+				if (hasDayChanged(false)) hasDayChanged(true);
+				if (hasWeekChanged(false)) hasWeekChanged(true);
+				if (hasMonthChanged(false)) hasMonthChanged(true);
 			}
 		}, 60, 60, TimeUnit.MINUTES);
 	}
@@ -189,12 +214,8 @@ public class TimeChecker {
 	}
 
 	public void update() {
-		if (plugin == null) {
-			return;
-		}
-		if (hasTimeOffSet()) {
-			plugin.extraDebug("TimeHourOffSet: " + getTime().getHour() + ":" + getTime().getMinute());
-		}
+		if (plugin == null) return;
+		if (hasTimeOffSet()) plugin.extraDebug("TimeHourOffSet: " + getTime().getHour() + ":" + getTime().getMinute());
 		if (plugin.getServerDataFile().isIgnoreTime()) {
 			hasDayChanged(true);
 			hasMonthChanged(true);
@@ -202,35 +223,211 @@ public class TimeChecker {
 			plugin.getServerDataFile().setIgnoreTime(false);
 			plugin.getLogger().info("Ignoring time change events for one time only");
 		}
-		if (!isActiveProcessing()) {
-			if (hasMonthChanged(false)) {
-				plugin.getLogger().info("Detected month changed, processing...");
-				if (isProcessingEnabled()) {
-					forceChanged(TimeType.MONTH, false, true, true);
-				} else {
-					plugin.debug("Processing time changes locally disabled");
-				}
-				hasMonthChanged(true);
-				plugin.getLogger().info("Finished processing month changes");
-			} else if (hasWeekChanged(false)) {
-				plugin.getLogger().info("Detected week changed, processing...");
-				if (isProcessingEnabled()) {
-					forceChanged(TimeType.WEEK, false, true, true);
-				} else {
-					plugin.debug("Processing time changes locally disabled");
-				}
-				hasWeekChanged(true);
-				plugin.getLogger().info("Finished processing week changes");
-			} else if (hasDayChanged(false)) {
-				plugin.getLogger().info("Detected day changed, processing...");
-				if (isProcessingEnabled()) {
-					forceChanged(TimeType.DAY, false, true, true);
-				} else {
-					plugin.debug("Processing time changes locally disabled");
-				}
-				hasDayChanged(true);
-				plugin.getLogger().info("Finished processing day changes");
+		if (isActiveProcessing()) return;
+		for (TimeType type : new TimeType[] { TimeType.MONTH, TimeType.WEEK, TimeType.DAY }) {
+			TimeChangeTransitionState pending = plugin.getServerDataFile().getPendingTimeChangeTransition(type);
+			if (pending != null) {
+				plugin.getLogger().info("Recovering pending " + type + " time change " + pending.id());
+				startDetectedTransition(type, pending);
+				return;
 			}
+		}
+
+		if (hasMonthChanged(false)) {
+			plugin.getLogger().info("Detected month changed, processing...");
+			if (isProcessingEnabled()) startDetectedTransition(TimeType.MONTH);
+			else plugin.debug("Processing time changes locally disabled");
+		} else if (hasWeekChanged(false)) {
+			plugin.getLogger().info("Detected week changed, processing...");
+			if (isProcessingEnabled()) startDetectedTransition(TimeType.WEEK);
+			else plugin.debug("Processing time changes locally disabled");
+		} else if (hasDayChanged(false)) {
+			plugin.getLogger().info("Detected day changed, processing...");
+			if (isProcessingEnabled()) startDetectedTransition(TimeType.DAY);
+			else plugin.debug("Processing time changes locally disabled");
+		}
+	}
+
+	private void startDetectedTransition(TimeType type) {
+		LocalDateTime current = getTime();
+		TimeChangeTransitionState persisted = plugin.getServerDataFile().beginTimeChangeTransition(type,
+				periodKey(type, current), markerValue(type, current));
+		startDetectedTransition(type, persisted);
+	}
+
+	private void startDetectedTransition(TimeType type, TimeChangeTransitionState persisted) {
+		TimeChangeTransition transition = new TimeChangeTransition(this, persisted.id(), persisted.periodKey(), type);
+		startTransition(type, false, true, true, new DurableTransition(transition, persisted));
+	}
+
+	private void startTransition(TimeType type, boolean fake, boolean preDate, boolean postDate, DurableTransition durable) {
+		if (type == null) return;
+		ActiveTransition active;
+		synchronized (transitionLock) {
+			if (!acceptingTransitions) {
+				if (durable != null) persistFailure(durable.persisted);
+				return;
+			}
+			if (activeTransition != null) return;
+			if (noActiveTransition.isDone()) noActiveTransition = new CompletableFuture<>();
+			active = new ActiveTransition(type, durable == null ? null : durable.transition,
+					durable == null ? null : durable.persisted);
+			activeTransition = active;
+			activeProcessing = true;
+		}
+
+		Throwable failure = null;
+		try {
+			plugin.debug("Executing time change events: " + type);
+			plugin.getLogger().info("Time change event: " + type + ", Fake: " + fake);
+			TimeChangeTransition transition = active.transition;
+			if (preDate) {
+				PreDateChangedEvent preDateChanged = new PreDateChangedEvent(type, transition);
+				preDateChanged.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(preDateChanged);
+			}
+			if (TimeType.DAY.equals(type)) {
+				DayChangeEvent event = new DayChangeEvent(transition);
+				event.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(event);
+			} else if (TimeType.WEEK.equals(type)) {
+				WeekChangeEvent event = new WeekChangeEvent(transition);
+				event.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(event);
+			} else if (TimeType.MONTH.equals(type)) {
+				MonthChangeEvent event = new MonthChangeEvent(transition);
+				event.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(event);
+			}
+			if (postDate) {
+				DateChangedEvent event = new DateChangedEvent(type, transition);
+				event.setFake(fake);
+				plugin.getServer().getPluginManager().callEvent(event);
+			}
+			plugin.debug("Finished executing time change events: " + type);
+		} catch (Throwable thrown) {
+			failure = thrown;
+			plugin.getLogger().warning("Failed to process time change " + type + ": " + thrown.getMessage());
+			plugin.debug(thrown);
+		} finally {
+			finish(active, failure);
+		}
+	}
+
+	private void finish(ActiveTransition active, Throwable failure) {
+		synchronized (transitionLock) {
+			if (active.finished) return;
+			if (failure != null) {
+				active.failed = true;
+				active.failure = failure;
+			}
+			if (--active.participants > 0) return;
+			active.finished = true;
+			try {
+				if (active.persisted != null) {
+					if (!active.failed) {
+						plugin.getServerDataFile().completeTimeChangeTransition(active.persisted);
+						plugin.getLogger().info("Finished processing " + active.type + " changes");
+					} else {
+						persistFailure(active);
+						Throwable cause = active.failure;
+						plugin.getLogger().warning("Time change " + active.type + " remains pending for retry"
+								+ (cause == null ? "" : ": " + cause.getClass().getSimpleName()
+										+ (cause.getMessage() == null ? "" : ": " + cause.getMessage())));
+					}
+				}
+			} catch (Throwable persistenceFailure) {
+				persistFailure(active);
+				plugin.getLogger().warning("Failed to record time change transition "
+						+ (active.transition == null ? "" : active.transition.getId()) + ": " + persistenceFailure.getMessage());
+				plugin.debug(persistenceFailure);
+			} finally {
+				if (activeTransition == active) {
+					activeTransition = null;
+					activeProcessing = false;
+				}
+				noActiveTransition.complete(null);
+			}
+		}
+	}
+
+	private void persistFailure(ActiveTransition active) {
+		if (active.persisted != null) persistFailure(active.persisted);
+	}
+
+	private void persistFailure(TimeChangeTransitionState persisted) {
+		try {
+			plugin.getServerDataFile().failTimeChangeTransition(persisted);
+		} catch (Throwable failure) {
+			plugin.getLogger().warning("Failed to retain recoverable time change transition " + persisted.id()
+					+ ": " + failure.getMessage());
+			plugin.debug(failure);
+		}
+	}
+
+	private String markerValue(TimeType type, LocalDateTime current) {
+		return switch (type) {
+		case DAY -> Integer.toString(current.getDayOfMonth());
+		case MONTH -> current.getMonth().toString();
+		case WEEK -> Integer.toString(TimeCalculation.weekNumber(current, plugin.getOptions().getTimeWeekOffSet(), Locale.getDefault()));
+		};
+	}
+
+	private String periodKey(TimeType type, LocalDateTime current) {
+		return switch (type) {
+		case DAY -> current.toLocalDate().toString();
+		case MONTH -> current.getYear() + "-" + String.format(Locale.ROOT, "%02d", current.getMonthValue());
+		case WEEK -> {
+			LocalDateTime adjusted = current.plusDays(plugin.getOptions().getTimeWeekOffSet());
+			WeekFields fields = WeekFields.of(Locale.getDefault());
+			yield adjusted.get(fields.weekBasedYear()) + "-W"
+					+ String.format(Locale.ROOT, "%02d", adjusted.get(fields.weekOfWeekBasedYear()));
+		}
+		};
+	}
+
+	private final class Lease implements TimeChangeTransition.Lease {
+		private final ActiveTransition active;
+		private final AtomicBoolean released = new AtomicBoolean();
+
+		private Lease(ActiveTransition active) {
+			this.active = active;
+		}
+
+		@Override public void complete() {
+			if (released.compareAndSet(false, true)) finish(active, null);
+		}
+
+		@Override public void fail(Throwable failure) {
+			if (released.compareAndSet(false, true)) finish(active,
+					failure == null ? new IllegalStateException("Time transition participant failed") : failure);
+		}
+	}
+
+	private static final class DurableTransition {
+		private final TimeChangeTransition transition;
+		private final TimeChangeTransitionState persisted;
+
+		private DurableTransition(TimeChangeTransition transition, TimeChangeTransitionState persisted) {
+			this.transition = transition;
+			this.persisted = persisted;
+		}
+	}
+
+	private static final class ActiveTransition {
+		private final TimeType type;
+		private final TimeChangeTransition transition;
+		private final TimeChangeTransitionState persisted;
+		private int participants = 1;
+		private boolean failed;
+		private boolean finished;
+		private boolean cancellationRequested;
+		private Throwable failure;
+
+		private ActiveTransition(TimeType type, TimeChangeTransition transition, TimeChangeTransitionState persisted) {
+			this.type = type;
+			this.transition = transition;
+			this.persisted = persisted;
 		}
 	}
 }

@@ -21,6 +21,7 @@ import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 public final class BukkitRuntimePlatform implements RuntimePlatform {
     private final AdvancedCorePlugin plugin;
     private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
+	private volatile CompletionStage<Void> timeChangeRetirement = CompletableFuture.completedFuture(null);
     private final AtomicBoolean userStorageOwnerClosed = new AtomicBoolean();
 
     public BukkitRuntimePlatform(AdvancedCorePlugin plugin) {
@@ -51,13 +52,21 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                         JavascriptEngineHandler.getInstance().clearCachedEngine();
                     }
                 }),
-                new Cleanup("user storage", this::closeUserStorageAfterSharedRetirement),
+				new Cleanup("time change admission", this::closeTimeChangeAdmission),
+				new Cleanup("user storage", this::closeUserStorageAfterTimeChangeRetirement),
                 new Cleanup("server data timestamp", () -> {
                     if (plugin.getServerDataFile() != null) plugin.getServerDataFile().setLastUpdated();
                 }));
     }
 
 	@Override public CompletionStage<Void> beforeExecutorShutdownCompletion() { return userStorageRetirement; }
+	@Override public boolean holdTimeTimerUntilPreExecutorShutdownCompletion() {
+		return timeChangeRetirement != null && !timeChangeRetirement.toCompletableFuture().isDone();
+	}
+	@Override public void beforeForcedTimeTimerShutdown() {
+		TimeChecker checker = plugin.getTimeChecker();
+		if (checker != null) checker.abortActiveTransitions();
+	}
 	@Override public boolean canBlockForPreExecutorShutdown() {
 		return Bukkit.getServer() == null || !Bukkit.isPrimaryThread();
 	}
@@ -101,10 +110,28 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
         plugin.debug(failure);
     }
 
-	private void closeUserStorageAfterSharedRetirement() {
+	private void closeTimeChangeAdmission() {
+		TimeChecker checker = plugin.getTimeChecker();
+		timeChangeRetirement = checker == null ? CompletableFuture.completedFuture(null) : checker.beginShutdown();
+	}
+
+	private void closeUserStorageAfterTimeChangeRetirement() {
+		CompletionStage<Void> timeRetirement = timeChangeRetirement;
+		if (timeRetirement.toCompletableFuture().isDone()) {
+			try {
+				timeRetirement.toCompletableFuture().join();
+				userStorageRetirement = closeUserStorageAfterSharedRetirement();
+			} catch (java.util.concurrent.CompletionException failure) {
+				userStorageRetirement = CompletableFuture.failedFuture(failure);
+			}
+			return;
+		}
+		userStorageRetirement = timeRetirement.thenCompose(ignored -> closeUserStorageAfterSharedRetirement());
+	}
+
+	private CompletionStage<Void> closeUserStorageAfterSharedRetirement() {
         if (!plugin.isLoadUserData()) {
-            userStorageRetirement = CompletableFuture.completedFuture(null);
-            return;
+			return CompletableFuture.completedFuture(null);
         }
 		UserManager users = plugin.getLoadedUserManager();
 		// Resolve this only after shared retirement. A successful replacement may
@@ -113,14 +140,14 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 		Runnable closeMysql = () -> closeCurrentUserStorageOwner(users);
         if (users == null) {
             closeMysql.run();
-            userStorageRetirement = CompletableFuture.completedFuture(null);
-            return;
+			return CompletableFuture.completedFuture(null);
         }
 		CompletionStage<Void> retirement = users.getDataManager().closeSharedRuntimeAsyncCompletion(closeMysql);
         if (retirement == null) {
             closeMysql.run();
-            userStorageRetirement = CompletableFuture.completedFuture(null);
-		} else userStorageRetirement = retirement;
+			return CompletableFuture.completedFuture(null);
+		}
+		return retirement;
 	}
 
 	private void closeCurrentUserStorageOwner(UserManager users) {

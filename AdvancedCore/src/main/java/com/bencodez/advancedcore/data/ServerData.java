@@ -5,6 +5,7 @@ import java.io.File;
 import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.time.TimeType;
 import com.bencodez.simpleapi.file.YMLFile;
 
 // TODO: Auto-generated Javadoc
@@ -12,6 +13,15 @@ import com.bencodez.simpleapi.file.YMLFile;
  * The Class ServerData.
  */
 public class ServerData extends YMLFile {
+	/**
+	 * Durable state for one locally detected time transition. The identifier is
+	 * deliberately stable while a transition is pending so consumers can store
+	 * their own idempotency receipt before acknowledging asynchronous work.
+	 */
+	public record TimeChangeTransitionState(TimeType type, String id, String periodKey, String markerValue,
+			boolean pending) {
+	}
+
 	public ServerData(AdvancedCorePlugin plugin) {
 		super(plugin, new File(plugin.getDataFolder(), "ServerData.yml"));
 	}
@@ -118,5 +128,74 @@ public class ServerData extends YMLFile {
 	public void setPrevWeekDay(int week) {
 		getData().set("PrevWeek", week);
 		saveData();
+	}
+
+	/**
+	 * Starts (or recovers) a transition. This writes the pending record before
+	 * event listeners can observe its identifier.
+	 */
+	public synchronized TimeChangeTransitionState beginTimeChangeTransition(TimeType type, String periodKey,
+			String markerValue) {
+		String path = transitionPath(type);
+		String existingPeriod = getData().getString(path + ".Period", "");
+		String existingId = getData().getString(path + ".Id", "");
+		boolean pending = getData().getBoolean(path + ".Pending", false);
+		if (pending && periodKey.equals(existingPeriod) && !existingId.isEmpty()) {
+			return new TimeChangeTransitionState(type, existingId, existingPeriod,
+					getData().getString(path + ".Marker", markerValue), true);
+		}
+
+		String id = type.name() + ":" + periodKey;
+		getData().set(path + ".Id", id);
+		getData().set(path + ".Period", periodKey);
+		getData().set(path + ".Marker", markerValue);
+		getData().set(path + ".Pending", true);
+		saveData();
+		return new TimeChangeTransitionState(type, id, periodKey, markerValue, true);
+	}
+
+	/** Returns an unfinished transition even when the current clock has moved on. */
+	public synchronized TimeChangeTransitionState getPendingTimeChangeTransition(TimeType type) {
+		String path = transitionPath(type);
+		if (!getData().getBoolean(path + ".Pending", false)) return null;
+		String id = getData().getString(path + ".Id", "");
+		String period = getData().getString(path + ".Period", "");
+		String marker = getData().getString(path + ".Marker", "");
+		if (id.isEmpty() || period.isEmpty() || marker.isEmpty()) return null;
+		return new TimeChangeTransitionState(type, id, period, marker, true);
+	}
+
+	/**
+	 * Atomically records successful completion with the legacy marker. A crash
+	 * before this save leaves the pending record intact for a recoverable retry.
+	 */
+	public synchronized void completeTimeChangeTransition(TimeChangeTransitionState transition) {
+		if (!matchesPendingTransition(transition)) return;
+		switch (transition.type()) {
+		case DAY -> getData().set("PrevDay", Integer.parseInt(transition.markerValue()));
+		case WEEK -> getData().set("PrevWeek", Integer.parseInt(transition.markerValue()));
+		case MONTH -> getData().set("Month", transition.markerValue());
+		}
+		getData().set(transitionPath(transition.type()) + ".Pending", false);
+		saveData();
+	}
+
+	/** Leaves a durable pending record available for the next checker instance. */
+	public synchronized void failTimeChangeTransition(TimeChangeTransitionState transition) {
+		if (!matchesPendingTransition(transition)) return;
+		getData().set(transitionPath(transition.type()) + ".Pending", true);
+		saveData();
+	}
+
+	private boolean matchesPendingTransition(TimeChangeTransitionState transition) {
+		if (transition == null) return false;
+		String path = transitionPath(transition.type());
+		return getData().getBoolean(path + ".Pending", false)
+				&& transition.id().equals(getData().getString(path + ".Id", ""))
+				&& transition.periodKey().equals(getData().getString(path + ".Period", ""));
+	}
+
+	private String transitionPath(TimeType type) {
+		return "TimeTransitions." + type.name();
 	}
 }

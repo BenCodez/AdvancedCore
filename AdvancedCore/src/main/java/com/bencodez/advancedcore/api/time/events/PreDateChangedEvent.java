@@ -4,6 +4,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
 import com.bencodez.advancedcore.api.time.TimeType;
+import com.bencodez.advancedcore.api.time.TimeChangeTransition;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -26,10 +27,16 @@ public class PreDateChangedEvent extends Event {
 	private boolean fake = false;
 
 	private TimeType timeType;
+	private final TimeChangeTransition transition;
 
 	public PreDateChangedEvent(TimeType time) {
+		this(time, null);
+	}
+
+	public PreDateChangedEvent(TimeType time, TimeChangeTransition transition) {
 		super(true);
 		this.timeType = time;
+		this.transition = transition;
 	}
 
 	/*
@@ -47,6 +54,14 @@ public class PreDateChangedEvent extends Event {
 	 */
 	public TimeType getTimeType() {
 		return timeType;
+	}
+
+	/**
+	 * Returns the durable transition for locally detected changes. It is null for
+	 * legacy/manual dispatches that do not own a persistent time marker.
+	 */
+	public TimeChangeTransition getTransition() {
+		return transition;
 	}
 
 	public boolean isFake() {

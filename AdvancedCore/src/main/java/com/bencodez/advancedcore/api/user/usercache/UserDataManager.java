@@ -973,6 +973,12 @@ public class UserDataManager {
 
 	private void dispatchSharedStorageNotification(Runnable notification, org.bukkit.entity.Entity callbackOwner) {
 		Objects.requireNonNull(notification, "notification");
+		if (plugin == null || !plugin.isEnabled()) {
+			RejectedExecutionException rejected = new RejectedExecutionException(
+					"Shared storage notification rejected because the plugin is disabled");
+			reportDeferredStorageFailure(rejected);
+			throw rejected;
+		}
 		if (Bukkit.getServer() == null || Bukkit.isPrimaryThread()) notification.run();
 		else if (callbackOwner != null) plugin.getBukkitScheduler().runTask(plugin, notification, callbackOwner);
 		else plugin.getBukkitScheduler().runTask(plugin, notification);
