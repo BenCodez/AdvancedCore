@@ -19,6 +19,7 @@ import org.bukkit.plugin.Plugin;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.time.TimeType;
+import com.bencodez.simpleapi.file.DurableFiles;
 import com.bencodez.simpleapi.file.YMLFile;
 
 // TODO: Auto-generated Javadoc
@@ -89,9 +90,14 @@ public class ServerData extends YMLFile {
 		Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
 	}
 
+	protected void forceDirectory(Path directory) throws IOException {
+		DurableFiles.forceDirectory(directory);
+	}
+
 	private void replaceSnapshot(Path temporary, Path target) throws IOException {
 		try {
 			moveAtomically(temporary, target);
+			forceDirectory(target.getParent());
 		} catch (AtomicMoveNotSupportedException unsupported) {
 			Path backup = backupPath(target);
 			Path replacementMarker = replacementMarkerPath(target);
@@ -100,19 +106,30 @@ public class ServerData extends YMLFile {
 				try (FileChannel channel = FileChannel.open(backup, StandardOpenOption.WRITE)) {
 					channel.force(true);
 				}
+				forceDirectory(target.getParent());
 			}
 			Files.writeString(replacementMarker, snapshotHash(temporary), StandardOpenOption.CREATE,
 					StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
 			try (FileChannel channel = FileChannel.open(replacementMarker, StandardOpenOption.WRITE)) {
 				channel.force(true);
 			}
+			forceDirectory(target.getParent());
 			try {
 				Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
 			} catch (IOException replacementFailure) {
-				if (Files.exists(backup)) Files.copy(backup, target, StandardCopyOption.REPLACE_EXISTING);
+				if (Files.exists(backup)) {
+					Files.copy(backup, target, StandardCopyOption.REPLACE_EXISTING);
+					DurableFiles.forceFile(target);
+					forceDirectory(target.getParent());
+				}
 				throw replacementFailure;
 			}
+			// Keep the recovery marker until the replacement's directory entry is
+			// durable. If this force fails, startup can identify the committed target
+			// by its recorded hash instead of rolling it back as an incomplete move.
+			forceDirectory(target.getParent());
 			Files.delete(replacementMarker);
+			forceDirectory(target.getParent());
 		}
 	}
 
@@ -160,6 +177,8 @@ public class ServerData extends YMLFile {
 	private void restoreBackup(Path backup, Path target) {
 		try {
 			Files.copy(backup, target, StandardCopyOption.REPLACE_EXISTING);
+			DurableFiles.forceFile(target);
+			forceDirectory(target.getParent());
 		} catch (IOException failure) {
 			throw new UncheckedIOException("Failed to recover " + target.getFileName(), failure);
 		}
@@ -168,6 +187,7 @@ public class ServerData extends YMLFile {
 	private void deleteReplacementMarker(Path marker) {
 		try {
 			Files.delete(marker);
+			forceDirectory(marker.getParent());
 		} catch (IOException failure) {
 			throw new UncheckedIOException("Failed to clear interrupted replacement marker", failure);
 		}

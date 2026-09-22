@@ -30,6 +30,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	private final AdvancedCorePlugin plugin;
 	private final Clock clock;
 	private final Object transitionLock = new Object();
+	private final Object transitionPersistenceLock = new Object();
 	private final Deque<ManualTransition> reentrantTransitions = new ArrayDeque<>();
 	private volatile ActiveTransition activeTransition;
 	private CompletableFuture<Void> noActiveTransition = CompletableFuture.completedFuture(null);
@@ -93,14 +94,23 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	 */
 	public void abortActiveTransitions() {
 		ActiveTransition active;
+		boolean persist;
 		synchronized (transitionLock) {
 			active = activeTransition;
 			if (active == null || active.finalizing) return;
-			cancel(active, "Time transition was cancelled by bounded shutdown");
-			active.finished = true;
-			active.retired = true;
 		}
-		persistFailure(active);
+		synchronized (transitionPersistenceLock) {
+			synchronized (transitionLock) {
+				active = activeTransition;
+				if (active == null || active.finalizing) return;
+				cancel(active, "Time transition was cancelled by bounded shutdown");
+				active.finished = true;
+				persist = !active.persistenceClosed;
+				active.persistenceClosed = true;
+				reentrantTransitions.clear();
+			}
+			if (persist) persistFailure(active);
+		}
 		retireTransition(active);
 	}
 
@@ -111,6 +121,32 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			if (active == null || active.finalizing || active.finished) return;
 			cancel(active, "Time transition was cancelled because plugin shutdown began");
 		}
+	}
+
+	/**
+	 * Cancels admitted work and closes this checker's authority to persist its
+	 * transition result. The active drain remains open until retained work stops,
+	 * so dependent user storage is not retired while a listener is still running.
+	 */
+	public void cancelActiveTransitionsAndClosePersistence() {
+		ActiveTransition active;
+		boolean persist = false;
+		boolean retire;
+		synchronized (transitionPersistenceLock) {
+			synchronized (transitionLock) {
+				active = activeTransition;
+				if (active == null) return;
+				if (!active.persistenceClosed) {
+					cancel(active, "Time transition was cancelled because plugin shutdown began");
+					active.persistenceClosed = true;
+					persist = true;
+				}
+				reentrantTransitions.clear();
+				retire = active.finished;
+			}
+			if (persist) persistFailure(active);
+		}
+		if (retire) retireTransition(active);
 	}
 
 	private void cancel(ActiveTransition active, String message) {
@@ -297,6 +333,10 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				return;
 			}
 			while (waitForTurn && acceptingTransitions && activeTransition != null) {
+				if (activeTransition.dispatchComplete) {
+					reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
+					return;
+				}
 				try { transitionLock.wait(); }
 				catch (InterruptedException interruption) { interrupted = true; }
 			}
@@ -355,7 +395,10 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			failure = fatal;
 			throw fatal;
 		} finally {
-			synchronized (transitionLock) { active.dispatchComplete = true; }
+			synchronized (transitionLock) {
+				active.dispatchComplete = true;
+				transitionLock.notifyAll();
+			}
 			finish(active, failure);
 		}
 	}
@@ -403,31 +446,37 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	}
 
 	private void finalizeTransition(ActiveTransition active) {
-		synchronized (transitionLock) {
-			if (active.retired || activeTransition != active) return;
-			active.finalizing = true;
-		}
-		try {
-			if (active.persisted != null) {
-				if (!active.failed) {
-					plugin.getServerDataFile().completeTimeChangeTransition(active.persisted);
-					plugin.getLogger().info("Finished processing " + active.type + " changes");
-				} else {
+		synchronized (transitionPersistenceLock) {
+			boolean skipPersistence;
+			synchronized (transitionLock) {
+				skipPersistence = active.retired || activeTransition != active || active.persistenceClosed;
+				if (!skipPersistence) active.finalizing = true;
+			}
+			if (!skipPersistence) {
+				try {
+					if (active.persisted != null) {
+						if (!active.failed) {
+							plugin.getServerDataFile().completeTimeChangeTransition(active.persisted);
+							plugin.getLogger().info("Finished processing " + active.type + " changes");
+						} else {
+							persistFailure(active);
+							Throwable cause = active.failure;
+							plugin.getLogger().warning("Time change " + active.type + " remains pending for retry"
+									+ (cause == null ? "" : ": " + cause.getClass().getSimpleName()
+											+ (cause.getMessage() == null ? "" : ": " + cause.getMessage())));
+						}
+					}
+				} catch (RuntimeException persistenceFailure) {
 					persistFailure(active);
-					Throwable cause = active.failure;
-					plugin.getLogger().warning("Time change " + active.type + " remains pending for retry"
-							+ (cause == null ? "" : ": " + cause.getClass().getSimpleName()
-									+ (cause.getMessage() == null ? "" : ": " + cause.getMessage())));
+					plugin.getLogger().warning("Failed to record time change transition "
+							+ (active.transition == null ? "" : active.transition.getId()) + ": " + persistenceFailure.getMessage());
+					plugin.debug(persistenceFailure);
+				} finally {
+					synchronized (transitionLock) { active.persistenceClosed = true; }
 				}
 			}
-		} catch (RuntimeException persistenceFailure) {
-			persistFailure(active);
-			plugin.getLogger().warning("Failed to record time change transition "
-					+ (active.transition == null ? "" : active.transition.getId()) + ": " + persistenceFailure.getMessage());
-			plugin.debug(persistenceFailure);
-		} finally {
-			retireTransition(active);
 		}
+		retireTransition(active);
 	}
 
 	private void retireTransition(ActiveTransition active) {
@@ -542,6 +591,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		private boolean cancellationRequested;
 		private boolean dispatchComplete;
 		private boolean finalizing;
+		private boolean persistenceClosed;
 		private boolean retired;
 		private Throwable failure;
 

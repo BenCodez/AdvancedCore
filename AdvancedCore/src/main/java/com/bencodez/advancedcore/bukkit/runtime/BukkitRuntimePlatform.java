@@ -72,7 +72,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 	}
 	@Override public void beforeDeferredPlatformCleanup() {
 		TimeChecker checker = plugin.getTimeChecker();
-		if (checker != null) checker.cancelActiveTransitions();
+		if (checker != null) checker.cancelActiveTransitionsAndClosePersistence();
 	}
 	@Override public boolean canBlockForPreExecutorShutdown() {
 		return Bukkit.getServer() == null || !Bukkit.isPrimaryThread();

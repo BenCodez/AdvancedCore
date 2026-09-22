@@ -509,7 +509,7 @@ class CoreRuntimeTest {
 		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
 		assertTrue(platform.holdTimeTimerUntilPreExecutorShutdownCompletion());
 		platform.beforeDeferredPlatformCleanup();
-		verify(checker).cancelActiveTransitions();
+		verify(checker).cancelActiveTransitionsAndClosePersistence();
 		transitionDrain.complete(null);
 		verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
 		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());

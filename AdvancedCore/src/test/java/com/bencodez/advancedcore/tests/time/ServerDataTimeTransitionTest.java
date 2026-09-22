@@ -138,6 +138,31 @@ class ServerDataTimeTransitionTest {
 		assertFalse(Files.exists(marker));
 	}
 
+	@Test
+	void atomicReplacementForcesContainingDirectory() {
+		DirectoryTrackingServerData data = new DirectoryTrackingServerData(plugin(), false);
+		data.setup();
+		data.getData().set("PrevDay", 21);
+
+		data.saveData();
+
+		assertEquals(1, data.directoryForces);
+	}
+
+	@Test
+	void fallbackReplacementForcesEveryPublishedDirectoryChange() {
+		DirectoryTrackingServerData data = new DirectoryTrackingServerData(plugin(), true);
+		data.setup();
+		data.getData().set("PrevDay", 20);
+		data.saveData();
+		data.directoryForces = 0;
+		data.getData().set("PrevDay", 21);
+
+		data.saveData();
+
+		assertEquals(4, data.directoryForces);
+	}
+
 	private ServerData serverData() {
 		return new ServerData(plugin());
 	}
@@ -172,6 +197,27 @@ class ServerDataTimeTransitionTest {
 
 		@Override protected void moveAtomically(Path source, Path target) throws IOException {
 			throw new AtomicMoveNotSupportedException(source.toString(), target.toString(), "test provider");
+		}
+	}
+
+	private static final class DirectoryTrackingServerData extends ServerData {
+		private final boolean useFallback;
+		private int directoryForces;
+
+		private DirectoryTrackingServerData(AdvancedCorePlugin plugin, boolean useFallback) {
+			super(plugin);
+			this.useFallback = useFallback;
+		}
+
+		@Override protected void moveAtomically(Path source, Path target) throws IOException {
+			if (useFallback) {
+				throw new AtomicMoveNotSupportedException(source.toString(), target.toString(), "test provider");
+			}
+			super.moveAtomically(source, target);
+		}
+
+		@Override protected void forceDirectory(Path directory) {
+			directoryForces++;
 		}
 	}
 }
