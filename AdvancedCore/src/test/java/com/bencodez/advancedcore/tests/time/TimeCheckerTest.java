@@ -211,6 +211,34 @@ public class TimeCheckerTest {
 	}
 
 	@Test
+	public void cooperativeCancellationKeepsDrainOpenUntilRetainedWorkStops() throws Exception {
+		TimeChangeTransitionState transition = transitionState();
+		PluginManager pluginManager = configureDetectedDay(transition);
+		AtomicReference<TimeChangeTransition.Lease> lease = new AtomicReference<>();
+		AtomicReference<TimeChangeTransition> observed = new AtomicReference<>();
+		Mockito.doAnswer(call -> {
+			if (call.getArgument(0) instanceof DayChangeEvent day) {
+				observed.set(day.getTransition());
+				lease.set(day.getTransition().retain());
+			}
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		TimeChecker checker = new TimeChecker(plugin,
+				Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+
+		checker.update();
+		CompletionStage<Void> drain = checker.beginShutdown();
+		checker.cancelActiveTransitions();
+
+		assertTrue(observed.get().isCancellationRequested());
+		assertFalse(drain.toCompletableFuture().isDone());
+		lease.get().complete();
+		drain.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
+		verify(serverDataFile).failTimeChangeTransition(transition);
+	}
+
+	@Test
 	public void watchdogCannotReverseSuccessAfterFinalPersistenceStarts() throws Exception {
 		TimeChangeTransitionState transition = transitionState();
 		PluginManager pluginManager = configureDetectedDay(transition);
@@ -429,6 +457,35 @@ public class TimeCheckerTest {
 		assertFalse(monthObserved.get(), "new work must remain rejected after shutdown begins");
 		assertNotNull(drain.get());
 		assertTrue(drain.get().toCompletableFuture().isDone());
+	}
+
+	@Test
+	public void manualTransitionQueuesWithoutBlockingBehindRetainedLease() throws Exception {
+		PluginManager pluginManager = configureDetectedDay(transitionState());
+		TimeChecker checker = new TimeChecker(plugin,
+				Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+		AtomicReference<TimeChangeTransition.Lease> lease = new AtomicReference<>();
+		CountDownLatch weekObserved = new CountDownLatch(1);
+		Mockito.doAnswer(call -> {
+			Event event = call.getArgument(0);
+			if (event instanceof DayChangeEvent day) lease.set(day.getTransition().retain());
+			else if (event instanceof com.bencodez.advancedcore.api.time.events.WeekChangeEvent) {
+				weekObserved.countDown();
+			}
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		checker.update();
+		var caller = Executors.newSingleThreadExecutor();
+		try {
+			caller.submit(() -> checker.forceChanged(TimeType.WEEK, true, false, false))
+					.get(1, TimeUnit.SECONDS);
+			assertFalse(weekObserved.await(100, TimeUnit.MILLISECONDS));
+			lease.get().complete();
+			assertTrue(weekObserved.await(2, TimeUnit.SECONDS));
+		} finally {
+			caller.shutdownNow();
+			assertTrue(caller.awaitTermination(2, TimeUnit.SECONDS));
+		}
 	}
 
 	@Test

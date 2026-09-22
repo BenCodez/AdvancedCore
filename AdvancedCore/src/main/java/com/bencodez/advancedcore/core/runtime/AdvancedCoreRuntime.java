@@ -170,20 +170,18 @@ public final class AdvancedCoreRuntime {
 		if (timer == null) timer = platform.getTimer();
 		final ScheduledExecutorService storageTimer = timer;
 		AtomicBoolean finished = new AtomicBoolean();
-		AtomicBoolean platformCleanup = new AtomicBoolean();
 		AtomicBoolean terminalStorageCleanup = new AtomicBoolean();
-		Runnable finishPlatform = () -> {
-			if (platformCleanup.compareAndSet(false, true)) {
-				finishDeferredPlatformCleanup(grace, storageTimer, holdTimeTimer);
-			}
-		};
-		if (!holdTimeTimer) finishPlatform.run();
+		if (holdTimeTimer) clean(List.of(new Cleanup("time change cancellation",
+				platform::beforeDeferredPlatformCleanup)));
+		// Thread-confined Bukkit cleanup must remain on the lifecycle thread. An
+		// active transition is first cancelled above and its lease still gates
+		// storage retirement through completion.
+		finishDeferredPlatformCleanup(grace, storageTimer, holdTimeTimer);
 		completion.whenComplete((ignored, failure) -> {
 			if (!finished.compareAndSet(false, true)) {
 				if (failure != null) finishDeferredStorageTimer(storageTimer, true, true, terminalStorageCleanup);
 				return;
 			}
-			finishPlatform.run();
 			if (failure == null) shutdown(storageTimer);
 			else {
 				Throwable cause = failure instanceof CompletionException && failure.getCause() != null
@@ -203,7 +201,6 @@ public final class AdvancedCoreRuntime {
 			if (!finished.compareAndSet(false, true)) return;
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
-			finishPlatform.run();
 			if (holdTimeTimer) shutdownNow(grace.timeTimer());
 			// The forced time-transition hook may just have queued the final storage
 			// flush. Stop new admissions but give that queued retirement one bounded

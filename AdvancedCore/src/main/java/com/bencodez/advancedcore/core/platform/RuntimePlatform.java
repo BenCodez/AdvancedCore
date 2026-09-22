@@ -52,6 +52,9 @@ public interface RuntimePlatform {
 	/** Called immediately before a watchdog forcibly interrupts the time worker. */
 	default void beforeForcedTimeTimerShutdown() { }
 
+	/** Called on the lifecycle thread before platform teardown while time work drains. */
+	default void beforeDeferredPlatformCleanup() { }
+
     List<Cleanup> afterExecutorGrace();
 
 	/** Terminal cleanup that must run only after the storage executor has retired. */

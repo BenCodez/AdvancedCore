@@ -104,6 +104,15 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		retireTransition(active);
 	}
 
+	/** Requests cooperative cancellation without retiring the active lease boundary. */
+	public void cancelActiveTransitions() {
+		synchronized (transitionLock) {
+			ActiveTransition active = activeTransition;
+			if (active == null || active.finalizing || active.finished) return;
+			cancel(active, "Time transition was cancelled because plugin shutdown began");
+		}
+	}
+
 	private void cancel(ActiveTransition active, String message) {
 		active.failed = true;
 		active.cancellationRequested = true;
@@ -281,6 +290,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				}
 				return;
 			}
+			if (waitForTurn && activeTransition != null && activeTransition.dispatchComplete) {
+				if (acceptingTransitions) {
+					reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
+				}
+				return;
+			}
 			while (waitForTurn && acceptingTransitions && activeTransition != null) {
 				try { transitionLock.wait(); }
 				catch (InterruptedException interruption) { interrupted = true; }
@@ -340,6 +355,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			failure = fatal;
 			throw fatal;
 		} finally {
+			synchronized (transitionLock) { active.dispatchComplete = true; }
 			finish(active, failure);
 		}
 	}
@@ -524,6 +540,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		private boolean failed;
 		private boolean finished;
 		private boolean cancellationRequested;
+		private boolean dispatchComplete;
 		private boolean finalizing;
 		private boolean retired;
 		private Throwable failure;

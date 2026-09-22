@@ -236,25 +236,28 @@ class CoreRuntimeTest {
 		assertEquals(List.of("reward", "unload"), events, "deferred completion must not repeat cleanup");
 	}
 
-	@Test void admittedTimeTransitionDelaysPlatformTeardownUntilRetirementCompletes() throws Exception {
+	@Test void admittedTimeTransitionIsCancelledBeforeLifecycleThreadTeardown() throws Exception {
 		RuntimePlatform platform = platform();
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
 		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
-		CountDownLatch unloaded = new CountDownLatch(1);
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
 		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
 		when(platform.holdTimeTimerUntilPreExecutorShutdownCompletion()).thenReturn(true);
+		doAnswer(call -> { events.add("cancel"); return null; }).when(platform).beforeDeferredPlatformCleanup();
 		when(platform.afterExecutorGrace()).thenReturn(List.of(
 				new Cleanup("reward", () -> events.add("reward"))));
+		AtomicReference<Thread> unloadThread = new AtomicReference<>();
 		when(platform.afterExecutorShutdown()).thenReturn(List.of(
-				new Cleanup("unload", () -> { events.add("unload"); unloaded.countDown(); })));
+				new Cleanup("unload", () -> { unloadThread.set(Thread.currentThread()); events.add("unload"); })));
 
+		Thread lifecycleThread = Thread.currentThread();
 		new AdvancedCoreRuntime(platform).shutdown();
 
-		assertTrue(events.isEmpty(), "platform teardown must not overtake an admitted transition");
+		assertEquals(List.of("cancel", "reward", "unload"), events);
+		assertSame(lifecycleThread, unloadThread.get());
 		retiring.complete(null);
-		assertTrue(unloaded.await(2, TimeUnit.SECONDS));
-		assertEquals(List.of("reward", "unload"), events);
+		assertEquals(List.of("cancel", "reward", "unload"), events,
+				"deferred completion must not repeat lifecycle cleanup");
 	}
 
 	@Test void deferredRetirementTimeoutForcesStorageWorkerWithoutRepeatingPlatformCleanup() {
@@ -505,6 +508,8 @@ class CoreRuntimeTest {
 
 		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
 		assertTrue(platform.holdTimeTimerUntilPreExecutorShutdownCompletion());
+		platform.beforeDeferredPlatformCleanup();
+		verify(checker).cancelActiveTransitions();
 		transitionDrain.complete(null);
 		verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
 		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
