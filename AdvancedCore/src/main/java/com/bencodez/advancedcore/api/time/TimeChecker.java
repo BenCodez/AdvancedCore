@@ -159,18 +159,21 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		ActiveTransition active;
 		boolean newlyCancelled = false;
 		boolean retire;
-		synchronized (transitionPersistenceLock) {
-			synchronized (transitionLock) {
-				active = activeTransition;
-				if (active == null) return;
-				if (!active.persistenceClosed) {
+		synchronized (transitionLock) {
+			active = activeTransition;
+			if (active == null) return;
+			if (!active.persistenceClosed) {
+				if (!active.finalizing) {
 					cancel(active, "Time transition was cancelled because plugin shutdown began");
-					active.persistenceClosed = true;
 					newlyCancelled = true;
 				}
-				discardQueuedManualTransitions();
-				retire = active.finished;
+				active.persistenceClosed = true;
 			}
+			discardQueuedManualTransitions();
+			// A finalizer which already claimed persistence retires the transition
+			// after its in-flight write. Shutdown must not wait for that filesystem
+			// operation or complete the drain ahead of it.
+			retire = active.finished && !active.finalizing;
 		}
 		if (newlyCancelled && active.persisted != null) {
 			plugin.getLogger().warning("Time change " + active.type

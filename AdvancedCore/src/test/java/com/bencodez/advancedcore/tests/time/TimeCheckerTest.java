@@ -552,6 +552,44 @@ public class TimeCheckerTest {
 	}
 
 	@Test
+	public void lifecyclePersistenceFenceDoesNotWaitForAnInFlightFinalWrite() throws Exception {
+		TimeChangeTransitionState transition = transitionState();
+		PluginManager pluginManager = configureDetectedDay(transition);
+		AtomicReference<TimeChangeTransition.Lease> lease = new AtomicReference<>();
+		CountDownLatch persistenceEntered = new CountDownLatch(1);
+		CountDownLatch releasePersistence = new CountDownLatch(1);
+		Mockito.doAnswer(call -> {
+			if (call.getArgument(0) instanceof DayChangeEvent day) lease.set(day.getTransition().retain());
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		Mockito.doAnswer(call -> {
+			persistenceEntered.countDown();
+			assertTrue(releasePersistence.await(2, TimeUnit.SECONDS));
+			return null;
+		}).when(serverDataFile).completeTimeChangeTransition(transition);
+		TimeChecker checker = new TimeChecker(plugin,
+				Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+
+		checker.update();
+		CompletionStage<Void> drain = checker.beginShutdown();
+		lease.get().complete();
+		assertTrue(persistenceEntered.await(2, TimeUnit.SECONDS));
+		var lifecycle = Executors.newSingleThreadExecutor();
+		try {
+			lifecycle.submit(checker::cancelActiveTransitionsAndClosePersistence)
+					.get(500, TimeUnit.MILLISECONDS);
+			assertFalse(drain.toCompletableFuture().isDone());
+		} finally {
+			releasePersistence.countDown();
+			lifecycle.shutdownNow();
+			assertTrue(lifecycle.awaitTermination(2, TimeUnit.SECONDS));
+		}
+		drain.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		verify(serverDataFile).completeTimeChangeTransition(transition);
+		verify(serverDataFile, Mockito.never()).failTimeChangeTransition(any());
+	}
+
+	@Test
 	public void retainedLeaseBoundsAndReportsSynchronousManualBacklog() throws Exception {
 		PluginManager pluginManager = configureDetectedDay(transitionState());
 		Logger logger = mock(Logger.class);
