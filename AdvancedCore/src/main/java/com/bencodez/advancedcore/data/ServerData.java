@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.data;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -9,7 +10,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Month;
+import java.util.HexFormat;
 
 import org.bukkit.plugin.Plugin;
 
@@ -41,11 +45,7 @@ public class ServerData extends YMLFile {
 		Path backup = backupPath(target);
 		Path replacementMarker = replacementMarkerPath(target);
 		if (Files.exists(replacementMarker)) {
-			if (!Files.exists(backup)) {
-				throw new IllegalStateException("Cannot recover interrupted replacement of " + target.getFileName());
-			}
-			restoreBackup(backup, target);
-			deleteReplacementMarker(replacementMarker);
+			recoverInterruptedReplacement(replacementMarker, backup, target);
 		}
 		if (!Files.exists(target) && Files.exists(backup)) restoreBackup(backup, target);
 		super.setup();
@@ -101,7 +101,7 @@ public class ServerData extends YMLFile {
 					channel.force(true);
 				}
 			}
-			Files.write(replacementMarker, new byte[0], StandardOpenOption.CREATE,
+			Files.writeString(replacementMarker, snapshotHash(temporary), StandardOpenOption.CREATE,
 					StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
 			try (FileChannel channel = FileChannel.open(replacementMarker, StandardOpenOption.WRITE)) {
 				channel.force(true);
@@ -122,6 +122,39 @@ public class ServerData extends YMLFile {
 
 	private Path replacementMarkerPath(Path target) {
 		return target.resolveSibling(target.getFileName().toString() + ".replacement-pending");
+	}
+
+	private void recoverInterruptedReplacement(Path marker, Path backup, Path target) {
+		try {
+			String intendedHash = Files.readString(marker).trim();
+			if (Files.isRegularFile(target) && !intendedHash.isEmpty()
+					&& intendedHash.equals(snapshotHash(target))) {
+				deleteReplacementMarker(marker);
+				return;
+			}
+		} catch (IOException failure) {
+			throw new UncheckedIOException("Failed to inspect interrupted replacement of " + target.getFileName(), failure);
+		}
+		if (!Files.exists(backup)) {
+			throw new IllegalStateException("Cannot recover interrupted replacement of " + target.getFileName());
+		}
+		restoreBackup(backup, target);
+		deleteReplacementMarker(marker);
+	}
+
+	private String snapshotHash(Path snapshot) throws IOException {
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			try (InputStream input = Files.newInputStream(snapshot)) {
+				byte[] buffer = new byte[8192];
+				for (int read; (read = input.read(buffer)) >= 0;) {
+					if (read > 0) digest.update(buffer, 0, read);
+				}
+			}
+			return HexFormat.of().formatHex(digest.digest());
+		} catch (NoSuchAlgorithmException impossible) {
+			throw new IllegalStateException("SHA-256 is unavailable", impossible);
+		}
 	}
 
 	private void restoreBackup(Path backup, Path target) {

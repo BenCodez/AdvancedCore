@@ -14,6 +14,8 @@ import java.io.UncheckedIOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.logging.Logger;
 
 import org.bukkit.Server;
@@ -112,6 +114,28 @@ class ServerDataTimeTransitionTest {
 		recovered.setup();
 		assertEquals(20, recovered.getPrevDay());
 		assertFalse(Files.exists(target.resolveSibling(target.getFileName().toString() + ".replacement-pending")));
+	}
+
+	@Test
+	void completedFallbackReplacementIsKeptWhenMarkerCleanupWasInterrupted() throws Exception {
+		UnsupportedAtomicMoveServerData data = new UnsupportedAtomicMoveServerData(plugin());
+		data.setup();
+		data.getData().set("PrevDay", 20);
+		data.saveData();
+		data.getData().set("PrevDay", 21);
+		data.saveData();
+
+		Path target = data.getdFile().toPath();
+		String targetHash = HexFormat.of().formatHex(
+				MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(target)));
+		Path marker = target.resolveSibling(target.getFileName().toString() + ".replacement-pending");
+		Files.writeString(marker, targetHash);
+
+		UnsupportedAtomicMoveServerData recovered = new UnsupportedAtomicMoveServerData(plugin());
+		recovered.setup();
+
+		assertEquals(21, recovered.getPrevDay());
+		assertFalse(Files.exists(marker));
 	}
 
 	private ServerData serverData() {
