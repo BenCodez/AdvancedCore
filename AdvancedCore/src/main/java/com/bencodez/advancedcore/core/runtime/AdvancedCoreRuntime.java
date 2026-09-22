@@ -65,9 +65,11 @@ public final class AdvancedCoreRuntime {
 		clean(platform.beforeExecutorShutdown());
 		CompletionStage<Void> retirement = platform.beforeExecutorShutdownCompletion();
 		CleanupState retirementState = awaitCleanup(retirement, "pre-executor shutdown");
+		boolean holdTimeTimer = retirementState == CleanupState.DEFERRED
+				&& platform.holdTimeTimerUntilPreExecutorShutdownCompletion();
 		ExecutorGrace grace = beginExecutorGrace(retirementState == CleanupState.SUCCESS);
 		if (retirementState == CleanupState.DEFERRED) {
-			finishDeferredCleanup(retirement, "pre-executor shutdown", grace);
+			finishDeferredCleanup(retirement, "pre-executor shutdown", grace, holdTimeTimer);
 			return;
 		}
 		boolean timerForced = retirementState == CleanupState.FAILURE;
@@ -81,6 +83,8 @@ public final class AdvancedCoreRuntime {
 		ScheduledExecutorService timeTimer = platform.getTimeTimer();
 		shutdown(platform.getLoginTimer());
 		if (stopStorageTimer) shutdown(platform.getTimer());
+		// Stop new timer submissions and let work accepted before admission closed
+		// drain before lifecycle-thread cleanup tears down its listeners and owners.
 		shutdown(timeTimer);
         shutdown(platform.getInventoryTimer());
 
@@ -96,6 +100,8 @@ public final class AdvancedCoreRuntime {
 		clean(platform.afterExecutorGrace());
 		shutdownNow(platform.getLoginTimer());
 		if (!storageTimerAlreadyForced) shutdownNow(platform.getTimer());
+		clean(List.of(new Cleanup("forced time transition shutdown",
+				platform::beforeForcedTimeTimerShutdown)));
 		shutdownNow(grace.timeTimer());
         shutdownNow(platform.getInventoryTimer());
         await(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
@@ -160,16 +166,20 @@ public final class AdvancedCoreRuntime {
 		}
 	}
 
-	/** Finish platform teardown now and bound the remaining storage-worker retirement. */
-	private void finishDeferredCleanup(CompletionStage<Void> completion, String component, ExecutorGrace grace) {
+	/** Bound deferred retirement while preserving admitted transition dependencies. */
+	private void finishDeferredCleanup(CompletionStage<Void> completion, String component, ExecutorGrace grace,
+			boolean holdTimeTimer) {
 		ScheduledExecutorService timer = platform.getUserStorageTimer();
 		if (timer == null) timer = platform.getTimer();
 		final ScheduledExecutorService storageTimer = timer;
-		// Bukkit/Folia-facing cleanup must finish on the lifecycle thread before
-		// onDisable returns. Only storage-executor retirement continues later.
-		finishDeferredPlatformCleanup(grace, storageTimer);
 		AtomicBoolean finished = new AtomicBoolean();
 		AtomicBoolean terminalStorageCleanup = new AtomicBoolean();
+		if (holdTimeTimer) clean(List.of(new Cleanup("time change cancellation",
+				platform::beforeDeferredPlatformCleanup)));
+		// Thread-confined Bukkit cleanup must remain on the lifecycle thread. An
+		// active transition is first cancelled above and its lease still gates
+		// storage retirement through completion.
+		finishDeferredPlatformCleanup(grace, storageTimer, holdTimeTimer);
 		completion.whenComplete((ignored, failure) -> {
 			if (!finished.compareAndSet(false, true)) {
 				if (failure != null) finishDeferredStorageTimer(storageTimer, true, true, terminalStorageCleanup);
@@ -182,18 +192,25 @@ public final class AdvancedCoreRuntime {
 				platform.cleanupFailed(component, cause);
 				shutdownNow(storageTimer);
 			}
+			if (holdTimeTimer) shutdownNow(grace.timeTimer());
 			finishDeferredStorageTimer(storageTimer, failure != null, failure != null, terminalStorageCleanup);
 		});
 		long timeoutMillis = Math.max(1, platform.deferredShutdownTimeoutMillis());
 		Runnable timeout = () -> {
+			// Mark a still-draining transition recoverable before racing its final
+			// lease acknowledgement. Once this hook returns, it cannot advance a
+			// time marker even if the worker ignores interruption briefly.
+			if (holdTimeTimer) clean(List.of(new Cleanup("forced time transition shutdown",
+					platform::beforeForcedTimeTimerShutdown)));
 			if (!finished.compareAndSet(false, true)) return;
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
-			shutdownNow(storageTimer);
-			// The queued retirement may have been removed by shutdownNow and therefore
-			// cannot complete its stage. Run terminal cleanup explicitly after the
-			// bounded worker wait so native owners are not stranded behind that stage.
-			finishDeferredStorageTimer(storageTimer, true, true, terminalStorageCleanup);
+			if (holdTimeTimer) shutdownNow(grace.timeTimer());
+			// The forced time-transition hook may just have queued the final storage
+			// flush. Stop new admissions but give that queued retirement one bounded
+			// worker grace before forcing it and falling back to terminal cleanup.
+			shutdown(storageTimer);
+			finishDeferredStorageTimer(storageTimer, false, true, terminalStorageCleanup);
 		};
 		try { CompletableFuture.delayedExecutor(timeoutMillis, TimeUnit.MILLISECONDS).execute(timeout); }
 		catch (RuntimeException | Error schedulingFailure) {
@@ -202,15 +219,16 @@ public final class AdvancedCoreRuntime {
 		}
 	}
 
-	private void finishDeferredPlatformCleanup(ExecutorGrace grace, ScheduledExecutorService storageTimer) {
+	private void finishDeferredPlatformCleanup(ExecutorGrace grace, ScheduledExecutorService storageTimer,
+			boolean holdTimeTimer) {
 		clean(platform.afterExecutorGrace());
 		shutdownNow(platform.getLoginTimer());
 		if (platform.getTimer() != storageTimer) shutdownNow(platform.getTimer());
-		shutdownNow(grace.timeTimer());
+		if (!holdTimeTimer) shutdownNow(grace.timeTimer());
 		shutdownNow(platform.getInventoryTimer());
 		await(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
 		if (platform.getTimer() != storageTimer) await(platform.getTimer(), 1, TimeUnit.SECONDS);
-		await(grace.timeTimer(), 1, TimeUnit.SECONDS);
+		if (!holdTimeTimer) await(grace.timeTimer(), 1, TimeUnit.SECONDS);
 		await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
 		clean(platform.afterExecutorShutdown());
 	}

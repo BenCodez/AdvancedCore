@@ -235,6 +235,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	@Test
 	void unseenOnlineNameUsesNonblockingProfileFallback() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isEnabled()).thenReturn(true);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		when(plugin.getOptions()).thenReturn(options);
 		when(options.isOnlineMode()).thenReturn(true);
@@ -330,6 +331,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	@Test
 	void profileFallbackSchedulerRejectionDoesNotInvokeFailureFromProfileWorker() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isEnabled()).thenReturn(true);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		when(plugin.getOptions()).thenReturn(options);
 		when(options.isOnlineMode()).thenReturn(true);
@@ -378,6 +380,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	@Test
 	void uuidUserResolutionDoesNotReturnBeforePersistedNameCompletes() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isEnabled()).thenReturn(true);
 		UserManager users = new UserManager(plugin);
 		when(plugin.getUserManager()).thenReturn(users);
 		UserDataManager manager = users.getDataManager();
@@ -432,6 +435,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	@Test
 	void workerStringUserResolutionCapturesIdentityOnPlatformThenReadsSharedStorageOnWorker() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isEnabled()).thenReturn(true);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		when(plugin.getOptions()).thenReturn(options);
 		when(options.isOnlineMode()).thenReturn(true);
@@ -561,6 +565,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	@Test
 	void primaryThreadNameUpdateDefersExistenceCheckBeforeReadingOrWriting() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isEnabled()).thenReturn(true);
 		UserManager users = mock(UserManager.class);
 		when(plugin.getUserManager()).thenReturn(users);
 		UserDataManager manager = new UserDataManager(plugin);
@@ -610,6 +615,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	@Test
 	void primaryThreadStorageResultIsReadOnTheWorkerAndDeliveredBackToBukkit() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isEnabled()).thenReturn(true);
 		UserDataManager manager = new UserDataManager(plugin);
 		manager.getTimer().shutdownNow();
 		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
@@ -685,6 +691,26 @@ class SharedCacheCleanupPrimaryThreadTest {
 		}
 		assertFalse(succeeded.get());
 		assertNull(failed.get());
+		assertTrue(manager.getLastDeferredStorageFailure() instanceof RejectedExecutionException);
+		manager.getTimer().shutdownNow();
+	}
+
+	@Test
+	void disabledPluginRejectsStorageNotificationWithoutSchedulingOrInlineDelivery() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isEnabled()).thenReturn(false);
+		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		UserDataManager manager = new UserDataManager(plugin);
+		AtomicBoolean delivered = new AtomicBoolean();
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			assertThrows(RejectedExecutionException.class,
+					() -> manager.dispatchSharedStorageNotification(() -> delivered.set(true)));
+		}
+		assertFalse(delivered.get());
+		verify(scheduler, never()).runTask(eq(plugin), any(Runnable.class));
 		assertTrue(manager.getLastDeferredStorageFailure() instanceof RejectedExecutionException);
 		manager.getTimer().shutdownNow();
 	}
@@ -785,6 +811,7 @@ class SharedCacheCleanupPrimaryThreadTest {
 	@Test
 	void failedPrimaryThreadPopulationIsRetainedBeforeNotificationDelivery() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		when(plugin.isEnabled()).thenReturn(true);
 		when(plugin.getNativeUserStorageOwner()).thenReturn(null);
 		UserDataManager manager = new UserDataManager(plugin);
 		manager.getTimer().shutdownNow();

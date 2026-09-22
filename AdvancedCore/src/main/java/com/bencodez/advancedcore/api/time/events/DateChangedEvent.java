@@ -4,6 +4,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
 import com.bencodez.advancedcore.api.time.TimeType;
+import com.bencodez.advancedcore.api.time.TimeChangeTransition;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -26,6 +27,7 @@ public class DateChangedEvent extends Event {
 	private boolean fake = false;
 
 	private TimeType timeType;
+	private final TimeChangeTransition transition;
 
 	/**
 	 * Instantiates a new date changed event.
@@ -33,8 +35,13 @@ public class DateChangedEvent extends Event {
 	 * @param time the time type
 	 */
 	public DateChangedEvent(TimeType time) {
+		this(time, null);
+	}
+
+	public DateChangedEvent(TimeType time, TimeChangeTransition transition) {
 		super(true);
 		this.timeType = time;
+		this.transition = transition;
 	}
 
 	/*
@@ -52,6 +59,14 @@ public class DateChangedEvent extends Event {
 	 */
 	public TimeType getTimeType() {
 		return timeType;
+	}
+
+	/**
+	 * Returns the durable transition for locally detected changes, or null for a
+	 * legacy/manual dispatch.
+	 */
+	public TimeChangeTransition getTransition() {
+		return transition;
 	}
 
 	/**

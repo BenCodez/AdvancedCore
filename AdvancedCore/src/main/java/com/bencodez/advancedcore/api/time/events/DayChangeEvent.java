@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.api.time.events;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+import com.bencodez.advancedcore.api.time.TimeChangeTransition;
+
 // TODO: Auto-generated Javadoc
 /**
  * The Class DayChangeEvent.
@@ -22,12 +24,18 @@ public class DayChangeEvent extends Event {
 	}
 
 	private boolean fake = false;
+	private final TimeChangeTransition transition;
 
 	/**
 	 * Instantiates a new day change event.
 	 */
 	public DayChangeEvent() {
+		this(null);
+	}
+
+	public DayChangeEvent(TimeChangeTransition transition) {
 		super(true);
+		this.transition = transition;
 	}
 
 	/*
@@ -47,6 +55,11 @@ public class DayChangeEvent extends Event {
 	 */
 	public boolean isFake() {
 		return fake;
+	}
+
+	/** See {@link TimeChangeTransition} for durable listener acknowledgement. */
+	public TimeChangeTransition getTransition() {
+		return transition;
 	}
 
 	/**

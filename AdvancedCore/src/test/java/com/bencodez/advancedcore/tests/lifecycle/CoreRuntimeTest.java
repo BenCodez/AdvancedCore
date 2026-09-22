@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
+import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
@@ -180,6 +182,20 @@ class CoreRuntimeTest {
         verify(platform).cleanupFailed("failed", failure);
 	}
 
+	@Test void forcedTimeShutdownFailureDoesNotSkipRemainingCleanup() {
+		RuntimePlatform platform = platform();
+		var events = new ArrayList<String>();
+		var failure = new IllegalStateException("storage close failed");
+		doThrow(failure).when(platform).beforeForcedTimeTimerShutdown();
+		when(platform.afterExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("unload", () -> events.add("unload"))));
+
+		assertDoesNotThrow(() -> new AdvancedCoreRuntime(platform).shutdown());
+
+		verify(platform).cleanupFailed("forced time transition shutdown", failure);
+		assertEquals(List.of("unload"), events);
+	}
+
 	@Test void waitsForAsyncPreShutdownWorkBeforeRetiringExecutors() throws Exception {
 		RuntimePlatform platform = platform();
 		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -235,6 +251,66 @@ class CoreRuntimeTest {
 		assertEquals(List.of("reward", "unload"), events, "deferred completion must not repeat cleanup");
 	}
 
+	@Test void admittedTimeTransitionIsCancelledBeforeLifecycleThreadTeardown() throws Exception {
+		RuntimePlatform platform = platform();
+		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.holdTimeTimerUntilPreExecutorShutdownCompletion()).thenReturn(true);
+		doAnswer(call -> { events.add("cancel"); return null; }).when(platform).beforeDeferredPlatformCleanup();
+		when(platform.afterExecutorGrace()).thenReturn(List.of(
+				new Cleanup("reward", () -> events.add("reward"))));
+		AtomicReference<Thread> unloadThread = new AtomicReference<>();
+		when(platform.afterExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("unload", () -> { unloadThread.set(Thread.currentThread()); events.add("unload"); })));
+
+		Thread lifecycleThread = Thread.currentThread();
+		new AdvancedCoreRuntime(platform).shutdown();
+
+		assertEquals(List.of("cancel", "reward", "unload"), events);
+		assertSame(lifecycleThread, unloadThread.get());
+		retiring.complete(null);
+		assertEquals(List.of("cancel", "reward", "unload"), events,
+				"deferred completion must not repeat lifecycle cleanup");
+	}
+
+	@Test void queuedTimeWorkDrainsBeforeLifecycleThreadTeardown() throws Exception {
+		RuntimePlatform platform = platform();
+		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+		ScheduledExecutorService timeTimer = Executors.newSingleThreadScheduledExecutor();
+		CountDownLatch occupied = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		timeTimer.execute(() -> {
+			occupied.countDown();
+			try { release.await(); }
+			catch (InterruptedException interruption) { Thread.currentThread().interrupt(); }
+		});
+		assertTrue(occupied.await(2, TimeUnit.SECONDS));
+		timeTimer.execute(() -> events.add("manual"));
+		when(platform.getTimeTimer()).thenReturn(timeTimer);
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.holdTimeTimerUntilPreExecutorShutdownCompletion()).thenReturn(true);
+		doAnswer(call -> { events.add("cancel"); return null; }).when(platform).beforeDeferredPlatformCleanup();
+		when(platform.afterExecutorGrace()).thenReturn(List.of(
+				new Cleanup("reward", () -> events.add("reward"))));
+		when(platform.afterExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("unload", () -> events.add("unload"))));
+
+		CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute(release::countDown);
+		try {
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertEquals(List.of("manual", "cancel", "reward", "unload"), events);
+		} finally {
+			release.countDown();
+			retiring.complete(null);
+			timeTimer.shutdownNow();
+			assertTrue(timeTimer.awaitTermination(2, TimeUnit.SECONDS));
+		}
+	}
+
 	@Test void deferredRetirementTimeoutForcesStorageWorkerWithoutRepeatingPlatformCleanup() {
 		RuntimePlatform platform = platform();
 		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
@@ -258,6 +334,40 @@ class CoreRuntimeTest {
 		assertEquals(List.of("unload"), events);
 		retiring.complete(null);
 		assertEquals(List.of("unload"), events);
+	}
+
+	@Test void watchdogLetsQueuedRetirementFlushBeforeForcingStorageWorker() throws Exception {
+		RuntimePlatform platform = platform();
+		var timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+		CountDownLatch occupied = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		timer.execute(() -> {
+			occupied.countDown();
+			try { release.await(); }
+			catch (InterruptedException interruption) { Thread.currentThread().interrupt(); }
+		});
+		assertTrue(occupied.await(2, TimeUnit.SECONDS));
+		timer.execute(() -> retirement.complete(null));
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retirement);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(20L);
+		when(platform.getTimer()).thenReturn(timer);
+		try {
+			new AdvancedCoreRuntime(platform).shutdown();
+			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+			while (!timer.isShutdown() && System.nanoTime() < deadline) Thread.yield();
+			assertTrue(timer.isShutdown());
+			release.countDown();
+
+			retirement.get(2, TimeUnit.SECONDS);
+			assertTrue(timer.awaitTermination(2, TimeUnit.SECONDS));
+			verify(platform).cleanupFailed(eq("pre-executor shutdown"),
+					any(java.util.concurrent.TimeoutException.class));
+		} finally {
+			release.countDown();
+			timer.shutdownNow();
+		}
 	}
 
 	@Test void watchdogRunsTerminalCleanupWhenQueuedRetirementIsCancelled() throws Exception {
@@ -423,6 +533,69 @@ class CoreRuntimeTest {
 		afterRetirement[0].run();
 		retired.complete(null);
 		verify(mysql).close();
+	}
+
+	@Test void bukkitAdapterDoesNotRetireStorageBeforeAnAdmittedTimeTransitionDrains() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		TimeChecker checker = mock(TimeChecker.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		CompletableFuture<Void> transitionDrain = new CompletableFuture<>();
+		CompletableFuture<Void> storageRetirement = new CompletableFuture<>();
+		when(plugin.getTimeChecker()).thenReturn(checker);
+		when(checker.beginShutdown()).thenReturn(transitionDrain);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(storageRetirement);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("time change admission"))
+				.findFirst().orElseThrow().action().run();
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+
+		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		assertTrue(platform.holdTimeTimerUntilPreExecutorShutdownCompletion());
+		platform.beforeDeferredPlatformCleanup();
+		verify(checker).cancelActiveTransitionsAndClosePersistence();
+		transitionDrain.complete(null);
+		verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
+		storageRetirement.complete(null);
+		assertTrue(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
+	}
+
+	@Test void bukkitAdapterStartsStorageRetirementWhenTimeTransitionWatchdogFires() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		TimeChecker checker = mock(TimeChecker.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		CompletableFuture<Void> transitionDrain = new CompletableFuture<>();
+		CompletableFuture<Void> storageRetirement = new CompletableFuture<>();
+		when(plugin.getTimeChecker()).thenReturn(checker);
+		when(checker.beginShutdown()).thenReturn(transitionDrain);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(storageRetirement);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("time change admission"))
+				.findFirst().orElseThrow().action().run();
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+
+		platform.beforeForcedTimeTimerShutdown();
+
+		verify(checker).abortActiveTransitions();
+		verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
 	}
 
 	@Test void bukkitAdapterClosesTheCapturedMysqlOwnerAfterConfigurationChanges() {

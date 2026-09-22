@@ -42,6 +42,19 @@ public interface RuntimePlatform {
 	/** Maximum time a non-blocking lifecycle waits before forcing its storage worker. */
 	default long deferredShutdownTimeoutMillis() { return 5_000; }
 
+	/**
+	 * Keeps the time executor alive while an admitted time transition is draining.
+	 * This applies only to a non-blocking lifecycle path; the completion stage
+	 * above remains the ordering boundary for storage retirement.
+	 */
+	default boolean holdTimeTimerUntilPreExecutorShutdownCompletion() { return false; }
+
+	/** Called immediately before a watchdog forcibly interrupts the time worker. */
+	default void beforeForcedTimeTimerShutdown() { }
+
+	/** Called on the lifecycle thread before platform teardown while time work drains. */
+	default void beforeDeferredPlatformCleanup() { }
+
     List<Cleanup> afterExecutorGrace();
 
 	/** Terminal cleanup that must run only after the storage executor has retired. */

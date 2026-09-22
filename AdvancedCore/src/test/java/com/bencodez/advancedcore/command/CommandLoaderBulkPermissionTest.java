@@ -267,6 +267,7 @@ class CommandLoaderBulkPermissionTest {
 	@Test
 	void deferredCommandFailureDoesNotCallPlayerFromWorkerWhenEntitySchedulerStops() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isEnabled()).thenReturn(true);
 		UserManager users = mock(UserManager.class);
 		UserDataManager dataManager = new UserDataManager(plugin);
 		dataManager.getTimer().shutdownNow();
