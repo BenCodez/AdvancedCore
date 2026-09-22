@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -272,6 +273,42 @@ class CoreRuntimeTest {
 		retiring.complete(null);
 		assertEquals(List.of("cancel", "reward", "unload"), events,
 				"deferred completion must not repeat lifecycle cleanup");
+	}
+
+	@Test void queuedTimeWorkDrainsBeforeLifecycleThreadTeardown() throws Exception {
+		RuntimePlatform platform = platform();
+		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+		ScheduledExecutorService timeTimer = Executors.newSingleThreadScheduledExecutor();
+		CountDownLatch occupied = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		timeTimer.execute(() -> {
+			occupied.countDown();
+			try { release.await(); }
+			catch (InterruptedException interruption) { Thread.currentThread().interrupt(); }
+		});
+		assertTrue(occupied.await(2, TimeUnit.SECONDS));
+		timeTimer.execute(() -> events.add("manual"));
+		when(platform.getTimeTimer()).thenReturn(timeTimer);
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.holdTimeTimerUntilPreExecutorShutdownCompletion()).thenReturn(true);
+		doAnswer(call -> { events.add("cancel"); return null; }).when(platform).beforeDeferredPlatformCleanup();
+		when(platform.afterExecutorGrace()).thenReturn(List.of(
+				new Cleanup("reward", () -> events.add("reward"))));
+		when(platform.afterExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("unload", () -> events.add("unload"))));
+
+		CompletableFuture.delayedExecutor(50, TimeUnit.MILLISECONDS).execute(release::countDown);
+		try {
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertEquals(List.of("manual", "cancel", "reward", "unload"), events);
+		} finally {
+			release.countDown();
+			retiring.complete(null);
+			timeTimer.shutdownNow();
+			assertTrue(timeTimer.awaitTermination(2, TimeUnit.SECONDS));
+		}
 	}
 
 	@Test void deferredRetirementTimeoutForcesStorageWorkerWithoutRepeatingPlatformCleanup() {

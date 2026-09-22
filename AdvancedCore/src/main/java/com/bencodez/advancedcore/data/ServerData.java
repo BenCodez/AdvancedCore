@@ -402,6 +402,11 @@ public class ServerData extends YMLFile {
 		saveTimeChangeTransitionData();
 	}
 
+	/** Returns whether this exact durable transition still owns the pending slot. */
+	public synchronized boolean isPendingTimeChangeTransition(TimeChangeTransitionState transition) {
+		return matchesPendingTransition(transition);
+	}
+
 	private boolean matchesPendingTransition(TimeChangeTransitionState transition) {
 		if (transition == null) return false;
 		String path = transitionPath(transition.type());

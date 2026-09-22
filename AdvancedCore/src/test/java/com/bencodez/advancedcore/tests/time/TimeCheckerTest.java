@@ -67,6 +67,7 @@ public class TimeCheckerTest {
 		// 3) stub plugin getters
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.getServerDataFile()).thenReturn(serverDataFile);
+		when(serverDataFile.isPendingTimeChangeTransition(any())).thenReturn(true);
 
 		// 4) default option values used in tests
 		when(options.getTimeZone()).thenReturn("UTC");
@@ -661,7 +662,7 @@ public class TimeCheckerTest {
 	}
 
 	@Test
-	public void queuedManualTransitionSurvivesLifecycleCancellationAndIsDrained() throws Exception {
+	public void queuedManualTransitionAcceptedBeforeShutdownIsDrained() throws Exception {
 		PluginManager pluginManager = configureDetectedDay(transitionState());
 		ScheduledThreadPoolExecutor timer = new ScheduledThreadPoolExecutor(1);
 		CountDownLatch occupied = new CountDownLatch(1);
@@ -683,7 +684,6 @@ public class TimeCheckerTest {
 
 			checker.forceChanged(TimeType.DAY);
 			CompletionStage<Void> drain = checker.beginShutdown();
-			checker.cancelActiveTransitionsAndClosePersistence();
 
 			assertFalse(drain.toCompletableFuture().isDone());
 			release.countDown();
@@ -750,6 +750,26 @@ public class TimeCheckerTest {
 
 		verify(serverDataFile).completeTimeChangeTransition(transition);
 		verify(serverDataFile, Mockito.never()).setIgnoreTime(false);
+	}
+
+	@Test
+	public void staleDurableTransitionSnapshotIsNotDispatchedAgain() {
+		TimeChangeTransitionState transition = transitionState();
+		PluginManager pluginManager = configurePendingTransition(TimeType.DAY, transition);
+		AtomicBoolean pending = new AtomicBoolean(true);
+		when(serverDataFile.isPendingTimeChangeTransition(transition)).thenAnswer(call -> pending.get());
+		Mockito.doAnswer(call -> {
+			pending.set(false);
+			return null;
+		}).when(serverDataFile).completeTimeChangeTransition(transition);
+		TimeChecker checker = new TimeChecker(plugin,
+				Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+
+		checker.update();
+		checker.update();
+
+		verify(pluginManager, Mockito.times(3)).callEvent(any(Event.class));
+		verify(serverDataFile).completeTimeChangeTransition(transition);
 	}
 
 	@Test

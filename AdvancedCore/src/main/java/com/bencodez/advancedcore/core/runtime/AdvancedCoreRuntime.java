@@ -67,7 +67,7 @@ public final class AdvancedCoreRuntime {
 		CleanupState retirementState = awaitCleanup(retirement, "pre-executor shutdown");
 		boolean holdTimeTimer = retirementState == CleanupState.DEFERRED
 				&& platform.holdTimeTimerUntilPreExecutorShutdownCompletion();
-		ExecutorGrace grace = beginExecutorGrace(retirementState == CleanupState.SUCCESS, !holdTimeTimer);
+		ExecutorGrace grace = beginExecutorGrace(retirementState == CleanupState.SUCCESS);
 		if (retirementState == CleanupState.DEFERRED) {
 			finishDeferredCleanup(retirement, "pre-executor shutdown", grace, holdTimeTimer);
 			return;
@@ -77,19 +77,21 @@ public final class AdvancedCoreRuntime {
 		finishAfterExecutorGrace(grace, timerForced);
 	}
 
-	private ExecutorGrace beginExecutorGrace(boolean stopStorageTimer, boolean stopTimeTimer) {
+	private ExecutorGrace beginExecutorGrace(boolean stopStorageTimer) {
         // Resolve the time-checker timer once, after the pre-shutdown actions,
         // just as the old lifecycle did. Other getters retain their lookup order.
 		ScheduledExecutorService timeTimer = platform.getTimeTimer();
 		shutdown(platform.getLoginTimer());
 		if (stopStorageTimer) shutdown(platform.getTimer());
-		if (stopTimeTimer) shutdown(timeTimer);
+		// Stop new timer submissions and let work accepted before admission closed
+		// drain before lifecycle-thread cleanup tears down its listeners and owners.
+		shutdown(timeTimer);
         shutdown(platform.getInventoryTimer());
 
 		platform.info("Allowing background tasks to finish before shutdown");
 		await(platform.getLoginTimer(), 2, TimeUnit.SECONDS);
 		if (stopStorageTimer) await(platform.getTimer(), 2, TimeUnit.SECONDS);
-		if (stopTimeTimer) await(timeTimer, 2, TimeUnit.SECONDS);
+		await(timeTimer, 2, TimeUnit.SECONDS);
         await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
 		return new ExecutorGrace(timeTimer);
 	}
