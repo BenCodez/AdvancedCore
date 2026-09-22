@@ -157,7 +157,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	 */
 	public void cancelActiveTransitionsAndClosePersistence() {
 		ActiveTransition active;
-		boolean persist = false;
+		boolean newlyCancelled = false;
 		boolean retire;
 		synchronized (transitionPersistenceLock) {
 			synchronized (transitionLock) {
@@ -166,12 +166,15 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				if (!active.persistenceClosed) {
 					cancel(active, "Time transition was cancelled because plugin shutdown began");
 					active.persistenceClosed = true;
-					persist = true;
+					newlyCancelled = true;
 				}
 				discardQueuedManualTransitions();
 				retire = active.finished;
 			}
-			if (persist) persistFailure(active);
+		}
+		if (newlyCancelled && active.persisted != null) {
+			plugin.getLogger().warning("Time change " + active.type
+					+ " remains pending for retry because plugin shutdown began");
 		}
 		if (retire) retireTransition(active);
 	}

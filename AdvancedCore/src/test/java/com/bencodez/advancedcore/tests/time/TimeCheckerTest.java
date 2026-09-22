@@ -544,8 +544,7 @@ public class TimeCheckerTest {
 		CompletionStage<Void> drain = checker.beginShutdown();
 		checker.cancelActiveTransitionsAndClosePersistence();
 
-		verify(serverDataFile).failTimeChangeTransition(transition);
-		Mockito.clearInvocations(serverDataFile);
+		verify(serverDataFile, Mockito.never()).failTimeChangeTransition(any());
 		lease.get().complete();
 		drain.toCompletableFuture().get(2, TimeUnit.SECONDS);
 		verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
