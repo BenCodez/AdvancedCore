@@ -163,22 +163,27 @@ public final class AdvancedCoreRuntime {
 		}
 	}
 
-	/** Finish platform teardown now and bound the remaining storage-worker retirement. */
+	/** Bound deferred retirement while preserving admitted transition dependencies. */
 	private void finishDeferredCleanup(CompletionStage<Void> completion, String component, ExecutorGrace grace,
 			boolean holdTimeTimer) {
 		ScheduledExecutorService timer = platform.getUserStorageTimer();
 		if (timer == null) timer = platform.getTimer();
 		final ScheduledExecutorService storageTimer = timer;
-		// Bukkit/Folia-facing cleanup must finish on the lifecycle thread before
-		// onDisable returns. Only storage-executor retirement continues later.
-		finishDeferredPlatformCleanup(grace, storageTimer, holdTimeTimer);
 		AtomicBoolean finished = new AtomicBoolean();
+		AtomicBoolean platformCleanup = new AtomicBoolean();
 		AtomicBoolean terminalStorageCleanup = new AtomicBoolean();
+		Runnable finishPlatform = () -> {
+			if (platformCleanup.compareAndSet(false, true)) {
+				finishDeferredPlatformCleanup(grace, storageTimer, holdTimeTimer);
+			}
+		};
+		if (!holdTimeTimer) finishPlatform.run();
 		completion.whenComplete((ignored, failure) -> {
 			if (!finished.compareAndSet(false, true)) {
 				if (failure != null) finishDeferredStorageTimer(storageTimer, true, true, terminalStorageCleanup);
 				return;
 			}
+			finishPlatform.run();
 			if (failure == null) shutdown(storageTimer);
 			else {
 				Throwable cause = failure instanceof CompletionException && failure.getCause() != null
@@ -198,6 +203,7 @@ public final class AdvancedCoreRuntime {
 			if (!finished.compareAndSet(false, true)) return;
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
+			finishPlatform.run();
 			if (holdTimeTimer) shutdownNow(grace.timeTimer());
 			// The forced time-transition hook may just have queued the final storage
 			// flush. Stop new admissions but give that queued retirement one bounded

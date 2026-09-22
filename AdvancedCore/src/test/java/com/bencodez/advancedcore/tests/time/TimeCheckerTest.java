@@ -24,6 +24,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
@@ -399,6 +400,35 @@ public class TimeCheckerTest {
 			worker.shutdownNow();
 			assertTrue(worker.awaitTermination(2, TimeUnit.SECONDS));
 		}
+	}
+
+	@Test
+	public void reentrantManualTransitionAcceptedBeforeShutdownIsDrained() {
+		PluginManager pluginManager = configureDetectedDay(transitionState());
+		TimeChecker checker = new TimeChecker(plugin);
+		AtomicReference<CompletionStage<Void>> drain = new AtomicReference<>();
+		AtomicBoolean weekObserved = new AtomicBoolean();
+		AtomicBoolean monthObserved = new AtomicBoolean();
+		Mockito.doAnswer(call -> {
+			Event event = call.getArgument(0);
+			if (event instanceof DayChangeEvent) {
+				checker.forceChanged(TimeType.WEEK, true, false, false);
+				drain.set(checker.beginShutdown());
+			} else if (event instanceof com.bencodez.advancedcore.api.time.events.WeekChangeEvent) {
+				weekObserved.set(true);
+				checker.forceChanged(TimeType.MONTH, true, false, false);
+			} else if (event instanceof com.bencodez.advancedcore.api.time.events.MonthChangeEvent) {
+				monthObserved.set(true);
+			}
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+
+		checker.forceChanged(TimeType.DAY, true, false, false);
+
+		assertTrue(weekObserved.get());
+		assertFalse(monthObserved.get(), "new work must remain rejected after shutdown begins");
+		assertNotNull(drain.get());
+		assertTrue(drain.get().toCompletableFuture().isDone());
 	}
 
 	@Test

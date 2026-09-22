@@ -276,7 +276,9 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		synchronized (transitionLock) {
 			if (waitForTurn && activeTransition != null
 					&& activeTransition.dispatchThread == Thread.currentThread()) {
-				reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
+				if (acceptingTransitions) {
+					reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
+				}
 				return;
 			}
 			while (waitForTurn && acceptingTransitions && activeTransition != null) {
@@ -296,7 +298,11 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			noActiveTransition = drain;
 			activeProcessing = true;
 		}
+		dispatchTransition(active, type, fake, preDate, postDate);
+	}
 
+	private void dispatchTransition(ActiveTransition active, TimeType type, boolean fake, boolean preDate,
+			boolean postDate) {
 		Throwable failure = null;
 		try {
 			plugin.debug("Executing time change events: " + type);
@@ -409,7 +415,8 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	}
 
 	private void retireTransition(ActiveTransition active) {
-		ManualTransition next = null;
+		ActiveTransition nextActive = null;
+		ManualTransition next;
 		synchronized (transitionLock) {
 			if (active.retired && activeTransition != active) return;
 			active.retired = true;
@@ -417,12 +424,17 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				activeTransition = null;
 				activeProcessing = false;
 			}
-			if (acceptingTransitions) next = reentrantTransitions.pollFirst();
-			else reentrantTransitions.clear();
+			next = reentrantTransitions.pollFirst();
+			if (next != null) {
+				nextActive = new ActiveTransition(next.type, null, null, active.drain, Thread.currentThread());
+				activeTransition = nextActive;
+				noActiveTransition = active.drain;
+				activeProcessing = true;
+			}
 			transitionLock.notifyAll();
 		}
-		active.drain.complete(null);
-		if (next != null) startTransition(next.type, next.fake, next.preDate, next.postDate, null, true);
+		if (nextActive == null) active.drain.complete(null);
+		else dispatchTransition(nextActive, next.type, next.fake, next.preDate, next.postDate);
 	}
 
 	private void persistFailure(ActiveTransition active) {

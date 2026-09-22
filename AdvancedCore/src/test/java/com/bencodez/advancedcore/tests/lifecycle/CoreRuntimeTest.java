@@ -236,6 +236,27 @@ class CoreRuntimeTest {
 		assertEquals(List.of("reward", "unload"), events, "deferred completion must not repeat cleanup");
 	}
 
+	@Test void admittedTimeTransitionDelaysPlatformTeardownUntilRetirementCompletes() throws Exception {
+		RuntimePlatform platform = platform();
+		CompletableFuture<Void> retiring = new CompletableFuture<>();
+		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+		CountDownLatch unloaded = new CountDownLatch(1);
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.holdTimeTimerUntilPreExecutorShutdownCompletion()).thenReturn(true);
+		when(platform.afterExecutorGrace()).thenReturn(List.of(
+				new Cleanup("reward", () -> events.add("reward"))));
+		when(platform.afterExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("unload", () -> { events.add("unload"); unloaded.countDown(); })));
+
+		new AdvancedCoreRuntime(platform).shutdown();
+
+		assertTrue(events.isEmpty(), "platform teardown must not overtake an admitted transition");
+		retiring.complete(null);
+		assertTrue(unloaded.await(2, TimeUnit.SECONDS));
+		assertEquals(List.of("reward", "unload"), events);
+	}
+
 	@Test void deferredRetirementTimeoutForcesStorageWorkerWithoutRepeatingPlatformCleanup() {
 		RuntimePlatform platform = platform();
 		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
