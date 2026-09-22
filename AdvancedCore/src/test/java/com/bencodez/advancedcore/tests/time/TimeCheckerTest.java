@@ -574,6 +574,27 @@ public class TimeCheckerTest {
 	}
 
 	@Test
+	public void shutdownAfterPendingSnapshotDoesNotRewriteItUnderTheTransitionLock() {
+		TimeChangeTransitionState transition = transitionState();
+		PluginManager pluginManager = configureDetectedDay(transition);
+		AtomicReference<TimeChecker> checkerReference = new AtomicReference<>();
+		when(serverDataFile.beginTimeChangeTransition(any(), anyString(), anyString())).thenAnswer(call -> {
+			checkerReference.get().beginShutdown();
+			return transition;
+		});
+		TimeChecker checker = new TimeChecker(plugin,
+				Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+		checkerReference.set(checker);
+
+		checker.update();
+
+		verify(pluginManager, Mockito.never()).callEvent(any(Event.class));
+		verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
+		verify(serverDataFile, Mockito.never()).failTimeChangeTransition(any());
+		assertFalse(checker.isActiveProcessing());
+	}
+
+	@Test
 	public void lifecyclePersistenceFenceDoesNotWaitForAnInFlightFinalWrite() throws Exception {
 		TimeChangeTransitionState transition = transitionState();
 		PluginManager pluginManager = configureDetectedDay(transition);

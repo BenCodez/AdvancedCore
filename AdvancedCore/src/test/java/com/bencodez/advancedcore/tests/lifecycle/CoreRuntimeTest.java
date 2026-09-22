@@ -181,6 +181,20 @@ class CoreRuntimeTest {
         verify(platform).cleanupFailed("failed", failure);
 	}
 
+	@Test void forcedTimeShutdownFailureDoesNotSkipRemainingCleanup() {
+		RuntimePlatform platform = platform();
+		var events = new ArrayList<String>();
+		var failure = new IllegalStateException("storage close failed");
+		doThrow(failure).when(platform).beforeForcedTimeTimerShutdown();
+		when(platform.afterExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("unload", () -> events.add("unload"))));
+
+		assertDoesNotThrow(() -> new AdvancedCoreRuntime(platform).shutdown());
+
+		verify(platform).cleanupFailed("forced time transition shutdown", failure);
+		assertEquals(List.of("unload"), events);
+	}
+
 	@Test void waitsForAsyncPreShutdownWorkBeforeRetiringExecutors() throws Exception {
 		RuntimePlatform platform = platform();
 		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();

@@ -98,7 +98,8 @@ public final class AdvancedCoreRuntime {
 		clean(platform.afterExecutorGrace());
 		shutdownNow(platform.getLoginTimer());
 		if (!storageTimerAlreadyForced) shutdownNow(platform.getTimer());
-		platform.beforeForcedTimeTimerShutdown();
+		clean(List.of(new Cleanup("forced time transition shutdown",
+				platform::beforeForcedTimeTimerShutdown)));
 		shutdownNow(grace.timeTimer());
         shutdownNow(platform.getInventoryTimer());
         await(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
@@ -197,7 +198,8 @@ public final class AdvancedCoreRuntime {
 			// Mark a still-draining transition recoverable before racing its final
 			// lease acknowledgement. Once this hook returns, it cannot advance a
 			// time marker even if the worker ignores interruption briefly.
-			if (holdTimeTimer) platform.beforeForcedTimeTimerShutdown();
+			if (holdTimeTimer) clean(List.of(new Cleanup("forced time transition shutdown",
+					platform::beforeForcedTimeTimerShutdown)));
 			if (!finished.compareAndSet(false, true)) return;
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));

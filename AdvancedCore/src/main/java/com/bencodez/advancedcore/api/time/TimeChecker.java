@@ -389,7 +389,8 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			}
 			if (interrupted) Thread.currentThread().interrupt();
 			if (!acceptingTransitions) {
-				if (durable != null) persistFailure(durable.persisted);
+				if (durable != null) plugin.debug("Leaving durable time change "
+						+ durable.persisted.id() + " pending because the checker is shutting down");
 				if (manualReservation) releaseManualTransition();
 				return;
 			}
