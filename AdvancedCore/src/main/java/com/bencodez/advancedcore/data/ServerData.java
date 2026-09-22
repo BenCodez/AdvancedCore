@@ -57,9 +57,8 @@ public class ServerData extends YMLFile {
 		}
 	}
 
-	/** Writes server lifecycle state as one forced snapshot and reports failures. */
-	@Override
-	public synchronized void saveData() {
+	/** Writes transition state as one forced snapshot and reports failures. */
+	protected synchronized void saveTimeChangeTransitionData() {
 		Path target = getdFile().toPath().toAbsolutePath();
 		Path parent = target.getParent();
 		Path temporary = null;
@@ -322,7 +321,7 @@ public class ServerData extends YMLFile {
 			getData().set(path + ".Period", periodKey);
 			getData().set(path + ".Marker", markerValue);
 			getData().set(path + ".Pending", true);
-			saveData();
+			saveTimeChangeTransitionData();
 		} catch (RuntimeException | Error failure) {
 			getData().set(path + ".Id", previousId);
 			getData().set(path + ".Period", previousPeriod);
@@ -342,7 +341,7 @@ public class ServerData extends YMLFile {
 		String marker = getData().getString(path + ".Marker", "");
 		if (id.isEmpty() || period.isEmpty() || !isValidMarker(type, marker)) {
 			getData().set(path + ".Pending", false);
-			saveData();
+			saveTimeChangeTransitionData();
 			return null;
 		}
 		return new TimeChangeTransitionState(type, id, period, marker, true);
@@ -388,7 +387,7 @@ public class ServerData extends YMLFile {
 			case MONTH -> getData().set(markerPath, transition.markerValue());
 			}
 			getData().set(pendingPath, false);
-			saveData();
+			saveTimeChangeTransitionData();
 		} catch (RuntimeException | Error failure) {
 			getData().set(markerPath, previousMarker);
 			getData().set(pendingPath, true);
@@ -400,7 +399,7 @@ public class ServerData extends YMLFile {
 	public synchronized void failTimeChangeTransition(TimeChangeTransitionState transition) {
 		if (!matchesPendingTransition(transition)) return;
 		getData().set(transitionPath(transition.type()) + ".Pending", true);
-		saveData();
+		saveTimeChangeTransitionData();
 	}
 
 	private boolean matchesPendingTransition(TimeChangeTransitionState transition) {

@@ -34,7 +34,7 @@ class ServerDataTimeTransitionTest {
 
 	@Test
 	void malformedNumericMarkerIsDiscardedInsteadOfRetriedForever() {
-		ServerData data = serverData();
+		TestServerData data = serverData();
 		data.setup();
 		data.getData().set("TimeTransitions.DAY.Pending", true);
 		data.getData().set("TimeTransitions.DAY.Id", "DAY:2026-09-21");
@@ -64,7 +64,7 @@ class ServerDataTimeTransitionTest {
 
 	@Test
 	void atomicServerDataSavePropagatesReplacementFailure() throws Exception {
-		ServerData data = serverData();
+		TestServerData data = serverData();
 		data.setup();
 		File target = data.getdFile();
 		assertTrue(target.delete());
@@ -72,7 +72,7 @@ class ServerDataTimeTransitionTest {
 		Files.writeString(target.toPath().resolve("blocks-replacement"), "occupied");
 		data.getData().set("PrevDay", 21);
 
-		assertThrows(UncheckedIOException.class, data::saveData);
+		assertThrows(UncheckedIOException.class, data::saveTransitionState);
 		assertTrue(target.isDirectory());
 	}
 
@@ -98,9 +98,9 @@ class ServerDataTimeTransitionTest {
 		UnsupportedAtomicMoveServerData data = new UnsupportedAtomicMoveServerData(plugin());
 		data.setup();
 		data.getData().set("PrevDay", 20);
-		data.saveData();
+		data.saveTransitionState();
 		data.getData().set("PrevDay", 21);
-		data.saveData();
+		data.saveTransitionState();
 
 		Path target = data.getdFile().toPath();
 		Path backup = target.resolveSibling(target.getFileName().toString() + ".backup");
@@ -121,9 +121,9 @@ class ServerDataTimeTransitionTest {
 		UnsupportedAtomicMoveServerData data = new UnsupportedAtomicMoveServerData(plugin());
 		data.setup();
 		data.getData().set("PrevDay", 20);
-		data.saveData();
+		data.saveTransitionState();
 		data.getData().set("PrevDay", 21);
-		data.saveData();
+		data.saveTransitionState();
 
 		Path target = data.getdFile().toPath();
 		String targetHash = HexFormat.of().formatHex(
@@ -144,7 +144,7 @@ class ServerDataTimeTransitionTest {
 		data.setup();
 		data.getData().set("PrevDay", 21);
 
-		data.saveData();
+		data.saveTransitionState();
 
 		assertEquals(1, data.directoryForces);
 	}
@@ -154,17 +154,28 @@ class ServerDataTimeTransitionTest {
 		DirectoryTrackingServerData data = new DirectoryTrackingServerData(plugin(), true);
 		data.setup();
 		data.getData().set("PrevDay", 20);
-		data.saveData();
+		data.saveTransitionState();
 		data.directoryForces = 0;
 		data.getData().set("PrevDay", 21);
 
-		data.saveData();
+		data.saveTransitionState();
 
 		assertEquals(4, data.directoryForces);
 	}
 
-	private ServerData serverData() {
-		return new ServerData(plugin());
+	@Test
+	void ordinaryServerDataSaveDoesNotForceTheContainingDirectory() {
+		DirectoryTrackingServerData data = new DirectoryTrackingServerData(plugin(), false);
+		data.setup();
+		data.directoryForces = 0;
+
+		data.setLastUpdated();
+
+		assertEquals(0, data.directoryForces);
+	}
+
+	private TestServerData serverData() {
+		return new TestServerData(plugin());
 	}
 
 	private AdvancedCorePlugin plugin() {
@@ -184,9 +195,19 @@ class ServerDataTimeTransitionTest {
 			super(plugin);
 		}
 
-		@Override public void saveData() {
+		@Override protected void saveTimeChangeTransitionData() {
 			if (failSaves) throw new IllegalStateException("simulated save failure");
-			super.saveData();
+			super.saveTimeChangeTransitionData();
+		}
+	}
+
+	private static class TestServerData extends ServerData {
+		private TestServerData(AdvancedCorePlugin plugin) {
+			super(plugin);
+		}
+
+		private void saveTransitionState() {
+			saveTimeChangeTransitionData();
 		}
 	}
 
@@ -197,6 +218,10 @@ class ServerDataTimeTransitionTest {
 
 		@Override protected void moveAtomically(Path source, Path target) throws IOException {
 			throw new AtomicMoveNotSupportedException(source.toString(), target.toString(), "test provider");
+		}
+
+		private void saveTransitionState() {
+			saveTimeChangeTransitionData();
 		}
 	}
 
@@ -218,6 +243,10 @@ class ServerDataTimeTransitionTest {
 
 		@Override protected void forceDirectory(Path directory) {
 			directoryForces++;
+		}
+
+		private void saveTransitionState() {
+			saveTimeChangeTransitionData();
 		}
 	}
 }

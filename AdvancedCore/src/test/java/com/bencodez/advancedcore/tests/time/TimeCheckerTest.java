@@ -661,6 +661,41 @@ public class TimeCheckerTest {
 	}
 
 	@Test
+	public void queuedManualTransitionAcceptedBeforeShutdownIsDrained() throws Exception {
+		PluginManager pluginManager = configureDetectedDay(transitionState());
+		ScheduledThreadPoolExecutor timer = new ScheduledThreadPoolExecutor(1);
+		CountDownLatch occupied = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		CountDownLatch dayObserved = new CountDownLatch(1);
+		Mockito.doAnswer(call -> {
+			if (call.getArgument(0) instanceof DayChangeEvent) dayObserved.countDown();
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		try {
+			timer.execute(() -> {
+				occupied.countDown();
+				try { release.await(); }
+				catch (InterruptedException interruption) { Thread.currentThread().interrupt(); }
+			});
+			assertTrue(occupied.await(2, TimeUnit.SECONDS));
+			TimeChecker checker = new TimeChecker(plugin);
+			checker.setTimer(timer);
+
+			checker.forceChanged(TimeType.DAY);
+			CompletionStage<Void> drain = checker.beginShutdown();
+
+			assertFalse(drain.toCompletableFuture().isDone());
+			release.countDown();
+			assertTrue(dayObserved.await(2, TimeUnit.SECONDS));
+			drain.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		} finally {
+			release.countDown();
+			timer.shutdownNow();
+			assertTrue(timer.awaitTermination(2, TimeUnit.SECONDS));
+		}
+	}
+
+	@Test
 	public void asynchronousManualAdmissionIsBoundedBeforeExecutorQueueing() throws Exception {
 		Logger logger = mock(Logger.class);
 		when(plugin.getLogger()).thenReturn(logger);

@@ -38,7 +38,9 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	private final AtomicBoolean manualBacklogWarningLogged = new AtomicBoolean();
 	private volatile ActiveTransition activeTransition;
 	private CompletableFuture<Void> noActiveTransition = CompletableFuture.completedFuture(null);
+	private CompletableFuture<Void> noPendingManualTransitions = CompletableFuture.completedFuture(null);
 	private boolean acceptingTransitions = true;
+	private boolean abortingTransitions;
 
 	@Getter
 	private volatile boolean activeProcessing = false;
@@ -85,7 +87,8 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	}
 
 	private boolean reserveManualTransition() {
-		while (true) {
+		synchronized (transitionLock) {
+			if (!acceptingTransitions || abortingTransitions) return false;
 			int pending = pendingManualTransitions.get();
 			if (pending >= MAX_PENDING_MANUAL_TRANSITIONS) {
 				if (manualBacklogWarningLogged.compareAndSet(false, true)) {
@@ -94,13 +97,20 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				}
 				return false;
 			}
-			if (pendingManualTransitions.compareAndSet(pending, pending + 1)) return true;
+			if (pending == 0) noPendingManualTransitions = new CompletableFuture<>();
+			pendingManualTransitions.incrementAndGet();
+			return true;
 		}
 	}
 
 	private void releaseManualTransition() {
-		pendingManualTransitions.decrementAndGet();
-		manualBacklogWarningLogged.set(false);
+		synchronized (transitionLock) {
+			if (pendingManualTransitions.get() == 0) return;
+			if (pendingManualTransitions.decrementAndGet() == 0) {
+				manualBacklogWarningLogged.set(false);
+				noPendingManualTransitions.complete(null);
+			}
+		}
 	}
 
 	/**
@@ -111,7 +121,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		synchronized (transitionLock) {
 			acceptingTransitions = false;
 			transitionLock.notifyAll();
-			return noActiveTransition;
+			return CompletableFuture.allOf(noActiveTransition, noPendingManualTransitions);
 		}
 	}
 
@@ -122,14 +132,18 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	public void abortActiveTransitions() {
 		ActiveTransition active;
 		synchronized (transitionLock) {
+			abortingTransitions = true;
 			active = activeTransition;
-			if (active == null || active.finalizing) return;
+			if (active == null || active.finalizing) {
+				abandonManualTransitions();
+				return;
+			}
 			cancel(active, "Time transition was cancelled by bounded shutdown");
 			active.finished = true;
 			// Detected transitions were persisted as pending before dispatch. The
 			// bounded watchdog only fences later writes; it must not perform fsync.
 			active.persistenceClosed = true;
-			discardQueuedManualTransitions();
+			abandonManualTransitions();
 		}
 		retireTransition(active);
 	}
@@ -153,8 +167,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		boolean newlyCancelled = false;
 		boolean retire;
 		synchronized (transitionLock) {
+			abortingTransitions = true;
 			active = activeTransition;
-			if (active == null) return;
+			if (active == null) {
+				abandonManualTransitions();
+				return;
+			}
 			if (!active.persistenceClosed) {
 				if (!active.finalizing) {
 					cancel(active, "Time transition was cancelled because plugin shutdown began");
@@ -162,7 +180,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				}
 				active.persistenceClosed = true;
 			}
-			discardQueuedManualTransitions();
+			abandonManualTransitions();
 			// A finalizer which already claimed persistence retires the transition
 			// after its in-flight write. Shutdown must not wait for that filesystem
 			// operation or complete the drain ahead of it.
@@ -361,18 +379,18 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		synchronized (transitionLock) {
 			if (waitForTurn && activeTransition != null
 					&& activeTransition.dispatchThread == Thread.currentThread()) {
-				if (acceptingTransitions) {
+				if (!abortingTransitions) {
 					reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
 				} else if (manualReservation) releaseManualTransition();
 				return;
 			}
 			if (waitForTurn && activeTransition != null && activeTransition.dispatchComplete) {
-				if (acceptingTransitions) {
+				if (!abortingTransitions) {
 					reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
 				} else if (manualReservation) releaseManualTransition();
 				return;
 			}
-			while (waitForTurn && acceptingTransitions && activeTransition != null) {
+			while (waitForTurn && !abortingTransitions && activeTransition != null) {
 				if (activeTransition.dispatchComplete) {
 					reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
 					return;
@@ -381,7 +399,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				catch (InterruptedException interruption) { interrupted = true; }
 			}
 			if (interrupted) Thread.currentThread().interrupt();
-			if (!acceptingTransitions) {
+			if (abortingTransitions || (!acceptingTransitions && !manualReservation)) {
 				if (durable != null) plugin.debug("Leaving durable time change "
 						+ durable.persisted.id() + " pending because the checker is shutting down");
 				if (manualReservation) releaseManualTransition();
@@ -560,8 +578,13 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		else dispatchTransition(nextActive, next.type, next.fake, next.preDate, next.postDate);
 	}
 
-	private void discardQueuedManualTransitions() {
-		while (reentrantTransitions.pollFirst() != null) releaseManualTransition();
+	/** Releases all manual admissions when the bounded shutdown fence wins. */
+	private void abandonManualTransitions() {
+		reentrantTransitions.clear();
+		pendingManualTransitions.set(0);
+		manualBacklogWarningLogged.set(false);
+		noPendingManualTransitions.complete(null);
+		transitionLock.notifyAll();
 	}
 
 	private void persistFailure(ActiveTransition active) {
