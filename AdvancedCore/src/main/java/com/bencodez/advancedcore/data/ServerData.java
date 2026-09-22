@@ -1,6 +1,14 @@
 package com.bencodez.advancedcore.data;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.channels.FileChannel;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.Month;
 
 import org.bukkit.plugin.Plugin;
@@ -25,6 +33,39 @@ public class ServerData extends YMLFile {
 
 	public ServerData(AdvancedCorePlugin plugin) {
 		super(plugin, new File(plugin.getDataFolder(), "ServerData.yml"));
+	}
+
+	/** Writes server lifecycle state as one forced snapshot and reports failures. */
+	@Override
+	public synchronized void saveData() {
+		Path target = getdFile().toPath().toAbsolutePath();
+		Path parent = target.getParent();
+		Path temporary = null;
+		try {
+			Files.createDirectories(parent);
+			temporary = Files.createTempFile(parent, target.getFileName().toString() + ".", ".tmp");
+			getData().save(temporary.toFile());
+			try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
+				channel.force(true);
+			}
+			try {
+				Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+			} catch (AtomicMoveNotSupportedException unsupported) {
+				Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+			}
+			temporary = null;
+		} catch (IOException failure) {
+			throw new UncheckedIOException("Failed to save " + target.getFileName(), failure);
+		} finally {
+			if (temporary != null) {
+				try {
+					Files.deleteIfExists(temporary);
+				} catch (IOException cleanupFailure) {
+					getPlugin().getLogger().warning("Failed to remove temporary " + target.getFileName()
+							+ " snapshot: " + cleanupFailure.getMessage());
+				}
+			}
+		}
 	}
 
 	public long getLastUpdated() {

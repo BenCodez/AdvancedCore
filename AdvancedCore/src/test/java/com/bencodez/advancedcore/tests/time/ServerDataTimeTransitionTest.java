@@ -9,6 +9,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.util.logging.Logger;
 
 import org.bukkit.Server;
@@ -52,6 +54,20 @@ class ServerDataTimeTransitionTest {
 				new ServerData.TimeChangeTransitionState(TimeType.DAY, "DAY:2026-09-21", "2026-09-21", "21", true)));
 		assertEquals(20, data.getData().getInt("PrevDay"));
 		assertTrue(data.getData().getBoolean("TimeTransitions.DAY.Pending"));
+	}
+
+	@Test
+	void atomicServerDataSavePropagatesReplacementFailure() throws Exception {
+		ServerData data = serverData();
+		data.setup();
+		File target = data.getdFile();
+		assertTrue(target.delete());
+		assertTrue(target.mkdir());
+		Files.writeString(target.toPath().resolve("blocks-replacement"), "occupied");
+		data.getData().set("PrevDay", 21);
+
+		assertThrows(UncheckedIOException.class, data::saveData);
+		assertTrue(target.isDirectory());
 	}
 
 	private ServerData serverData() {

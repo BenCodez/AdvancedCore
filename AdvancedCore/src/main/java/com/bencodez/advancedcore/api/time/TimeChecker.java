@@ -92,10 +92,13 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		ActiveTransition active;
 		synchronized (transitionLock) {
 			active = activeTransition;
-			if (active == null) return;
+			if (active == null || active.finalizing) return;
 			cancel(active, "Time transition was cancelled by bounded shutdown");
+			active.finished = true;
+			active.retired = true;
 		}
 		persistFailure(active);
+		retireTransition(active);
 	}
 
 	private void cancel(ActiveTransition active, String message) {
@@ -278,10 +281,11 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				return;
 			}
 			if (activeTransition != null) return;
-			if (noActiveTransition.isDone()) noActiveTransition = new CompletableFuture<>();
+			CompletableFuture<Void> drain = new CompletableFuture<>();
 			active = new ActiveTransition(type, durable == null ? null : durable.transition,
-					durable == null ? null : durable.persisted);
+					durable == null ? null : durable.persisted, drain);
 			activeTransition = active;
+			noActiveTransition = drain;
 			activeProcessing = true;
 		}
 
@@ -369,7 +373,10 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	}
 
 	private void finalizeTransition(ActiveTransition active) {
-		CompletableFuture<Void> drained;
+		synchronized (transitionLock) {
+			if (active.retired || activeTransition != active) return;
+			active.finalizing = true;
+		}
 		try {
 			if (active.persisted != null) {
 				if (!active.failed) {
@@ -389,16 +396,21 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 					+ (active.transition == null ? "" : active.transition.getId()) + ": " + persistenceFailure.getMessage());
 			plugin.debug(persistenceFailure);
 		} finally {
-			synchronized (transitionLock) {
-				if (activeTransition == active) {
-					activeTransition = null;
-					activeProcessing = false;
-				}
-				drained = noActiveTransition;
-				transitionLock.notifyAll();
-			}
-			drained.complete(null);
+			retireTransition(active);
 		}
+	}
+
+	private void retireTransition(ActiveTransition active) {
+		synchronized (transitionLock) {
+			if (active.retired && activeTransition != active) return;
+			active.retired = true;
+			if (activeTransition == active) {
+				activeTransition = null;
+				activeProcessing = false;
+			}
+			transitionLock.notifyAll();
+		}
+		active.drain.complete(null);
 	}
 
 	private void persistFailure(ActiveTransition active) {
@@ -468,16 +480,21 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		private final TimeType type;
 		private final TimeChangeTransition transition;
 		private final TimeChangeTransitionState persisted;
+		private final CompletableFuture<Void> drain;
 		private int participants = 1;
 		private boolean failed;
 		private boolean finished;
 		private boolean cancellationRequested;
+		private boolean finalizing;
+		private boolean retired;
 		private Throwable failure;
 
-		private ActiveTransition(TimeType type, TimeChangeTransition transition, TimeChangeTransitionState persisted) {
+		private ActiveTransition(TimeType type, TimeChangeTransition transition, TimeChangeTransitionState persisted,
+				CompletableFuture<Void> drain) {
 			this.type = type;
 			this.transition = transition;
 			this.persisted = persisted;
+			this.drain = drain;
 		}
 	}
 }

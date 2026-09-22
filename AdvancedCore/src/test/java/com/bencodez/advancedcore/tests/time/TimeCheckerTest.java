@@ -203,11 +203,92 @@ public class TimeCheckerTest {
 				"normal shutdown must give admitted work its bounded completion grace");
 		checker.abortActiveTransitions();
 		assertTrue(observed.get().isCancellationRequested());
-		lease.get().complete();
-
 		drain.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		lease.get().complete();
 		verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
-		verify(serverDataFile, Mockito.atLeastOnce()).failTimeChangeTransition(transition);
+		verify(serverDataFile).failTimeChangeTransition(transition);
+	}
+
+	@Test
+	public void watchdogCannotReverseSuccessAfterFinalPersistenceStarts() throws Exception {
+		TimeChangeTransitionState transition = transitionState();
+		PluginManager pluginManager = configureDetectedDay(transition);
+		AtomicReference<TimeChangeTransition.Lease> lease = new AtomicReference<>();
+		CountDownLatch persistenceStarted = new CountDownLatch(1);
+		CountDownLatch releasePersistence = new CountDownLatch(1);
+		Mockito.doAnswer(call -> {
+			if (call.getArgument(0) instanceof DayChangeEvent day) lease.set(day.getTransition().retain());
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		Mockito.doAnswer(call -> {
+			persistenceStarted.countDown();
+			assertTrue(releasePersistence.await(2, TimeUnit.SECONDS));
+			return null;
+		}).when(serverDataFile).completeTimeChangeTransition(transition);
+		ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
+		try {
+			TimeChecker checker = new TimeChecker(plugin,
+					Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+			checker.setTimer(timer);
+			checker.update();
+			CompletionStage<Void> drain = checker.beginShutdown();
+
+			lease.get().complete();
+			assertTrue(persistenceStarted.await(2, TimeUnit.SECONDS));
+			checker.abortActiveTransitions();
+			releasePersistence.countDown();
+
+			drain.toCompletableFuture().get(2, TimeUnit.SECONDS);
+			verify(serverDataFile).completeTimeChangeTransition(transition);
+			verify(serverDataFile, Mockito.never()).failTimeChangeTransition(any());
+		} finally {
+			releasePersistence.countDown();
+			timer.shutdownNow();
+			assertTrue(timer.awaitTermination(2, TimeUnit.SECONDS));
+		}
+	}
+
+	@Test
+	public void watchdogRetiresTransitionWhileFinalizationIsQueued() throws Exception {
+		TimeChangeTransitionState transition = transitionState();
+		PluginManager pluginManager = configureDetectedDay(transition);
+		AtomicReference<TimeChangeTransition.Lease> lease = new AtomicReference<>();
+		CountDownLatch timerBlocked = new CountDownLatch(1);
+		CountDownLatch releaseTimer = new CountDownLatch(1);
+		Mockito.doAnswer(call -> {
+			if (call.getArgument(0) instanceof DayChangeEvent day) lease.set(day.getTransition().retain());
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor();
+		try {
+			timer.execute(() -> {
+				timerBlocked.countDown();
+				try {
+					releaseTimer.await();
+				} catch (InterruptedException interruption) {
+					Thread.currentThread().interrupt();
+				}
+			});
+			assertTrue(timerBlocked.await(2, TimeUnit.SECONDS));
+			TimeChecker checker = new TimeChecker(plugin,
+					Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+			checker.setTimer(timer);
+			checker.update();
+			CompletionStage<Void> drain = checker.beginShutdown();
+
+			lease.get().complete();
+			checker.abortActiveTransitions();
+
+			drain.toCompletableFuture().get(2, TimeUnit.SECONDS);
+			releaseTimer.countDown();
+			timer.shutdown();
+			assertTrue(timer.awaitTermination(2, TimeUnit.SECONDS));
+			verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
+			verify(serverDataFile).failTimeChangeTransition(transition);
+		} finally {
+			releaseTimer.countDown();
+			timer.shutdownNow();
+		}
 	}
 
 	@Test
