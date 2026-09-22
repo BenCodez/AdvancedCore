@@ -661,7 +661,7 @@ public class TimeCheckerTest {
 	}
 
 	@Test
-	public void queuedManualTransitionAcceptedBeforeShutdownIsDrained() throws Exception {
+	public void queuedManualTransitionSurvivesLifecycleCancellationAndIsDrained() throws Exception {
 		PluginManager pluginManager = configureDetectedDay(transitionState());
 		ScheduledThreadPoolExecutor timer = new ScheduledThreadPoolExecutor(1);
 		CountDownLatch occupied = new CountDownLatch(1);
@@ -683,6 +683,7 @@ public class TimeCheckerTest {
 
 			checker.forceChanged(TimeType.DAY);
 			CompletionStage<Void> drain = checker.beginShutdown();
+			checker.cancelActiveTransitionsAndClosePersistence();
 
 			assertFalse(drain.toCompletableFuture().isDone());
 			release.countDown();
