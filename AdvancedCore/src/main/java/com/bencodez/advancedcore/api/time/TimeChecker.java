@@ -402,12 +402,14 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		try {
 			plugin.debug("Executing time change events: " + type);
 			plugin.getLogger().info("Time change event: " + type + ", Fake: " + fake);
+			if (dispatchCancelled(active)) return;
 			TimeChangeTransition transition = active.transition;
 			if (preDate) {
 				PreDateChangedEvent preDateChanged = new PreDateChangedEvent(type, transition);
 				preDateChanged.setFake(fake);
 				plugin.getServer().getPluginManager().callEvent(preDateChanged);
 			}
+			if (dispatchCancelled(active)) return;
 			if (TimeType.DAY.equals(type)) {
 				DayChangeEvent event = new DayChangeEvent(transition);
 				event.setFake(fake);
@@ -421,6 +423,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				event.setFake(fake);
 				plugin.getServer().getPluginManager().callEvent(event);
 			}
+			if (dispatchCancelled(active)) return;
 			if (postDate) {
 				DateChangedEvent event = new DateChangedEvent(type, transition);
 				event.setFake(fake);
@@ -440,6 +443,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				transitionLock.notifyAll();
 			}
 			finish(active, failure);
+		}
+	}
+
+	private boolean dispatchCancelled(ActiveTransition active) {
+		synchronized (transitionLock) {
+			return activeTransition != active || active.retired || active.cancellationRequested;
 		}
 	}
 
