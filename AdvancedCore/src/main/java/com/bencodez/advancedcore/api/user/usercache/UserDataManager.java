@@ -14,6 +14,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
@@ -62,6 +63,8 @@ public class UserDataManager {
 	/** The one in-flight retirement, retained so lifecycle callers can await it safely. */
 	private volatile CompletionStage<Void> sharedRuntimeRetirement;
 	private final AtomicReference<Throwable> lastDeferredStorageFailure = new AtomicReference<>();
+	private final AtomicLong sharedNotificationGeneration = new AtomicLong();
+	private volatile boolean sharedNotificationsClosed;
 	private final Object sharedBindingAdmission = new Object();
 	/** Explicit converter-only bypass for the legacy storage adapter. */
 	private final ThreadLocal<Integer> storageMaintenanceDepth = ThreadLocal.withInitial(() -> 0);
@@ -679,11 +682,11 @@ public class UserDataManager {
 		finally { cacheMapLifecycle.readLock().unlock(); }
 		boolean current = population == null || finishSharedCachePopulation(population, runtimeFailure == null && errorFailure == null);
 		if (runtimeFailure != null) {
-			if (current) notifyCacheChangesAfterFailure(refreshed, runtimeFailure);
+			if (current) dispatchCacheRefreshNotification(refreshed, runtimeFailure);
 			throw runtimeFailure;
 		}
 		if (errorFailure != null) {
-			if (current) notifyCacheChangesAfterFailure(refreshed, errorFailure);
+			if (current) dispatchCacheRefreshNotification(refreshed, errorFailure);
 			throw errorFailure;
 		}
 		if (!current || !populated[0]) {
@@ -696,7 +699,7 @@ public class UserDataManager {
 			}
 			return;
 		}
-		notifyCacheChanges(refreshed);
+		dispatchCacheRefreshNotification(refreshed, null);
 	}
 
 	private void cacheUserNow(UUID uuid, boolean traceDevelopmentCall, CacheRefresh refresh) {
@@ -756,7 +759,7 @@ public class UserDataManager {
 				}
 				if (deferredFailure != null) {
 					reportDeferredStorageFailure(deferredFailure);
-					dispatchSharedStorageNotification(() -> {
+					dispatchSharedUserDataNotification(() -> {
 						try { notifyCacheChangesAfterFailure(refreshed, deferredFailure); }
 						catch (RuntimeException | Error notificationFailure) {
 							deferredFailure.addSuppressed(notificationFailure);
@@ -766,7 +769,7 @@ public class UserDataManager {
 					return;
 				}
 				if (!populated[0]) return;
-				dispatchSharedStorageNotification(() -> {
+				dispatchSharedUserDataNotification(() -> {
 					try { notifyCacheChanges(refreshed); }
 					catch (RuntimeException | Error notificationFailure) {
 						reportDeferredStorageFailure(notificationFailure);
@@ -851,6 +854,16 @@ public class UserDataManager {
 	private void notifyCacheChangesAfterFailure(CacheRefresh refresh, Throwable originalFailure) {
 		try { notifyCacheChanges(refresh); }
 		catch (RuntimeException | Error notificationFailure) { originalFailure.addSuppressed(notificationFailure); }
+	}
+
+	private void dispatchCacheRefreshNotification(CacheRefresh refresh, Throwable originalFailure) {
+		if (refresh == null || (refresh.flushNotification == null && refresh.changed.isEmpty())) return;
+		Runnable notification = () -> {
+			if (originalFailure == null) notifyCacheChanges(refresh);
+			else notifyCacheChangesAfterFailure(refresh, originalFailure);
+		};
+		if (hasSharedSqlBackend()) dispatchSharedUserDataNotification(notification);
+		else notification.run();
 	}
 
 	private void notifyCacheChanges(CacheRefresh refresh) {
@@ -950,7 +963,7 @@ public class UserDataManager {
 				Throwable completedFailure = problem;
 				java.util.concurrent.atomic.AtomicBoolean completionClaimed = new java.util.concurrent.atomic.AtomicBoolean();
 				try {
-					dispatchSharedStorageNotification(() -> {
+					dispatchPlatformCallback(() -> {
 						if (!completionClaimed.compareAndSet(false, true)) return;
 						if (completedFailure == null) success.accept(completed);
 						else failure.accept(completedFailure);
@@ -974,10 +987,10 @@ public class UserDataManager {
 	 * it never invokes a callback from the storage worker as a fallback.
 	 */
 	public final void dispatchSharedStorageNotification(Runnable notification) {
-		dispatchSharedStorageNotification(notification, null);
+		dispatchPlatformCallback(notification, null);
 	}
 
-	private void dispatchSharedStorageNotification(Runnable notification, org.bukkit.entity.Entity callbackOwner) {
+	private void dispatchPlatformCallback(Runnable notification, org.bukkit.entity.Entity callbackOwner) {
 		Objects.requireNonNull(notification, "notification");
 		if (plugin == null || !plugin.isEnabled()) {
 			RejectedExecutionException rejected = new RejectedExecutionException(
@@ -988,6 +1001,39 @@ public class UserDataManager {
 		if (Bukkit.getServer() == null || Bukkit.isPrimaryThread()) notification.run();
 		else if (callbackOwner != null) plugin.getBukkitScheduler().runTask(plugin, notification, callbackOwner);
 		else plugin.getBukkitScheduler().runTask(plugin, notification);
+	}
+
+	/**
+	 * Deliver an internal shared cache/storage notification on the manager's
+	 * storage worker. Unlike platform completions, this lane never hands the
+	 * notification to Bukkit/Folia. Queueing also ensures callers have released
+	 * cache and per-user admission before a listener can re-enter storage APIs.
+	 */
+	public final void dispatchSharedUserDataNotification(Runnable notification) {
+		Objects.requireNonNull(notification, "notification");
+		if (sharedNotificationsClosed) return;
+		long generation = sharedNotificationGeneration.get();
+		try {
+			timer.execute(() -> {
+				if (sharedNotificationsClosed || generation != sharedNotificationGeneration.get()) return;
+				try { notification.run(); }
+				catch (RuntimeException | Error failure) { reportDeferredStorageFailure(failure); }
+			});
+		} catch (RejectedExecutionException rejected) {
+			reportDeferredStorageFailure(rejected);
+			throw rejected;
+		}
+	}
+
+	/** Fence callbacks captured from a cache generation that has been replaced. */
+	public final void advanceSharedUserDataNotificationGeneration() {
+		sharedNotificationGeneration.incrementAndGet();
+	}
+
+	/** Final shutdown discards queued notifications and prevents future publication. */
+	public final void closeSharedUserDataNotifications() {
+		sharedNotificationsClosed = true;
+		sharedNotificationGeneration.incrementAndGet();
 	}
 
 	private void reportDeferredStorageFailure(Throwable failure) {

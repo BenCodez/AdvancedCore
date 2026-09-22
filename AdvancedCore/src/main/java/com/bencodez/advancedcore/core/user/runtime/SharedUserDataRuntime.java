@@ -242,16 +242,17 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 
 	/** Replace the route and publish its platform owner before releasing lifecycle admission. */
 	public void replaceBackend(SqlUserBackend replacement, Runnable afterReplacement) {
-        rejectReentrantTransition();
-        cacheOwner.requireBlockingAllowed();
-        Objects.requireNonNull(replacement, "replacement");
+		rejectReentrantTransition();
+		cacheOwner.requireBlockingAllowed();
+		Objects.requireNonNull(replacement, "replacement");
 		Objects.requireNonNull(afterReplacement, "afterReplacement");
-        lifecycle.writeLock().lock();
-        try {
-            requireOpen();
-            retryPendingBackendClose();
-            if (replacement == backend) return;
-            if (!replacement.isOpen()) throw new IllegalArgumentException("replacement backend is closed");
+		boolean generationReplaced = false;
+		lifecycle.writeLock().lock();
+		try {
+			requireOpen();
+			retryPendingBackendClose();
+			if (replacement == backend) return;
+			if (!replacement.isOpen()) throw new IllegalArgumentException("replacement backend is closed");
 			cacheOwner.beginRetirement();
 			try {
 				flushAllInternal();
@@ -260,6 +261,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 				afterReplacement.run();
 				cacheOwner.bindBackend(replacement);
 				backend = replacement;
+				generationReplaced = true;
 				try { previous.close(); }
 				catch (RuntimeException | Error failure) {
 					// The replacement is already published and owns the active route.
@@ -273,9 +275,10 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 			}
 		} finally {
 			lifecycle.writeLock().unlock();
-			cacheOwner.dispatchAllNotifications();
+			if (generationReplaced) cacheOwner.discardAllNotifications();
+			else cacheOwner.dispatchAllNotifications();
 		}
-    }
+	}
 
     private void retryPendingBackendClose() {
         SqlUserBackend pending = pendingBackendClose;

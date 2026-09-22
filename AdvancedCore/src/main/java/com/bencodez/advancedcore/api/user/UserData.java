@@ -579,12 +579,11 @@ public class UserData {
 			// An unbound placeholder or retiring cache defers the entire mutation so it
 			// can join the correct lifecycle generation on the storage worker.
 			UserDataCache cache = user.getCache();
-			if (!cache.tryAddChangeBeforeDeferredSharedFlush(change)) {
+			Runnable notification = queue
+					? () -> user.getPlugin().getUserManager().onChange(user, change.getKey()) : null;
+			if (!cache.tryAddChangeBeforeDeferredSharedFlush(change, notification, !queue)) {
 				return manager.deferSharedStorageWork(mutation);
 			}
-			if (queue) manager.dispatchSharedStorageNotification(() ->
-					user.getPlugin().getUserManager().onChange(user, change.getKey()));
-			else manager.deferSharedStorageWork(() -> cache.processChangesImmediately(false));
 			return true;
 		}
 		mutation.run();
@@ -595,7 +594,7 @@ public class UserData {
 			boolean queue, boolean async) {
 		cache.addChange(change, true);
 		if (queue) {
-			manager.dispatchSharedStorageNotification(() ->
+			manager.dispatchSharedUserDataNotification(() ->
 					user.getPlugin().getUserManager().onChange(user, change.getKey()));
 		} else cache.processChangesImmediately(async);
 	}
@@ -622,10 +621,10 @@ public class UserData {
 		});
 		if (manager.mustDeferSharedStorageAccess()) {
 			UserDataCache cache = user.getCache();
-			if (!cache.tryAddChangesBeforeDeferredSharedFlush(changes)) {
+			if (!cache.tryAddChangesBeforeDeferredSharedFlush(changes, true)) {
 				return manager.deferSharedStorageWork(mutation);
 			}
-			return manager.deferSharedStorageWork(() -> cache.processChangesImmediately(false));
+			return true;
 		}
 		mutation.run();
 		return true;

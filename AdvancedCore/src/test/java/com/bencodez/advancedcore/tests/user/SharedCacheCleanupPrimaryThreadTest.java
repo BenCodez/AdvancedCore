@@ -1025,4 +1025,45 @@ class SharedCacheCleanupPrimaryThreadTest {
             assertFalse(manager.getUserDataCache().containsKey(uuid));
         }
     }
+
+	@Test
+	void sharedUserDataNotificationUsesStorageWorkerWithoutPlatformScheduling() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.getLogger()).thenReturn(mock(Logger.class));
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		AtomicReference<Thread> deliveredOn = new AtomicReference<>();
+
+		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
+
+		ArgumentCaptor<Runnable> notification = ArgumentCaptor.forClass(Runnable.class);
+		verify(worker).execute(notification.capture());
+		verify(scheduler, never()).runTask(eq(plugin), any(Runnable.class));
+		Thread storageWorker = new Thread(notification.getValue(), "AdvancedCore-UserStorage-test");
+		storageWorker.start();
+		storageWorker.join(5000);
+		assertSame(storageWorker, deliveredOn.get());
+
+		deliveredOn.set(null);
+		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
+		verify(worker, times(2)).execute(notification.capture());
+		manager.advanceSharedUserDataNotificationGeneration();
+		notification.getAllValues().get(1).run();
+		assertNull(deliveredOn.get(), "a retired cache generation must not publish queued notifications");
+
+		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
+		verify(worker, times(3)).execute(notification.capture());
+		manager.closeSharedUserDataNotifications();
+		notification.getAllValues().get(2).run();
+		assertNull(deliveredOn.get(), "terminal shutdown must discard queued notifications");
+		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
+		verify(worker, times(3)).execute(any(Runnable.class));
+		manager.getTimer().shutdownNow();
+	}
 }

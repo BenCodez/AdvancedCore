@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -36,6 +37,12 @@ public class UserDataCache {
 	private volatile Consumer<HashMap<String, DataValue>> sharedStorageWriter;
 	private Thread sharedBatchThread;
 	private volatile Consumer<Runnable> sharedFlushGate;
+	private volatile Consumer<Runnable> sharedExclusiveFlushGate;
+	private int exclusiveFlushesPending;
+	private final Queue<UserDataChange> changesAfterExclusiveFlush = new ConcurrentLinkedQueue<>();
+	private final Queue<Runnable> notificationsAfterExclusiveFlush = new ConcurrentLinkedQueue<>();
+	private boolean flushChangesAfterExclusive;
+	private final ReentrantReadWriteLock legacyMutationOrder = new ReentrantReadWriteLock(true);
 	@Getter private UUID uuid;
 
 	public UserDataCache(UserDataManager manager, UUID uuid) {
@@ -55,9 +62,14 @@ public class UserDataCache {
 		Consumer<Runnable> gate;
 		synchronized (this) {
 			gate = sharedFlushGate;
-			if (gate == null) { addChangeInternal(change, queue); return; }
 		}
-		gate.accept(() -> addChangeInternal(change, queue));
+		if (gate != null) {
+			gate.accept(() -> addChangeInternal(change, queue));
+			return;
+		}
+		legacyMutationOrder.readLock().lock();
+		try { addChangeInternal(change, queue); }
+		finally { legacyMutationOrder.readLock().unlock(); }
 	}
 
 	/**
@@ -66,14 +78,57 @@ public class UserDataCache {
 	 * first is included in the following flush, while a transition that marks the
 	 * cache first makes the caller defer the complete mutation instead.
 	 */
-	public synchronized boolean tryAddChangeBeforeDeferredSharedFlush(UserDataChange change) {
-		return tryAddChangesBeforeDeferredSharedFlush(java.util.List.of(change));
+	public boolean tryAddChangeBeforeDeferredSharedFlush(UserDataChange change) {
+		return tryAddChangeBeforeDeferredSharedFlush(change, null);
+	}
+
+	/**
+	 * Publish read-after-write state without crossing a pending durable checkpoint.
+	 * Notifications accepted during the checkpoint are released with the mutation,
+	 * after every already-admitted exclusive operation has completed.
+	 */
+	public boolean tryAddChangeBeforeDeferredSharedFlush(UserDataChange change, Runnable notification) {
+		return tryAddChangeBeforeDeferredSharedFlush(change, notification, false);
+	}
+
+	public boolean tryAddChangeBeforeDeferredSharedFlush(UserDataChange change, Runnable notification,
+			boolean flushImmediately) {
+		return tryAddChangesBeforeDeferredSharedFlush(java.util.List.of(change), notification, flushImmediately);
 	}
 
 	/** Atomically publish one complete caller batch against cache retirement. */
-	public synchronized boolean tryAddChangesBeforeDeferredSharedFlush(Iterable<UserDataChange> changes) {
-		if (sharedFlushGate == null || removing || uuid == null || cache == null || cachedChanges == null) return false;
-		for (UserDataChange change : changes) addChangeInternal(change, true);
+	public boolean tryAddChangesBeforeDeferredSharedFlush(Iterable<UserDataChange> changes) {
+		return tryAddChangesBeforeDeferredSharedFlush(changes, null, false);
+	}
+
+	public boolean tryAddChangesBeforeDeferredSharedFlush(Iterable<UserDataChange> changes,
+			boolean flushImmediately) {
+		return tryAddChangesBeforeDeferredSharedFlush(changes, null, flushImmediately);
+	}
+
+	private boolean tryAddChangesBeforeDeferredSharedFlush(Iterable<UserDataChange> changes,
+			Runnable notification, boolean flushImmediately) {
+		boolean dispatchNotification = false;
+		boolean flushNow = false;
+		synchronized (this) {
+			if (sharedFlushGate == null || removing || uuid == null || cache == null || cachedChanges == null) {
+				return false;
+			}
+			if (exclusiveFlushesPending != 0) {
+				for (UserDataChange change : changes) {
+					publishChangeInternal(change);
+					if (change != null) changesAfterExclusiveFlush.add(change);
+				}
+				if (notification != null) notificationsAfterExclusiveFlush.add(notification);
+				flushChangesAfterExclusive |= flushImmediately;
+				return true;
+			}
+			for (UserDataChange change : changes) addChangeInternal(change, true);
+			dispatchNotification = notification != null;
+			flushNow = flushImmediately;
+		}
+		if (dispatchNotification) manager.dispatchSharedUserDataNotification(notification);
+		if (flushNow) scheduleImmediateSharedFlush();
 		return true;
 	}
 
@@ -87,12 +142,17 @@ public class UserDataCache {
 		// listener running as the cache is being retired.
 		if (removing) throw new IllegalStateException("Shared user cache is retiring");
 		if (change == null || cache == null || cachedChanges == null) return;
-		cache.put(change.getKey(), change.toUserDataValue());
-		changedAt.put(change.getKey(), ++snapshotVersion);
+		publishChangeInternal(change);
 		if (queue) {
 			cachedChanges.add(change);
 			if (!scheduled) scheduleChanges();
 		}
+	}
+
+	private void publishChangeInternal(UserDataChange change) {
+		if (change == null || cache == null) return;
+		cache.put(change.getKey(), change.toUserDataValue());
+		changedAt.put(change.getKey(), ++snapshotVersion);
 	}
 
 	public UserDataCache cache() {
@@ -146,7 +206,8 @@ public class UserDataCache {
 			DataValue prior = before.get(entry.getKey());
 			if (prior != null && entry.getValue() != null && !prior.toString().equals(entry.getValue().toString())) changedKeys.add(entry.getKey());
 		}
-		if (notify && !changedKeys.isEmpty()) manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys));
+		if (notify && !changedKeys.isEmpty()) deliverNotification(
+				() -> manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys)));
 		if (!keys.isEmpty()) manager.getPlugin().devDebug("Caching additional keys: " + ArrayUtils.makeStringList(keys));
 		return changedKeys;
 	}
@@ -165,7 +226,10 @@ public class UserDataCache {
 		if (action == null) return;
 		initializeSharedStorage();
 		Consumer<Runnable> gate;
-		synchronized (this) { gate = sharedFlushGate; }
+		synchronized (this) {
+			gate = sharedExclusiveFlushGate;
+			if (gate != null) exclusiveFlushesPending++;
+		}
 		if (gate != null) {
 			ArrayList<Runnable> notifications = new ArrayList<>();
 			try {
@@ -175,32 +239,51 @@ public class UserDataCache {
 						if (notification != null) notifications.add(notification);
 						synchronized (this) {
 							if (cachedChanges != null && !cachedChanges.isEmpty()) continue;
-							action.run();
-							break;
 						}
+						action.run();
+						break;
 					}
 				});
 			} finally {
-				for (Runnable notification : notifications) notification.run();
+				boolean flushNow = false;
+				synchronized (this) {
+					exclusiveFlushesPending--;
+					if (exclusiveFlushesPending == 0) {
+						UserDataChange deferred;
+						while ((deferred = changesAfterExclusiveFlush.poll()) != null) cachedChanges.add(deferred);
+						flushNow = flushChangesAfterExclusive;
+						flushChangesAfterExclusive = false;
+						if (!flushNow && !cachedChanges.isEmpty() && !scheduled) scheduleChanges();
+						Runnable deferredNotification;
+						while ((deferredNotification = notificationsAfterExclusiveFlush.poll()) != null) {
+							notifications.add(deferredNotification);
+						}
+					}
+				}
+				if (flushNow) scheduleImmediateSharedFlush();
+				for (Runnable notification : notifications) manager.dispatchSharedUserDataNotification(notification);
 			}
 			return;
 		}
-		while (true) {
-			processChanges();
-			synchronized (this) {
-				while (inFlightBatches > 0) {
-					try {
-						wait();
-					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();
-						throw new IllegalStateException("Interrupted while flushing cached user changes", e);
+		legacyMutationOrder.writeLock().lock();
+		try {
+			while (true) {
+				processChanges();
+				synchronized (this) {
+					while (inFlightBatches > 0) {
+						try {
+							wait();
+						} catch (InterruptedException e) {
+							Thread.currentThread().interrupt();
+							throw new IllegalStateException("Interrupted while flushing cached user changes", e);
+						}
 					}
+					if (cachedChanges != null && !cachedChanges.isEmpty()) continue;
 				}
-				if (cachedChanges != null && !cachedChanges.isEmpty()) continue;
 				action.run();
 				return;
 			}
-		}
+		} finally { legacyMutationOrder.writeLock().unlock(); }
 	}
 
 	private void clearCacheNow() {
@@ -220,12 +303,12 @@ public class UserDataCache {
 			synchronized (this) { if (cache != null) { cache.clear(); recordSnapshotReplacement(); } }
 		});
 		Runnable callback = notification.get();
-		if (callback != null) callback.run();
+		deliverNotification(callback);
 	}
 
 	public void clearChanges() {
 		Runnable callback = clearChangesForRefresh();
-		if (callback != null) callback.run();
+		deliverNotification(callback);
 	}
 
 	/**
@@ -242,7 +325,7 @@ public class UserDataCache {
 
 	private void clearChangesAndNotify() {
 		Runnable callback = clearChangesNow();
-		if (callback != null) callback.run();
+		deliverNotification(callback);
 	}
 
 	private Runnable clearChangesNow() {
@@ -304,11 +387,19 @@ public class UserDataCache {
 		if (sharedStorageWriter == null && inFlightBatches != 0) throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");
 	}
 
-	public synchronized void configureSharedStorage(Consumer<HashMap<String, DataValue>> writer, Consumer<Runnable> gate) {
+	/** Retained for binary compatibility with integrations that provide one admission gate. */
+	public void configureSharedStorage(Consumer<HashMap<String, DataValue>> writer, Consumer<Runnable> gate) {
+		configureSharedStorage(writer, gate, gate);
+	}
+
+	public synchronized void configureSharedStorage(Consumer<HashMap<String, DataValue>> writer, Consumer<Runnable> gate,
+			Consumer<Runnable> exclusiveGate) {
 		if (sharedFlushGate != null && sharedFlushGate != gate) throw new IllegalStateException("Shared user cache already belongs to another runtime");
+		if (sharedExclusiveFlushGate != null && sharedExclusiveFlushGate != exclusiveGate) throw new IllegalStateException("Shared user cache already belongs to another runtime");
 		if (sharedFlushGate == null && gate != null && inFlightBatches != 0) throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");
 		setSharedStorageWriter(writer);
 		sharedFlushGate = gate;
+		sharedExclusiveFlushGate = exclusiveGate;
 	}
 
 	public synchronized void setSharedStorageWriter(Consumer<HashMap<String, DataValue>> writer) {
@@ -332,7 +423,13 @@ public class UserDataCache {
 	public void processChanges() {
 		initializeSharedStorage();
 		Runnable notification = processChangesInternal(false);
-		if (notification != null) notification.run();
+		deliverNotification(notification);
+	}
+
+	private void deliverNotification(Runnable notification) {
+		if (notification == null) return;
+		if (manager != null && manager.hasSharedSqlBackend()) manager.dispatchSharedUserDataNotification(notification);
+		else notification.run();
 	}
 
 	/**
@@ -355,7 +452,7 @@ public class UserDataCache {
 			if (manager.deferSharedStorageWork(() -> processChangesImmediately(false))) return;
 			initializeSharedStorage();
 			Runnable notification = processChangesInternal(false);
-			if (notification != null) manager.dispatchSharedStorageNotification(notification);
+			if (notification != null) manager.dispatchSharedUserDataNotification(notification);
 			return;
 		}
 		processChanges();
@@ -480,6 +577,11 @@ public class UserDataCache {
 	}
 
 	public void processChangesAsync() { if (uuid != null && hasChangesToProcess()) manager.getPlugin().getTimer().execute(this::processChanges); }
+
+	private void scheduleImmediateSharedFlush() {
+		if (manager != null && manager.deferSharedStorageWork(() -> processChangesImmediately(false))) return;
+		processChangesAsync();
+	}
 
 	private synchronized void scheduleChanges() {
 		if (scheduled || cachedChanges == null || cachedChanges.isEmpty()) return;

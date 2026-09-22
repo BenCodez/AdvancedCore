@@ -301,6 +301,55 @@ class SharedUserLifecycleRegressionTest {
 		}
 	}
 
+	@Test
+	void durableCheckpointDoesNotHoldCacheMonitorAndOrdersLaterMutationAfterReplacement() throws Exception {
+		Fixture fixture = new Fixture();
+		doAnswer(call -> {
+			call.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(fixture.manager).dispatchSharedUserDataNotification(any(Runnable.class));
+		SharedUserDataRuntime runtime = fixture.runtime();
+		runtime.populate(fixture.uuid);
+		UserDataCache cache = fixture.caches.get(fixture.uuid);
+		List<String> order = new CopyOnWriteArrayList<>();
+		fixture.first.beforeWrite = () -> order.add("write");
+		cache.addChange(new UserDataChangeInt("Points", 2), true);
+		CountDownLatch checkpointStarted = new CountDownLatch(1);
+		CountDownLatch releaseCheckpoint = new CountDownLatch(1);
+		ExecutorService workers = Executors.newFixedThreadPool(3);
+		try {
+			Future<?> checkpoint = workers.submit(() -> cache.flushChangesAndRun(() -> {
+				order.add("checkpoint");
+				checkpointStarted.countDown();
+				await(releaseCheckpoint);
+			}));
+			await(checkpointStarted);
+
+			assertTrue(workers.submit(cache::hasCache).get(1, TimeUnit.SECONDS),
+					"a blocked durable callback must not retain the cache monitor");
+			CountDownLatch notification = new CountDownLatch(1);
+			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 3),
+					notification::countDown));
+			assertEquals(3, cache.snapshot().get("Points").getInt(),
+					"the setter-facing cache must preserve immediate read-after-write visibility");
+			assertEquals(1, notification.getCount(),
+					"the mutation callback must remain behind exclusive admission");
+
+			releaseCheckpoint.countDown();
+			checkpoint.get(5, TimeUnit.SECONDS);
+			runtime.flush(fixture.uuid);
+			assertTrue(notification.await(5, TimeUnit.SECONDS));
+
+			assertEquals(List.of("write", "checkpoint", "write"), order);
+			assertEquals(3, fixture.first.points(fixture.uuid));
+		} finally {
+			releaseCheckpoint.countDown();
+			workers.shutdownNow();
+			assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
+			runtime.close();
+		}
+	}
+
     @Test
     void shutdownCancelsDelayedTimerWorkWithoutAwaitingIt() throws Exception {
         Fixture fixture = new Fixture();
