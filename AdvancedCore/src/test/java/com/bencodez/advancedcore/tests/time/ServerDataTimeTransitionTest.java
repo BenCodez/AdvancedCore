@@ -9,11 +9,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.logging.Logger;
 
 import org.bukkit.Server;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -70,6 +74,46 @@ class ServerDataTimeTransitionTest {
 		assertTrue(target.isDirectory());
 	}
 
+	@Test
+	void failedTransitionInitializationIsRolledBackAndRetried() {
+		FailingServerData data = new FailingServerData(plugin());
+		data.setup();
+		data.failSaves = true;
+
+		assertThrows(IllegalStateException.class,
+				() -> data.beginTimeChangeTransition(TimeType.DAY, "2026-09-21", "21"));
+		assertFalse(data.getData().getBoolean("TimeTransitions.DAY.Pending"));
+
+		data.failSaves = false;
+		ServerData.TimeChangeTransitionState transition =
+				data.beginTimeChangeTransition(TimeType.DAY, "2026-09-21", "21");
+		assertEquals("DAY:2026-09-21", transition.id());
+		assertTrue(data.getData().getBoolean("TimeTransitions.DAY.Pending"));
+	}
+
+	@Test
+	void unsupportedAtomicMoveKeepsRecoverablePreviousSnapshot() throws Exception {
+		UnsupportedAtomicMoveServerData data = new UnsupportedAtomicMoveServerData(plugin());
+		data.setup();
+		data.getData().set("PrevDay", 20);
+		data.saveData();
+		data.getData().set("PrevDay", 21);
+		data.saveData();
+
+		Path target = data.getdFile().toPath();
+		Path backup = target.resolveSibling(target.getFileName().toString() + ".backup");
+		assertTrue(Files.isRegularFile(backup));
+		assertEquals(20, YamlConfiguration.loadConfiguration(backup.toFile()).getInt("PrevDay"));
+		assertEquals(21, YamlConfiguration.loadConfiguration(target.toFile()).getInt("PrevDay"));
+
+		Files.writeString(target.resolveSibling(target.getFileName().toString() + ".replacement-pending"), "");
+		Files.writeString(target, "incomplete: [");
+		UnsupportedAtomicMoveServerData recovered = new UnsupportedAtomicMoveServerData(plugin());
+		recovered.setup();
+		assertEquals(20, recovered.getPrevDay());
+		assertFalse(Files.exists(target.resolveSibling(target.getFileName().toString() + ".replacement-pending")));
+	}
+
 	private ServerData serverData() {
 		return new ServerData(plugin());
 	}
@@ -94,6 +138,16 @@ class ServerDataTimeTransitionTest {
 		@Override public void saveData() {
 			if (failSaves) throw new IllegalStateException("simulated save failure");
 			super.saveData();
+		}
+	}
+
+	private static final class UnsupportedAtomicMoveServerData extends ServerData {
+		private UnsupportedAtomicMoveServerData(AdvancedCorePlugin plugin) {
+			super(plugin);
+		}
+
+		@Override protected void moveAtomically(Path source, Path target) throws IOException {
+			throw new AtomicMoveNotSupportedException(source.toString(), target.toString(), "test provider");
 		}
 	}
 }

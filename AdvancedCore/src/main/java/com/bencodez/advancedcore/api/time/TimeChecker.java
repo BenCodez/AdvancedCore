@@ -3,6 +3,8 @@ package com.bencodez.advancedcore.api.time;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.WeekFields;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -28,6 +30,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	private final AdvancedCorePlugin plugin;
 	private final Clock clock;
 	private final Object transitionLock = new Object();
+	private final Deque<ManualTransition> reentrantTransitions = new ArrayDeque<>();
 	private volatile ActiveTransition activeTransition;
 	private CompletableFuture<Void> noActiveTransition = CompletableFuture.completedFuture(null);
 	private boolean acceptingTransitions = true;
@@ -271,6 +274,11 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		ActiveTransition active;
 		boolean interrupted = false;
 		synchronized (transitionLock) {
+			if (waitForTurn && activeTransition != null
+					&& activeTransition.dispatchThread == Thread.currentThread()) {
+				reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
+				return;
+			}
 			while (waitForTurn && acceptingTransitions && activeTransition != null) {
 				try { transitionLock.wait(); }
 				catch (InterruptedException interruption) { interrupted = true; }
@@ -283,7 +291,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			if (activeTransition != null) return;
 			CompletableFuture<Void> drain = new CompletableFuture<>();
 			active = new ActiveTransition(type, durable == null ? null : durable.transition,
-					durable == null ? null : durable.persisted, drain);
+					durable == null ? null : durable.persisted, drain, Thread.currentThread());
 			activeTransition = active;
 			noActiveTransition = drain;
 			activeProcessing = true;
@@ -401,6 +409,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	}
 
 	private void retireTransition(ActiveTransition active) {
+		ManualTransition next = null;
 		synchronized (transitionLock) {
 			if (active.retired && activeTransition != active) return;
 			active.retired = true;
@@ -408,9 +417,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				activeTransition = null;
 				activeProcessing = false;
 			}
+			if (acceptingTransitions) next = reentrantTransitions.pollFirst();
+			else reentrantTransitions.clear();
 			transitionLock.notifyAll();
 		}
 		active.drain.complete(null);
+		if (next != null) startTransition(next.type, next.fake, next.preDate, next.postDate, null, true);
 	}
 
 	private void persistFailure(ActiveTransition active) {
@@ -476,11 +488,26 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		}
 	}
 
+	private static final class ManualTransition {
+		private final TimeType type;
+		private final boolean fake;
+		private final boolean preDate;
+		private final boolean postDate;
+
+		private ManualTransition(TimeType type, boolean fake, boolean preDate, boolean postDate) {
+			this.type = type;
+			this.fake = fake;
+			this.preDate = preDate;
+			this.postDate = postDate;
+		}
+	}
+
 	private static final class ActiveTransition {
 		private final TimeType type;
 		private final TimeChangeTransition transition;
 		private final TimeChangeTransitionState persisted;
 		private final CompletableFuture<Void> drain;
+		private final Thread dispatchThread;
 		private int participants = 1;
 		private boolean failed;
 		private boolean finished;
@@ -490,11 +517,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		private Throwable failure;
 
 		private ActiveTransition(TimeType type, TimeChangeTransition transition, TimeChangeTransitionState persisted,
-				CompletableFuture<Void> drain) {
+				CompletableFuture<Void> drain, Thread dispatchThread) {
 			this.type = type;
 			this.transition = transition;
 			this.persisted = persisted;
 			this.drain = drain;
+			this.dispatchThread = dispatchThread;
 		}
 	}
 }

@@ -35,6 +35,27 @@ public class ServerData extends YMLFile {
 		super(plugin, new File(plugin.getDataFolder(), "ServerData.yml"));
 	}
 
+	@Override
+	public synchronized void setup() {
+		Path target = getdFile().toPath().toAbsolutePath();
+		Path backup = backupPath(target);
+		Path replacementMarker = replacementMarkerPath(target);
+		if (Files.exists(replacementMarker)) {
+			if (!Files.exists(backup)) {
+				throw new IllegalStateException("Cannot recover interrupted replacement of " + target.getFileName());
+			}
+			restoreBackup(backup, target);
+			deleteReplacementMarker(replacementMarker);
+		}
+		if (!Files.exists(target) && Files.exists(backup)) restoreBackup(backup, target);
+		super.setup();
+		if (isFailedToRead() && Files.exists(backup)) {
+			restoreBackup(backup, target);
+			super.reloadData();
+			if (isFailedToRead()) throw new IllegalStateException("Failed to recover " + target.getFileName());
+		}
+	}
+
 	/** Writes server lifecycle state as one forced snapshot and reports failures. */
 	@Override
 	public synchronized void saveData() {
@@ -48,11 +69,7 @@ public class ServerData extends YMLFile {
 			try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
 				channel.force(true);
 			}
-			try {
-				Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-			} catch (AtomicMoveNotSupportedException unsupported) {
-				Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
-			}
+			replaceSnapshot(temporary, target);
 			temporary = null;
 		} catch (IOException failure) {
 			throw new UncheckedIOException("Failed to save " + target.getFileName(), failure);
@@ -65,6 +82,61 @@ public class ServerData extends YMLFile {
 							+ " snapshot: " + cleanupFailure.getMessage());
 				}
 			}
+		}
+	}
+
+	protected void moveAtomically(Path source, Path target) throws IOException {
+		Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+	}
+
+	private void replaceSnapshot(Path temporary, Path target) throws IOException {
+		try {
+			moveAtomically(temporary, target);
+		} catch (AtomicMoveNotSupportedException unsupported) {
+			Path backup = backupPath(target);
+			Path replacementMarker = replacementMarkerPath(target);
+			if (Files.exists(target)) {
+				Files.copy(target, backup, StandardCopyOption.REPLACE_EXISTING);
+				try (FileChannel channel = FileChannel.open(backup, StandardOpenOption.WRITE)) {
+					channel.force(true);
+				}
+			}
+			Files.write(replacementMarker, new byte[0], StandardOpenOption.CREATE,
+					StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+			try (FileChannel channel = FileChannel.open(replacementMarker, StandardOpenOption.WRITE)) {
+				channel.force(true);
+			}
+			try {
+				Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+			} catch (IOException replacementFailure) {
+				if (Files.exists(backup)) Files.copy(backup, target, StandardCopyOption.REPLACE_EXISTING);
+				throw replacementFailure;
+			}
+			Files.delete(replacementMarker);
+		}
+	}
+
+	private Path backupPath(Path target) {
+		return target.resolveSibling(target.getFileName().toString() + ".backup");
+	}
+
+	private Path replacementMarkerPath(Path target) {
+		return target.resolveSibling(target.getFileName().toString() + ".replacement-pending");
+	}
+
+	private void restoreBackup(Path backup, Path target) {
+		try {
+			Files.copy(backup, target, StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException failure) {
+			throw new UncheckedIOException("Failed to recover " + target.getFileName(), failure);
+		}
+	}
+
+	private void deleteReplacementMarker(Path marker) {
+		try {
+			Files.delete(marker);
+		} catch (IOException failure) {
+			throw new UncheckedIOException("Failed to clear interrupted replacement marker", failure);
 		}
 	}
 
@@ -188,11 +260,23 @@ public class ServerData extends YMLFile {
 		}
 
 		String id = type.name() + ":" + periodKey;
-		getData().set(path + ".Id", id);
-		getData().set(path + ".Period", periodKey);
-		getData().set(path + ".Marker", markerValue);
-		getData().set(path + ".Pending", true);
-		saveData();
+		Object previousId = getData().get(path + ".Id");
+		Object previousPeriod = getData().get(path + ".Period");
+		Object previousMarker = getData().get(path + ".Marker");
+		Object previousPending = getData().get(path + ".Pending");
+		try {
+			getData().set(path + ".Id", id);
+			getData().set(path + ".Period", periodKey);
+			getData().set(path + ".Marker", markerValue);
+			getData().set(path + ".Pending", true);
+			saveData();
+		} catch (RuntimeException | Error failure) {
+			getData().set(path + ".Id", previousId);
+			getData().set(path + ".Period", previousPeriod);
+			getData().set(path + ".Marker", previousMarker);
+			getData().set(path + ".Pending", previousPending);
+			throw failure;
+		}
 		return new TimeChangeTransitionState(type, id, periodKey, markerValue, true);
 	}
 

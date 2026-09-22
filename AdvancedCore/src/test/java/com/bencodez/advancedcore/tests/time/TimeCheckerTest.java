@@ -379,6 +379,29 @@ public class TimeCheckerTest {
 	}
 
 	@Test
+	public void reentrantManualTransitionRunsAfterCurrentDispatchWithoutDeadlock() throws Exception {
+		PluginManager pluginManager = configureDetectedDay(transitionState());
+		TimeChecker checker = new TimeChecker(plugin);
+		CountDownLatch weekObserved = new CountDownLatch(1);
+		Mockito.doAnswer(call -> {
+			Event event = call.getArgument(0);
+			if (event instanceof DayChangeEvent) checker.forceChanged(TimeType.WEEK, true, false, false);
+			else if (event instanceof com.bencodez.advancedcore.api.time.events.WeekChangeEvent) {
+				weekObserved.countDown();
+			}
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		var worker = java.util.concurrent.Executors.newSingleThreadExecutor();
+		try {
+			worker.submit(() -> checker.forceChanged(TimeType.DAY, true, false, false)).get(2, TimeUnit.SECONDS);
+			assertTrue(weekObserved.await(2, TimeUnit.SECONDS));
+		} finally {
+			worker.shutdownNow();
+			assertTrue(worker.awaitTermination(2, TimeUnit.SECONDS));
+		}
+	}
+
+	@Test
 	public void fatalListenerErrorRemainsPendingAndPropagates() {
 		TimeChangeTransitionState transition = transitionState();
 		PluginManager pluginManager = configureDetectedDay(transition);
