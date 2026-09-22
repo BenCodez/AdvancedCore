@@ -13,6 +13,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.time.events.DateChangedEvent;
@@ -27,11 +28,14 @@ import lombok.Setter;
 
 /** Checks and dispatches local calendar transitions. */
 public class TimeChecker implements TimeChangeTransition.Owner {
+	private static final int MAX_PENDING_MANUAL_TRANSITIONS = 32;
 	private final AdvancedCorePlugin plugin;
 	private final Clock clock;
 	private final Object transitionLock = new Object();
 	private final Object transitionPersistenceLock = new Object();
 	private final Deque<ManualTransition> reentrantTransitions = new ArrayDeque<>();
+	private final AtomicInteger pendingManualTransitions = new AtomicInteger();
+	private final AtomicBoolean manualBacklogWarningLogged = new AtomicBoolean();
 	private volatile ActiveTransition activeTransition;
 	private CompletableFuture<Void> noActiveTransition = CompletableFuture.completedFuture(null);
 	private boolean acceptingTransitions = true;
@@ -59,21 +63,44 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 
 	/** Queues a manual transition while this checker still accepts work. */
 	public void forceChanged(TimeType time) {
+		if (time == null || !reserveManualTransition()) return;
 		ScheduledExecutorService currentTimer = timer;
 		if (currentTimer == null) {
+			releaseManualTransition();
 			plugin.debug("Unable to force a time change before the time checker timer is loaded");
 			return;
 		}
 		try {
-			currentTimer.execute(() -> forceChanged(time, true, true, true));
+			currentTimer.execute(() -> startTransition(time, true, true, true, null, true, true));
 		} catch (RejectedExecutionException rejected) {
+			releaseManualTransition();
 			plugin.debug("Ignoring forced time change while the checker is shutting down");
 		}
 	}
 
 	/** Executes a legacy/manual transition synchronously without a durable marker. */
 	public void forceChanged(TimeType time, boolean fake, boolean preDate, boolean postDate) {
-		startTransition(time, fake, preDate, postDate, null, true);
+		if (time == null || !reserveManualTransition()) return;
+		startTransition(time, fake, preDate, postDate, null, true, true);
+	}
+
+	private boolean reserveManualTransition() {
+		while (true) {
+			int pending = pendingManualTransitions.get();
+			if (pending >= MAX_PENDING_MANUAL_TRANSITIONS) {
+				if (manualBacklogWarningLogged.compareAndSet(false, true)) {
+					plugin.getLogger().warning("Rejected forced time change because "
+							+ MAX_PENDING_MANUAL_TRANSITIONS + " manual transitions are already pending");
+				}
+				return false;
+			}
+			if (pendingManualTransitions.compareAndSet(pending, pending + 1)) return true;
+		}
+	}
+
+	private void releaseManualTransition() {
+		pendingManualTransitions.decrementAndGet();
+		manualBacklogWarningLogged.set(false);
 	}
 
 	/**
@@ -107,7 +134,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				active.finished = true;
 				persist = !active.persistenceClosed;
 				active.persistenceClosed = true;
-				reentrantTransitions.clear();
+				discardQueuedManualTransitions();
 			}
 			if (persist) persistFailure(active);
 		}
@@ -141,7 +168,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 					active.persistenceClosed = true;
 					persist = true;
 				}
-				reentrantTransitions.clear();
+				discardQueuedManualTransitions();
 				retire = active.finished;
 			}
 			if (persist) persistFailure(active);
@@ -310,12 +337,15 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	}
 
 	private void startTransition(TimeType type, boolean fake, boolean preDate, boolean postDate, DurableTransition durable) {
-		startTransition(type, fake, preDate, postDate, durable, false);
+		startTransition(type, fake, preDate, postDate, durable, false, false);
 	}
 
 	private void startTransition(TimeType type, boolean fake, boolean preDate, boolean postDate,
-			DurableTransition durable, boolean waitForTurn) {
-		if (type == null) return;
+			DurableTransition durable, boolean waitForTurn, boolean manualReservation) {
+		if (type == null) {
+			if (manualReservation) releaseManualTransition();
+			return;
+		}
 		ActiveTransition active;
 		boolean interrupted = false;
 		synchronized (transitionLock) {
@@ -323,13 +353,13 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 					&& activeTransition.dispatchThread == Thread.currentThread()) {
 				if (acceptingTransitions) {
 					reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
-				}
+				} else if (manualReservation) releaseManualTransition();
 				return;
 			}
 			if (waitForTurn && activeTransition != null && activeTransition.dispatchComplete) {
 				if (acceptingTransitions) {
 					reentrantTransitions.addLast(new ManualTransition(type, fake, preDate, postDate));
-				}
+				} else if (manualReservation) releaseManualTransition();
 				return;
 			}
 			while (waitForTurn && acceptingTransitions && activeTransition != null) {
@@ -343,12 +373,16 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			if (interrupted) Thread.currentThread().interrupt();
 			if (!acceptingTransitions) {
 				if (durable != null) persistFailure(durable.persisted);
+				if (manualReservation) releaseManualTransition();
 				return;
 			}
-			if (activeTransition != null) return;
+			if (activeTransition != null) {
+				if (manualReservation) releaseManualTransition();
+				return;
+			}
 			CompletableFuture<Void> drain = new CompletableFuture<>();
 			active = new ActiveTransition(type, durable == null ? null : durable.transition,
-					durable == null ? null : durable.persisted, drain, Thread.currentThread());
+					durable == null ? null : durable.persisted, drain, Thread.currentThread(), manualReservation);
 			activeTransition = active;
 			noActiveTransition = drain;
 			activeProcessing = true;
@@ -485,13 +519,17 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		synchronized (transitionLock) {
 			if (active.retired && activeTransition != active) return;
 			active.retired = true;
+			if (active.manualReservation && !active.manualReservationReleased) {
+				active.manualReservationReleased = true;
+				releaseManualTransition();
+			}
 			if (activeTransition == active) {
 				activeTransition = null;
 				activeProcessing = false;
 			}
 			next = reentrantTransitions.pollFirst();
 			if (next != null) {
-				nextActive = new ActiveTransition(next.type, null, null, active.drain, Thread.currentThread());
+				nextActive = new ActiveTransition(next.type, null, null, active.drain, Thread.currentThread(), true);
 				activeTransition = nextActive;
 				noActiveTransition = active.drain;
 				activeProcessing = true;
@@ -500,6 +538,10 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		}
 		if (nextActive == null) active.drain.complete(null);
 		else dispatchTransition(nextActive, next.type, next.fake, next.preDate, next.postDate);
+	}
+
+	private void discardQueuedManualTransitions() {
+		while (reentrantTransitions.pollFirst() != null) releaseManualTransition();
 	}
 
 	private void persistFailure(ActiveTransition active) {
@@ -585,6 +627,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		private final TimeChangeTransitionState persisted;
 		private final CompletableFuture<Void> drain;
 		private final Thread dispatchThread;
+		private final boolean manualReservation;
 		private int participants = 1;
 		private boolean failed;
 		private boolean finished;
@@ -593,15 +636,17 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		private boolean finalizing;
 		private boolean persistenceClosed;
 		private boolean retired;
+		private boolean manualReservationReleased;
 		private Throwable failure;
 
 		private ActiveTransition(TimeType type, TimeChangeTransition transition, TimeChangeTransitionState persisted,
-				CompletableFuture<Void> drain, Thread dispatchThread) {
+				CompletableFuture<Void> drain, Thread dispatchThread, boolean manualReservation) {
 			this.type = type;
 			this.transition = transition;
 			this.persisted = persisted;
 			this.drain = drain;
 			this.dispatchThread = dispatchThread;
+			this.manualReservation = manualReservation;
 		}
 	}
 }

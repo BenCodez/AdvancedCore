@@ -23,6 +23,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -549,6 +550,62 @@ public class TimeCheckerTest {
 		drain.toCompletableFuture().get(2, TimeUnit.SECONDS);
 		verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
 		verify(serverDataFile, Mockito.never()).failTimeChangeTransition(any());
+	}
+
+	@Test
+	public void retainedLeaseBoundsAndReportsSynchronousManualBacklog() throws Exception {
+		PluginManager pluginManager = configureDetectedDay(transitionState());
+		Logger logger = mock(Logger.class);
+		when(plugin.getLogger()).thenReturn(logger);
+		TimeChecker checker = new TimeChecker(plugin,
+				Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+		AtomicReference<TimeChangeTransition.Lease> lease = new AtomicReference<>();
+		CountDownLatch weeksObserved = new CountDownLatch(32);
+		Mockito.doAnswer(call -> {
+			Event event = call.getArgument(0);
+			if (event instanceof DayChangeEvent day) lease.set(day.getTransition().retain());
+			else if (event instanceof com.bencodez.advancedcore.api.time.events.WeekChangeEvent) {
+				weeksObserved.countDown();
+			}
+			return null;
+		}).when(pluginManager).callEvent(any(Event.class));
+		checker.update();
+
+		for (int index = 0; index < 40; index++) {
+			checker.forceChanged(TimeType.WEEK, true, false, false);
+		}
+		lease.get().complete();
+
+		assertTrue(weeksObserved.await(2, TimeUnit.SECONDS));
+		verify(logger).warning("Rejected forced time change because 32 manual transitions are already pending");
+	}
+
+	@Test
+	public void asynchronousManualAdmissionIsBoundedBeforeExecutorQueueing() throws Exception {
+		Logger logger = mock(Logger.class);
+		when(plugin.getLogger()).thenReturn(logger);
+		ScheduledThreadPoolExecutor timer = new ScheduledThreadPoolExecutor(1);
+		CountDownLatch occupied = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		try {
+			timer.execute(() -> {
+				occupied.countDown();
+				try { release.await(); }
+				catch (InterruptedException interruption) { Thread.currentThread().interrupt(); }
+			});
+			assertTrue(occupied.await(2, TimeUnit.SECONDS));
+			TimeChecker checker = new TimeChecker(plugin);
+			checker.setTimer(timer);
+
+			for (int index = 0; index < 40; index++) checker.forceChanged(TimeType.DAY);
+
+			assertEquals(32, timer.getQueue().size());
+			verify(logger).warning("Rejected forced time change because 32 manual transitions are already pending");
+		} finally {
+			release.countDown();
+			timer.shutdownNow();
+			assertTrue(timer.awaitTermination(2, TimeUnit.SECONDS));
+		}
 	}
 
 	@Test
