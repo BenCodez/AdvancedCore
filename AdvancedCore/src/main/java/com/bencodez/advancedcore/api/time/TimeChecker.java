@@ -270,15 +270,15 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 					"Skipping time change events, since server has been offline for awhile, use /av forcetimechanged to force them if needed");
 		}
 		plugin.getServerDataFile().setLastUpdated();
-		timer.scheduleWithFixedDelay(() -> {
+		timer.scheduleWithFixedDelay(() -> runRecurringTask("time change check", () -> {
 			if (plugin != null && plugin.isEnabled()) {
 				if (!isActiveProcessing() && isProcessingEnabled()) update();
 			} else {
 				timer.shutdown();
 				timerLoaded = false;
 			}
-		}, 60, 5, TimeUnit.SECONDS);
-		timer.scheduleAtFixedRate(() -> {
+		}), 60, 5, TimeUnit.SECONDS);
+		timer.scheduleAtFixedRate(() -> runRecurringTask("time checker heartbeat", () -> {
 			plugin.getServerDataFile().setLastUpdated();
 			if (!isProcessingEnabled()) {
 				plugin.debug("Processing time changes locally disabled");
@@ -286,7 +286,18 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				if (hasWeekChanged(false)) hasWeekChanged(true);
 				if (hasMonthChanged(false)) hasMonthChanged(true);
 			}
-		}, 60, 60, TimeUnit.MINUTES);
+		}), 60, 60, TimeUnit.MINUTES);
+	}
+
+	private void runRecurringTask(String task, Runnable action) {
+		try {
+			action.run();
+		} catch (RuntimeException failure) {
+			plugin.getLogger().warning("Failed to run " + task + "; automatic processing will retry: "
+					+ failure.getClass().getSimpleName()
+					+ (failure.getMessage() == null ? "" : ": " + failure.getMessage()));
+			plugin.debug(failure);
+		}
 	}
 
 	public void setProcessingEnabled(boolean value) {
