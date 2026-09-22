@@ -199,11 +199,11 @@ public final class AdvancedCoreRuntime {
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
 			if (holdTimeTimer) shutdownNow(grace.timeTimer());
-			shutdownNow(storageTimer);
-			// The queued retirement may have been removed by shutdownNow and therefore
-			// cannot complete its stage. Run terminal cleanup explicitly after the
-			// bounded worker wait so native owners are not stranded behind that stage.
-			finishDeferredStorageTimer(storageTimer, true, true, terminalStorageCleanup);
+			// The forced time-transition hook may just have queued the final storage
+			// flush. Stop new admissions but give that queued retirement one bounded
+			// worker grace before forcing it and falling back to terminal cleanup.
+			shutdown(storageTimer);
+			finishDeferredStorageTimer(storageTimer, false, true, terminalStorageCleanup);
 		};
 		try { CompletableFuture.delayedExecutor(timeoutMillis, TimeUnit.MILLISECONDS).execute(timeout); }
 		catch (RuntimeException | Error schedulingFailure) {

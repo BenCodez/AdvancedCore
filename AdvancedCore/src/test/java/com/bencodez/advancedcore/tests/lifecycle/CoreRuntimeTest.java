@@ -261,6 +261,40 @@ class CoreRuntimeTest {
 		assertEquals(List.of("unload"), events);
 	}
 
+	@Test void watchdogLetsQueuedRetirementFlushBeforeForcingStorageWorker() throws Exception {
+		RuntimePlatform platform = platform();
+		var timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+		CountDownLatch occupied = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		timer.execute(() -> {
+			occupied.countDown();
+			try { release.await(); }
+			catch (InterruptedException interruption) { Thread.currentThread().interrupt(); }
+		});
+		assertTrue(occupied.await(2, TimeUnit.SECONDS));
+		timer.execute(() -> retirement.complete(null));
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retirement);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(20L);
+		when(platform.getTimer()).thenReturn(timer);
+		try {
+			new AdvancedCoreRuntime(platform).shutdown();
+			long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+			while (!timer.isShutdown() && System.nanoTime() < deadline) Thread.yield();
+			assertTrue(timer.isShutdown());
+			release.countDown();
+
+			retirement.get(2, TimeUnit.SECONDS);
+			assertTrue(timer.awaitTermination(2, TimeUnit.SECONDS));
+			verify(platform).cleanupFailed(eq("pre-executor shutdown"),
+					any(java.util.concurrent.TimeoutException.class));
+		} finally {
+			release.countDown();
+			timer.shutdownNow();
+		}
+	}
+
 	@Test void watchdogRunsTerminalCleanupWhenQueuedRetirementIsCancelled() throws Exception {
 		RuntimePlatform platform = platform();
 		var timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
