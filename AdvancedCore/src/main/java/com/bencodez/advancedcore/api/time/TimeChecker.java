@@ -121,22 +121,15 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	 */
 	public void abortActiveTransitions() {
 		ActiveTransition active;
-		boolean persist;
 		synchronized (transitionLock) {
 			active = activeTransition;
 			if (active == null || active.finalizing) return;
-		}
-		synchronized (transitionPersistenceLock) {
-			synchronized (transitionLock) {
-				active = activeTransition;
-				if (active == null || active.finalizing) return;
-				cancel(active, "Time transition was cancelled by bounded shutdown");
-				active.finished = true;
-				persist = !active.persistenceClosed;
-				active.persistenceClosed = true;
-				discardQueuedManualTransitions();
-			}
-			if (persist) persistFailure(active);
+			cancel(active, "Time transition was cancelled by bounded shutdown");
+			active.finished = true;
+			// Detected transitions were persisted as pending before dispatch. The
+			// bounded watchdog only fences later writes; it must not perform fsync.
+			active.persistenceClosed = true;
+			discardQueuedManualTransitions();
 		}
 		retireTransition(active);
 	}

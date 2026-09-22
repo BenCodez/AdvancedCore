@@ -208,7 +208,7 @@ public class TimeCheckerTest {
 		drain.toCompletableFuture().get(2, TimeUnit.SECONDS);
 		lease.get().complete();
 		verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
-		verify(serverDataFile).failTimeChangeTransition(transition);
+		verify(serverDataFile, Mockito.never()).failTimeChangeTransition(any());
 	}
 
 	@Test
@@ -314,7 +314,7 @@ public class TimeCheckerTest {
 			timer.shutdown();
 			assertTrue(timer.awaitTermination(2, TimeUnit.SECONDS));
 			verify(serverDataFile, Mockito.never()).completeTimeChangeTransition(any());
-			verify(serverDataFile).failTimeChangeTransition(transition);
+			verify(serverDataFile, Mockito.never()).failTimeChangeTransition(any());
 		} finally {
 			releaseTimer.countDown();
 			timer.shutdownNow();
