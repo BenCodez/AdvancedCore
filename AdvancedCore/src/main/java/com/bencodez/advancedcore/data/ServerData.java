@@ -48,13 +48,7 @@ public class ServerData extends YMLFile {
 		if (Files.exists(replacementMarker)) {
 			recoverInterruptedReplacement(replacementMarker, backup, target);
 		}
-		if (!Files.exists(target) && Files.exists(backup)) restoreBackup(backup, target);
 		super.setup();
-		if (isFailedToRead() && Files.exists(backup)) {
-			restoreBackup(backup, target);
-			super.reloadData();
-			if (isFailedToRead()) throw new IllegalStateException("Failed to recover " + target.getFileName());
-		}
 	}
 
 	/** Writes transition state as one forced snapshot and reports failures. */
@@ -127,8 +121,7 @@ public class ServerData extends YMLFile {
 			// durable. If this force fails, startup can identify the committed target
 			// by its recorded hash instead of rolling it back as an incomplete move.
 			forceDirectory(target.getParent());
-			Files.delete(replacementMarker);
-			forceDirectory(target.getParent());
+			clearReplacementState(replacementMarker, backup);
 		}
 	}
 
@@ -145,7 +138,7 @@ public class ServerData extends YMLFile {
 			String intendedHash = Files.readString(marker).trim();
 			if (Files.isRegularFile(target) && !intendedHash.isEmpty()
 					&& intendedHash.equals(snapshotHash(target))) {
-				deleteReplacementMarker(marker);
+				clearReplacementState(marker, backup);
 				return;
 			}
 		} catch (IOException failure) {
@@ -155,7 +148,7 @@ public class ServerData extends YMLFile {
 			throw new IllegalStateException("Cannot recover interrupted replacement of " + target.getFileName());
 		}
 		restoreBackup(backup, target);
-		deleteReplacementMarker(marker);
+		clearReplacementState(marker, backup);
 	}
 
 	private String snapshotHash(Path snapshot) throws IOException {
@@ -183,8 +176,10 @@ public class ServerData extends YMLFile {
 		}
 	}
 
-	private void deleteReplacementMarker(Path marker) {
+	private void clearReplacementState(Path marker, Path backup) {
 		try {
+			Files.deleteIfExists(backup);
+			forceDirectory(marker.getParent());
 			Files.delete(marker);
 			forceDirectory(marker.getParent());
 		} catch (IOException failure) {

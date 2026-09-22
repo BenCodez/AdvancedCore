@@ -99,21 +99,39 @@ class ServerDataTimeTransitionTest {
 		data.setup();
 		data.getData().set("PrevDay", 20);
 		data.saveTransitionState();
+		byte[] previousSnapshot = Files.readAllBytes(data.getdFile().toPath());
 		data.getData().set("PrevDay", 21);
 		data.saveTransitionState();
 
 		Path target = data.getdFile().toPath();
 		Path backup = target.resolveSibling(target.getFileName().toString() + ".backup");
-		assertTrue(Files.isRegularFile(backup));
-		assertEquals(20, YamlConfiguration.loadConfiguration(backup.toFile()).getInt("PrevDay"));
+		assertFalse(Files.exists(backup), "a committed replacement must not leave a stale rollback snapshot");
 		assertEquals(21, YamlConfiguration.loadConfiguration(target.toFile()).getInt("PrevDay"));
 
+		Files.write(backup, previousSnapshot);
 		Files.writeString(target.resolveSibling(target.getFileName().toString() + ".replacement-pending"), "");
 		Files.writeString(target, "incomplete: [");
 		UnsupportedAtomicMoveServerData recovered = new UnsupportedAtomicMoveServerData(plugin());
 		recovered.setup();
 		assertEquals(20, recovered.getPrevDay());
 		assertFalse(Files.exists(target.resolveSibling(target.getFileName().toString() + ".replacement-pending")));
+	}
+
+	@Test
+	void orphanedBackupIsNotRestoredWithoutAReplacementMarker() throws Exception {
+		UnsupportedAtomicMoveServerData data = new UnsupportedAtomicMoveServerData(plugin());
+		data.setup();
+		data.getData().set("PrevDay", 20);
+		data.saveTransitionState();
+		Path target = data.getdFile().toPath();
+		Path backup = target.resolveSibling(target.getFileName().toString() + ".backup");
+		Files.copy(target, backup);
+		Files.delete(target);
+
+		UnsupportedAtomicMoveServerData recovered = new UnsupportedAtomicMoveServerData(plugin());
+		recovered.setup();
+
+		assertEquals(-1, recovered.getPrevDay());
 	}
 
 	@Test
@@ -160,7 +178,7 @@ class ServerDataTimeTransitionTest {
 
 		data.saveTransitionState();
 
-		assertEquals(4, data.directoryForces);
+		assertEquals(5, data.directoryForces);
 	}
 
 	@Test
