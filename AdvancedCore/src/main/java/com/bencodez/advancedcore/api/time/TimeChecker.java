@@ -327,7 +327,10 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	}
 
 	private void finish(ActiveTransition active, Throwable failure) {
-		CompletableFuture<Void> drained;
+		finish(active, failure, false);
+	}
+
+	private void finish(ActiveTransition active, Throwable failure, boolean deferPersistence) {
 		synchronized (transitionLock) {
 			if (active.finished) return;
 			if (failure != null) {
@@ -337,6 +340,36 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			if (--active.participants > 0) return;
 			active.finished = true;
 		}
+		if (deferPersistence && active.persisted != null) {
+			scheduleFinalization(active);
+			return;
+		}
+		finalizeTransition(active);
+	}
+
+	private void scheduleFinalization(ActiveTransition active) {
+		Runnable finalization = () -> finalizeTransition(active);
+		ScheduledExecutorService currentTimer = timer;
+		if (tryExecute(currentTimer, finalization)) return;
+		ScheduledExecutorService storageTimer = plugin.getTimer();
+		if (storageTimer != currentTimer && tryExecute(storageTimer, finalization)) return;
+		Thread fallback = new Thread(finalization, "AdvancedCore-Time-Transition-Completion");
+		fallback.setDaemon(true);
+		fallback.start();
+	}
+
+	private boolean tryExecute(ScheduledExecutorService executor, Runnable task) {
+		if (executor == null) return false;
+		try {
+			executor.execute(task);
+			return true;
+		} catch (RejectedExecutionException rejected) {
+			return false;
+		}
+	}
+
+	private void finalizeTransition(ActiveTransition active) {
+		CompletableFuture<Void> drained;
 		try {
 			if (active.persisted != null) {
 				if (!active.failed) {
@@ -412,12 +445,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		}
 
 		@Override public void complete() {
-			if (released.compareAndSet(false, true)) finish(active, null);
+			if (released.compareAndSet(false, true)) finish(active, null, true);
 		}
 
 		@Override public void fail(Throwable failure) {
 			if (released.compareAndSet(false, true)) finish(active,
-					failure == null ? new IllegalStateException("Time transition participant failed") : failure);
+					failure == null ? new IllegalStateException("Time transition participant failed") : failure, true);
 		}
 	}
 

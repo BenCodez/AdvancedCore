@@ -197,13 +197,25 @@ public class ServerData extends YMLFile {
 	 */
 	public synchronized void completeTimeChangeTransition(TimeChangeTransitionState transition) {
 		if (!matchesPendingTransition(transition)) return;
-		switch (transition.type()) {
-		case DAY -> getData().set("PrevDay", Integer.parseInt(transition.markerValue()));
-		case WEEK -> getData().set("PrevWeek", Integer.parseInt(transition.markerValue()));
-		case MONTH -> getData().set("Month", transition.markerValue());
+		String markerPath = switch (transition.type()) {
+		case DAY -> "PrevDay";
+		case WEEK -> "PrevWeek";
+		case MONTH -> "Month";
+		};
+		Object previousMarker = getData().get(markerPath);
+		String pendingPath = transitionPath(transition.type()) + ".Pending";
+		try {
+			switch (transition.type()) {
+			case DAY, WEEK -> getData().set(markerPath, Integer.parseInt(transition.markerValue()));
+			case MONTH -> getData().set(markerPath, transition.markerValue());
+			}
+			getData().set(pendingPath, false);
+			saveData();
+		} catch (RuntimeException | Error failure) {
+			getData().set(markerPath, previousMarker);
+			getData().set(pendingPath, true);
+			throw failure;
 		}
-		getData().set(transitionPath(transition.type()) + ".Pending", false);
-		saveData();
 	}
 
 	/** Leaves a durable pending record available for the next checker instance. */
