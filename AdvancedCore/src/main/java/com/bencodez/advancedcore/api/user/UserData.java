@@ -592,10 +592,14 @@ public class UserData {
 
 	private void applySharedMutation(UserDataManager manager, UserDataCache cache, UserDataChange change,
 			boolean queue, boolean async) {
+		Runnable notification = queue ? manager.captureSharedUserDataNotification(() ->
+				user.getPlugin().getUserManager().onChange(user, change.getKey())) : null;
+		if (queue && notification == null) {
+			notification = () -> user.getPlugin().getUserManager().onChange(user, change.getKey());
+		}
 		cache.addChange(change, true);
 		if (queue) {
-			manager.dispatchSharedUserDataNotification(() ->
-					user.getPlugin().getUserManager().onChange(user, change.getKey()));
+			manager.dispatchSharedUserDataNotification(notification);
 		} else cache.processChangesImmediately(async);
 	}
 

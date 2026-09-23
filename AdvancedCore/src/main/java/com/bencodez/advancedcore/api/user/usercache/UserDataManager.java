@@ -766,7 +766,7 @@ public class UserDataManager {
 							deferredFailure.addSuppressed(notificationFailure);
 							reportDeferredStorageFailure(deferredFailure);
 						}
-					});
+					}, refreshed.notificationGeneration);
 					return;
 				}
 				if (!populated[0]) return;
@@ -775,7 +775,7 @@ public class UserDataManager {
 					catch (RuntimeException | Error notificationFailure) {
 						reportDeferredStorageFailure(notificationFailure);
 					}
-				});
+				}, refreshed.notificationGeneration);
 			});
 		} catch (RejectedExecutionException rejected) {
 			finishSharedCachePopulation(population, false);

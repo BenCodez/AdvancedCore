@@ -60,6 +60,7 @@ import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt;
 import com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL;
 import com.bencodez.advancedcore.bukkit.user.runtime.BukkitUserCacheOwner;
 import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
@@ -1074,6 +1075,31 @@ class SharedCacheCleanupPrimaryThreadTest {
 		assertNull(deliveredOn.get(), "terminal shutdown must discard queued notifications");
 		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
 		verify(worker, times(4)).execute(any(Runnable.class));
+		manager.getTimer().shutdownNow();
+	}
+
+	@Test
+	void eagerSharedMutationNotificationKeepsItsAcceptedGeneration() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.getLogger()).thenReturn(mock(Logger.class));
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		UserDataCache cache = new UserDataCache(manager, UUID.randomUUID());
+		cache.configureSharedStorage(ignored -> { }, Runnable::run, Runnable::run);
+		AtomicBoolean delivered = new AtomicBoolean();
+
+		assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(
+				new UserDataChangeInt("Points", 4), () -> delivered.set(true)));
+
+		ArgumentCaptor<Runnable> notification = ArgumentCaptor.forClass(Runnable.class);
+		verify(worker).execute(notification.capture());
+		manager.advanceSharedUserDataNotificationGeneration();
+		notification.getValue().run();
+		assertFalse(delivered.get(), "a mutation accepted by the retired generation must stay fenced");
 		manager.getTimer().shutdownNow();
 	}
 }

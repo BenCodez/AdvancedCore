@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -352,6 +351,45 @@ class SharedUserLifecycleRegressionTest {
 	}
 
 	@Test
+	void retirementFlushesMutationAcceptedBeforeCheckpointAdmission() throws Exception {
+		UUID uuid = UUID.randomUUID();
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		UserDataManager manager = mock(UserDataManager.class);
+		when(manager.getPlugin()).thenReturn(plugin);
+		when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+		when(plugin.getUserManager().getUser(uuid, false)).thenReturn(mock(AdvancedCoreUser.class));
+		doAnswer(call -> call.getArgument(0)).when(manager).captureSharedUserDataNotification(any(Runnable.class));
+		UserDataCache cache = new UserDataCache(manager, uuid);
+		AtomicBoolean persisted = new AtomicBoolean();
+		CountDownLatch checkpointWaiting = new CountDownLatch(1), admitCheckpoint = new CountDownLatch(1);
+		cache.configureSharedStorage(values -> persisted.set(values.get("Points").getInt() == 9), Runnable::run,
+				operation -> {
+					checkpointWaiting.countDown();
+					await(admitCheckpoint);
+					operation.run();
+				});
+		ExecutorService worker = Executors.newSingleThreadExecutor();
+		try {
+			Future<?> checkpoint = worker.submit(() -> cache.flushChangesAndRun(
+					() -> fail("a checkpoint admitted after retirement must not run on the retired cache")));
+			await(checkpointWaiting);
+			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 9)));
+
+			cache.beginRemoval();
+			cache.processChangesForSharedRuntime();
+			cache.retireAfterSharedFlush();
+			assertTrue(persisted.get(), "retirement must flush the normally queued mutation");
+
+			admitCheckpoint.countDown();
+			assertThrows(ExecutionException.class, () -> checkpoint.get(5, TimeUnit.SECONDS));
+		} finally {
+			admitCheckpoint.countDown();
+			worker.shutdownNow();
+			assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+		}
+	}
+
+	@Test
 	void overlappingCheckpointsFlushOlderStagedMutationBeforeLaterCheckpoint() throws Exception {
 		Fixture fixture = new Fixture();
 		SharedUserDataRuntime runtime = fixture.runtime();
@@ -370,7 +408,6 @@ class SharedUserLifecycleRegressionTest {
 			await(firstStarted);
 			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 2)));
 			Future<?> second = workers.submit(() -> cache.flushChangesAndRun(() -> order.add("checkpoint-b")));
-			awaitExclusiveFlushes(cache, 2);
 			releaseFirst.countDown();
 			first.get(5, TimeUnit.SECONDS);
 			second.get(5, TimeUnit.SECONDS);
@@ -403,19 +440,6 @@ class SharedUserLifecycleRegressionTest {
         try { assertTrue(latch.await(5, TimeUnit.SECONDS)); }
         catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new IllegalStateException(failure); }
     }
-
-	private static void awaitExclusiveFlushes(UserDataCache cache, int expected) throws Exception {
-		Field pending = UserDataCache.class.getDeclaredField("exclusiveFlushesPending");
-		pending.setAccessible(true);
-		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-		while (System.nanoTime() < deadline) {
-			synchronized (cache) {
-				if (pending.getInt(cache) == expected) return;
-			}
-			Thread.onSpinWait();
-		}
-		fail("Timed out waiting for " + expected + " exclusive flushes");
-	}
 
     private static final class Fixture {
         final UUID uuid = UUID.randomUUID();

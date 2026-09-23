@@ -108,7 +108,7 @@ public class UserDataCache {
 
 	private boolean tryAddChangesBeforeDeferredSharedFlush(Iterable<UserDataChange> changes,
 			Runnable notification, boolean flushImmediately) {
-		boolean dispatchNotification = false;
+		Runnable notificationToDispatch = null;
 		boolean flushNow = false;
 		synchronized (this) {
 			if (sharedFlushGate == null || removing || uuid == null || cache == null || cachedChanges == null) {
@@ -119,15 +119,21 @@ public class UserDataCache {
 					publishChangeInternal(change);
 					if (change != null) changesAfterExclusiveFlush.add(change);
 				}
-				if (notification != null) notificationsAfterExclusiveFlush.add(notification);
+				if (notification != null) {
+					Runnable captured = manager.captureSharedUserDataNotification(notification);
+					notificationsAfterExclusiveFlush.add(captured == null ? notification : captured);
+				}
 				flushChangesAfterExclusive |= flushImmediately;
 				return true;
 			}
 			for (UserDataChange change : changes) addChangeInternal(change, true);
-			dispatchNotification = notification != null;
+			if (notification != null) {
+				Runnable captured = manager.captureSharedUserDataNotification(notification);
+				notificationToDispatch = captured == null ? notification : captured;
+			}
 			flushNow = flushImmediately;
 		}
-		if (dispatchNotification) manager.dispatchSharedUserDataNotification(notification);
+		if (notificationToDispatch != null) manager.dispatchSharedUserDataNotification(notificationToDispatch);
 		if (flushNow) scheduleImmediateSharedFlush();
 		return true;
 	}
@@ -228,38 +234,47 @@ public class UserDataCache {
 		Consumer<Runnable> gate;
 		synchronized (this) {
 			gate = sharedExclusiveFlushGate;
-			if (gate != null) exclusiveFlushesPending++;
 		}
 		if (gate != null) {
 			ArrayList<Runnable> notifications = new ArrayList<>();
+			java.util.concurrent.atomic.AtomicBoolean flushNow = new java.util.concurrent.atomic.AtomicBoolean();
 			try {
 				gate.accept(() -> {
-					// This gate is the durable boundary for this checkpoint. Claim changes
-					// staged before admission so an earlier mutation cannot be persisted
-					// after this checkpoint by a concurrently queued exclusive caller.
-					drainChangesStagedBeforeExclusiveAdmission(notifications);
-					while (true) {
-						Runnable notification = processChangesInternal(true);
-						if (notification != null) notifications.add(notification);
-						synchronized (this) {
-							if (cachedChanges != null && !cachedChanges.isEmpty()) continue;
+					synchronized (this) {
+						if (removing || uuid == null || cache == null || cachedChanges == null) {
+							throw new IllegalStateException("Shared user cache is retiring");
 						}
-						action.run();
-						break;
+						exclusiveFlushesPending++;
+					}
+					try {
+						// Admission is the durable boundary for this checkpoint. Mutations
+						// accepted before it remain in the normal queue and are flushed first;
+						// only later mutations use the staging queue.
+						drainChangesStagedBeforeExclusiveAdmission(notifications);
+						while (true) {
+							Runnable notification = processChangesInternal(true);
+							if (notification != null) notifications.add(notification);
+							synchronized (this) {
+								if (cachedChanges != null && !cachedChanges.isEmpty()) continue;
+							}
+							action.run();
+							break;
+						}
+					} finally {
+						synchronized (this) {
+							exclusiveFlushesPending--;
+							if (exclusiveFlushesPending == 0) {
+								flushNow.set(flushChangesAfterExclusive);
+								flushChangesAfterExclusive = false;
+								drainChangesStagedBeforeExclusiveAdmission(notifications);
+								if (!flushNow.get() && cachedChanges != null && !cachedChanges.isEmpty()
+										&& !scheduled) scheduleChanges();
+							}
+						}
 					}
 				});
 			} finally {
-				boolean flushNow = false;
-				synchronized (this) {
-					exclusiveFlushesPending--;
-					if (exclusiveFlushesPending == 0) {
-						flushNow = flushChangesAfterExclusive;
-						flushChangesAfterExclusive = false;
-						drainChangesStagedBeforeExclusiveAdmission(notifications);
-						if (!flushNow && !cachedChanges.isEmpty() && !scheduled) scheduleChanges();
-					}
-				}
-				if (flushNow) scheduleImmediateSharedFlush();
+				if (flushNow.get()) scheduleImmediateSharedFlush();
 				for (Runnable notification : notifications) manager.dispatchSharedUserDataNotification(notification);
 			}
 			return;
@@ -292,9 +307,7 @@ public class UserDataCache {
 			while ((deferred = changesAfterExclusiveFlush.poll()) != null) cachedChanges.add(deferred);
 			Runnable deferredNotification;
 			while ((deferredNotification = notificationsAfterExclusiveFlush.poll()) != null) {
-				Runnable captured = manager == null ? deferredNotification
-						: manager.captureSharedUserDataNotification(deferredNotification);
-				notifications.add(captured == null ? deferredNotification : captured);
+				notifications.add(deferredNotification);
 			}
 			// The admitted checkpoint will flush every change it just claimed.
 			flushChangesAfterExclusive = false;
