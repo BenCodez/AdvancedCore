@@ -304,7 +304,13 @@ public class UserDataCache {
 	private void drainChangesStagedBeforeExclusiveAdmission(ArrayList<Runnable> notifications) {
 		synchronized (this) {
 			UserDataChange deferred;
-			while ((deferred = changesAfterExclusiveFlush.poll()) != null) cachedChanges.add(deferred);
+			while ((deferred = changesAfterExclusiveFlush.poll()) != null) {
+				// A checkpoint action may replace the visible cache snapshot. Re-publish
+				// mutations ordered after that checkpoint as they cross back into the
+				// normal queue so read-after-write visibility survives the replacement.
+				publishChangeInternal(deferred);
+				cachedChanges.add(deferred);
+			}
 			Runnable deferredNotification;
 			while ((deferredNotification = notificationsAfterExclusiveFlush.poll()) != null) {
 				notifications.add(deferredNotification);

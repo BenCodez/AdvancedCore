@@ -322,6 +322,7 @@ class SharedUserLifecycleRegressionTest {
 				order.add("checkpoint");
 				checkpointStarted.countDown();
 				await(releaseCheckpoint);
+				cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(2))));
 			}));
 			await(checkpointStarted);
 
@@ -337,6 +338,8 @@ class SharedUserLifecycleRegressionTest {
 
 			releaseCheckpoint.countDown();
 			checkpoint.get(5, TimeUnit.SECONDS);
+			assertEquals(3, cache.snapshot().get("Points").getInt(),
+					"claiming the staged mutation must restore visibility after checkpoint replacement");
 			runtime.flush(fixture.uuid);
 			assertTrue(notification.await(5, TimeUnit.SECONDS));
 
@@ -381,7 +384,9 @@ class SharedUserLifecycleRegressionTest {
 			assertTrue(persisted.get(), "retirement must flush the normally queued mutation");
 
 			admitCheckpoint.countDown();
-			assertThrows(ExecutionException.class, () -> checkpoint.get(5, TimeUnit.SECONDS));
+			ExecutionException failure = assertThrows(ExecutionException.class,
+					() -> checkpoint.get(5, TimeUnit.SECONDS));
+			assertInstanceOf(IllegalStateException.class, failure.getCause());
 		} finally {
 			admitCheckpoint.countDown();
 			worker.shutdownNow();
