@@ -2,6 +2,8 @@ package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -25,6 +28,34 @@ import com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class UserDataCachePopulationRaceTest {
+	@Test
+	void directRefreshCapturesNotificationGenerationBeforeDispatch() {
+		UserDataManager manager = mock(UserDataManager.class);
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserData data = mock(UserData.class);
+		UUID uuid = UUID.randomUUID();
+		when(manager.getPlugin()).thenReturn(plugin);
+		when(manager.hasSharedSqlBackend()).thenReturn(true);
+		when(manager.getKeys()).thenReturn(new ArrayList<>());
+		when(manager.captureSharedUserDataNotification(any(Runnable.class)))
+				.thenAnswer(call -> call.getArgument(0));
+		when(plugin.getUserManager()).thenReturn(users);
+		when(users.getUser(uuid, false)).thenReturn(user);
+		when(user.getUserData()).thenReturn(data);
+		when(data.getKeys()).thenReturn(new ArrayList<>());
+		when(data.getValues()).thenReturn(new HashMap<>(java.util.Map.of("Points", new DataValueInt(2))));
+		UserDataCache cache = new UserDataCache(manager, uuid);
+		cache.updateCache(new HashMap<>(java.util.Map.of("Points", new DataValueInt(1))));
+
+		cache.cache();
+
+		InOrder order = inOrder(manager);
+		order.verify(manager).captureSharedUserDataNotification(any(Runnable.class));
+		order.verify(manager).dispatchSharedUserDataNotification(any(Runnable.class));
+	}
+
     @Test
     void retiredCacheMakesAnInFlightLegacyLoadANoop() throws Exception {
         UserDataManager manager = mock(UserDataManager.class);

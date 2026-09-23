@@ -304,7 +304,7 @@ class SharedCacheBindingRegressionTest {
                 assertEquals(9, cache.getCache().get("Points").getInt(),
                         "the older completed batch must not replace the newer queued value");
                 fixture.first.blockWrites(null, null);
-                fixture.tasks.get(1).run();
+                fixture.tasks.get(fixture.tasks.size() - 1).run();
                 assertEquals(9, fixture.first.points(fixture.uuid));
             } finally {
                 releaseWrite.countDown();
@@ -369,6 +369,7 @@ class SharedCacheBindingRegressionTest {
             new UserData(user).setInt(UserStorage.MYSQL, "Points", 9, false, false);
 
             assertEquals(9, fixture.first.points(fixture.uuid));
+            fixture.tasks.get(fixture.tasks.size() - 1).run();
             verify(userManager, times(1)).onChange(eq(user), any(String[].class));
             runtime.close();
         }
@@ -398,12 +399,10 @@ class SharedCacheBindingRegressionTest {
 					data.getInt(UserStorage.MYSQL, "Points", 0, UserDataFetchMode.DEFAULT) + 1, false, false);
 			assertEquals(10, cache.snapshot().get("Points").getInt(),
 					"same-tick read-modify-write must observe the preceding setter");
-			fixture.tasks.get(fixture.tasks.size() - 1).run();
 			assertEquals(10, fixture.first.points(fixture.uuid));
-            var callback = org.mockito.ArgumentCaptor.forClass(Runnable.class);
-            verify(fixture.plugin.getBukkitScheduler()).runTask(eq(fixture.plugin), callback.capture());
-            verify(userManager, never()).onChange(any(), any(String[].class));
-            callback.getValue().run();
+			verify(fixture.plugin.getBukkitScheduler(), never()).runTask(eq(fixture.plugin), any(Runnable.class));
+			verify(userManager, never()).onChange(any(), any(String[].class));
+			fixture.tasks.get(fixture.tasks.size() - 1).run();
             verify(userManager, times(1)).onChange(eq(user), any(String[].class));
             runtime.close();
         }
@@ -458,8 +457,9 @@ class SharedCacheBindingRegressionTest {
 			fixture.tasks.get(1).run();
 			assertEquals(9, fixture.manager.getUserDataCache().get(fixture.uuid).getCache().get("Points").getInt(),
 					"the admitted worker mutation must publish into the populated cache");
-			assertEquals(3, fixture.tasks.size(), "the queued mutation must schedule its shared flush");
-			fixture.tasks.get(2).run();
+			for (int index = 2; !fixture.first.rows.containsKey(fixture.uuid) && index < fixture.tasks.size(); index++) {
+				fixture.tasks.get(index).run();
+			}
 			assertEquals(9, fixture.first.points(fixture.uuid));
 			fixture.assertNoLegacyWrites();
 			runtime.close();
@@ -595,7 +595,7 @@ class SharedCacheBindingRegressionTest {
                 assertEquals(9, cache.getCache().get("Points").getInt(),
                         "the queued mutation must remain visible after the older batch completes");
                 fixture.first.blockWrites(null, null);
-                fixture.tasks.get(1).run();
+                fixture.tasks.get(fixture.tasks.size() - 1).run();
                 assertEquals(9, fixture.first.points(fixture.uuid));
             } finally {
                 releaseWrite.countDown();
@@ -909,6 +909,7 @@ class SharedCacheBindingRegressionTest {
             }).when(userManager).onChange(any(AdvancedCoreUser.class), any(String[].class));
 
             assertDoesNotThrow(() -> fixture.manager.cacheUser(fixture.uuid, null));
+            fixture.tasks.get(fixture.tasks.size() - 1).run();
 
             assertEquals(21, fixture.first.points(fixture.uuid));
             assertFalse(fixture.manager.containsKey(fixture.uuid));

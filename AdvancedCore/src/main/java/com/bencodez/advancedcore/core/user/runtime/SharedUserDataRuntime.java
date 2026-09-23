@@ -242,16 +242,17 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 
 	/** Replace the route and publish its platform owner before releasing lifecycle admission. */
 	public void replaceBackend(SqlUserBackend replacement, Runnable afterReplacement) {
-        rejectReentrantTransition();
-        cacheOwner.requireBlockingAllowed();
-        Objects.requireNonNull(replacement, "replacement");
+		rejectReentrantTransition();
+		cacheOwner.requireBlockingAllowed();
+		Objects.requireNonNull(replacement, "replacement");
 		Objects.requireNonNull(afterReplacement, "afterReplacement");
-        lifecycle.writeLock().lock();
-        try {
-            requireOpen();
-            retryPendingBackendClose();
-            if (replacement == backend) return;
-            if (!replacement.isOpen()) throw new IllegalArgumentException("replacement backend is closed");
+		boolean generationReplaced = false;
+		lifecycle.writeLock().lock();
+		try {
+			requireOpen();
+			retryPendingBackendClose();
+			if (replacement == backend) return;
+			if (!replacement.isOpen()) throw new IllegalArgumentException("replacement backend is closed");
 			cacheOwner.beginRetirement();
 			try {
 				flushAllInternal();
@@ -260,6 +261,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 				afterReplacement.run();
 				cacheOwner.bindBackend(replacement);
 				backend = replacement;
+				generationReplaced = true;
 				try { previous.close(); }
 				catch (RuntimeException | Error failure) {
 					// The replacement is already published and owns the active route.
@@ -272,10 +274,15 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 				throw failure;
 			}
 		} finally {
-			lifecycle.writeLock().unlock();
-			cacheOwner.dispatchAllNotifications();
+			if (generationReplaced) {
+				try { cacheOwner.discardAllNotifications(); }
+				finally { lifecycle.writeLock().unlock(); }
+			} else {
+				lifecycle.writeLock().unlock();
+				cacheOwner.dispatchAllNotifications();
+			}
 		}
-    }
+	}
 
     private void retryPendingBackendClose() {
         SqlUserBackend pending = pendingBackendClose;
@@ -339,11 +346,11 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                             closed = true;
                         }
 					} finally {
-						lifecycle.writeLock().unlock();
 						// Disable is terminal even when its flush fails. These callbacks can
 						// schedule UserDataChanged work after Bukkit has unloaded, so neither
 						// a successful nor a failed final retirement may dispatch them.
-						cacheOwner.discardAllNotifications();
+						try { cacheOwner.discardAllNotifications(); }
+						finally { lifecycle.writeLock().unlock(); }
 					}
                     result.complete(null);
                 } catch (Throwable failure) { result.completeExceptionally(failure); }

@@ -34,9 +34,13 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     private volatile BiConsumer<UUID, Runnable> userGate;
     private volatile BiConsumer<UUID, Runnable> exclusiveUserGate;
     private final ConcurrentHashMap<UUID, Consumer<Runnable>> cacheGates = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Consumer<Runnable>> exclusiveCacheGates = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, ConcurrentLinkedQueue<Runnable>> pendingNotifications =
 			new ConcurrentHashMap<>();
-    private final Consumer<UUID> cacheRemovalListener = cacheGates::remove;
+    private final Consumer<UUID> cacheRemovalListener = uuid -> {
+        cacheGates.remove(uuid);
+        exclusiveCacheGates.remove(uuid);
+    };
     private final Consumer<UserDataCache> cacheInitializer;
 
     public BukkitUserCacheOwner(UserDataManager manager) {
@@ -87,6 +91,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
             userGate = perUserGate;
             exclusiveUserGate = perUserExclusiveGate;
             cacheGates.clear();
+            exclusiveCacheGates.clear();
         } finally {
             manager.endSharedBindingTransition();
         }
@@ -109,6 +114,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         if (perUser != null) manager.bindSharedSqlBackend(backend, flushGate, perUser,
                 exclusiveUserGate == null ? perUser : exclusiveUserGate);
         else if (flushGate != null) manager.bindSharedSqlBackend(backend, flushGate);
+        manager.advanceSharedUserDataNotificationGeneration();
     }
 
     private Consumer<Runnable> cacheGate(UUID uuid) {
@@ -121,6 +127,16 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
             });
         }
         return flushGate;
+    }
+
+    private Consumer<Runnable> exclusiveCacheGate(UUID uuid) {
+        BiConsumer<UUID, Runnable> perUser = exclusiveUserGate;
+        if (perUser == null || uuid == null) return flushGate;
+        return exclusiveCacheGates.computeIfAbsent(uuid, id -> operation -> {
+            BiConsumer<UUID, Runnable> current = exclusiveUserGate;
+            if (current == null) throw new IllegalStateException("Shared user lifecycle is not bound");
+            current.accept(id, operation);
+        });
     }
 
     private void bind(UserDataCache cache, UUID uuid) {
@@ -136,7 +152,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
                 throw new IllegalStateException("Shared SQL backend is unavailable");
             }
             selected.user(uuid).writeValues(selected.storageType(), values);
-        }, cacheGate(uuid));
+        }, cacheGate(uuid), exclusiveCacheGate(uuid));
     }
 
     @Override public void requireBlockingAllowed() {
@@ -241,28 +257,30 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         }
     }
 
-	@Override public void dispatchNotifications(UUID uuid) {
-		ConcurrentLinkedQueue<Runnable> notifications = pendingNotifications.remove(uuid);
-		if (notifications == null) return;
-		// Preserve the established storage-worker callback contract. The runtime has
-		// released per-user admission here, so callbacks may perform exclusive storage
-		// work; moving them to Bukkit's primary thread would make that work illegal.
-		Runnable notification;
-		while ((notification = notifications.poll()) != null) {
-			try { notification.run(); }
-			catch (RuntimeException | Error failure) { manager.getPlugin().debug(failure); }
-		}
-	}
+    @Override public synchronized void dispatchNotifications(UUID uuid) {
+        ConcurrentLinkedQueue<Runnable> notifications = pendingNotifications.remove(uuid);
+        if (notifications == null) return;
+        // Preserve the established storage-worker callback contract. The runtime has
+        // released per-user admission here, so callbacks may perform exclusive storage
+        // work; moving them to Bukkit's primary thread would make that work illegal.
+        Runnable notification;
+        while ((notification = notifications.poll()) != null) {
+            manager.dispatchSharedUserDataNotification(notification);
+        }
+    }
 
-	@Override public void dispatchAllNotifications() {
-		for (UUID uuid : Set.copyOf(pendingNotifications.keySet())) dispatchNotifications(uuid);
-	}
+    @Override public void dispatchAllNotifications() {
+        for (UUID uuid : Set.copyOf(pendingNotifications.keySet())) dispatchNotifications(uuid);
+    }
 
     @Override public void reportCommittedFailure(UUID uuid, Throwable failure) {
         manager.recordSharedStorageFailure(failure);
     }
 
-	@Override public void discardAllNotifications() { pendingNotifications.clear(); }
+    @Override public synchronized void discardAllNotifications() {
+		pendingNotifications.clear();
+		manager.advanceSharedUserDataNotificationGeneration();
+	}
 
     @Override public Set<UUID> cachedUsers() { return new HashSet<>(manager.getUserDataCache().keySet()); }
 
@@ -289,12 +307,16 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         if (cache != null) {
             cache.retireAfterSharedFlush();
         }
-        if (manager.retireSharedCache(uuid, cache)) cacheGates.remove(uuid);
+        if (manager.retireSharedCache(uuid, cache)) {
+            cacheGates.remove(uuid);
+            exclusiveCacheGates.remove(uuid);
+        }
     }
 
     @Override public void clearAfterFlush() { for (UUID uuid : cachedUsers()) remove(uuid); }
 
     @Override public void shutdown() {
+        manager.closeSharedUserDataNotifications();
         if (manager.getTimer() instanceof ScheduledThreadPoolExecutor timer) {
             timer.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
             timer.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);

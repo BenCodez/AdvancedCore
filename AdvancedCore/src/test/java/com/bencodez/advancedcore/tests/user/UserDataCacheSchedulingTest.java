@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -201,6 +202,12 @@ public class UserDataCacheSchedulingTest {
 	public void emptyPlaceholderIsNotACompletedStorageSnapshot() {
 		UserDataCache cache = new UserDataCache(mock(UserDataManager.class), UUID.randomUUID());
 		assertFalse(cache.hasPublishedStorageSnapshot());
+	}
+
+	@Test
+	public void sharedStorageRetainsTheSingleGateCompatibilityOverload() throws Exception {
+		assertNotNull(UserDataCache.class.getMethod("configureSharedStorage",
+				java.util.function.Consumer.class, java.util.function.Consumer.class));
 	}
 
 	@Test

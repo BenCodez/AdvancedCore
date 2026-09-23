@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,6 +40,20 @@ import com.bencodez.simpleapi.sql.data.DataValueInt;
 import com.bencodez.simpleapi.sql.data.DataValueString;
 
 class SharedUserDataRuntimeTest {
+	@Test
+	void backendReplacementDiscardsNotificationsFromRetiredCacheGeneration() {
+		SqlUserBackend first = mock(SqlUserBackend.class);
+		SqlUserBackend replacement = mock(SqlUserBackend.class);
+		UserCacheOwner cache = mock(UserCacheOwner.class);
+		when(first.isOpen()).thenReturn(true);
+		when(replacement.isOpen()).thenReturn(true);
+		SharedUserDataRuntime runtime = new SharedUserDataRuntime(first, cache);
+
+		runtime.replaceBackend(replacement);
+
+		verify(cache).discardAllNotifications();
+		verify(cache, never()).dispatchAllNotifications();
+	}
     @Test
     void preservesTempCacheThenCacheThenStoragePrecedenceAcrossFetchModes() {
         UUID uuid = UUID.randomUUID();

@@ -17,6 +17,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.InOrder;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -297,6 +298,144 @@ class SharedUserLifecycleRegressionTest {
 			releaseWrite.countDown();
 			worker.shutdownNow();
 			assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+			runtime.close();
+		}
+	}
+
+	@Test
+	void durableCheckpointDoesNotHoldCacheMonitorAndOrdersLaterMutationAfterReplacement() throws Exception {
+		Fixture fixture = new Fixture();
+		doAnswer(call -> {
+			call.getArgument(0, Runnable.class).run();
+			return null;
+		}).when(fixture.manager).dispatchSharedUserDataNotification(any(Runnable.class));
+		SharedUserDataRuntime runtime = fixture.runtime();
+		runtime.populate(fixture.uuid);
+		UserDataCache cache = fixture.caches.get(fixture.uuid);
+		ScheduledExecutorService immediateTimer = mock(ScheduledExecutorService.class);
+		when(fixture.plugin.getTimer()).thenReturn(immediateTimer);
+		List<String> order = new CopyOnWriteArrayList<>();
+		fixture.first.beforeWrite = () -> order.add("write");
+		cache.addChange(new UserDataChangeInt("Points", 2), true);
+		CountDownLatch checkpointStarted = new CountDownLatch(1);
+		CountDownLatch releaseCheckpoint = new CountDownLatch(1);
+		ExecutorService workers = Executors.newFixedThreadPool(3);
+		try {
+			Future<?> checkpoint = workers.submit(() -> cache.flushChangesAndRun(() -> {
+				order.add("checkpoint");
+				checkpointStarted.countDown();
+				await(releaseCheckpoint);
+				cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(2))));
+			}));
+			await(checkpointStarted);
+
+			assertTrue(workers.submit(cache::hasCache).get(1, TimeUnit.SECONDS),
+					"a blocked durable callback must not retain the cache monitor");
+			CountDownLatch notification = new CountDownLatch(1);
+			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 3),
+					notification::countDown, true));
+			assertEquals(3, cache.snapshot().get("Points").getInt(),
+					"the setter-facing cache must preserve immediate read-after-write visibility");
+			assertEquals(1, notification.getCount(),
+					"the mutation callback must remain behind exclusive admission");
+
+			clearInvocations(fixture.manager, immediateTimer);
+			releaseCheckpoint.countDown();
+			checkpoint.get(5, TimeUnit.SECONDS);
+			InOrder completionOrder = inOrder(fixture.manager, immediateTimer);
+			completionOrder.verify(fixture.manager, times(2))
+					.dispatchSharedUserDataNotification(any(Runnable.class));
+			completionOrder.verify(immediateTimer).execute(any(Runnable.class));
+			assertEquals(3, cache.snapshot().get("Points").getInt(),
+					"claiming the staged mutation must restore visibility after checkpoint replacement");
+			runtime.flush(fixture.uuid);
+			assertTrue(notification.await(5, TimeUnit.SECONDS));
+
+			assertEquals(List.of("write", "checkpoint", "write"), order);
+			assertEquals(3, fixture.first.points(fixture.uuid));
+		} finally {
+			releaseCheckpoint.countDown();
+			workers.shutdownNow();
+			assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
+			runtime.close();
+		}
+	}
+
+	@Test
+	void retirementFlushesMutationAcceptedBeforeCheckpointAdmission() throws Exception {
+		UUID uuid = UUID.randomUUID();
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		UserDataManager manager = mock(UserDataManager.class);
+		when(manager.getPlugin()).thenReturn(plugin);
+		when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+		when(plugin.getUserManager().getUser(uuid, false)).thenReturn(mock(AdvancedCoreUser.class));
+		doAnswer(call -> call.getArgument(0)).when(manager).captureSharedUserDataNotification(any(Runnable.class));
+		UserDataCache cache = new UserDataCache(manager, uuid);
+		AtomicBoolean persisted = new AtomicBoolean();
+		CountDownLatch checkpointWaiting = new CountDownLatch(1), admitCheckpoint = new CountDownLatch(1);
+		cache.configureSharedStorage(values -> persisted.set(values.get("Points").getInt() == 9), Runnable::run,
+				operation -> {
+					checkpointWaiting.countDown();
+					await(admitCheckpoint);
+					operation.run();
+				});
+		ExecutorService worker = Executors.newSingleThreadExecutor();
+		try {
+			Future<?> checkpoint = worker.submit(() -> cache.flushChangesAndRun(
+					() -> fail("a checkpoint admitted after retirement must not run on the retired cache")));
+			await(checkpointWaiting);
+			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 9)));
+
+			cache.beginRemoval();
+			cache.processChangesForSharedRuntime();
+			cache.retireAfterSharedFlush();
+			assertTrue(persisted.get(), "retirement must flush the normally queued mutation");
+
+			admitCheckpoint.countDown();
+			ExecutionException failure = assertThrows(ExecutionException.class,
+					() -> checkpoint.get(5, TimeUnit.SECONDS));
+			assertInstanceOf(IllegalStateException.class, failure.getCause());
+		} finally {
+			admitCheckpoint.countDown();
+			worker.shutdownNow();
+			assertTrue(worker.awaitTermination(5, TimeUnit.SECONDS));
+		}
+	}
+
+	@Test
+	void overlappingCheckpointsFlushOlderStagedMutationBeforeLaterCheckpoint() throws Exception {
+		Fixture fixture = new Fixture();
+		SharedUserDataRuntime runtime = fixture.runtime();
+		runtime.populate(fixture.uuid);
+		UserDataCache cache = fixture.caches.get(fixture.uuid);
+		List<String> order = new CopyOnWriteArrayList<>();
+		doAnswer(call -> {
+			order.add("notification-submit");
+			return null;
+		}).when(fixture.manager).dispatchSharedUserDataNotification(any(Runnable.class));
+		fixture.first.beforeWrite = () -> order.add("write-" + fixture.first.points(fixture.uuid));
+		CountDownLatch firstStarted = new CountDownLatch(1), releaseFirst = new CountDownLatch(1);
+		ExecutorService workers = Executors.newFixedThreadPool(2);
+		try {
+			Future<?> first = workers.submit(() -> cache.flushChangesAndRun(() -> {
+				order.add("checkpoint-a");
+				firstStarted.countDown();
+				await(releaseFirst);
+			}));
+			await(firstStarted);
+			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 2), () -> { }));
+			Future<?> second = workers.submit(() -> cache.flushChangesAndRun(() -> order.add("checkpoint-b")));
+			releaseFirst.countDown();
+			first.get(5, TimeUnit.SECONDS);
+			second.get(5, TimeUnit.SECONDS);
+
+			assertEquals(2, fixture.first.points(fixture.uuid));
+			assertEquals(List.of("checkpoint-a", "notification-submit", "write-1",
+					"checkpoint-b", "notification-submit"), order);
+		} finally {
+			releaseFirst.countDown();
+			workers.shutdownNow();
+			assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
 			runtime.close();
 		}
 	}
