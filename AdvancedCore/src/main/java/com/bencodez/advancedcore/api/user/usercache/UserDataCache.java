@@ -280,8 +280,8 @@ public class UserDataCache {
 					}
 				});
 			} finally {
-				if (flushNow.get()) scheduleImmediateSharedFlush();
 				for (Runnable notification : notifications) manager.dispatchSharedUserDataNotification(notification);
+				if (flushNow.get()) scheduleImmediateSharedFlush();
 			}
 			return;
 		}

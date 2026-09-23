@@ -17,6 +17,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.InOrder;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -311,6 +312,8 @@ class SharedUserLifecycleRegressionTest {
 		SharedUserDataRuntime runtime = fixture.runtime();
 		runtime.populate(fixture.uuid);
 		UserDataCache cache = fixture.caches.get(fixture.uuid);
+		ScheduledExecutorService immediateTimer = mock(ScheduledExecutorService.class);
+		when(fixture.plugin.getTimer()).thenReturn(immediateTimer);
 		List<String> order = new CopyOnWriteArrayList<>();
 		fixture.first.beforeWrite = () -> order.add("write");
 		cache.addChange(new UserDataChangeInt("Points", 2), true);
@@ -330,14 +333,19 @@ class SharedUserLifecycleRegressionTest {
 					"a blocked durable callback must not retain the cache monitor");
 			CountDownLatch notification = new CountDownLatch(1);
 			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 3),
-					notification::countDown));
+					notification::countDown, true));
 			assertEquals(3, cache.snapshot().get("Points").getInt(),
 					"the setter-facing cache must preserve immediate read-after-write visibility");
 			assertEquals(1, notification.getCount(),
 					"the mutation callback must remain behind exclusive admission");
 
+			clearInvocations(fixture.manager, immediateTimer);
 			releaseCheckpoint.countDown();
 			checkpoint.get(5, TimeUnit.SECONDS);
+			InOrder completionOrder = inOrder(fixture.manager, immediateTimer);
+			completionOrder.verify(fixture.manager, times(2))
+					.dispatchSharedUserDataNotification(any(Runnable.class));
+			completionOrder.verify(immediateTimer).execute(any(Runnable.class));
 			assertEquals(3, cache.snapshot().get("Points").getInt(),
 					"claiming the staged mutation must restore visibility after checkpoint replacement");
 			runtime.flush(fixture.uuid);
