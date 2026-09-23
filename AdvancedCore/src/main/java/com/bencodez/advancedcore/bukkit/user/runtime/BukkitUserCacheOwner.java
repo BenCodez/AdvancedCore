@@ -257,7 +257,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         }
     }
 
-    @Override public void dispatchNotifications(UUID uuid) {
+    @Override public synchronized void dispatchNotifications(UUID uuid) {
         ConcurrentLinkedQueue<Runnable> notifications = pendingNotifications.remove(uuid);
         if (notifications == null) return;
         // Preserve the established storage-worker callback contract. The runtime has
@@ -277,7 +277,10 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
         manager.recordSharedStorageFailure(failure);
     }
 
-    @Override public void discardAllNotifications() { pendingNotifications.clear(); }
+    @Override public synchronized void discardAllNotifications() {
+		pendingNotifications.clear();
+		manager.advanceSharedUserDataNotificationGeneration();
+	}
 
     @Override public Set<UUID> cachedUsers() { return new HashSet<>(manager.getUserDataCache().keySet()); }
 

@@ -274,9 +274,13 @@ public final class SharedUserDataRuntime implements AutoCloseable {
 				throw failure;
 			}
 		} finally {
-			lifecycle.writeLock().unlock();
-			if (generationReplaced) cacheOwner.discardAllNotifications();
-			else cacheOwner.dispatchAllNotifications();
+			if (generationReplaced) {
+				try { cacheOwner.discardAllNotifications(); }
+				finally { lifecycle.writeLock().unlock(); }
+			} else {
+				lifecycle.writeLock().unlock();
+				cacheOwner.dispatchAllNotifications();
+			}
 		}
 	}
 
@@ -342,11 +346,11 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                             closed = true;
                         }
 					} finally {
-						lifecycle.writeLock().unlock();
 						// Disable is terminal even when its flush fails. These callbacks can
 						// schedule UserDataChanged work after Bukkit has unloaded, so neither
 						// a successful nor a failed final retirement may dispatch them.
-						cacheOwner.discardAllNotifications();
+						try { cacheOwner.discardAllNotifications(); }
+						finally { lifecycle.writeLock().unlock(); }
 					}
                     result.complete(null);
                 } catch (Throwable failure) { result.completeExceptionally(failure); }

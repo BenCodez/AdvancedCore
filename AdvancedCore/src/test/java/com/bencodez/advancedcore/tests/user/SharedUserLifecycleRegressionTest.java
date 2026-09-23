@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -350,6 +351,40 @@ class SharedUserLifecycleRegressionTest {
 		}
 	}
 
+	@Test
+	void overlappingCheckpointsFlushOlderStagedMutationBeforeLaterCheckpoint() throws Exception {
+		Fixture fixture = new Fixture();
+		SharedUserDataRuntime runtime = fixture.runtime();
+		runtime.populate(fixture.uuid);
+		UserDataCache cache = fixture.caches.get(fixture.uuid);
+		List<String> order = new CopyOnWriteArrayList<>();
+		fixture.first.beforeWrite = () -> order.add("write-" + fixture.first.points(fixture.uuid));
+		CountDownLatch firstStarted = new CountDownLatch(1), releaseFirst = new CountDownLatch(1);
+		ExecutorService workers = Executors.newFixedThreadPool(2);
+		try {
+			Future<?> first = workers.submit(() -> cache.flushChangesAndRun(() -> {
+				order.add("checkpoint-a");
+				firstStarted.countDown();
+				await(releaseFirst);
+			}));
+			await(firstStarted);
+			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 2)));
+			Future<?> second = workers.submit(() -> cache.flushChangesAndRun(() -> order.add("checkpoint-b")));
+			awaitExclusiveFlushes(cache, 2);
+			releaseFirst.countDown();
+			first.get(5, TimeUnit.SECONDS);
+			second.get(5, TimeUnit.SECONDS);
+
+			assertEquals(2, fixture.first.points(fixture.uuid));
+			assertEquals(List.of("checkpoint-a", "write-1", "checkpoint-b"), order);
+		} finally {
+			releaseFirst.countDown();
+			workers.shutdownNow();
+			assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
+			runtime.close();
+		}
+	}
+
     @Test
     void shutdownCancelsDelayedTimerWorkWithoutAwaitingIt() throws Exception {
         Fixture fixture = new Fixture();
@@ -368,6 +403,19 @@ class SharedUserLifecycleRegressionTest {
         try { assertTrue(latch.await(5, TimeUnit.SECONDS)); }
         catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new IllegalStateException(failure); }
     }
+
+	private static void awaitExclusiveFlushes(UserDataCache cache, int expected) throws Exception {
+		Field pending = UserDataCache.class.getDeclaredField("exclusiveFlushesPending");
+		pending.setAccessible(true);
+		long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+		while (System.nanoTime() < deadline) {
+			synchronized (cache) {
+				if (pending.getInt(cache) == expected) return;
+			}
+			Thread.onSpinWait();
+		}
+		fail("Timed out waiting for " + expected + " exclusive flushes");
+	}
 
     private static final class Fixture {
         final UUID uuid = UUID.randomUUID();

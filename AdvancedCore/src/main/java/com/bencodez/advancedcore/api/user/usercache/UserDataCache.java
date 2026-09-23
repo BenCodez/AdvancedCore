@@ -234,6 +234,10 @@ public class UserDataCache {
 			ArrayList<Runnable> notifications = new ArrayList<>();
 			try {
 				gate.accept(() -> {
+					// This gate is the durable boundary for this checkpoint. Claim changes
+					// staged before admission so an earlier mutation cannot be persisted
+					// after this checkpoint by a concurrently queued exclusive caller.
+					drainChangesStagedBeforeExclusiveAdmission(notifications);
 					while (true) {
 						Runnable notification = processChangesInternal(true);
 						if (notification != null) notifications.add(notification);
@@ -249,15 +253,10 @@ public class UserDataCache {
 				synchronized (this) {
 					exclusiveFlushesPending--;
 					if (exclusiveFlushesPending == 0) {
-						UserDataChange deferred;
-						while ((deferred = changesAfterExclusiveFlush.poll()) != null) cachedChanges.add(deferred);
 						flushNow = flushChangesAfterExclusive;
 						flushChangesAfterExclusive = false;
+						drainChangesStagedBeforeExclusiveAdmission(notifications);
 						if (!flushNow && !cachedChanges.isEmpty() && !scheduled) scheduleChanges();
-						Runnable deferredNotification;
-						while ((deferredNotification = notificationsAfterExclusiveFlush.poll()) != null) {
-							notifications.add(deferredNotification);
-						}
 					}
 				}
 				if (flushNow) scheduleImmediateSharedFlush();
@@ -284,6 +283,22 @@ public class UserDataCache {
 				return;
 			}
 		} finally { legacyMutationOrder.writeLock().unlock(); }
+	}
+
+	/** Caller holds either this monitor or the exclusive per-user admission. */
+	private void drainChangesStagedBeforeExclusiveAdmission(ArrayList<Runnable> notifications) {
+		synchronized (this) {
+			UserDataChange deferred;
+			while ((deferred = changesAfterExclusiveFlush.poll()) != null) cachedChanges.add(deferred);
+			Runnable deferredNotification;
+			while ((deferredNotification = notificationsAfterExclusiveFlush.poll()) != null) {
+				Runnable captured = manager == null ? deferredNotification
+						: manager.captureSharedUserDataNotification(deferredNotification);
+				notifications.add(captured == null ? deferredNotification : captured);
+			}
+			// The admitted checkpoint will flush every change it just claimed.
+			flushChangesAfterExclusive = false;
+		}
 	}
 
 	private void clearCacheNow() {
@@ -555,10 +570,15 @@ public class UserDataCache {
 		if (!persisted) return null;
 		AdvancedCoreUser notifyUser = changedUser;
 		String[] notifyKeys = changedKeys;
-		return () -> {
+		Runnable notification = () -> {
 			manager.getPlugin().getUserManager().onChange(notifyUser, notifyKeys);
 			for (UserDataChange change : changes) change.dump();
 		};
+		if (manager != null && manager.hasSharedSqlBackend()) {
+			Runnable captured = manager.captureSharedUserDataNotification(notification);
+			if (captured != null) return captured;
+		}
+		return notification;
 	}
 
 	private synchronized void requeueChanges(ArrayList<UserDataChange> changes) {

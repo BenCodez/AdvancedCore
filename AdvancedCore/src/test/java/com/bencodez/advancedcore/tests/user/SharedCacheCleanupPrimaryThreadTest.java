@@ -1051,19 +1051,29 @@ class SharedCacheCleanupPrimaryThreadTest {
 		assertSame(storageWorker, deliveredOn.get());
 
 		deliveredOn.set(null);
-		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
-		verify(worker, times(2)).execute(notification.capture());
+		Runnable admittedNotification = manager.captureSharedUserDataNotification(
+				() -> deliveredOn.set(Thread.currentThread()));
 		manager.advanceSharedUserDataNotificationGeneration();
+		manager.dispatchSharedUserDataNotification(admittedNotification);
+		verify(worker, times(2)).execute(notification.capture());
 		notification.getAllValues().get(1).run();
+		assertNull(deliveredOn.get(),
+				"a notification captured under old lifecycle admission must not publish into its replacement");
+
+		deliveredOn.set(null);
+		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
+		verify(worker, times(3)).execute(notification.capture());
+		manager.advanceSharedUserDataNotificationGeneration();
+		notification.getAllValues().get(2).run();
 		assertNull(deliveredOn.get(), "a retired cache generation must not publish queued notifications");
 
 		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
-		verify(worker, times(3)).execute(notification.capture());
+		verify(worker, times(4)).execute(notification.capture());
 		manager.closeSharedUserDataNotifications();
-		notification.getAllValues().get(2).run();
+		notification.getAllValues().get(3).run();
 		assertNull(deliveredOn.get(), "terminal shutdown must discard queued notifications");
 		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
-		verify(worker, times(3)).execute(any(Runnable.class));
+		verify(worker, times(4)).execute(any(Runnable.class));
 		manager.getTimer().shutdownNow();
 	}
 }

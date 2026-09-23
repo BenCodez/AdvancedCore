@@ -703,6 +703,7 @@ public class UserDataManager {
 	}
 
 	private void cacheUserNow(UUID uuid, boolean traceDevelopmentCall, CacheRefresh refresh) {
+		refresh.notificationGeneration = sharedNotificationGeneration.get();
 		plugin.devDebug("Caching " + uuid.toString());
 		if (traceDevelopmentCall && plugin.getOptions().getDebug().isDebug(DebugLevel.DEV)) {
 			try { throw new Exception("caching here: " + uuid.toString()); }
@@ -862,7 +863,7 @@ public class UserDataManager {
 			if (originalFailure == null) notifyCacheChanges(refresh);
 			else notifyCacheChangesAfterFailure(refresh, originalFailure);
 		};
-		if (hasSharedSqlBackend()) dispatchSharedUserDataNotification(notification);
+		if (hasSharedSqlBackend()) dispatchSharedUserDataNotification(notification, refresh.notificationGeneration);
 		else notification.run();
 	}
 
@@ -883,6 +884,7 @@ public class UserDataManager {
 		private final UUID uuid;
 		private ArrayList<String> changed = new ArrayList<>();
 		private Runnable flushNotification;
+		private long notificationGeneration;
 		private CacheRefresh(UUID uuid) { this.uuid = uuid; }
 	}
 
@@ -1010,9 +1012,12 @@ public class UserDataManager {
 	 * cache and per-user admission before a listener can re-enter storage APIs.
 	 */
 	public final void dispatchSharedUserDataNotification(Runnable notification) {
+		dispatchSharedUserDataNotification(notification, sharedNotificationGeneration.get());
+	}
+
+	private void dispatchSharedUserDataNotification(Runnable notification, long generation) {
 		Objects.requireNonNull(notification, "notification");
 		if (sharedNotificationsClosed) return;
-		long generation = sharedNotificationGeneration.get();
 		try {
 			timer.execute(() -> {
 				if (sharedNotificationsClosed || generation != sharedNotificationGeneration.get()) return;
@@ -1023,6 +1028,15 @@ public class UserDataManager {
 			reportDeferredStorageFailure(rejected);
 			throw rejected;
 		}
+	}
+
+	/** Capture the producing cache generation before lifecycle admission is released. */
+	public final Runnable captureSharedUserDataNotification(Runnable notification) {
+		Objects.requireNonNull(notification, "notification");
+		long generation = sharedNotificationGeneration.get();
+		return () -> {
+			if (!sharedNotificationsClosed && generation == sharedNotificationGeneration.get()) notification.run();
+		};
 	}
 
 	/** Fence callbacks captured from a cache generation that has been replaced. */
