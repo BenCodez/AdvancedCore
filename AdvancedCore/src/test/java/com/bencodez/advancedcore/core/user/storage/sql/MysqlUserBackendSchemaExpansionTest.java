@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
@@ -98,6 +99,56 @@ class MysqlUserBackendSchemaExpansionTest {
         assertMysqlFamilyMigratesRetainedNumericColumn(DbType.MARIADB);
     }
 
+    @Test void mariaDbAcceptsPeerMigrationBeforeAttributeInspectionCompletes() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("VoteRemindersLast");
+        fixture.numericColumns.add("VoteRemindersLast");
+        fixture.peerMigrationDuringAttributeInspection = true;
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("VoteRemindersLast", "TEXT", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertFalse(fixture.numericColumns.contains("VoteRemindersLast"));
+            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith(
+                    "ALTER TABLE `Users` MODIFY COLUMN `VoteRemindersLast`")));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbWaitsForPeerMigrationAfterAttributeInspectionFailure() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("VoteRemindersLast");
+        fixture.numericColumns.add("VoteRemindersLast");
+        fixture.columnDefaults.put("VoteRemindersLast", "'0'");
+        fixture.peerMigrationAfterAttributeFailure = true;
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("VoteRemindersLast", "TEXT", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertFalse(fixture.numericColumns.contains("VoteRemindersLast"));
+            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith(
+                    "ALTER TABLE `Users` MODIFY COLUMN `VoteRemindersLast`")));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbAcceptsPeerMigrationAfterConflictingAlter() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("VoteRemindersLast");
+        fixture.numericColumns.add("VoteRemindersLast");
+        fixture.peerMigrationOnAlterFailure = true;
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("VoteRemindersLast", "TEXT", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertFalse(fixture.numericColumns.contains("VoteRemindersLast"));
+        }
+        fixture.assertClosed();
+    }
+
     private void assertMysqlFamilyMigratesRetainedNumericColumn(DbType dbType) throws Exception {
         Fixture fixture = new Fixture(dbType);
         fixture.existing.add("Note");
@@ -151,7 +202,7 @@ class MysqlUserBackendSchemaExpansionTest {
         final DbType type;
         final List<String> sql = new ArrayList<>();
         final List<String> existing = new ArrayList<>(List.of("uuid"));
-        final List<String> numericColumns = new ArrayList<>();
+        final List<String> numericColumns = new CopyOnWriteArrayList<>();
         final List<String> booleanColumns = new ArrayList<>();
         final List<String> nonNullableColumns = new ArrayList<>();
         final java.util.Map<String, String> columnDefaults = new java.util.HashMap<>();
@@ -160,6 +211,9 @@ class MysqlUserBackendSchemaExpansionTest {
         final List<ResultSet> results = new ArrayList<>();
         SQLException addFailure;
         SQLException inspectFailure;
+        boolean peerMigrationDuringAttributeInspection;
+        boolean peerMigrationAfterAttributeFailure;
+        boolean peerMigrationOnAlterFailure;
         Fixture(DbType type) { this.type = type; }
 
         MockedConstruction<ConnectionManager> managers() {
@@ -199,6 +253,12 @@ class MysqlUserBackendSchemaExpansionTest {
                     return null;
                 }).when(statement).setString(anyInt(), anyString());
                 when(statement.executeUpdate()).thenAnswer(ignored -> {
+                    if (peerMigrationOnAlterFailure && query.startsWith("ALTER TABLE `Users` MODIFY COLUMN")) {
+                        peerMigrationOnAlterFailure = false;
+                        numericColumns.remove("VoteRemindersLast");
+                        columnDefaults.put("VoteRemindersLast", "'0'");
+                        throw new SQLException("column definition changed concurrently", "HY000", 1901);
+                    }
                     if (query.startsWith("ALTER TABLE") && addFailure != null) throw addFailure;
                     return 0;
                 });
@@ -214,6 +274,24 @@ class MysqlUserBackendSchemaExpansionTest {
                         when(result.getString("COLUMN_DEFAULT")).thenReturn(null);
                     } else if (query.startsWith("SELECT IS_NULLABLE, COLUMN_DEFAULT")) {
                         String column = stringParameters[2];
+                        if (peerMigrationDuringAttributeInspection && "VoteRemindersLast".equals(column)) {
+                            peerMigrationDuringAttributeInspection = false;
+                            numericColumns.remove(column);
+                            columnDefaults.put(column, "'0'");
+                        }
+                        if (peerMigrationAfterAttributeFailure && "VoteRemindersLast".equals(column)) {
+                            peerMigrationAfterAttributeFailure = false;
+                            Thread peer = new Thread(() -> {
+                                try { Thread.sleep(100); }
+                                catch (InterruptedException interrupted) {
+                                    Thread.currentThread().interrupt();
+                                    return;
+                                }
+                                numericColumns.remove(column);
+                            }, "schema-migration-peer");
+                            peer.setDaemon(true);
+                            peer.start();
+                        }
                         when(result.next()).thenReturn(true, false);
                         when(result.getString(1)).thenReturn(nonNullableColumns.contains(column) ? "NO" : "YES");
                         when(result.getString(2)).thenReturn(columnDefaults.get(column));
