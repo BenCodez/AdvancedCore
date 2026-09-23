@@ -183,6 +183,14 @@ public class UserDataCache {
 			before = new HashMap<>(cache);
 		}
 		AdvancedCoreUser user = manager.getPlugin().getUserManager().getUser(currentUuid, false);
+		ArrayList<String> changedKeys = new ArrayList<>();
+		Runnable refreshNotification = null;
+		if (notify) {
+			Runnable rawNotification = () -> manager.getPlugin().getUserManager()
+					.onChange(user, ArrayUtils.convert(changedKeys));
+			Runnable captured = manager.captureSharedUserDataNotification(rawNotification);
+			refreshNotification = captured == null ? rawNotification : captured;
+		}
 		ArrayList<String> keys = user.getUserData().getKeys();
 		HashMap<String, DataValue> data = user.getUserData().getValues();
 		boolean refreshedStoredDataPresent = !keys.isEmpty() || !data.isEmpty();
@@ -207,13 +215,11 @@ public class UserDataCache {
 			published = updateSharedSnapshot(refreshed, expectedVersion, currentUuid,
 					refreshedStoredDataPresent);
 		}
-		ArrayList<String> changedKeys = new ArrayList<>();
 		for (Entry<String, DataValue> entry : published.entrySet()) {
 			DataValue prior = before.get(entry.getKey());
 			if (prior != null && entry.getValue() != null && !prior.toString().equals(entry.getValue().toString())) changedKeys.add(entry.getKey());
 		}
-		if (notify && !changedKeys.isEmpty()) deliverNotification(
-				() -> manager.getPlugin().getUserManager().onChange(user, ArrayUtils.convert(changedKeys)));
+		if (refreshNotification != null && !changedKeys.isEmpty()) deliverNotification(refreshNotification);
 		if (!keys.isEmpty()) manager.getPlugin().devDebug("Caching additional keys: " + ArrayUtils.makeStringList(keys));
 		return changedKeys;
 	}
