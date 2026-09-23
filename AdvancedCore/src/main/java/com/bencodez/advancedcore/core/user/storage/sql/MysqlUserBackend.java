@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
@@ -27,6 +28,8 @@ import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
 
 public final class MysqlUserBackend implements SqlUserBackend {
     private static final int USER_PAGE_SIZE = 512;
+    private static final long PEER_MIGRATION_GRACE_NANOS = TimeUnit.SECONDS.toNanos(5);
+    private static final long PEER_MIGRATION_RECHECK_MILLIS = 50;
     private final SqlUserSchema schema;
     private final SqlBackendLogger logger;
     private final HeadlessUserTable table;
@@ -351,15 +354,18 @@ public final class MysqlUserBackend implements SqlUserBackend {
         private void migrateRetainedColumnToString(String storedName,
                 SqlUserSchema.ColumnDefinition definition) throws SQLException {
             int jdbcType = registeredColumnType(storedName);
-            if (jdbcType != java.sql.Types.TINYINT && jdbcType != java.sql.Types.SMALLINT
-                    && jdbcType != java.sql.Types.INTEGER && jdbcType != java.sql.Types.BIGINT
-                    && jdbcType != java.sql.Types.REAL && jdbcType != java.sql.Types.FLOAT
-                    && jdbcType != java.sql.Types.DOUBLE && jdbcType != java.sql.Types.NUMERIC
-                    && jdbcType != java.sql.Types.DECIMAL && jdbcType != java.sql.Types.BOOLEAN
-                    && jdbcType != java.sql.Types.BIT) return;
+            if (!isNumericOrBoolean(jdbcType)) return;
             String column = quote(storedName);
             if (getDbType() != DbType.POSTGRESQL) {
-                MysqlColumnAttributes attributes = mysqlColumnAttributes(storedName);
+                MysqlColumnAttributes attributes;
+                try { attributes = mysqlColumnAttributes(storedName); }
+                catch (SQLException inspectionFailure) {
+                    if (migrationCompletedByPeer(storedName, inspectionFailure)) return;
+                    throw inspectionFailure;
+                }
+                // Database metadata and information_schema are read through separate
+                // connections. A peer can finish the ALTER between those reads.
+                if (!retainedColumnNeedsStringMigration(storedName)) return;
                 if (attributes.extra() != null && !attributes.extra().isBlank()) {
                     throw new SQLException("Cannot safely migrate SQL column with generated or automatic attributes: "
                             + storedName);
@@ -375,6 +381,8 @@ public final class MysqlUserBackend implements SqlUserBackend {
                 try (Connection connection = getMysql().getConnectionManager().getConnection();
                         PreparedStatement statement = connection.prepareStatement(sql)) {
                     statement.executeUpdate();
+                } catch (SQLException ddlFailure) {
+                    if (!migrationCompletedByPeer(storedName, ddlFailure)) throw ddlFailure;
                 }
                 return;
             }
@@ -392,7 +400,42 @@ public final class MysqlUserBackend implements SqlUserBackend {
             try (Connection connection = getMysql().getConnectionManager().getConnection();
                     PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                 statement.executeUpdate();
+            } catch (SQLException ddlFailure) {
+                if (!migrationCompletedByPeer(storedName, ddlFailure)) throw ddlFailure;
             }
+        }
+
+        private boolean migrationCompletedByPeer(String storedName, SQLException failure) throws SQLException {
+            long deadline = System.nanoTime() + PEER_MIGRATION_GRACE_NANOS;
+            do {
+                try {
+                    if (!retainedColumnNeedsStringMigration(storedName)) return true;
+                } catch (SQLException inspectionFailure) {
+                    if (inspectionFailure != failure) failure.addSuppressed(inspectionFailure);
+                }
+                if (System.nanoTime() >= deadline) return false;
+                try { Thread.sleep(PEER_MIGRATION_RECHECK_MILLIS); }
+                catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    failure.addSuppressed(new SQLException(
+                            "Interrupted while waiting for concurrent SQL column migration: " + storedName,
+                            interrupted));
+                    return false;
+                }
+            } while (true);
+        }
+
+        private boolean retainedColumnNeedsStringMigration(String storedName) throws SQLException {
+            return isNumericOrBoolean(registeredColumnType(storedName));
+        }
+
+        private static boolean isNumericOrBoolean(int jdbcType) {
+            return jdbcType == java.sql.Types.TINYINT || jdbcType == java.sql.Types.SMALLINT
+                    || jdbcType == java.sql.Types.INTEGER || jdbcType == java.sql.Types.BIGINT
+                    || jdbcType == java.sql.Types.REAL || jdbcType == java.sql.Types.FLOAT
+                    || jdbcType == java.sql.Types.DOUBLE || jdbcType == java.sql.Types.NUMERIC
+                    || jdbcType == java.sql.Types.DECIMAL || jdbcType == java.sql.Types.BOOLEAN
+                    || jdbcType == java.sql.Types.BIT;
         }
 
         private MysqlColumnAttributes mysqlColumnAttributes(String name) throws SQLException {
