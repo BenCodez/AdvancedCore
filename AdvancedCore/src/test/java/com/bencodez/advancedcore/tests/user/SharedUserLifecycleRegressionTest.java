@@ -409,6 +409,10 @@ class SharedUserLifecycleRegressionTest {
 		runtime.populate(fixture.uuid);
 		UserDataCache cache = fixture.caches.get(fixture.uuid);
 		List<String> order = new CopyOnWriteArrayList<>();
+		doAnswer(call -> {
+			order.add("notification-submit");
+			return null;
+		}).when(fixture.manager).dispatchSharedUserDataNotification(any(Runnable.class));
 		fixture.first.beforeWrite = () -> order.add("write-" + fixture.first.points(fixture.uuid));
 		CountDownLatch firstStarted = new CountDownLatch(1), releaseFirst = new CountDownLatch(1);
 		ExecutorService workers = Executors.newFixedThreadPool(2);
@@ -419,14 +423,15 @@ class SharedUserLifecycleRegressionTest {
 				await(releaseFirst);
 			}));
 			await(firstStarted);
-			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 2)));
+			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 2), () -> { }));
 			Future<?> second = workers.submit(() -> cache.flushChangesAndRun(() -> order.add("checkpoint-b")));
 			releaseFirst.countDown();
 			first.get(5, TimeUnit.SECONDS);
 			second.get(5, TimeUnit.SECONDS);
 
 			assertEquals(2, fixture.first.points(fixture.uuid));
-			assertEquals(List.of("checkpoint-a", "write-1", "checkpoint-b"), order);
+			assertEquals(List.of("checkpoint-a", "notification-submit", "write-1",
+					"checkpoint-b", "notification-submit"), order);
 		} finally {
 			releaseFirst.countDown();
 			workers.shutdownNow();

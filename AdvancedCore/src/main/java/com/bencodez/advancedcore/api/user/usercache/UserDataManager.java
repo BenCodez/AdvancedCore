@@ -1018,11 +1018,29 @@ public class UserDataManager {
 	private void dispatchSharedUserDataNotification(Runnable notification, long generation) {
 		Objects.requireNonNull(notification, "notification");
 		if (sharedNotificationsClosed) return;
+		SharedSqlRoute admission = sharedSqlRoute;
 		try {
 			timer.execute(() -> {
 				if (sharedNotificationsClosed || generation != sharedNotificationGeneration.get()) return;
-				try { notification.run(); }
-				catch (RuntimeException | Error failure) { reportDeferredStorageFailure(failure); }
+				try {
+					Runnable admittedNotification = () -> {
+						if (sharedNotificationsClosed || generation != sharedNotificationGeneration.get()) return;
+						try { notification.run(); }
+						catch (RuntimeException | Error failure) { reportDeferredStorageFailure(failure); }
+					};
+					// Keep the producing runtime alive for the complete callback. A backend
+					// replacement or shutdown takes the matching write admission and must
+					// therefore wait for an already-started notification to finish. The
+					// callback remains outside per-user admission so it may re-enter cache APIs.
+					if (admission == null) admittedNotification.run();
+					else admission.lifecycleGate().accept(admittedNotification);
+				} catch (RuntimeException | Error failure) {
+					// A queued callback may be rejected by its old runtime after replacement.
+					// Its generation is stale by then, so dropping it is the intended fence.
+					if (!sharedNotificationsClosed && generation == sharedNotificationGeneration.get()) {
+						reportDeferredStorageFailure(failure);
+					}
+				}
 			});
 		} catch (RejectedExecutionException rejected) {
 			reportDeferredStorageFailure(rejected);

@@ -277,10 +277,15 @@ public class UserDataCache {
 										&& !scheduled) scheduleChanges();
 							}
 						}
+						// Submission belongs to this checkpoint's ordered handoff. The manager
+						// queues callback execution, so listeners still run only after this
+						// per-user exclusive admission has been released.
+						for (Runnable notification : notifications) {
+							manager.dispatchSharedUserDataNotification(notification);
+						}
 					}
 				});
 			} finally {
-				for (Runnable notification : notifications) manager.dispatchSharedUserDataNotification(notification);
 				if (flushNow.get()) scheduleImmediateSharedFlush();
 			}
 			return;

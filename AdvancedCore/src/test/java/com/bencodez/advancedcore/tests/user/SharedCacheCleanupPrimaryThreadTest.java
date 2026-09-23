@@ -33,12 +33,17 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -1076,6 +1081,62 @@ class SharedCacheCleanupPrimaryThreadTest {
 		manager.dispatchSharedUserDataNotification(() -> deliveredOn.set(Thread.currentThread()));
 		verify(worker, times(4)).execute(any(Runnable.class));
 		manager.getTimer().shutdownNow();
+	}
+
+	@Test
+	void activeSharedUserDataNotificationRetainsLifecycleAdmissionUntilItFinishes() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.getLogger()).thenReturn(mock(Logger.class));
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		ReentrantReadWriteLock lifecycle = new ReentrantReadWriteLock(true);
+		manager.bindSharedSqlBackend(backend, operation -> {
+			lifecycle.readLock().lock();
+			try { operation.run(); }
+			finally { lifecycle.readLock().unlock(); }
+		});
+		CountDownLatch callbackStarted = new CountDownLatch(1);
+		CountDownLatch releaseCallback = new CountDownLatch(1);
+		manager.dispatchSharedUserDataNotification(() -> {
+			callbackStarted.countDown();
+			try { assertTrue(releaseCallback.await(5, TimeUnit.SECONDS)); }
+			catch (InterruptedException failure) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException(failure);
+			}
+		});
+		ArgumentCaptor<Runnable> queued = ArgumentCaptor.forClass(Runnable.class);
+		verify(worker).execute(queued.capture());
+		ExecutorService threads = Executors.newFixedThreadPool(2);
+		try {
+			Future<?> callback = threads.submit(queued.getValue());
+			assertTrue(callbackStarted.await(5, TimeUnit.SECONDS));
+			CountDownLatch replacementAttempted = new CountDownLatch(1);
+			CountDownLatch replacementAdmitted = new CountDownLatch(1);
+			Future<?> replacement = threads.submit(() -> {
+				replacementAttempted.countDown();
+				lifecycle.writeLock().lock();
+				try { replacementAdmitted.countDown(); }
+				finally { lifecycle.writeLock().unlock(); }
+			});
+			assertTrue(replacementAttempted.await(5, TimeUnit.SECONDS));
+			assertFalse(replacementAdmitted.await(100, TimeUnit.MILLISECONDS),
+					"replacement must wait for an active notification");
+			releaseCallback.countDown();
+			callback.get(5, TimeUnit.SECONDS);
+			replacement.get(5, TimeUnit.SECONDS);
+			assertEquals(0, replacementAdmitted.getCount());
+		} finally {
+			releaseCallback.countDown();
+			threads.shutdownNow();
+			assertTrue(threads.awaitTermination(5, TimeUnit.SECONDS));
+			manager.getTimer().shutdownNow();
+		}
 	}
 
 	@Test
