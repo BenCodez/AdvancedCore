@@ -75,7 +75,10 @@ public class UserDataManager {
 	private final Set<UUID> completedSharedCachePopulations = ConcurrentHashMap.newKeySet();
 	private final ConcurrentHashMap<UUID, SharedCachePopulationState> sharedCachePopulationStates = new ConcurrentHashMap<>();
 	/** Live storage identities, maintained from platform join/quit events. */
-	private final Set<UUID> onlineUserSessions = ConcurrentHashMap.newKeySet();
+	// TRUE/FALSE records the latest player-event state. Offline tombstones keep a
+	// concurrent Folia snapshot from re-adding a player whose quit event won the
+	// race; a later snapshot removes tombstones once Bukkit no longer lists them.
+	private final ConcurrentHashMap<UUID, Boolean> onlineUserSessions = new ConcurrentHashMap<>();
 
 	private static final class SharedCachePopulationState {
 		private long generation;
@@ -1170,14 +1173,19 @@ public class UserDataManager {
 	 */
 	public void clearNonNeededCachedUsers() {
 		Runnable capture = () -> {
-			java.util.HashSet<UUID> online = new java.util.HashSet<>();
+			java.util.HashSet<UUID> platformOnline = new java.util.HashSet<>();
 			for (Player player : Bukkit.getOnlinePlayers()) {
 				UUID storageUuid = onlineStorageUuid(player);
-				if (storageUuid != null) {
-					online.add(storageUuid);
-					onlineUserSessions.add(storageUuid);
-				}
+				if (storageUuid != null) platformOnline.add(storageUuid);
 			}
+			java.util.HashSet<UUID> online = new java.util.HashSet<>();
+			for (UUID uuid : platformOnline) {
+				Boolean state = onlineUserSessions.compute(uuid,
+						(ignored, current) -> Boolean.FALSE.equals(current) ? Boolean.FALSE : Boolean.TRUE);
+				if (Boolean.TRUE.equals(state)) online.add(uuid);
+			}
+			onlineUserSessions.entrySet().removeIf(entry -> Boolean.FALSE.equals(entry.getValue())
+					&& !platformOnline.contains(entry.getKey()));
 			try {
 				timer.execute(() -> {
 					try { clearNonNeededCachedUsers(online); }
@@ -1212,7 +1220,7 @@ public class UserDataManager {
 	}
 
 	public void markUserOnline(UUID uuid) {
-		if (uuid != null) onlineUserSessions.add(uuid);
+		if (uuid != null) onlineUserSessions.put(uuid, Boolean.TRUE);
 	}
 
 	/** Capture an online session from a Bukkit/Folia-owned player event. */
@@ -1221,7 +1229,7 @@ public class UserDataManager {
 	}
 
 	public void markUserOffline(UUID uuid) {
-		if (uuid != null) onlineUserSessions.remove(uuid);
+		if (uuid != null) onlineUserSessions.put(uuid, Boolean.FALSE);
 	}
 
 	/** Remove an online session from a Bukkit/Folia-owned player event. */
@@ -1233,17 +1241,17 @@ public class UserDataManager {
 		plugin.devDebug("Clearing cache for non online players (if any)");
 		int removed = 0;
 		for (UUID uuid : Set.copyOf(userDataCache.keySet())) {
-			if (onlineSnapshot.contains(uuid) || onlineUserSessions.contains(uuid)) continue;
+			if (onlineSnapshot.contains(uuid) || Boolean.TRUE.equals(onlineUserSessions.get(uuid))) continue;
 			UserDataCache expected = userDataCache.get(uuid);
 			if (expected == null) continue;
 			long expectedVersion = expected.getSharedSnapshotVersion();
 			java.util.concurrent.atomic.AtomicBoolean retired = new java.util.concurrent.atomic.AtomicBoolean();
 			withSharedSqlBackendExclusive(uuid, () -> {
-				if (onlineUserSessions.contains(uuid)) return;
+				if (Boolean.TRUE.equals(onlineUserSessions.get(uuid))) return;
 				UserDataCache current = userDataCache.get(uuid);
 				if (current != expected || current.getSharedSnapshotVersion() != expectedVersion) return;
 				current.beginRemoval();
-				if (onlineUserSessions.contains(uuid)) {
+				if (Boolean.TRUE.equals(onlineUserSessions.get(uuid))) {
 					current.cancelRemoval();
 					return;
 				}

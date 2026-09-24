@@ -94,4 +94,40 @@ class UserDataManagerCacheCleanupThreadingTest {
 			assertTrue(manager.containsKey(uuid));
 		}
 	}
+
+	@Test
+	void concurrentQuitCannotBeOverwrittenByPlatformSnapshot() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(plugin.isEnabled()).thenReturn(true);
+		when(plugin.getOptions().isOnlineMode()).thenReturn(true);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		java.util.concurrent.ScheduledExecutorService worker = mock(java.util.concurrent.ScheduledExecutorService.class);
+		java.lang.reflect.Field timerField = UserDataManager.class.getDeclaredField("timer");
+		timerField.setAccessible(true);
+		timerField.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		UserDataCache cache = new UserDataCache(manager, uuid);
+		cache.updateCache(new java.util.HashMap<>(java.util.Map.of("Points", new DataValueInt(1))));
+		manager.getUserDataCache().put(uuid, cache);
+		org.bukkit.entity.Player player = mock(org.bukkit.entity.Player.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		Server server = mock(Server.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::getOnlinePlayers).thenReturn(java.util.List.of(player));
+			ArgumentCaptor<Runnable> platform = ArgumentCaptor.forClass(Runnable.class);
+			ArgumentCaptor<Runnable> storage = ArgumentCaptor.forClass(Runnable.class);
+			manager.markUserOnline(player);
+			manager.clearNonNeededCachedUsers();
+			verify(scheduler).runTask(eq(plugin), platform.capture());
+			manager.markUserOffline(player);
+			platform.getValue().run();
+			verify(worker).execute(storage.capture());
+			storage.getValue().run();
+			assertTrue(!manager.containsKey(uuid));
+		}
+	}
 }
