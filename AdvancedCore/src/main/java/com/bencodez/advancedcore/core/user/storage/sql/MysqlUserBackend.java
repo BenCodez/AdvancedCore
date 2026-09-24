@@ -353,25 +353,37 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
         private void migrateRetainedColumnToString(String storedName,
                 SqlUserSchema.ColumnDefinition definition) throws SQLException {
-            int jdbcType = registeredColumnType(storedName);
-            if (!isNumericOrBoolean(jdbcType)) return;
+            // DataType.STRING describes the Java value API, but plugins may deliberately
+            // retain a numeric SQL representation (for example an epoch millisecond).
+            // In that case the existing numeric column already matches the requested
+            // schema and must not be reconciled as a legacy numeric-to-text column.
+            RegisteredColumnType registeredType = registeredColumnType(storedName);
+            boolean declaredStorageType = declaredTypeIsNumericOrBoolean(definition.sqlType());
+            if (declaredStorageType && getDbType() == DbType.POSTGRESQL
+                    && declaredTypeMatches(definition.sqlType(), registeredType)) return;
+            if (!isNumericOrBoolean(registeredType.jdbcType())) return;
             String column = quote(storedName);
             if (getDbType() != DbType.POSTGRESQL) {
                 MysqlColumnAttributes attributes;
-                try { attributes = mysqlColumnAttributes(storedName); }
+                try {
+					attributes = mysqlColumnAttributes(storedName);
+					if (declaredStorageType
+							&& mysqlDeclaredTypeMatches(definition.sqlType(), registeredType, attributes)) return;
+					validateMysqlMigrationAttributes(storedName, attributes);
+				}
                 catch (SQLException inspectionFailure) {
-                    if (migrationCompletedByPeer(storedName, inspectionFailure)) return;
+                    if (migrationCompletedByPeer(storedName, definition, inspectionFailure)) return;
                     throw inspectionFailure;
                 }
                 // Database metadata and information_schema are read through separate
                 // connections. A peer can finish the ALTER between those reads.
-                if (!retainedColumnNeedsStringMigration(storedName)) return;
+                if (!retainedColumnNeedsMigration(storedName, definition)) return;
                 if (attributes.extra() != null && !attributes.extra().isBlank()) {
                     throw new SQLException("Cannot safely migrate SQL column with generated or automatic attributes: "
                             + storedName);
                 }
                 String sql = "ALTER TABLE " + quote(tableName) + " MODIFY COLUMN " + column + " "
-                        + normaliseTypeForDb(definition.sqlType())
+                        + normaliseTypeForDb(declaredPhysicalType(definition.sqlType()))
                         + (attributes.nullable() ? " NULL" : " NOT NULL")
                         + (attributes.defaultValue() == null ? ""
                                 : " DEFAULT '" + quoteMysqlLiteral(attributes.defaultValue()) + "'")
@@ -382,34 +394,38 @@ public final class MysqlUserBackend implements SqlUserBackend {
                         PreparedStatement statement = connection.prepareStatement(sql)) {
                     statement.executeUpdate();
                 } catch (SQLException ddlFailure) {
-                    if (!migrationCompletedByPeer(storedName, ddlFailure)) throw ddlFailure;
+                    if (!migrationCompletedByPeer(storedName, definition, ddlFailure)) throw ddlFailure;
                 }
                 return;
             }
             String defaultExpression = postgresColumnDefault(storedName);
+			String targetType = normaliseTypeForDb(declaredPhysicalType(definition.sqlType()));
             StringBuilder sql = new StringBuilder("ALTER TABLE ").append(quote(tableName));
             // PostgreSQL does not apply TYPE ... USING to a column default. Drop and
             // recreate it in the same transactional ALTER TABLE so a legacy numeric
             // DEFAULT does not make an otherwise-safe value conversion fail.
             if (defaultExpression != null) sql.append(" ALTER COLUMN ").append(column).append(" DROP DEFAULT,");
             sql.append(" ALTER COLUMN ").append(column).append(" TYPE ")
-                    .append(normaliseTypeForDb(definition.sqlType())).append(" USING ").append(column).append("::text");
+                    .append(targetType).append(" USING ").append(column).append("::text")
+                    .append(declaredStorageType ? "::" + targetType : "");
             if (defaultExpression != null) sql.append(", ALTER COLUMN ").append(column)
-                    .append(" SET DEFAULT (").append(defaultExpression).append(")::text");
+                    .append(" SET DEFAULT (").append(defaultExpression).append(")::text")
+                    .append(declaredStorageType ? "::" + targetType : "");
             sql.append(';');
             try (Connection connection = getMysql().getConnectionManager().getConnection();
                     PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                 statement.executeUpdate();
             } catch (SQLException ddlFailure) {
-                if (!migrationCompletedByPeer(storedName, ddlFailure)) throw ddlFailure;
+                if (!migrationCompletedByPeer(storedName, definition, ddlFailure)) throw ddlFailure;
             }
         }
 
-        private boolean migrationCompletedByPeer(String storedName, SQLException failure) throws SQLException {
+        private boolean migrationCompletedByPeer(String storedName, SqlUserSchema.ColumnDefinition definition,
+                SQLException failure) throws SQLException {
             long deadline = System.nanoTime() + PEER_MIGRATION_GRACE_NANOS;
             do {
                 try {
-                    if (!retainedColumnNeedsStringMigration(storedName)) return true;
+                    if (!retainedColumnNeedsMigration(storedName, definition)) return true;
                 } catch (SQLException inspectionFailure) {
                     if (inspectionFailure != failure) failure.addSuppressed(inspectionFailure);
                 }
@@ -425,8 +441,17 @@ public final class MysqlUserBackend implements SqlUserBackend {
             } while (true);
         }
 
-        private boolean retainedColumnNeedsStringMigration(String storedName) throws SQLException {
-            return isNumericOrBoolean(registeredColumnType(storedName));
+        private boolean retainedColumnNeedsMigration(String storedName,
+                SqlUserSchema.ColumnDefinition definition) throws SQLException {
+            RegisteredColumnType registered = registeredColumnType(storedName);
+            if (declaredTypeIsNumericOrBoolean(definition.sqlType())) {
+				if (getDbType() != DbType.POSTGRESQL) {
+					return !mysqlDeclaredTypeMatches(definition.sqlType(), registered,
+							mysqlColumnAttributes(storedName));
+				}
+                return !declaredTypeMatches(definition.sqlType(), registered);
+            }
+            return isNumericOrBoolean(registered.jdbcType());
         }
 
         private static boolean isNumericOrBoolean(int jdbcType) {
@@ -438,8 +463,127 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     || jdbcType == java.sql.Types.BIT;
         }
 
+        private static boolean declaredTypeIsNumericOrBoolean(String sqlType) {
+            String normalized = sqlType == null ? "" : sqlType.stripLeading().toUpperCase(java.util.Locale.ROOT);
+            int separator = normalized.indexOf(' ');
+            int parameters = normalized.indexOf('(');
+            int end = separator < 0 ? normalized.length() : separator;
+            if (parameters >= 0 && parameters < end) end = parameters;
+            String baseType = normalized.substring(0, end);
+            return baseType.equals("TINYINT") || baseType.equals("SMALLINT") || baseType.equals("MEDIUMINT")
+                    || baseType.equals("INT") || baseType.equals("INTEGER") || baseType.equals("BIGINT")
+                    || baseType.equals("REAL") || baseType.equals("FLOAT") || baseType.equals("DOUBLE")
+					|| baseType.equals("NUMERIC") || baseType.equals("DECIMAL") || baseType.equals("DEC")
+					|| baseType.equals("BOOLEAN")
+                    || baseType.equals("BOOL") || baseType.equals("BIT");
+        }
+
+        private static boolean declaredTypeMatches(String sqlType, RegisteredColumnType registered) {
+            String declared = normalizedBaseType(sqlType);
+            String actual = normalizedBaseType(registered.typeName());
+            if (actual.isEmpty()) actual = switch (registered.jdbcType()) {
+                case java.sql.Types.TINYINT -> "TINYINT";
+                case java.sql.Types.SMALLINT -> "SMALLINT";
+                case java.sql.Types.INTEGER -> "INTEGER";
+                case java.sql.Types.BIGINT -> "BIGINT";
+                case java.sql.Types.REAL -> "REAL";
+                case java.sql.Types.FLOAT -> "FLOAT";
+                case java.sql.Types.DOUBLE -> "DOUBLE";
+                case java.sql.Types.NUMERIC -> "NUMERIC";
+                case java.sql.Types.DECIMAL -> "DECIMAL";
+                case java.sql.Types.BOOLEAN -> "BOOLEAN";
+                case java.sql.Types.BIT -> "BIT";
+                default -> "";
+            };
+            declared = canonicalType(declared);
+            actual = canonicalType(actual);
+            if (!declared.equals(actual)) return false;
+            int[] parameters = declaredTypeParameters(sqlType);
+            if (parameters.length > 0 && registered.precision() > 0 && parameters[0] != registered.precision()) return false;
+            return parameters.length < 2 || registered.scale() < 0 || parameters[1] == registered.scale();
+        }
+
+		private static boolean mysqlDeclaredTypeMatches(String sqlType, RegisteredColumnType registered,
+				MysqlColumnAttributes attributes) {
+			String declared = declaredPhysicalType(sqlType).toUpperCase(java.util.Locale.ROOT);
+			String actual = attributes.columnType() == null ? ""
+					: attributes.columnType().toUpperCase(java.util.Locale.ROOT);
+			RegisteredColumnType actualType = new RegisteredColumnType(registered.jdbcType(),
+					attributes.columnType(), registered.precision(), registered.scale());
+			boolean mysqlBooleanAlias = "BOOLEAN".equals(canonicalType(normalizedBaseType(declared)))
+					&& "TINYINT".equals(normalizedBaseType(actual))
+					&& java.util.Arrays.equals(declaredTypeParameters(actual), new int[] { 1 });
+			String declaredBase = canonicalType(normalizedBaseType(declared));
+			if (!mysqlBooleanAlias && !declaredTypeMatches(declaredBase, actualType)) return false;
+			int[] declaredParameters = comparableDeclaredMysqlTypeParameters(declared);
+			if (!mysqlBooleanAlias && declaredParameters.length > 0 && !mysqlIntegerType(declaredBase)) {
+				int[] actualParameters = declaredTypeParameters(actual);
+				if (actualParameters.length > 0) {
+					if (!java.util.Arrays.equals(declaredParameters, actualParameters)) return false;
+				} else if (declaredParameters[0] != registered.precision()
+						|| declaredParameters.length > 1 && declaredParameters[1] != registered.scale()) return false;
+			}
+			return declared.matches(".*\\bUNSIGNED\\b.*") == actual.matches(".*\\bUNSIGNED\\b.*")
+					&& declared.matches(".*\\bZEROFILL\\b.*") == actual.matches(".*\\bZEROFILL\\b.*");
+		}
+
+		private static boolean mysqlIntegerType(String type) {
+			return type.equals("TINYINT") || type.equals("SMALLINT") || type.equals("MEDIUMINT")
+					|| type.equals("INTEGER") || type.equals("BIGINT");
+		}
+
+		private static int[] comparableDeclaredMysqlTypeParameters(String sqlType) {
+			int[] parameters = declaredTypeParameters(sqlType);
+			if (!"DECIMAL".equals(canonicalType(normalizedBaseType(sqlType)))) return parameters;
+			return new int[] { parameters.length > 0 ? parameters[0] : 10,
+					parameters.length > 1 ? parameters[1] : 0 };
+		}
+
+		private static String declaredPhysicalType(String sqlType) {
+			if (sqlType == null) return "";
+			return sqlType.strip().replaceFirst(
+					"(?i)\\s+(?=DEFAULT\\b|NOT\\s+NULL\\b|NULL\\b|PRIMARY\\s+KEY\\b|UNIQUE\\b|COMMENT\\b|REFERENCES\\b|CHECK\\b).*$",
+					"");
+		}
+
+        private static String normalizedBaseType(String sqlType) {
+            String normalized = sqlType == null ? "" : sqlType.stripLeading().toUpperCase(java.util.Locale.ROOT);
+            int space = normalized.indexOf(' ');
+            int parenthesis = normalized.indexOf('(');
+            int end = space < 0 ? normalized.length() : space;
+            if (parenthesis >= 0 && parenthesis < end) end = parenthesis;
+            return normalized.substring(0, end);
+        }
+
+        private static String canonicalType(String type) {
+            return switch (type) {
+                case "INT", "INT4" -> "INTEGER";
+                case "INT2" -> "SMALLINT";
+                case "INT8" -> "BIGINT";
+                case "BOOL" -> "BOOLEAN";
+                case "DEC", "NUMERIC" -> "DECIMAL";
+                case "FLOAT4" -> "REAL";
+                case "FLOAT8" -> "DOUBLE";
+                default -> type;
+            };
+        }
+
+        private static int[] declaredTypeParameters(String sqlType) {
+            if (sqlType == null) return new int[0];
+			String physicalType = declaredPhysicalType(sqlType);
+			int open = physicalType.indexOf('(');
+			int close = open < 0 ? -1 : physicalType.indexOf(')', open + 1);
+            if (open < 0 || close < 0) return new int[0];
+			String[] values = physicalType.substring(open + 1, close).split(",");
+            try {
+                int[] parsed = new int[values.length];
+                for (int i = 0; i < values.length; i++) parsed[i] = Integer.parseInt(values[i].trim());
+                return parsed;
+            } catch (NumberFormatException ignored) { return new int[0]; }
+        }
+
         private MysqlColumnAttributes mysqlColumnAttributes(String name) throws SQLException {
-            String sql = "SELECT IS_NULLABLE, COLUMN_DEFAULT, EXTRA, COLUMN_COMMENT "
+            String sql = "SELECT IS_NULLABLE, COLUMN_DEFAULT, EXTRA, COLUMN_COMMENT, COLUMN_TYPE "
                     + "FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?";
             try (Connection connection = getMysql().getConnectionManager().getConnection();
                     PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -449,29 +593,47 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     if (!result.next()) throw new SQLException(
                             "Registered SQL column disappeared during attribute inspection: " + name);
                     String nullable = result.getString(1);
-                    if (!"YES".equalsIgnoreCase(nullable) && !"NO".equalsIgnoreCase(nullable)) {
-                        throw new SQLException("Cannot determine SQL column nullability during migration: " + name);
-                    }
-                    String defaultValue = result.getString(2);
-                    if (defaultValue != null && !defaultValue.matches(
-                            "(?i)(?:true|false|[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:e[-+]?\\d+)?)")) {
-                        throw new SQLException("Cannot safely preserve SQL column default during migration: " + name);
-                    }
+                    String defaultValue = normalizeMysqlDefault(result.getString(2));
                     String comment = result.getString(4);
-                    if (comment != null && comment.indexOf('\\') >= 0) {
-                        throw new SQLException("Cannot safely preserve SQL column comment during migration: " + name);
-                    }
-                    return new MysqlColumnAttributes("YES".equalsIgnoreCase(nullable),
-                            defaultValue, result.getString(3), comment);
+                    return new MysqlColumnAttributes(nullable,
+							defaultValue, result.getString(3), comment, result.getString(5));
                 }
             }
         }
+
+		private static String normalizeMysqlDefault(String raw) {
+			if (raw == null) return null;
+			String value = raw.strip();
+			if ("NULL".equalsIgnoreCase(value)) return null;
+			if (value.length() >= 2 && value.charAt(0) == '\'' && value.charAt(value.length() - 1) == '\'') {
+				return value.substring(1, value.length() - 1).replace("''", "'");
+			}
+			return value;
+		}
+
+		private static void validateMysqlMigrationAttributes(String name, MysqlColumnAttributes attributes)
+				throws SQLException {
+			if (!"YES".equalsIgnoreCase(attributes.nullableValue())
+					&& !"NO".equalsIgnoreCase(attributes.nullableValue())) {
+				throw new SQLException("Cannot determine SQL column nullability during migration: " + name);
+			}
+			if (attributes.defaultValue() != null && !attributes.defaultValue().matches(
+					"(?i)(?:true|false|[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:e[-+]?\\d+)?)")) {
+				throw new SQLException("Cannot safely preserve SQL column default during migration: " + name);
+			}
+			if (attributes.comment() != null && attributes.comment().indexOf('\\') >= 0) {
+				throw new SQLException("Cannot safely preserve SQL column comment during migration: " + name);
+			}
+		}
 
         private static String quoteMysqlLiteral(String value) {
             return value.replace("'", "''");
         }
 
-        private record MysqlColumnAttributes(boolean nullable, String defaultValue, String extra, String comment) { }
+        private record MysqlColumnAttributes(String nullableValue, String defaultValue, String extra, String comment,
+				String columnType) {
+			boolean nullable() { return "YES".equalsIgnoreCase(nullableValue); }
+		}
 
         private String postgresColumnDefault(String name) throws SQLException {
             String regclass = '"' + tableName.replace("\"", "\"\"") + '"';
@@ -491,18 +653,21 @@ public final class MysqlUserBackend implements SqlUserBackend {
             }
         }
 
-        private int registeredColumnType(String name) throws SQLException {
+        private RegisteredColumnType registeredColumnType(String name) throws SQLException {
             try (Connection connection = getMysql().getConnectionManager().getConnection();
                     PreparedStatement statement = connection.prepareStatement(
                             "SELECT * FROM " + quote(tableName) + " WHERE 1=0");
                     ResultSet result = statement.executeQuery()) {
                 ResultSetMetaData metadata = result.getMetaData();
                 for (int i = 1; i <= metadata.getColumnCount(); i++) {
-                    if (name.equals(metadata.getColumnName(i))) return metadata.getColumnType(i);
+                    if (name.equals(metadata.getColumnName(i))) return new RegisteredColumnType(metadata.getColumnType(i),
+                            metadata.getColumnTypeName(i), metadata.getPrecision(i), metadata.getScale(i));
                 }
                 throw new SQLException("Registered SQL column disappeared during type inspection: " + name);
             }
         }
+
+        private record RegisteredColumnType(int jdbcType, String typeName, int precision, int scale) { }
 
         private void rememberColumn(SqlUserSchema.ColumnDefinition column) {
             columns.removeIf(existing -> existing.equalsIgnoreCase(column.name())); columns.add(column.name());

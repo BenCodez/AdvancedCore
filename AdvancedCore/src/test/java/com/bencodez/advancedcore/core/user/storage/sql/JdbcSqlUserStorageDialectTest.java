@@ -19,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +31,7 @@ import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.core.user.storage.SqlUserStorage;
 import com.bencodez.simpleapi.sql.DataType;
 import com.bencodez.simpleapi.sql.data.DataValueBoolean;
+import com.bencodez.simpleapi.sql.data.DataValueString;
 import com.bencodez.simpleapi.sql.mysql.ConnectionManager;
 import com.bencodez.simpleapi.sql.mysql.DbType;
 import com.bencodez.simpleapi.sql.mysql.config.MysqlConfig;
@@ -203,6 +205,19 @@ class JdbcSqlUserStorageDialectTest {
             assertThrows(IllegalArgumentException.class, () -> dialect.quote("invalid\0name"));
             assertTrue(dialect.quote("custom-name with space").contains("custom-name with space"));
         }
+    }
+
+    @Test void postgresqlStringValuesUseTargetInferredTypeForRetainedNumericColumns() throws Exception {
+        RecordingJdbc jdbc = new RecordingJdbc();
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("VoteRemindersLast", "BIGINT", DataType.STRING).build();
+        SqlUserStorage user = new JdbcSqlUserStorage(UserStorage.MYSQL, UUID_VALUE, "Users", schema,
+                () -> jdbc.connection, JdbcSqlUserStorage.Dialect.POSTGRESQL, SqlBackendLogger.NO_OP);
+
+        user.write(UserStorage.MYSQL, "VoteRemindersLast", new DataValueString("1727136000000"));
+
+        verify(jdbc.statements.get(1)).setObject(2, "1727136000000", Types.OTHER);
+        verify(jdbc.statements.get(1), never()).setString(2, "1727136000000");
     }
 
     private static final class RecordingJdbc {
