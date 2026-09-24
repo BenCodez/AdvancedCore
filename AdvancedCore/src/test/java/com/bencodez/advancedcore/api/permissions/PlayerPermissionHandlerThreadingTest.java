@@ -222,4 +222,35 @@ class PlayerPermissionHandlerThreadingTest {
 		}
 	}
 
+	@Test
+	void offlineExpirationCannotRaceACompletedLogin() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		when(plugin.getServerDataFile().getData()).thenReturn(null);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		PermissionHandler manager = spy(new PermissionHandler(plugin));
+		UUID uuid = UUID.randomUUID();
+		PlayerPermissionHandler handle = mock(PlayerPermissionHandler.class);
+		when(handle.getUuid()).thenReturn(uuid);
+		long expiry = System.currentTimeMillis() - 1L;
+		when(handle.isExpirationCurrent("example.use", expiry)).thenReturn(true);
+		manager.getPermsToAdd().put(uuid, handle);
+		java.util.concurrent.atomic.AtomicReference<Runnable> global = new java.util.concurrent.atomic.AtomicReference<>();
+		doAnswer(call -> { global.set(call.getArgument(1)); return null; })
+				.when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		doNothing().when(manager).scheduleExpiration(handle, "example.use", expiry, 1_000L);
+		Player player = mock(Player.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.addAttachment(plugin)).thenReturn(mock(PermissionAttachment.class));
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			manager.dispatchExpiration(handle, "example.use", expiry);
+			manager.login(player);
+			global.get().run();
+			verify(handle, never()).expirePermission("example.use", expiry, false);
+			verify(manager).scheduleExpiration(handle, "example.use", expiry, 1_000L);
+		} finally { manager.getTimer().shutdownNow(); }
+	}
+
 }

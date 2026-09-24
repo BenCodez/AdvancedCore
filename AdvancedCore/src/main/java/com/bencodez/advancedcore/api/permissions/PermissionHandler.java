@@ -111,7 +111,7 @@ public class PermissionHandler {
 				if (!acceptingExpirations.get() || !handle.isExpirationCurrent(permission, expectedExpireAt)) return;
 				Player player = Bukkit.getPlayer(handle.getUuid());
 				if (player == null) {
-					handle.expirePermission(permission, expectedExpireAt, false);
+					expireOfflineOrRetry(handle, permission, expectedExpireAt);
 					return;
 				}
 				try {
@@ -128,6 +128,19 @@ public class PermissionHandler {
 			plugin.debug(failure);
 			retryExpiration(handle, permission, expectedExpireAt);
 		}
+	}
+
+	private void expireOfflineOrRetry(PlayerPermissionHandler handle, String permission, long expectedExpireAt) {
+		boolean active;
+		UUID uuid = handle.getUuid();
+		synchronized (stateLock(uuid)) {
+			if (permsToAdd.get(uuid) == handle) {
+				handle.expirePermission(permission, expectedExpireAt, false);
+				return;
+			}
+			active = perms.get(uuid) == handle;
+		}
+		if (active) retryExpiration(handle, permission, expectedExpireAt);
 	}
 
 	private void retryExpiration(PlayerPermissionHandler handle, String permission, long expectedExpireAt) {
