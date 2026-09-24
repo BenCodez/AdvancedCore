@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -181,7 +182,7 @@ class UserDataManagerCacheCleanupThreadingTest {
 	}
 
 	@Test
-	void joinDuringBlockedFlushPreventsRetirementWithoutBlockingJoin() throws Exception {
+	void joinDuringBlockedFlushInvalidatesClearedCacheWithoutBlockingJoin() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
 		when(plugin.isEnabled()).thenReturn(true);
 		UserDataManager manager = new UserDataManager(plugin);
@@ -206,8 +207,8 @@ class UserDataManagerCacheCleanupThreadingTest {
 			releaseFlush.countDown();
 			manager.getTimer().shutdown();
 			assertTrue(manager.getTimer().awaitTermination(5, TimeUnit.SECONDS));
-			assertTrue(manager.containsKey(uuid));
-			verify(cache).cancelRemoval();
+			assertFalse(manager.containsKey(uuid));
+			verify(cache, never()).cancelRemoval();
 			verify(cache, never()).retireAfterSharedFlush();
 		} finally { manager.getTimer().shutdownNow(); }
 	}

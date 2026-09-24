@@ -1270,6 +1270,7 @@ public class UserDataManager {
 			if (expected == null) continue;
 			long expectedVersion = expected.getSharedSnapshotVersion();
 			java.util.concurrent.atomic.AtomicBoolean retired = new java.util.concurrent.atomic.AtomicBoolean();
+			java.util.concurrent.atomic.AtomicBoolean invalidatedForJoin = new java.util.concurrent.atomic.AtomicBoolean();
 			withSharedSqlBackendExclusive(uuid, () -> {
 				if (Boolean.TRUE.equals(onlineUserSessions.get(uuid))) return;
 				UserDataCache current = userDataCache.get(uuid);
@@ -1287,7 +1288,16 @@ public class UserDataManager {
 				}
 				synchronized (onlineSessionLock(uuid)) {
 					if (Boolean.TRUE.equals(onlineUserSessions.get(uuid))) {
-						current.cancelRemoval();
+						if (sharedSqlRoute != null) {
+							try { current.retireAfterSharedFlush(); }
+							catch (RuntimeException | Error failure) {
+								current.cancelRemoval();
+								throw failure;
+							}
+						}
+						boolean cacheRemoved = retireSharedCache(uuid, current);
+						retired.set(cacheRemoved);
+						invalidatedForJoin.set(cacheRemoved);
 						return;
 					}
 					if (sharedSqlRoute != null) {
@@ -1303,7 +1313,7 @@ public class UserDataManager {
 			});
 			Consumer<UUID> listener = sharedCacheRemovalListener;
 			if (retired.get() && listener != null) listener.accept(uuid);
-			if (retired.get()) removed++;
+			if (retired.get() && !invalidatedForJoin.get()) removed++;
 		}
 		if (removed > 0) plugin.devDebug("Removed " + removed + " cached users who are no longer online");
 	}
