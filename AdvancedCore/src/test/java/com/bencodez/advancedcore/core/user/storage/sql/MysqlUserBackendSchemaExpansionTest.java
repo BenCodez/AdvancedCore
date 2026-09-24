@@ -120,7 +120,7 @@ class MysqlUserBackendSchemaExpansionTest {
         Fixture fixture = new Fixture(DbType.MARIADB);
         fixture.existing.add("VoteRemindersLast");
         fixture.numericColumns.add("VoteRemindersLast");
-        fixture.columnDefaults.put("VoteRemindersLast", "'0'");
+        fixture.columnDefaults.put("VoteRemindersLast", "CURRENT_TIMESTAMP");
         fixture.peerMigrationAfterAttributeFailure = true;
         SqlUserSchema schema = SqlUserSchema.builder()
                 .column("VoteRemindersLast", "TEXT", DataType.STRING).build();
@@ -164,6 +164,38 @@ class MysqlUserBackendSchemaExpansionTest {
             assertTrue(backend.isOpen());
             assertTrue(fixture.sql.contains(
                     "ALTER TABLE `Users` MODIFY COLUMN `VoteRemindersLast` BIGINT NULL DEFAULT '0';"));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbNormalizesQuotedNumericDefaultWhileWidening() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("VoteRemindersLast");
+        fixture.numericColumns.add("VoteRemindersLast");
+        fixture.columnDefaults.put("VoteRemindersLast", "'0'");
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("VoteRemindersLast", "BIGINT", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertTrue(fixture.sql.contains(
+                    "ALTER TABLE `Users` MODIFY COLUMN `VoteRemindersLast` BIGINT NULL DEFAULT '0';"));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbTreatsBareNullDefaultAsNoDefaultWhileWidening() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("VoteRemindersLast");
+        fixture.numericColumns.add("VoteRemindersLast");
+        fixture.columnDefaults.put("VoteRemindersLast", "NULL");
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("VoteRemindersLast", "BIGINT", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertTrue(fixture.sql.contains(
+                    "ALTER TABLE `Users` MODIFY COLUMN `VoteRemindersLast` BIGINT NULL;"));
         }
         fixture.assertClosed();
     }
@@ -230,6 +262,22 @@ class MysqlUserBackendSchemaExpansionTest {
         fixture.columnScales.put("Balance", 2);
         SqlUserSchema schema = SqlUserSchema.builder()
                 .column("Balance", "DEC(12,2)", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith("ALTER TABLE")));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbIgnoresIntegerDisplayWidthDuringReconciliation() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("Counter");
+        fixture.numericColumns.add("Counter");
+        fixture.columnTypeNames.put("Counter", "INT(11)");
+        fixture.columnPrecisions.put("Counter", 10);
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("Counter", "INT(11)", DataType.STRING).build();
 
         try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
             assertTrue(backend.isOpen());

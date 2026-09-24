@@ -513,9 +513,23 @@ public final class MysqlUserBackend implements SqlUserBackend {
 			boolean mysqlBooleanAlias = "BOOLEAN".equals(canonicalType(normalizedBaseType(declared)))
 					&& "TINYINT".equals(normalizedBaseType(actual))
 					&& java.util.Arrays.equals(declaredTypeParameters(actual), new int[] { 1 });
-			if (!mysqlBooleanAlias && !declaredTypeMatches(declared, actualType)) return false;
+			String declaredBase = canonicalType(normalizedBaseType(declared));
+			if (!mysqlBooleanAlias && !declaredTypeMatches(declaredBase, actualType)) return false;
+			int[] declaredParameters = declaredTypeParameters(declared);
+			if (!mysqlBooleanAlias && declaredParameters.length > 0 && !mysqlIntegerType(declaredBase)) {
+				int[] actualParameters = declaredTypeParameters(actual);
+				if (actualParameters.length > 0) {
+					if (!java.util.Arrays.equals(declaredParameters, actualParameters)) return false;
+				} else if (declaredParameters[0] != registered.precision()
+						|| declaredParameters.length > 1 && declaredParameters[1] != registered.scale()) return false;
+			}
 			return declared.matches(".*\\bUNSIGNED\\b.*") == actual.matches(".*\\bUNSIGNED\\b.*")
 					&& declared.matches(".*\\bZEROFILL\\b.*") == actual.matches(".*\\bZEROFILL\\b.*");
+		}
+
+		private static boolean mysqlIntegerType(String type) {
+			return type.equals("TINYINT") || type.equals("SMALLINT") || type.equals("MEDIUMINT")
+					|| type.equals("INTEGER") || type.equals("BIGINT");
 		}
 
 		private static String declaredPhysicalType(String sqlType) {
@@ -572,13 +586,23 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     if (!result.next()) throw new SQLException(
                             "Registered SQL column disappeared during attribute inspection: " + name);
                     String nullable = result.getString(1);
-                    String defaultValue = result.getString(2);
+                    String defaultValue = normalizeMysqlDefault(result.getString(2));
                     String comment = result.getString(4);
                     return new MysqlColumnAttributes(nullable,
 							defaultValue, result.getString(3), comment, result.getString(5));
                 }
             }
         }
+
+		private static String normalizeMysqlDefault(String raw) {
+			if (raw == null) return null;
+			String value = raw.strip();
+			if ("NULL".equalsIgnoreCase(value)) return null;
+			if (value.length() >= 2 && value.charAt(0) == '\'' && value.charAt(value.length() - 1) == '\'') {
+				return value.substring(1, value.length() - 1).replace("''", "'");
+			}
+			return value;
+		}
 
 		private static void validateMysqlMigrationAttributes(String name, MysqlColumnAttributes attributes)
 				throws SQLException {
