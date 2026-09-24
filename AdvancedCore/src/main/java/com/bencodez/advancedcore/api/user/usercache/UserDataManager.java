@@ -75,11 +75,13 @@ public class UserDataManager {
 	private final Set<UUID> completedSharedCachePopulations = ConcurrentHashMap.newKeySet();
 	private final ConcurrentHashMap<UUID, SharedCachePopulationState> sharedCachePopulationStates = new ConcurrentHashMap<>();
 	/** Live storage identities, maintained from platform join/quit events. */
-	// TRUE/FALSE records the latest player-event state. Offline tombstones keep a
-	// concurrent Folia snapshot from re-adding a player whose quit event won the
-	// race; a later snapshot removes tombstones once Bukkit no longer lists them.
-	private final ConcurrentHashMap<UUID, Boolean> onlineUserSessions = new ConcurrentHashMap<>();
+	// Generation-stamped offline tombstones prevent an older queued platform
+	// snapshot from erasing a newer quit and letting a later stale snapshot
+	// resurrect that session.
+	private final ConcurrentHashMap<UUID, OnlineSessionState> onlineUserSessions = new ConcurrentHashMap<>();
+	private final AtomicLong onlineSessionGeneration = new AtomicLong();
 	private final Object[] onlineSessionLocks = createOnlineSessionLocks();
+	private record OnlineSessionState(boolean online, long generation) {}
 
 	private static Object[] createOnlineSessionLocks() {
 		Object[] locks = new Object[64];
@@ -1191,9 +1193,10 @@ public class UserDataManager {
 					if (storageUuid != null) platformOnline.add(storageUuid);
 				}
 			}
+			long snapshotGeneration = onlineSessionGeneration.get();
 			try {
 				timer.execute(() -> {
-					try { clearNonNeededCachedUsers(reconcileOnlineSnapshot(platformOnline)); }
+					try { clearNonNeededCachedUsers(reconcileOnlineSnapshot(platformOnline, snapshotGeneration)); }
 					catch (RuntimeException | Error failure) {
 						reportDeferredStorageFailure(failure);
 						throw failure;
@@ -1212,19 +1215,22 @@ public class UserDataManager {
 		}
 	}
 
-	private Set<UUID> reconcileOnlineSnapshot(Set<UUID> platformOnline) {
+	private Set<UUID> reconcileOnlineSnapshot(Set<UUID> platformOnline, long snapshotGeneration) {
 		java.util.HashSet<UUID> online = new java.util.HashSet<>();
 		for (UUID uuid : platformOnline) {
 			synchronized (onlineSessionLock(uuid)) {
-				Boolean state = onlineUserSessions.compute(uuid,
-						(ignored, current) -> Boolean.FALSE.equals(current) ? Boolean.FALSE : Boolean.TRUE);
-				if (Boolean.TRUE.equals(state)) online.add(uuid);
+				OnlineSessionState state = onlineUserSessions.compute(uuid,
+						(ignored, current) -> current == null
+								? new OnlineSessionState(true, snapshotGeneration) : current);
+				if (state.online()) online.add(uuid);
 			}
 		}
 		for (UUID uuid : Set.copyOf(onlineUserSessions.keySet())) {
 			synchronized (onlineSessionLock(uuid)) {
-				if (Boolean.FALSE.equals(onlineUserSessions.get(uuid)) && !platformOnline.contains(uuid)) {
-					onlineUserSessions.remove(uuid, Boolean.FALSE);
+				OnlineSessionState state = onlineUserSessions.get(uuid);
+				if (state != null && !state.online() && state.generation() <= snapshotGeneration
+						&& !platformOnline.contains(uuid)) {
+					onlineUserSessions.remove(uuid, state);
 				}
 			}
 		}
@@ -1245,7 +1251,7 @@ public class UserDataManager {
 
 	public void markUserOnline(UUID uuid) {
 		if (uuid != null) synchronized (onlineSessionLock(uuid)) {
-			onlineUserSessions.put(uuid, Boolean.TRUE);
+			onlineUserSessions.put(uuid, new OnlineSessionState(true, onlineSessionGeneration.incrementAndGet()));
 		}
 	}
 
@@ -1256,7 +1262,7 @@ public class UserDataManager {
 
 	public void markUserOffline(UUID uuid) {
 		if (uuid != null) synchronized (onlineSessionLock(uuid)) {
-			onlineUserSessions.put(uuid, Boolean.FALSE);
+			onlineUserSessions.put(uuid, new OnlineSessionState(false, onlineSessionGeneration.incrementAndGet()));
 		}
 	}
 
@@ -1269,18 +1275,18 @@ public class UserDataManager {
 		plugin.devDebug("Clearing cache for non online players (if any)");
 		int removed = 0;
 		for (UUID uuid : Set.copyOf(userDataCache.keySet())) {
-			if (onlineSnapshot.contains(uuid) || Boolean.TRUE.equals(onlineUserSessions.get(uuid))) continue;
+			if (onlineSnapshot.contains(uuid) || isUserOnline(uuid)) continue;
 			UserDataCache expected = userDataCache.get(uuid);
 			if (expected == null) continue;
 			long expectedVersion = expected.getSharedSnapshotVersion();
 			java.util.concurrent.atomic.AtomicBoolean retired = new java.util.concurrent.atomic.AtomicBoolean();
 			java.util.concurrent.atomic.AtomicBoolean invalidatedForJoin = new java.util.concurrent.atomic.AtomicBoolean();
 			withSharedSqlBackendExclusive(uuid, () -> {
-				if (Boolean.TRUE.equals(onlineUserSessions.get(uuid))) return;
+				if (isUserOnline(uuid)) return;
 				UserDataCache current = userDataCache.get(uuid);
 				if (current != expected || current.getSharedSnapshotVersion() != expectedVersion) return;
 				current.beginRemoval();
-				if (Boolean.TRUE.equals(onlineUserSessions.get(uuid))) {
+				if (isUserOnline(uuid)) {
 					current.cancelRemoval();
 					return;
 				}
@@ -1291,7 +1297,7 @@ public class UserDataManager {
 					throw failure;
 				}
 				synchronized (onlineSessionLock(uuid)) {
-					if (Boolean.TRUE.equals(onlineUserSessions.get(uuid))) {
+					if (isUserOnline(uuid)) {
 						if (sharedSqlRoute != null) {
 							try { current.retireAfterSharedFlush(); }
 							catch (RuntimeException | Error failure) {
@@ -1320,6 +1326,11 @@ public class UserDataManager {
 			if (retired.get() && !invalidatedForJoin.get()) removed++;
 		}
 		if (removed > 0) plugin.devDebug("Removed " + removed + " cached users who are no longer online");
+	}
+
+	private boolean isUserOnline(UUID uuid) {
+		OnlineSessionState state = onlineUserSessions.get(uuid);
+		return state != null && state.online();
 	}
 
 	public UserDataCache getPublishedCache(UUID uuid) {

@@ -128,8 +128,7 @@ class UserDataManagerCacheCleanupThreadingTest {
 		java.lang.reflect.Field sessionsField = UserDataManager.class.getDeclaredField("onlineUserSessions");
 		sessionsField.setAccessible(true);
 		@SuppressWarnings("unchecked")
-		ConcurrentHashMap<UUID, Boolean> sessions =
-				(ConcurrentHashMap<UUID, Boolean>) sessionsField.get(manager);
+		ConcurrentHashMap<UUID, ?> sessions = (ConcurrentHashMap<UUID, ?>) sessionsField.get(manager);
 		Server server = mock(Server.class);
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(Bukkit::getServer).thenReturn(server);
@@ -143,6 +142,52 @@ class UserDataManagerCacheCleanupThreadingTest {
 			verify(worker).execute(storage.capture());
 			storage.getValue().run();
 			assertFalse(sessions.containsKey(uuid));
+		}
+	}
+
+	@Test
+	void olderQueuedSnapshotCannotEraseNewerQuitTombstone() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(plugin.isEnabled()).thenReturn(true);
+		when(plugin.getOptions().isOnlineMode()).thenReturn(true);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		java.util.concurrent.ScheduledExecutorService worker = mock(java.util.concurrent.ScheduledExecutorService.class);
+		java.lang.reflect.Field timerField = UserDataManager.class.getDeclaredField("timer");
+		timerField.setAccessible(true);
+		timerField.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		org.bukkit.entity.Player player = mock(org.bukkit.entity.Player.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		Server server = mock(Server.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::getOnlinePlayers)
+					.thenReturn(java.util.List.of(), java.util.List.of(player), java.util.List.of());
+			ArgumentCaptor<Runnable> platform = ArgumentCaptor.forClass(Runnable.class);
+			ArgumentCaptor<Runnable> storage = ArgumentCaptor.forClass(Runnable.class);
+
+			manager.clearNonNeededCachedUsers();
+			manager.clearNonNeededCachedUsers();
+			verify(scheduler, times(2)).runTask(eq(plugin), platform.capture());
+			platform.getAllValues().forEach(Runnable::run);
+			verify(worker, times(2)).execute(storage.capture());
+			manager.markUserOffline(player);
+			storage.getAllValues().forEach(Runnable::run);
+
+			UserDataCache cache = new UserDataCache(manager, uuid);
+			cache.updateCache(new java.util.HashMap<>(java.util.Map.of("Points", new DataValueInt(1))));
+			manager.getUserDataCache().put(uuid, cache);
+			manager.clearNonNeededCachedUsers();
+			ArgumentCaptor<Runnable> allPlatformTasks = ArgumentCaptor.forClass(Runnable.class);
+			verify(scheduler, times(3)).runTask(eq(plugin), allPlatformTasks.capture());
+			allPlatformTasks.getAllValues().get(2).run();
+			ArgumentCaptor<Runnable> allStorageTasks = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker, times(3)).execute(allStorageTasks.capture());
+			allStorageTasks.getAllValues().get(2).run();
+			assertFalse(manager.containsKey(uuid));
 		}
 	}
 
