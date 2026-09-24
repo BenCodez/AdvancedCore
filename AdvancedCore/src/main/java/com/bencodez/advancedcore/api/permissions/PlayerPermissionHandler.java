@@ -114,6 +114,16 @@ public class PlayerPermissionHandler {
 		return this;
 	}
 
+	synchronized void mergeOfflinePermissions(java.util.Map<String, Long> queued) {
+		if (queued.isEmpty()) return;
+		if (permsToAdd == null) permsToAdd = new HashMap<>();
+		permsToAdd.putAll(queued);
+	}
+
+	synchronized java.util.Map<String, Long> offlinePermissionSnapshot() {
+		return permsToAdd == null ? java.util.Map.of() : new HashMap<>(permsToAdd);
+	}
+
 	/**
 	 * Backwards-compatible offline queue.
 	 */
@@ -199,43 +209,51 @@ public class PlayerPermissionHandler {
 	 * Expire only the scheduled grant that still owns this permission. The
 	 * attachment flag is true only from the player's owning platform scheduler.
 	 */
-	synchronized void expirePermission(String perm, long expectedExpireAt, boolean updateAttachment) {
-		if (timedPermissions == null) return;
-		Long current = timedPermissions.get(perm);
-		if (current == null || current.longValue() != expectedExpireAt) return;
-		if (!timedPermissions.remove(perm, current)) return;
-		persistentPermissions.remove(perm);
-		if (permsToAdd != null) permsToAdd.remove(perm);
-		if (updateAttachment && attachment != null) attachment.unsetPermission(perm);
-		removeHandlerIfEmpty(!updateAttachment);
+	void expirePermission(String perm, long expectedExpireAt, boolean updateAttachment) {
+		long remaining;
+		boolean removeHandler;
+		synchronized (this) {
+			if (timedPermissions == null) return;
+			Long current = timedPermissions.get(perm);
+			if (current == null || current.longValue() != expectedExpireAt) return;
+			remaining = current.longValue() - System.currentTimeMillis();
+			if (remaining > 0L) {
+				removeHandler = false;
+			} else {
+				if (!timedPermissions.remove(perm, current)) return;
+				persistentPermissions.remove(perm);
+				if (updateAttachment && attachment != null) attachment.unsetPermission(perm);
+				removeHandler = isHandlerEmpty(!updateAttachment);
+			}
+		}
+		if (remaining > 0L) handler.scheduleExpiration(this, perm, expectedExpireAt, remaining);
+		else if (removeHandler) handler.removePermissionIfEmpty(uuid, this, !updateAttachment);
 	}
 
-	private void removeHandlerIfEmpty(boolean attachmentIsOffline) {
+	synchronized boolean isHandlerEmpty(boolean attachmentIsOffline) {
 		boolean noTracked = persistentPermissions.isEmpty()
 				&& (timedPermissions == null || timedPermissions.isEmpty())
 				&& (permsToAdd == null || permsToAdd.isEmpty());
-		if (noTracked && (attachmentIsOffline || attachment == null || attachment.getPermissions().isEmpty())) {
-			handler.removePermission(uuid, this);
-		}
+		return noTracked && (attachmentIsOffline || attachment == null || attachment.getPermissions().isEmpty());
 	}
 
 	/**
 	 * Removes a permission from both internal tracking and the live attachment (if online).
 	 */
-	public synchronized void removePermission(String perm) {
-		persistentPermissions.remove(perm);
-		if (timedPermissions != null) {
-			timedPermissions.remove(perm);
-		}
-		if (permsToAdd != null) {
-			permsToAdd.remove(perm);
-		}
+	public void removePermission(String perm) {
+		boolean removeHandler;
+		synchronized (this) {
+			persistentPermissions.remove(perm);
+			if (timedPermissions != null) timedPermissions.remove(perm);
+			if (permsToAdd != null) permsToAdd.remove(perm);
 
-		if (attachment != null) {
-			attachment.setPermission(perm, false);
-			attachment.getPermissions().remove(perm);
-		}
+			if (attachment != null) {
+				attachment.setPermission(perm, false);
+				attachment.getPermissions().remove(perm);
+			}
 
-		removeHandlerIfEmpty(false);
+			removeHandler = isHandlerEmpty(false);
+		}
+		if (removeHandler) handler.removePermissionIfEmpty(uuid, this, false);
 	}
 }

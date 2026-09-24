@@ -96,7 +96,8 @@ class PlayerPermissionHandlerThreadingTest {
 		PlayerPermissionHandler handler = new PlayerPermissionHandler(UUID.randomUUID(), attachment, manager);
 
 		handler.addExpiration("example.use", ParsedDuration.ofMillis(60_000));
-		long expiry = handler.getTimedPermissions().get("example.use");
+		long expiry = System.currentTimeMillis() - 1L;
+		handler.getTimedPermissions().put("example.use", expiry);
 		clearInvocations(attachment);
 		handler.expirePermission("example.use", expiry, false);
 
@@ -113,12 +114,13 @@ class PlayerPermissionHandlerThreadingTest {
 		UUID uuid = UUID.randomUUID();
 		PlayerPermissionHandler handler = new PlayerPermissionHandler(uuid, attachment, manager);
 		handler.addExpiration("example.use", ParsedDuration.ofMillis(60_000));
-		long expiry = handler.getTimedPermissions().get("example.use");
+		long expiry = System.currentTimeMillis() - 1L;
+		handler.getTimedPermissions().put("example.use", expiry);
 		clearInvocations(attachment);
 
 		handler.expirePermission("example.use", expiry, false);
 
-		verify(manager).removePermission(uuid, handler);
+		verify(manager).removePermissionIfEmpty(uuid, handler, true);
 		verify(attachment, never()).unsetPermission(anyString());
 		verify(attachment, never()).setPermission(anyString(), anyBoolean());
 	}
@@ -130,11 +132,94 @@ class PlayerPermissionHandlerThreadingTest {
 		when(attachment.getPermissions()).thenReturn(new java.util.LinkedHashMap<>());
 		PlayerPermissionHandler handler = new PlayerPermissionHandler(UUID.randomUUID(), attachment, manager);
 		handler.addExpiration("example.use", ParsedDuration.ofMillis(60_000));
-		long expiry = handler.getTimedPermissions().get("example.use");
+		long expiry = System.currentTimeMillis() - 1L;
+		handler.getTimedPermissions().put("example.use", expiry);
 		clearInvocations(attachment);
 		handler.expirePermission("example.use", expiry, true);
 		verify(attachment).unsetPermission("example.use");
 		verify(attachment, never()).setPermission("example.use", false);
+	}
+
+	@Test
+	void earlyTimerReschedulesInsteadOfRevokingPermission() {
+		PermissionHandler manager = mock(PermissionHandler.class);
+		PermissionAttachment attachment = mock(PermissionAttachment.class);
+		PlayerPermissionHandler handler = new PlayerPermissionHandler(UUID.randomUUID(), attachment, manager);
+		handler.addExpiration("example.use", ParsedDuration.ofMillis(60_000));
+		long expiry = handler.getTimedPermissions().get("example.use");
+		clearInvocations(manager, attachment);
+
+		handler.expirePermission("example.use", expiry, true);
+
+		assertTrue(handler.isExpirationCurrent("example.use", expiry));
+		verify(manager).scheduleExpiration(eq(handler), eq("example.use"), eq(expiry), longThat(delay -> delay > 0));
+		verify(attachment, never()).unsetPermission(anyString());
+	}
+
+	@Test
+	void oldTimedExpirationPreservesQueuedRegrant() {
+		PermissionHandler manager = mock(PermissionHandler.class);
+		PermissionAttachment attachment = mock(PermissionAttachment.class);
+		PlayerPermissionHandler handler = new PlayerPermissionHandler(UUID.randomUUID(), null, manager);
+		handler.addExpiration("example.use", ParsedDuration.ofMillis(60_000));
+		long expiry = System.currentTimeMillis() - 1L;
+		handler.getTimedPermissions().put("example.use", expiry);
+		handler.addOfflinePerm("example.use", ParsedDuration.empty());
+
+		handler.expirePermission("example.use", expiry, false);
+		handler.setAttachment(attachment);
+		handler.onLogin(mock(Player.class));
+
+		verify(attachment).setPermission("example.use", true);
+	}
+
+	@Test
+	void logoutHandoffIsAtomicWithOfflineGrant() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		when(plugin.getServerDataFile().getData()).thenReturn(null);
+		PermissionHandler manager = new PermissionHandler(plugin);
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PermissionAttachment oldAttachment = mock(PermissionAttachment.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		PlayerPermissionHandler active = new PlayerPermissionHandler(uuid, oldAttachment, manager).addPerm("existing.use");
+		manager.getPerms().put(uuid, active);
+		java.util.concurrent.CountDownLatch logoutEntered = new java.util.concurrent.CountDownLatch(1);
+		java.util.concurrent.CountDownLatch releaseLogout = new java.util.concurrent.CountDownLatch(1);
+		doAnswer(call -> {
+			logoutEntered.countDown();
+			releaseLogout.await();
+			return null;
+		}).when(player).removeAttachment(oldAttachment);
+		java.util.concurrent.atomic.AtomicBoolean grantFinished = new java.util.concurrent.atomic.AtomicBoolean();
+
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			Thread logout = new Thread(() -> manager.logout(player));
+			Thread grant = new Thread(() -> {
+				manager.addPermission(uuid, "new.use");
+				grantFinished.set(true);
+			});
+			logout.start();
+			assertTrue(logoutEntered.await(1, java.util.concurrent.TimeUnit.SECONDS));
+			grant.start();
+			Thread.sleep(50L);
+			assertFalse(grantFinished.get(), "grant must wait for the map handoff");
+			releaseLogout.countDown();
+			logout.join(1_000L);
+			grant.join(1_000L);
+			assertFalse(logout.isAlive());
+			assertFalse(grant.isAlive());
+			assertSame(active, manager.getPermsToAdd().get(uuid));
+			PermissionAttachment newAttachment = mock(PermissionAttachment.class);
+			active.setAttachment(newAttachment);
+			active.onLogin(player);
+			verify(newAttachment).setPermission("existing.use", true);
+			verify(newAttachment).setPermission("new.use", true);
+		} finally {
+			releaseLogout.countDown();
+			manager.getTimer().shutdownNow();
+		}
 	}
 
 }
