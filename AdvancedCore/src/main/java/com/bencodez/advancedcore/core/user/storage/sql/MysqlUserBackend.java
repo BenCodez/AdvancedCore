@@ -353,6 +353,11 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
         private void migrateRetainedColumnToString(String storedName,
                 SqlUserSchema.ColumnDefinition definition) throws SQLException {
+            // DataType.STRING describes the Java value API, but plugins may deliberately
+            // retain a numeric SQL representation (for example an epoch millisecond).
+            // In that case the existing numeric column already matches the requested
+            // schema and must not be reconciled as a legacy numeric-to-text column.
+            if (declaredTypeIsNumericOrBoolean(definition.sqlType())) return;
             int jdbcType = registeredColumnType(storedName);
             if (!isNumericOrBoolean(jdbcType)) return;
             String column = quote(storedName);
@@ -436,6 +441,20 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     || jdbcType == java.sql.Types.DOUBLE || jdbcType == java.sql.Types.NUMERIC
                     || jdbcType == java.sql.Types.DECIMAL || jdbcType == java.sql.Types.BOOLEAN
                     || jdbcType == java.sql.Types.BIT;
+        }
+
+        private static boolean declaredTypeIsNumericOrBoolean(String sqlType) {
+            String normalized = sqlType == null ? "" : sqlType.stripLeading().toUpperCase(java.util.Locale.ROOT);
+            int separator = normalized.indexOf(' ');
+            int parameters = normalized.indexOf('(');
+            int end = separator < 0 ? normalized.length() : separator;
+            if (parameters >= 0 && parameters < end) end = parameters;
+            String baseType = normalized.substring(0, end);
+            return baseType.equals("TINYINT") || baseType.equals("SMALLINT") || baseType.equals("MEDIUMINT")
+                    || baseType.equals("INT") || baseType.equals("INTEGER") || baseType.equals("BIGINT")
+                    || baseType.equals("REAL") || baseType.equals("FLOAT") || baseType.equals("DOUBLE")
+                    || baseType.equals("NUMERIC") || baseType.equals("DECIMAL") || baseType.equals("BOOLEAN")
+                    || baseType.equals("BOOL") || baseType.equals("BIT");
         }
 
         private MysqlColumnAttributes mysqlColumnAttributes(String name) throws SQLException {

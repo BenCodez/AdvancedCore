@@ -134,6 +134,25 @@ class MysqlUserBackendSchemaExpansionTest {
         fixture.assertClosed();
     }
 
+    @Test void mariaDbRetainsDeclaredNumericStorageForStringValues() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("VoteRemindersLast");
+        fixture.numericColumns.add("VoteRemindersLast");
+        fixture.columnDefaults.put("VoteRemindersLast", "'0'");
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("VoteRemindersLast", "BIGINT", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertTrue(fixture.numericColumns.contains("VoteRemindersLast"));
+            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith(
+                    "SELECT IS_NULLABLE, COLUMN_DEFAULT")));
+            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith(
+                    "ALTER TABLE `Users` MODIFY COLUMN `VoteRemindersLast`")));
+        }
+        fixture.assertClosed();
+    }
+
     @Test void mariaDbAcceptsPeerMigrationAfterConflictingAlter() throws Exception {
         Fixture fixture = new Fixture(DbType.MARIADB);
         fixture.existing.add("VoteRemindersLast");
