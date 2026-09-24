@@ -270,6 +270,39 @@ class MysqlUserBackendSchemaExpansionTest {
         fixture.assertClosed();
     }
 
+    @Test void mariaDbTreatsOmittedDecimalScaleAsZero() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("Balance");
+        fixture.numericColumns.add("Balance");
+        fixture.columnTypeNames.put("Balance", "DECIMAL(12,0)");
+        fixture.columnPrecisions.put("Balance", 12);
+        fixture.columnScales.put("Balance", 0);
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("Balance", "DECIMAL(12)", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith("ALTER TABLE")));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbTreatsBareDecimalAsDecimalTenZero() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("Balance");
+        fixture.numericColumns.add("Balance");
+        fixture.columnTypeNames.put("Balance", "DECIMAL(10,0)");
+        fixture.columnPrecisions.put("Balance", 10);
+        fixture.columnScales.put("Balance", 0);
+        SqlUserSchema schema = SqlUserSchema.builder().column("Balance", "DECIMAL", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith("ALTER TABLE")));
+        }
+        fixture.assertClosed();
+    }
+
     @Test void mariaDbIgnoresIntegerDisplayWidthDuringReconciliation() throws Exception {
         Fixture fixture = new Fixture(DbType.MARIADB);
         fixture.existing.add("Counter");

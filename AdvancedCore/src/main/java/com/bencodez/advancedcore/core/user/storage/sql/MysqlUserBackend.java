@@ -515,7 +515,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
 					&& java.util.Arrays.equals(declaredTypeParameters(actual), new int[] { 1 });
 			String declaredBase = canonicalType(normalizedBaseType(declared));
 			if (!mysqlBooleanAlias && !declaredTypeMatches(declaredBase, actualType)) return false;
-			int[] declaredParameters = declaredTypeParameters(declared);
+			int[] declaredParameters = comparableDeclaredMysqlTypeParameters(declared);
 			if (!mysqlBooleanAlias && declaredParameters.length > 0 && !mysqlIntegerType(declaredBase)) {
 				int[] actualParameters = declaredTypeParameters(actual);
 				if (actualParameters.length > 0) {
@@ -530,6 +530,13 @@ public final class MysqlUserBackend implements SqlUserBackend {
 		private static boolean mysqlIntegerType(String type) {
 			return type.equals("TINYINT") || type.equals("SMALLINT") || type.equals("MEDIUMINT")
 					|| type.equals("INTEGER") || type.equals("BIGINT");
+		}
+
+		private static int[] comparableDeclaredMysqlTypeParameters(String sqlType) {
+			int[] parameters = declaredTypeParameters(sqlType);
+			if (!"DECIMAL".equals(canonicalType(normalizedBaseType(sqlType)))) return parameters;
+			return new int[] { parameters.length > 0 ? parameters[0] : 10,
+					parameters.length > 1 ? parameters[1] : 0 };
 		}
 
 		private static String declaredPhysicalType(String sqlType) {
