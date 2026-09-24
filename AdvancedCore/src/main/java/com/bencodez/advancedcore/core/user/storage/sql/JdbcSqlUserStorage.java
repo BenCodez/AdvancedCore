@@ -302,7 +302,14 @@ final class JdbcSqlUserStorage implements SqlUserStorage {
 
     private void bind(PreparedStatement statement, int index, DataValue value, SqlUserSchema.ColumnDefinition definition) throws SQLException {
         if (value == null) statement.setObject(index, null);
-        else if (value.isString()) statement.setString(index, value.getString());
+        else if (value.isString()) {
+            // PostgreSQL's unknown parameter type lets the destination column
+            // parse the stored representation. This supports both ordinary text
+            // columns and deliberately retained numeric/boolean SQL columns whose
+            // public AdvancedCore value contract remains STRING.
+            if (dialect == Dialect.POSTGRESQL) statement.setObject(index, value.getString(), Types.OTHER);
+            else statement.setString(index, value.getString());
+        }
         else if (value.isInt()) {
             // PostgreSQL's unspecified parameter type is inferred from the target
             // column. This preserves writes to both current integer columns and
