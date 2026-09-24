@@ -1191,24 +1191,9 @@ public class UserDataManager {
 					if (storageUuid != null) platformOnline.add(storageUuid);
 				}
 			}
-			java.util.HashSet<UUID> online = new java.util.HashSet<>();
-			for (UUID uuid : platformOnline) {
-				synchronized (onlineSessionLock(uuid)) {
-					Boolean state = onlineUserSessions.compute(uuid,
-							(ignored, current) -> Boolean.FALSE.equals(current) ? Boolean.FALSE : Boolean.TRUE);
-					if (Boolean.TRUE.equals(state)) online.add(uuid);
-				}
-			}
-			for (UUID uuid : Set.copyOf(onlineUserSessions.keySet())) {
-				synchronized (onlineSessionLock(uuid)) {
-					if (Boolean.FALSE.equals(onlineUserSessions.get(uuid)) && !platformOnline.contains(uuid)) {
-						onlineUserSessions.remove(uuid, Boolean.FALSE);
-					}
-				}
-			}
 			try {
 				timer.execute(() -> {
-					try { clearNonNeededCachedUsers(online); }
+					try { clearNonNeededCachedUsers(reconcileOnlineSnapshot(platformOnline)); }
 					catch (RuntimeException | Error failure) {
 						reportDeferredStorageFailure(failure);
 						throw failure;
@@ -1225,6 +1210,25 @@ public class UserDataManager {
 				if (plugin != null && plugin.isEnabled()) reportDeferredStorageFailure(failure);
 			}
 		}
+	}
+
+	private Set<UUID> reconcileOnlineSnapshot(Set<UUID> platformOnline) {
+		java.util.HashSet<UUID> online = new java.util.HashSet<>();
+		for (UUID uuid : platformOnline) {
+			synchronized (onlineSessionLock(uuid)) {
+				Boolean state = onlineUserSessions.compute(uuid,
+						(ignored, current) -> Boolean.FALSE.equals(current) ? Boolean.FALSE : Boolean.TRUE);
+				if (Boolean.TRUE.equals(state)) online.add(uuid);
+			}
+		}
+		for (UUID uuid : Set.copyOf(onlineUserSessions.keySet())) {
+			synchronized (onlineSessionLock(uuid)) {
+				if (Boolean.FALSE.equals(onlineUserSessions.get(uuid)) && !platformOnline.contains(uuid)) {
+					onlineUserSessions.remove(uuid, Boolean.FALSE);
+				}
+			}
+		}
+		return online;
 	}
 
 	private UUID onlineStorageUuid(Player player) {

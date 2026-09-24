@@ -9,6 +9,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
@@ -108,6 +109,41 @@ class UserDataManagerCacheCleanupThreadingTest {
 			platform.getValue().run();
 			bukkit.verify(Bukkit::getOnlinePlayers);
 		} finally { manager.getTimer().shutdownNow(); }
+	}
+
+	@Test
+	void reconcilesSessionMarkersOnlyOnStorageWorker() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(plugin.isEnabled()).thenReturn(true);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		java.util.concurrent.ScheduledExecutorService worker = mock(java.util.concurrent.ScheduledExecutorService.class);
+		java.lang.reflect.Field timerField = UserDataManager.class.getDeclaredField("timer");
+		timerField.setAccessible(true);
+		timerField.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		manager.markUserOffline(uuid);
+		java.lang.reflect.Field sessionsField = UserDataManager.class.getDeclaredField("onlineUserSessions");
+		sessionsField.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		ConcurrentHashMap<UUID, Boolean> sessions =
+				(ConcurrentHashMap<UUID, Boolean>) sessionsField.get(manager);
+		Server server = mock(Server.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::getOnlinePlayers).thenReturn(java.util.List.of());
+			ArgumentCaptor<Runnable> platform = ArgumentCaptor.forClass(Runnable.class);
+			ArgumentCaptor<Runnable> storage = ArgumentCaptor.forClass(Runnable.class);
+			manager.clearNonNeededCachedUsers();
+			verify(scheduler).runTask(eq(plugin), platform.capture());
+			platform.getValue().run();
+			assertTrue(sessions.containsKey(uuid));
+			verify(worker).execute(storage.capture());
+			storage.getValue().run();
+			assertFalse(sessions.containsKey(uuid));
+		}
 	}
 
 	@Test
