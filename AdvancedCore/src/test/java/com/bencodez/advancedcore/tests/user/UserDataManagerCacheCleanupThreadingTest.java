@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
@@ -129,5 +131,37 @@ class UserDataManagerCacheCleanupThreadingTest {
 			storage.getValue().run();
 			assertTrue(!manager.containsKey(uuid));
 		}
+	}
+
+	@Test
+	void joinDuringBlockedFlushPreventsRetirementWithoutBlockingJoin() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		when(plugin.isEnabled()).thenReturn(true);
+		UserDataManager manager = new UserDataManager(plugin);
+		UUID uuid = UUID.randomUUID();
+		UserDataCache cache = mock(UserDataCache.class);
+		when(cache.getSharedSnapshotVersion()).thenReturn(1L);
+		CountDownLatch flushStarted = new CountDownLatch(1);
+		CountDownLatch releaseFlush = new CountDownLatch(1);
+		doAnswer(invocation -> {
+			flushStarted.countDown();
+			assertTrue(releaseFlush.await(5, TimeUnit.SECONDS));
+			return null;
+		}).when(cache).clearCache();
+		manager.getUserDataCache().put(uuid, cache);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(null);
+			manager.clearNonNeededCachedUsers();
+			assertTrue(flushStarted.await(5, TimeUnit.SECONDS));
+			long started = System.nanoTime();
+			manager.markUserOnline(uuid);
+			assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started) < 500);
+			releaseFlush.countDown();
+			manager.getTimer().shutdown();
+			assertTrue(manager.getTimer().awaitTermination(5, TimeUnit.SECONDS));
+			assertTrue(manager.containsKey(uuid));
+			verify(cache).cancelRemoval();
+			verify(cache, never()).retireAfterSharedFlush();
+		} finally { manager.getTimer().shutdownNow(); }
 	}
 }

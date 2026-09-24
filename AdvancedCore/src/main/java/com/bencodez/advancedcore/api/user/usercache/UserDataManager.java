@@ -79,6 +79,17 @@ public class UserDataManager {
 	// concurrent Folia snapshot from re-adding a player whose quit event won the
 	// race; a later snapshot removes tombstones once Bukkit no longer lists them.
 	private final ConcurrentHashMap<UUID, Boolean> onlineUserSessions = new ConcurrentHashMap<>();
+	private final Object[] onlineSessionLocks = createOnlineSessionLocks();
+
+	private static Object[] createOnlineSessionLocks() {
+		Object[] locks = new Object[64];
+		java.util.Arrays.setAll(locks, ignored -> new Object());
+		return locks;
+	}
+
+	private Object onlineSessionLock(UUID uuid) {
+		return onlineSessionLocks[(uuid.hashCode() & Integer.MAX_VALUE) % onlineSessionLocks.length];
+	}
 
 	private static final class SharedCachePopulationState {
 		private long generation;
@@ -1180,12 +1191,19 @@ public class UserDataManager {
 			}
 			java.util.HashSet<UUID> online = new java.util.HashSet<>();
 			for (UUID uuid : platformOnline) {
-				Boolean state = onlineUserSessions.compute(uuid,
-						(ignored, current) -> Boolean.FALSE.equals(current) ? Boolean.FALSE : Boolean.TRUE);
-				if (Boolean.TRUE.equals(state)) online.add(uuid);
+				synchronized (onlineSessionLock(uuid)) {
+					Boolean state = onlineUserSessions.compute(uuid,
+							(ignored, current) -> Boolean.FALSE.equals(current) ? Boolean.FALSE : Boolean.TRUE);
+					if (Boolean.TRUE.equals(state)) online.add(uuid);
+				}
 			}
-			onlineUserSessions.entrySet().removeIf(entry -> Boolean.FALSE.equals(entry.getValue())
-					&& !platformOnline.contains(entry.getKey()));
+			for (UUID uuid : Set.copyOf(onlineUserSessions.keySet())) {
+				synchronized (onlineSessionLock(uuid)) {
+					if (Boolean.FALSE.equals(onlineUserSessions.get(uuid)) && !platformOnline.contains(uuid)) {
+						onlineUserSessions.remove(uuid, Boolean.FALSE);
+					}
+				}
+			}
 			try {
 				timer.execute(() -> {
 					try { clearNonNeededCachedUsers(online); }
@@ -1220,7 +1238,9 @@ public class UserDataManager {
 	}
 
 	public void markUserOnline(UUID uuid) {
-		if (uuid != null) onlineUserSessions.put(uuid, Boolean.TRUE);
+		if (uuid != null) synchronized (onlineSessionLock(uuid)) {
+			onlineUserSessions.put(uuid, Boolean.TRUE);
+		}
 	}
 
 	/** Capture an online session from a Bukkit/Folia-owned player event. */
@@ -1229,7 +1249,9 @@ public class UserDataManager {
 	}
 
 	public void markUserOffline(UUID uuid) {
-		if (uuid != null) onlineUserSessions.put(uuid, Boolean.FALSE);
+		if (uuid != null) synchronized (onlineSessionLock(uuid)) {
+			onlineUserSessions.put(uuid, Boolean.FALSE);
+		}
 	}
 
 	/** Remove an online session from a Bukkit/Folia-owned player event. */
@@ -1257,16 +1279,22 @@ public class UserDataManager {
 				}
 				try {
 					current.clearCache();
-					if (sharedSqlRoute != null) current.retireAfterSharedFlush();
 				} catch (RuntimeException | Error failure) {
 					current.cancelRemoval();
 					throw failure;
 				}
-				boolean cacheRemoved = retireSharedCache(uuid, current);
-				Consumer<UUID> listener = sharedCacheRemovalListener;
-				if (cacheRemoved && listener != null) listener.accept(uuid);
-				retired.set(cacheRemoved);
+				synchronized (onlineSessionLock(uuid)) {
+					if (Boolean.TRUE.equals(onlineUserSessions.get(uuid))) {
+						current.cancelRemoval();
+						return;
+					}
+					if (sharedSqlRoute != null) current.retireAfterSharedFlush();
+					boolean cacheRemoved = retireSharedCache(uuid, current);
+					retired.set(cacheRemoved);
+				}
 			});
+			Consumer<UUID> listener = sharedCacheRemovalListener;
+			if (retired.get() && listener != null) listener.accept(uuid);
 			if (retired.get()) removed++;
 		}
 		if (removed > 0) plugin.devDebug("Removed " + removed + " cached users who are no longer online");
