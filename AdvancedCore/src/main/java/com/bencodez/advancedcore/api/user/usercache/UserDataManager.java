@@ -239,7 +239,7 @@ public class UserDataManager {
 			return operation.apply(admission == null
 					? (plugin == null ? null : plugin.getNativeUserStorageOwner()) : admission.nativeOwner());
 		}
-		if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+		if (isPlatformOwnedThread()) {
 			throw new IllegalStateException("Shared user storage must run on a worker thread");
 		}
 		AtomicReference<T> result = new AtomicReference<>();
@@ -507,7 +507,7 @@ public class UserDataManager {
 		Objects.requireNonNull(operation, "operation");
 		SharedSqlRoute admission = sharedSqlRoute;
 		if (admission == null) throw new IllegalStateException("Shared SQL backend is not bound");
-		if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+		if (isPlatformOwnedThread()) {
 			throw new IllegalStateException("Shared user storage must run on a worker thread");
 		}
 		AtomicReference<T> result = new AtomicReference<>();
@@ -732,7 +732,7 @@ public class UserDataManager {
 	 * happens, but its SQL read and lifecycle admission run on the manager worker.
 	 */
 	private boolean deferSharedCachePopulation(UUID uuid, boolean traceDevelopmentCall) {
-		if (!hasSharedSqlBackend() || Bukkit.getServer() == null || !Bukkit.isPrimaryThread()) return false;
+		if (!hasSharedSqlBackend() || !isPlatformOwnedThread()) return false;
 		ensureSharedCachePlaceholder(uuid);
 		SharedCachePopulation population = beginSharedCachePopulation(uuid, true);
 		if (population == null) return true;
@@ -896,7 +896,7 @@ public class UserDataManager {
 	 */
 	public final boolean deferSharedStorageWork(Runnable task) {
 		Objects.requireNonNull(task, "task");
-		if (!hasSharedSqlBackend() || Bukkit.getServer() == null || !Bukkit.isPrimaryThread()) return false;
+		if (!hasSharedSqlBackend() || !isPlatformOwnedThread()) return false;
 		try {
 			timer.execute(() -> {
 				lastDeferredStorageFailure.set(null);
@@ -1180,7 +1180,7 @@ public class UserDataManager {
 		return cache != null && cache.hasPublishedStorageSnapshot() ? cache : null;
 	}
 	public UserDataCache getCache(UUID uuid) {
-		if (hasSharedSqlBackend() && Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
+		if (hasSharedSqlBackend() && isPlatformOwnedThread()) {
 			UserDataCache cache = userDataCache.get(uuid);
 			if (cache == null) cache = ensureSharedCachePlaceholder(uuid);
 			if (!completedSharedCachePopulations.contains(uuid)) cacheUser(uuid, false);
@@ -1193,7 +1193,45 @@ public class UserDataManager {
 	public boolean isCached(UUID uuid) { return userDataCache.containsKey(uuid) && userDataCache.get(uuid).hasCache(); }
 	public boolean isInt(String str) { return intColumns.contains(str); }
 	public boolean mustDeferSharedStorageAccess() {
-		return hasSharedSqlBackend() && Bukkit.getServer() != null && Bukkit.isPrimaryThread();
+		return hasSharedSqlBackend() && isPlatformOwnedThread();
+	}
+
+	/**
+	 * True for Bukkit's primary thread and Folia/Paper tick threads. These are
+	 * platform-owned execution lanes and must never wait on JDBC/shared-runtime admission.
+	 */
+	public boolean isPlatformOwnedThread() {
+		Object server = Bukkit.getServer();
+		if (server == null) return false;
+		try { if (Bukkit.isPrimaryThread()) return true; }
+		catch (RuntimeException ignored) { }
+		return isFoliaTickThread(server);
+	}
+
+	/** Reflection-only Folia/Paper probe kept separate so it can be tested headlessly. */
+	static boolean isFoliaTickThread(Object server) {
+		if (server == null) return false;
+		try {
+			java.lang.reflect.Method global = server.getClass().getMethod("isGlobalTickThread");
+			if (Boolean.TRUE.equals(global.invoke(server))) return true;
+		} catch (ReflectiveOperationException | RuntimeException ignored) { }
+		if (reflectiveStaticBoolean("ca.spottedleaf.moonrise.common.util.TickThread", "isTickThread")) return true;
+		if (reflectiveStaticBoolean("io.papermc.paper.threadedregions.RegionizedServer", "isGlobalTickThread")) return true;
+		try {
+			Class<?> scheduler = Class.forName("io.papermc.paper.threadedregions.TickRegionScheduler");
+			java.lang.reflect.Method current = scheduler.getMethod("getCurrentRegion");
+			if (current.invoke(null) != null) return true;
+		} catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) { }
+		return false;
+	}
+
+	private static boolean reflectiveStaticBoolean(String className, String methodName) {
+		try {
+			Class<?> type = Class.forName(className);
+			return Boolean.TRUE.equals(type.getMethod(methodName).invoke(null));
+		} catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+			return false;
+		}
 	}
 
 	private void loadKeys() {
