@@ -215,7 +215,7 @@ public class PlayerPermissionHandler {
 				&& (timedPermissions == null || timedPermissions.isEmpty())
 				&& (permsToAdd == null || permsToAdd.isEmpty());
 		if (noTracked && (attachmentIsOffline || attachment == null || attachment.getPermissions().isEmpty())) {
-			handler.removePermission(uuid);
+			handler.removePermission(uuid, this);
 		}
 	}
 

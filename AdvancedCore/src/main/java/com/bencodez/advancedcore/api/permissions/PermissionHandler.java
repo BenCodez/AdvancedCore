@@ -102,7 +102,7 @@ public class PermissionHandler {
 		}
 	}
 
-	private void dispatchExpiration(PlayerPermissionHandler handle, String permission, long expectedExpireAt) {
+	void dispatchExpiration(PlayerPermissionHandler handle, String permission, long expectedExpireAt) {
 		if (!acceptingExpirations.get() || !handle.isExpirationCurrent(permission, expectedExpireAt)) return;
 		try {
 			plugin.getBukkitScheduler().runTask(plugin, () -> {
@@ -119,11 +119,19 @@ public class PermissionHandler {
 					}, player);
 				} catch (RuntimeException failure) {
 					plugin.debug(failure);
+					retryExpiration(handle, permission, expectedExpireAt);
 				}
 			});
 		} catch (RuntimeException failure) {
 			plugin.debug(failure);
+			retryExpiration(handle, permission, expectedExpireAt);
 		}
+	}
+
+	private void retryExpiration(PlayerPermissionHandler handle, String permission, long expectedExpireAt) {
+		if (!acceptingExpirations.get() || !handle.isExpirationCurrent(permission, expectedExpireAt)) return;
+		try { scheduleExpiration(handle, permission, expectedExpireAt, 1_000L); }
+		catch (RuntimeException ignored) { /* scheduleExpiration already reported the rejection */ }
 	}
 
 	public void addPermission(Player player, String permission) {
@@ -167,8 +175,11 @@ public class PermissionHandler {
 				PlayerPermissionHandler newHandle = new PlayerPermissionHandler(uuid, attachment, this).addPerm(perm);
 				perms.put(uuid, newHandle);
 			} else {
-				permsToAdd.put(uuid,
-						new PlayerPermissionHandler(uuid, null, this).addOfflinePerm(perm, ParsedDuration.empty()));
+				permsToAdd.compute(uuid, (ignored, pending) -> {
+					PlayerPermissionHandler target = pending == null
+							? new PlayerPermissionHandler(uuid, null, this) : pending;
+					return target.addOfflinePerm(perm, ParsedDuration.empty());
+				});
 			}
 		}
 	}
@@ -205,7 +216,11 @@ public class PermissionHandler {
 						.addExpiration(perm, duration);
 				perms.put(uuid, newHandle);
 			} else {
-				permsToAdd.put(uuid, new PlayerPermissionHandler(uuid, null, this).addOfflinePerm(perm, duration));
+				permsToAdd.compute(uuid, (ignored, pending) -> {
+					PlayerPermissionHandler target = pending == null
+							? new PlayerPermissionHandler(uuid, null, this) : pending;
+					return target.addOfflinePerm(perm, duration);
+				});
 			}
 		}
 	}
@@ -271,6 +286,11 @@ public class PermissionHandler {
 	public void removePermission(UUID uuid) {
 		perms.remove(uuid);
 		permsToAdd.remove(uuid);
+	}
+
+	void removePermission(UUID uuid, PlayerPermissionHandler expected) {
+		perms.remove(uuid, expected);
+		permsToAdd.remove(uuid, expected);
 	}
 
 	/**
