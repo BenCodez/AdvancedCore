@@ -138,6 +138,7 @@ class MysqlUserBackendSchemaExpansionTest {
         Fixture fixture = new Fixture(DbType.MARIADB);
         fixture.existing.add("VoteRemindersLast");
         fixture.numericColumns.add("VoteRemindersLast");
+        fixture.columnTypeNames.put("VoteRemindersLast", "BIGINT");
         fixture.columnDefaults.put("VoteRemindersLast", "'0'");
         SqlUserSchema schema = SqlUserSchema.builder()
                 .column("VoteRemindersLast", "BIGINT", DataType.STRING).build();
@@ -149,6 +150,40 @@ class MysqlUserBackendSchemaExpansionTest {
                     "SELECT IS_NULLABLE, COLUMN_DEFAULT")));
             assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith(
                     "ALTER TABLE `Users` MODIFY COLUMN `VoteRemindersLast`")));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbWidensRetainedNumericStorageToTheDeclaredType() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("VoteRemindersLast");
+        fixture.numericColumns.add("VoteRemindersLast");
+        fixture.columnDefaults.put("VoteRemindersLast", "0");
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("VoteRemindersLast", "BIGINT", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertTrue(fixture.sql.contains(
+                    "ALTER TABLE `Users` MODIFY COLUMN `VoteRemindersLast` BIGINT NULL DEFAULT '0';"));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbReconcilesRetainedDecimalPrecision() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("Balance");
+        fixture.numericColumns.add("Balance");
+        fixture.columnTypeNames.put("Balance", "DECIMAL");
+        fixture.columnPrecisions.put("Balance", 8);
+        fixture.columnScales.put("Balance", 2);
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("Balance", "DECIMAL(12,2)", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertTrue(fixture.sql.contains(
+                    "ALTER TABLE `Users` MODIFY COLUMN `Balance` DECIMAL(12,2) NULL;"));
         }
         fixture.assertClosed();
     }
@@ -225,6 +260,9 @@ class MysqlUserBackendSchemaExpansionTest {
         final List<String> booleanColumns = new ArrayList<>();
         final List<String> nonNullableColumns = new ArrayList<>();
         final java.util.Map<String, String> columnDefaults = new java.util.HashMap<>();
+        final java.util.Map<String, String> columnTypeNames = new java.util.HashMap<>();
+        final java.util.Map<String, Integer> columnPrecisions = new java.util.HashMap<>();
+        final java.util.Map<String, Integer> columnScales = new java.util.HashMap<>();
         final List<Connection> connections = new ArrayList<>();
         final List<PreparedStatement> statements = new ArrayList<>();
         final List<ResultSet> results = new ArrayList<>();
@@ -327,9 +365,13 @@ class MysqlUserBackendSchemaExpansionTest {
                         when(metadata.getColumnCount()).thenReturn(existing.size());
                         for (int i = 0; i < existing.size(); i++) {
                             when(metadata.getColumnName(i + 1)).thenReturn(existing.get(i));
-                            when(metadata.getColumnType(i + 1)).thenReturn(booleanColumns.contains(existing.get(i))
+                            String existingColumn = existing.get(i);
+                            when(metadata.getColumnType(i + 1)).thenReturn(booleanColumns.contains(existingColumn)
                                     ? java.sql.Types.BOOLEAN : numericColumns.contains(existing.get(i))
-                                    ? java.sql.Types.INTEGER : java.sql.Types.VARCHAR);
+                                    ? jdbcType(columnTypeNames.get(existingColumn)) : java.sql.Types.VARCHAR);
+                            when(metadata.getColumnTypeName(i + 1)).thenReturn(columnTypeNames.get(existingColumn));
+                            when(metadata.getPrecision(i + 1)).thenReturn(columnPrecisions.getOrDefault(existingColumn, 0));
+                            when(metadata.getScale(i + 1)).thenReturn(columnScales.getOrDefault(existingColumn, 0));
                         }
                     }
                     return result;
@@ -337,6 +379,12 @@ class MysqlUserBackendSchemaExpansionTest {
                 return statement;
             });
             return connection;
+        }
+
+        private static int jdbcType(String typeName) {
+            if ("BIGINT".equals(typeName)) return java.sql.Types.BIGINT;
+            if ("DECIMAL".equals(typeName)) return java.sql.Types.DECIMAL;
+            return java.sql.Types.INTEGER;
         }
 
         void assertClosed() throws SQLException {
