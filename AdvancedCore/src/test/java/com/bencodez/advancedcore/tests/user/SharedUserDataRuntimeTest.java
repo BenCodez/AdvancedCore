@@ -234,6 +234,42 @@ class SharedUserDataRuntimeTest {
 		}
 	}
 
+
+	@Test
+	void unrelatedUsersDoNotShareExclusiveAdmissionWhenOldStripesWouldCollide() throws Exception {
+		UUID first = UUID.randomUUID();
+		int stripe = (first.hashCode() & Integer.MAX_VALUE) % 64;
+		UUID candidate;
+		do {
+			candidate = UUID.randomUUID();
+		} while (candidate.equals(first) || ((candidate.hashCode() & Integer.MAX_VALUE) % 64) != stripe);
+		final UUID second = candidate;
+
+		FakeBackend backend = new FakeBackend();
+		backend.put(first, "Points", new DataValueInt(1));
+		backend.put(second, "Points", new DataValueInt(2));
+		FakeCacheOwner cache = new FakeCacheOwner();
+		cache.populate(first, values("Points", new DataValueInt(1)));
+		cache.populate(second, values("Points", new DataValueInt(2)));
+		java.util.concurrent.CountDownLatch firstEntered = new java.util.concurrent.CountDownLatch(1);
+		java.util.concurrent.CountDownLatch releaseFirst = new java.util.concurrent.CountDownLatch(1);
+		cache.blockQueueChange(first, firstEntered, releaseFirst);
+		SharedUserDataRuntime runtime = new SharedUserDataRuntime(backend, cache);
+
+		ExecutorService workers = Executors.newFixedThreadPool(2);
+		try {
+			Future<?> heldRead = workers.submit(() -> runtime.queueChange(first, "Points", new DataValueInt(3)));
+			assertTrue(firstEntered.await(1, TimeUnit.SECONDS));
+			Future<?> unrelatedWrite = workers.submit(() -> runtime.remove(second));
+			unrelatedWrite.get(1, TimeUnit.SECONDS);
+			releaseFirst.countDown();
+			heldRead.get(1, TimeUnit.SECONDS);
+		} finally {
+			releaseFirst.countDown();
+			workers.shutdownNow();
+		}
+	}
+
     private static HashMap<String, DataValue> values(String key, DataValue value) {
         HashMap<String, DataValue> result = new HashMap<>();
         result.put(key, value);
@@ -246,6 +282,9 @@ class SharedUserDataRuntimeTest {
 		private final Map<UUID, Runnable> notifications = new HashMap<>();
         private int populateCalls;
         private boolean shutdown;
+        private UUID blockedQueueUuid;
+        private java.util.concurrent.CountDownLatch blockedQueueEntered;
+        private java.util.concurrent.CountDownLatch blockedQueueRelease;
 
         @Override
         public boolean isCached(UUID uuid) {
@@ -266,8 +305,24 @@ class SharedUserDataRuntimeTest {
 
         @Override
         public void queueChange(UUID uuid, String key, DataValue value) {
+            if (uuid.equals(blockedQueueUuid) && blockedQueueEntered != null && blockedQueueRelease != null) {
+                blockedQueueEntered.countDown();
+                try {
+                    if (!blockedQueueRelease.await(2, TimeUnit.SECONDS)) throw new IllegalStateException("queue test timed out");
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(interrupted);
+                }
+            }
             cache.computeIfAbsent(uuid, ignored -> new HashMap<>()).put(key, value);
             pending.computeIfAbsent(uuid, ignored -> new HashMap<>()).put(key, value);
+        }
+
+        void blockQueueChange(UUID uuid, java.util.concurrent.CountDownLatch entered,
+                java.util.concurrent.CountDownLatch release) {
+            blockedQueueUuid = uuid;
+            blockedQueueEntered = entered;
+            blockedQueueRelease = release;
         }
 
         @Override

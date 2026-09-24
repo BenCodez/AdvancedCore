@@ -7,10 +7,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -26,10 +28,14 @@ import com.bencodez.simpleapi.sql.data.DataValue;
 
 /** Coordinates one existing cache/queue and its SQL provider; storage work runs on a worker. */
 public final class SharedUserDataRuntime implements AutoCloseable {
-    private static final int USER_LOCK_STRIPES = 64;
     private final UserCacheOwner cacheOwner;
     private final ReentrantReadWriteLock lifecycle = new ReentrantReadWriteLock(true);
-    private final ReentrantReadWriteLock[] userLocks = createUserLocks();
+    private final ConcurrentHashMap<UUID, UserLockCell> userLocks = new ConcurrentHashMap<>();
+
+    private static final class UserLockCell {
+        private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
+        private int references;
+    }
     private final AtomicBoolean retiring = new AtomicBoolean();
     private final Object closeLock = new Object();
     private volatile SqlUserBackend backend;
@@ -384,32 +390,33 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     private <T> T storageAccess(Supplier<T> operation) { cacheOwner.requireBlockingAllowed(); return access(operation); }
 
     private <T> T userAccess(UUID uuid, Supplier<T> operation) {
-        return access(() -> {
-            ReentrantReadWriteLock.ReadLock lock = userLock(uuid).readLock();
-            lock.lock();
-            try { return operation.get(); } finally { lock.unlock(); }
-        });
+        return access(() -> withUserLock(uuid, false, operation));
     }
 
     private <T> T storageUserAccess(UUID uuid, Supplier<T> operation) { cacheOwner.requireBlockingAllowed(); return userAccess(uuid, operation); }
 
     private <T> T userExclusiveAccess(UUID uuid, Supplier<T> operation) {
-        return access(() -> {
-            ReentrantReadWriteLock.WriteLock lock = userLock(uuid).writeLock();
-            lock.lock();
-            try { return operation.get(); } finally { lock.unlock(); }
+        return access(() -> withUserLock(uuid, true, operation));
+    }
+
+    private <T> T withUserLock(UUID uuid, boolean exclusive, Supplier<T> operation) {
+        UserLockCell cell = userLocks.compute(uuid, (ignored, current) -> {
+            UserLockCell selected = current == null ? new UserLockCell() : current;
+            selected.references++;
+            return selected;
         });
-    }
-
-    private ReentrantReadWriteLock userLock(UUID uuid) {
-        int index = (uuid.hashCode() & Integer.MAX_VALUE) % USER_LOCK_STRIPES;
-        return userLocks[index];
-    }
-
-    private static ReentrantReadWriteLock[] createUserLocks() {
-        ReentrantReadWriteLock[] locks = new ReentrantReadWriteLock[USER_LOCK_STRIPES];
-        for (int i = 0; i < locks.length; i++) locks[i] = new ReentrantReadWriteLock(true);
-        return locks;
+        Lock lock = exclusive ? cell.lock.writeLock() : cell.lock.readLock();
+        lock.lock();
+        try {
+            return operation.get();
+        } finally {
+            lock.unlock();
+            userLocks.compute(uuid, (ignored, current) -> {
+                if (current != cell) throw new IllegalStateException("User lock cell changed while admitted");
+                if (--cell.references < 0) throw new IllegalStateException("User lock reference count underflow");
+                return cell.references == 0 ? null : cell;
+            });
+        }
     }
 
     private void rejectReentrantTransition() {
