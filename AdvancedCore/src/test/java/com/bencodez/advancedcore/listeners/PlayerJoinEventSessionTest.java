@@ -16,6 +16,21 @@ import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 
 class PlayerJoinEventSessionTest {
 	@Test
+	void joinTracksOnlineStateWhenUserDataLoadingIsDisabled() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		when(plugin.isEnabled()).thenReturn(true);
+		when(plugin.isLoadUserData()).thenReturn(false);
+		Player player = mock(Player.class);
+		org.bukkit.event.player.PlayerJoinEvent join = mock(org.bukkit.event.player.PlayerJoinEvent.class);
+		when(join.getPlayer()).thenReturn(player);
+
+		new PlayerJoinEvent(plugin).onPlayerLogin(join);
+
+		verify(plugin.getUserManager().getDataManager()).markUserOnline(player);
+		verify(plugin.getLoginTimer(), never()).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
+	}
+
+	@Test
 	void delayedLoginDoesNotRestorePermissionsAfterThePlayerQuit() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
 		ScheduledExecutorService loginTimer = mock(ScheduledExecutorService.class);

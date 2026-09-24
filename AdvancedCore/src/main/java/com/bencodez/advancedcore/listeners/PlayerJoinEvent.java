@@ -67,9 +67,11 @@ public class PlayerJoinEvent implements Listener {
 
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onPlayerLogin(final org.bukkit.event.player.PlayerJoinEvent event) {
-		if (plugin == null || !plugin.isEnabled() || !plugin.isLoadUserData()) {
+		if (plugin == null || !plugin.isEnabled()) {
 			return;
 		}
+		plugin.getUserManager().getDataManager().markUserOnline(event.getPlayer());
+		if (!plugin.isLoadUserData()) return;
 
 		if (!plugin.getOptions().isHideLoginMessage()) {
 			plugin.getLogger()
@@ -77,7 +79,6 @@ public class PlayerJoinEvent implements Listener {
 		} else {
 			plugin.debug("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
 		}
-
 		Player joiningPlayer = event.getPlayer();
 		synchronized (loginSessionLock(joiningPlayer.getUniqueId())) {
 			pendingLoginSessions.put(joiningPlayer.getUniqueId(), joiningPlayer);
@@ -170,6 +171,7 @@ public class PlayerJoinEvent implements Listener {
 
 		Player player = event.getPlayer();
 		plugin.debug("Logout: " + player.getName() + " (" + player.getUniqueId() + ")");
+		plugin.getUserManager().getDataManager().markUserOffline(player);
 
 		synchronized (loginSessionLock(player.getUniqueId())) {
 			pendingLoginSessions.remove(player.getUniqueId(), player);
