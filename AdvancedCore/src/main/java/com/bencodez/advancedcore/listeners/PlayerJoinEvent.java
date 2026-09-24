@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.listeners;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -18,6 +19,13 @@ import com.bencodez.simpleapi.command.TabCompleteHandler;
 public class PlayerJoinEvent implements Listener {
 
 	private final AdvancedCorePlugin plugin;
+	private final ConcurrentHashMap<java.util.UUID, Player> pendingLoginSessions = new ConcurrentHashMap<>();
+	private final Object[] loginSessionLocks = java.util.stream.IntStream.range(0, 64)
+			.mapToObj(ignored -> new Object()).toArray();
+
+	private Object loginSessionLock(java.util.UUID uuid) {
+		return loginSessionLocks[(uuid.hashCode() & Integer.MAX_VALUE) % loginSessionLocks.length];
+	}
 
 	public PlayerJoinEvent(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -70,6 +78,10 @@ public class PlayerJoinEvent implements Listener {
 			plugin.debug("Login: " + event.getPlayer().getName() + " (" + event.getPlayer().getUniqueId() + ")");
 		}
 
+		Player joiningPlayer = event.getPlayer();
+		synchronized (loginSessionLock(joiningPlayer.getUniqueId())) {
+			pendingLoginSessions.put(joiningPlayer.getUniqueId(), joiningPlayer);
+		}
 		plugin.getLoginTimer().schedule(new Runnable() {
 
 			@Override
@@ -87,7 +99,7 @@ public class PlayerJoinEvent implements Listener {
 					}
 
 					Player player = event.getPlayer();
-					if (player == null) {
+					if (player == null || pendingLoginSessions.get(player.getUniqueId()) != player) {
 						return;
 					}
 
@@ -115,8 +127,9 @@ public class PlayerJoinEvent implements Listener {
 
 					plugin.debug("Login: " + player.getName() + " (" + player.getUniqueId() + ")");
 
-					if (plugin.getPermissionHandler() != null) {
-						plugin.getPermissionHandler().login(player);
+					synchronized (loginSessionLock(player.getUniqueId())) {
+						if (pendingLoginSessions.get(player.getUniqueId()) != player) return;
+						if (plugin.getPermissionHandler() != null) plugin.getPermissionHandler().login(player);
 					}
 
 					// Resolve UUID BEFORE constructing/getting the user
@@ -144,7 +157,7 @@ public class PlayerJoinEvent implements Listener {
 
 				} catch (Exception e) {
 					e.printStackTrace();
-				}
+				} finally { pendingLoginSessions.remove(joiningPlayer.getUniqueId(), joiningPlayer); }
 			}
 		}, 1500 + plugin.getOptions().getDelayLoginEventMs(), TimeUnit.MILLISECONDS);
 	}
@@ -158,8 +171,9 @@ public class PlayerJoinEvent implements Listener {
 		Player player = event.getPlayer();
 		plugin.debug("Logout: " + player.getName() + " (" + player.getUniqueId() + ")");
 
-		if (plugin.getPermissionHandler() != null) {
-			plugin.getPermissionHandler().logout(player);
+		synchronized (loginSessionLock(player.getUniqueId())) {
+			pendingLoginSessions.remove(player.getUniqueId(), player);
+			if (plugin.getPermissionHandler() != null) plugin.getPermissionHandler().logout(player);
 		}
 
 		plugin.getLoginTimer().execute(new Runnable() {
