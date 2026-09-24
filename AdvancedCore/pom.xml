@@ -342,7 +342,7 @@
         <dependency>
             <groupId>com.velocitypowered</groupId>
             <artifactId>velocity-api</artifactId>
-            <version>3.4.0</version>
+            <version>4.2.0</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
