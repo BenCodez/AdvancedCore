@@ -6,6 +6,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
@@ -49,6 +50,7 @@ public class PermissionHandler {
 
 	@Getter
 	private final ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
+	private final AtomicBoolean acceptingExpirations = new AtomicBoolean(true);
 
 	public PermissionHandler(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
@@ -85,6 +87,42 @@ public class PermissionHandler {
 			}
 
 			plugin.getServerDataFile().getData().set("TimedPermissions", null);
+		}
+	}
+
+
+	void scheduleExpiration(PlayerPermissionHandler handle, String permission, long expectedExpireAt, long delayMillis) {
+		if (!acceptingExpirations.get()) return;
+		try {
+			timer.schedule(() -> dispatchExpiration(handle, permission, expectedExpireAt),
+					Math.max(0L, delayMillis), java.util.concurrent.TimeUnit.MILLISECONDS);
+		} catch (RuntimeException failure) {
+			plugin.debug(failure);
+			throw failure;
+		}
+	}
+
+	private void dispatchExpiration(PlayerPermissionHandler handle, String permission, long expectedExpireAt) {
+		if (!acceptingExpirations.get() || !handle.isExpirationCurrent(permission, expectedExpireAt)) return;
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, () -> {
+				if (!acceptingExpirations.get() || !handle.isExpirationCurrent(permission, expectedExpireAt)) return;
+				Player player = Bukkit.getPlayer(handle.getUuid());
+				if (player == null) {
+					handle.expirePermission(permission, expectedExpireAt, false);
+					return;
+				}
+				try {
+					plugin.getBukkitScheduler().runTask(plugin, () -> {
+						if (!acceptingExpirations.get()) return;
+						handle.expirePermission(permission, expectedExpireAt, true);
+					}, player);
+				} catch (RuntimeException failure) {
+					plugin.debug(failure);
+				}
+			});
+		} catch (RuntimeException failure) {
+			plugin.debug(failure);
 		}
 	}
 
@@ -273,6 +311,10 @@ public class PermissionHandler {
 	 * Persists timed permissions for both online + offline handlers.
 	 */
 	public void shutDown() {
+		// Fence every timer/global/entity callback before taking persistence snapshots.
+		// A callback already inside a handler monitor finishes before timedPermissionSnapshot().
+		acceptingExpirations.set(false);
+		timer.shutdownNow();
 		saveTimedPerms(perms);
 		saveTimedPerms(permsToAdd);
 		plugin.getServerDataFile().saveData();
@@ -280,16 +322,13 @@ public class PermissionHandler {
 
 	private void saveTimedPerms(ConcurrentHashMap<UUID, PlayerPermissionHandler> map) {
 		for (PlayerPermissionHandler handle : map.values()) {
-			if (handle.getTimedPermissions() == null || handle.getTimedPermissions().isEmpty()) {
-				continue;
-			}
+			java.util.Map<String, Long> snapshot = handle.timedPermissionSnapshot();
+			if (snapshot.isEmpty()) continue;
 
 			ArrayList<String> list = new ArrayList<>();
-			for (Entry<String, Long> entry : handle.getTimedPermissions().entrySet()) {
-				// Store absolute expireAtMillis
+			for (Entry<String, Long> entry : snapshot.entrySet()) {
 				list.add(entry.getKey() + "%line%" + entry.getValue());
 			}
-
 			plugin.getServerDataFile().getData().set("TimedPermissions." + handle.getUuid(), list);
 		}
 	}

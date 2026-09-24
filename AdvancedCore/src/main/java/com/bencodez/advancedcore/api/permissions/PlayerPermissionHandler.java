@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachment;
@@ -70,7 +69,7 @@ public class PlayerPermissionHandler {
 	 * @param duration How long the permission should last
 	 * @return this
 	 */
-	public PlayerPermissionHandler addExpiration(String perm, ParsedDuration duration) {
+	public synchronized PlayerPermissionHandler addExpiration(String perm, ParsedDuration duration) {
 		if (duration == null || duration.isEmpty()) {
 			return addPerm(perm);
 		}
@@ -87,7 +86,7 @@ public class PlayerPermissionHandler {
 		}
 
 		long delayMillis = duration.delayMillisFromNow();
-		handler.getTimer().schedule(() -> removePermission(perm), delayMillis, TimeUnit.MILLISECONDS);
+		handler.scheduleExpiration(this, perm, expireAt, delayMillis);
 
 		return this;
 	}
@@ -106,7 +105,7 @@ public class PlayerPermissionHandler {
 	 * @param duration Duration; empty means permanent
 	 * @return this
 	 */
-	public PlayerPermissionHandler addOfflinePerm(String perm, ParsedDuration duration) {
+	public synchronized PlayerPermissionHandler addOfflinePerm(String perm, ParsedDuration duration) {
 		if (permsToAdd == null) {
 			permsToAdd = new HashMap<>();
 		}
@@ -128,7 +127,7 @@ public class PlayerPermissionHandler {
 	 * @param perm Permission node
 	 * @return this
 	 */
-	public PlayerPermissionHandler addPerm(String perm) {
+	public synchronized PlayerPermissionHandler addPerm(String perm) {
 		persistentPermissions.add(perm);
 
 		if (attachment != null) {
@@ -141,7 +140,7 @@ public class PlayerPermissionHandler {
 	/**
 	 * Re-applies stored permissions after an attachment is created on login.
 	 */
-	public void onLogin(Player player) {
+	public synchronized void onLogin(Player player) {
 		if (attachment == null) {
 			return;
 		}
@@ -184,10 +183,44 @@ public class PlayerPermissionHandler {
 		// intentionally empty
 	}
 
+
+	/** True only while this exact scheduled expiration still owns the timed grant. */
+	synchronized java.util.Map<String, Long> timedPermissionSnapshot() {
+		return timedPermissions == null ? java.util.Map.of() : new java.util.HashMap<>(timedPermissions);
+	}
+
+	synchronized boolean isExpirationCurrent(String perm, long expectedExpireAt) {
+		if (timedPermissions == null) return false;
+		Long current = timedPermissions.get(perm);
+		return current != null && current.longValue() == expectedExpireAt;
+	}
+
+	/**
+	 * Expire only the scheduled grant that still owns this permission. The
+	 * attachment flag is true only from the player's owning platform scheduler.
+	 */
+	synchronized void expirePermission(String perm, long expectedExpireAt, boolean updateAttachment) {
+		if (timedPermissions == null) return;
+		Long current = timedPermissions.get(perm);
+		if (current == null || current.longValue() != expectedExpireAt) return;
+		if (!timedPermissions.remove(perm, current)) return;
+		persistentPermissions.remove(perm);
+		if (permsToAdd != null) permsToAdd.remove(perm);
+		if (updateAttachment && attachment != null) attachment.unsetPermission(perm);
+		removeHandlerIfEmpty();
+	}
+
+	private void removeHandlerIfEmpty() {
+		boolean noTracked = persistentPermissions.isEmpty()
+				&& (timedPermissions == null || timedPermissions.isEmpty())
+				&& (permsToAdd == null || permsToAdd.isEmpty());
+		if (noTracked && (attachment == null || attachment.getPermissions().isEmpty())) handler.removePermission(uuid);
+	}
+
 	/**
 	 * Removes a permission from both internal tracking and the live attachment (if online).
 	 */
-	public void removePermission(String perm) {
+	public synchronized void removePermission(String perm) {
 		persistentPermissions.remove(perm);
 		if (timedPermissions != null) {
 			timedPermissions.remove(perm);
@@ -201,13 +234,6 @@ public class PlayerPermissionHandler {
 			attachment.getPermissions().remove(perm);
 		}
 
-		// If nothing tracked and attachment has nothing, drop handler state entirely
-		boolean noTracked = persistentPermissions.isEmpty()
-				&& (timedPermissions == null || timedPermissions.isEmpty())
-				&& (permsToAdd == null || permsToAdd.isEmpty());
-
-		if (noTracked && attachment != null && attachment.getPermissions().isEmpty()) {
-			handler.removePermission(uuid);
-		}
+		removeHandlerIfEmpty();
 	}
 }
