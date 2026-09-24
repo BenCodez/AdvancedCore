@@ -2,6 +2,7 @@ package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -18,10 +19,56 @@ import org.mockito.MockedStatic;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class UserDataManagerCacheCleanupThreadingTest {
+	@Test
+	void noServerCaptureSkipsBukkitOnlinePlayerLookup() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		java.util.concurrent.ScheduledExecutorService worker = mock(java.util.concurrent.ScheduledExecutorService.class);
+		java.lang.reflect.Field timerField = UserDataManager.class.getDeclaredField("timer");
+		timerField.setAccessible(true);
+		timerField.set(manager, worker);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(null);
+			manager.clearNonNeededCachedUsers();
+			bukkit.verify(Bukkit::getOnlinePlayers, never());
+			verify(worker).execute(any(Runnable.class));
+		}
+	}
+
+	@Test
+	void failedSharedRetirementReopensMappedCache() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isEnabled()).thenReturn(true);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		java.util.concurrent.ScheduledExecutorService worker = mock(java.util.concurrent.ScheduledExecutorService.class);
+		java.lang.reflect.Field timerField = UserDataManager.class.getDeclaredField("timer");
+		timerField.setAccessible(true);
+		timerField.set(manager, worker);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		manager.bindSharedSqlBackend(backend, (uuid, operation) -> operation.run());
+		UUID uuid = UUID.randomUUID();
+		UserDataCache cache = mock(UserDataCache.class);
+		when(cache.getSharedSnapshotVersion()).thenReturn(1L);
+		doThrow(new IllegalStateException("unflushed work")).when(cache).retireAfterSharedFlush();
+		manager.getUserDataCache().put(uuid, cache);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(null);
+			ArgumentCaptor<Runnable> storage = ArgumentCaptor.forClass(Runnable.class);
+			manager.clearNonNeededCachedUsers();
+			verify(worker).execute(storage.capture());
+			assertThrows(IllegalStateException.class, storage.getValue()::run);
+			verify(cache).cancelRemoval();
+			assertTrue(manager.containsKey(uuid));
+		}
+	}
+
 	@Test
 	void platformSchedulerRejectionDoesNotStopLaterCleanupAttempts() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);

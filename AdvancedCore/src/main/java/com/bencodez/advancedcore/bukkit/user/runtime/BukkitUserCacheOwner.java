@@ -156,7 +156,9 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     }
 
     @Override public void requireBlockingAllowed() {
-        if (Bukkit.getServer() != null && Bukkit.isPrimaryThread()) throw new IllegalStateException("Shared user storage must run on a worker; use closeAsync for shutdown");
+        if ((Bukkit.getServer() != null && Bukkit.isPrimaryThread()) || manager.isPlatformOwnedThread()) {
+            throw new IllegalStateException("Shared user storage must run on a worker; use closeAsync for shutdown");
+        }
     }
 
     @Override public boolean isCached(UUID uuid) { return manager.isCached(uuid); }

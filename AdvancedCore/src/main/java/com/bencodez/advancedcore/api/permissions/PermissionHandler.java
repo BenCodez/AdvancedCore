@@ -6,6 +6,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
@@ -49,9 +50,12 @@ public class PermissionHandler {
 
 	@Getter
 	private final ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
+	private final AtomicBoolean acceptingExpirations = new AtomicBoolean(true);
+	private final Object[] stateLocks = new Object[64];
 
 	public PermissionHandler(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
+		for (int i = 0; i < stateLocks.length; i++) stateLocks[i] = new Object();
 
 		// Restore timed permissions from previous shutdown (stored as expireAtMillis)
 		if (plugin.getServerDataFile().getData() != null
@@ -88,6 +92,63 @@ public class PermissionHandler {
 		}
 	}
 
+
+	void scheduleExpiration(PlayerPermissionHandler handle, String permission, long expectedExpireAt, long delayMillis) {
+		if (!acceptingExpirations.get()) return;
+		try {
+			timer.schedule(() -> dispatchExpiration(handle, permission, expectedExpireAt),
+					Math.max(0L, delayMillis), java.util.concurrent.TimeUnit.MILLISECONDS);
+		} catch (RuntimeException failure) {
+			plugin.debug(failure);
+			throw failure;
+		}
+	}
+
+	void dispatchExpiration(PlayerPermissionHandler handle, String permission, long expectedExpireAt) {
+		if (!acceptingExpirations.get() || !handle.isExpirationCurrent(permission, expectedExpireAt)) return;
+		try {
+			plugin.getBukkitScheduler().runTask(plugin, () -> {
+				if (!acceptingExpirations.get() || !handle.isExpirationCurrent(permission, expectedExpireAt)) return;
+				Player player = Bukkit.getPlayer(handle.getUuid());
+				if (player == null) {
+					expireOfflineOrRetry(handle, permission, expectedExpireAt);
+					return;
+				}
+				try {
+					plugin.getBukkitScheduler().runTask(plugin, () -> {
+						if (!acceptingExpirations.get()) return;
+						handle.expirePermission(permission, expectedExpireAt, true);
+					}, player);
+				} catch (RuntimeException failure) {
+					plugin.debug(failure);
+					retryExpiration(handle, permission, expectedExpireAt);
+				}
+			});
+		} catch (RuntimeException failure) {
+			plugin.debug(failure);
+			retryExpiration(handle, permission, expectedExpireAt);
+		}
+	}
+
+	private void expireOfflineOrRetry(PlayerPermissionHandler handle, String permission, long expectedExpireAt) {
+		boolean active;
+		UUID uuid = handle.getUuid();
+		synchronized (stateLock(uuid)) {
+			if (permsToAdd.get(uuid) == handle) {
+				handle.expirePermission(permission, expectedExpireAt, false);
+				return;
+			}
+			active = perms.get(uuid) == handle;
+		}
+		if (active) retryExpiration(handle, permission, expectedExpireAt);
+	}
+
+	private void retryExpiration(PlayerPermissionHandler handle, String permission, long expectedExpireAt) {
+		if (!acceptingExpirations.get() || !handle.isExpirationCurrent(permission, expectedExpireAt)) return;
+		try { scheduleExpiration(handle, permission, expectedExpireAt, 1_000L); }
+		catch (RuntimeException ignored) { /* scheduleExpiration already reported the rejection */ }
+	}
+
 	public void addPermission(Player player, String permission) {
 		addPermission(player.getUniqueId(), permission);
 	}
@@ -115,22 +176,32 @@ public class PermissionHandler {
 			return;
 		}
 
-		for (String perm : permission.split(Pattern.quote("|"))) {
-			PlayerPermissionHandler handle = perms.get(uuid);
+		synchronized (stateLock(uuid)) {
+			for (String perm : permission.split(Pattern.quote("|"))) {
+				PlayerPermissionHandler handle = perms.get(uuid);
 
-			if (handle != null) {
-				handle.addPerm(perm);
-				continue;
-			}
+				if (handle != null) {
+					handle.addPerm(perm);
+					continue;
+				}
+				PlayerPermissionHandler pending = permsToAdd.get(uuid);
+				if (pending != null) {
+					pending.addOfflinePerm(perm, ParsedDuration.empty());
+					continue;
+				}
 
-			Player p = Bukkit.getPlayer(uuid);
-			if (p != null) {
-				PermissionAttachment attachment = p.addAttachment(plugin);
-				PlayerPermissionHandler newHandle = new PlayerPermissionHandler(uuid, attachment, this).addPerm(perm);
-				perms.put(uuid, newHandle);
-			} else {
-				permsToAdd.put(uuid,
-						new PlayerPermissionHandler(uuid, null, this).addOfflinePerm(perm, ParsedDuration.empty()));
+				Player p = Bukkit.getPlayer(uuid);
+				if (p != null) {
+					PermissionAttachment attachment = p.addAttachment(plugin);
+					PlayerPermissionHandler newHandle = new PlayerPermissionHandler(uuid, attachment, this).addPerm(perm);
+					perms.put(uuid, newHandle);
+				} else {
+					permsToAdd.compute(uuid, (ignored, existing) -> {
+						PlayerPermissionHandler target = existing == null
+								? new PlayerPermissionHandler(uuid, null, this) : existing;
+						return target.addOfflinePerm(perm, ParsedDuration.empty());
+					});
+				}
 			}
 		}
 	}
@@ -152,22 +223,33 @@ public class PermissionHandler {
 			return;
 		}
 
-		for (String perm : permission.split(Pattern.quote("|"))) {
-			PlayerPermissionHandler handle = perms.get(uuid);
+		synchronized (stateLock(uuid)) {
+			for (String perm : permission.split(Pattern.quote("|"))) {
+				PlayerPermissionHandler handle = perms.get(uuid);
 
-			if (handle != null) {
-				handle.addExpiration(perm, duration);
-				continue;
-			}
+				if (handle != null) {
+					handle.addExpiration(perm, duration);
+					continue;
+				}
+				PlayerPermissionHandler pending = permsToAdd.get(uuid);
+				if (pending != null) {
+					pending.addOfflinePerm(perm, duration);
+					continue;
+				}
 
-			Player p = Bukkit.getPlayer(uuid);
-			if (p != null) {
-				PermissionAttachment attachment = p.addAttachment(plugin);
-				PlayerPermissionHandler newHandle = new PlayerPermissionHandler(uuid, attachment, this)
-						.addExpiration(perm, duration);
-				perms.put(uuid, newHandle);
-			} else {
-				permsToAdd.put(uuid, new PlayerPermissionHandler(uuid, null, this).addOfflinePerm(perm, duration));
+				Player p = Bukkit.getPlayer(uuid);
+				if (p != null) {
+					PermissionAttachment attachment = p.addAttachment(plugin);
+					PlayerPermissionHandler newHandle = new PlayerPermissionHandler(uuid, attachment, this)
+							.addExpiration(perm, duration);
+					perms.put(uuid, newHandle);
+				} else {
+					permsToAdd.compute(uuid, (ignored, existing) -> {
+						PlayerPermissionHandler target = existing == null
+								? new PlayerPermissionHandler(uuid, null, this) : existing;
+						return target.addOfflinePerm(perm, duration);
+					});
+				}
 			}
 		}
 	}
@@ -188,19 +270,20 @@ public class PermissionHandler {
 	 */
 	public void login(Player player) {
 		UUID uuid = player.getUniqueId();
+		synchronized (stateLock(uuid)) {
+			PlayerPermissionHandler handle = perms.get(uuid);
+			if (handle != null) {
+				handle.setAttachment(player.addAttachment(plugin));
+				handle.onLogin(player);
+				return;
+			}
 
-		PlayerPermissionHandler handle = perms.get(uuid);
-		if (handle != null) {
-			handle.setAttachment(player.addAttachment(plugin));
-			handle.onLogin(player);
-			return;
-		}
-
-		PlayerPermissionHandler pending = permsToAdd.remove(uuid);
-		if (pending != null) {
-			pending.setAttachment(player.addAttachment(plugin));
-			pending.onLogin(player);
-			perms.put(uuid, pending);
+			PlayerPermissionHandler pending = permsToAdd.remove(uuid);
+			if (pending != null) {
+				pending.setAttachment(player.addAttachment(plugin));
+				pending.onLogin(player);
+				perms.put(uuid, pending);
+			}
 		}
 	}
 
@@ -213,26 +296,46 @@ public class PermissionHandler {
 	 * </p>
 	 */
 	public void logout(Player player) {
-		PlayerPermissionHandler handle = perms.remove(player.getUniqueId());
-		if (handle == null) {
-			return;
-		}
+		UUID uuid = player.getUniqueId();
+		synchronized (stateLock(uuid)) {
+			PlayerPermissionHandler handle = perms.remove(uuid);
+			if (handle == null) return;
 
-		try {
-			if (handle.getAttachment() != null) {
-				player.removeAttachment(handle.getAttachment());
+			try {
+				if (handle.getAttachment() != null) player.removeAttachment(handle.getAttachment());
+			} catch (Throwable ignored) {
 			}
-		} catch (Throwable ignored) {
-		}
 
-		handle.setAttachment(null);
-		handle.onLogout(player);
-		permsToAdd.put(player.getUniqueId(), handle);
+			handle.setAttachment(null);
+			handle.onLogout(player);
+			permsToAdd.merge(uuid, handle, (pending, moved) -> {
+				java.util.Map<String, Long> queued = pending.offlinePermissionSnapshot();
+				moved.mergeOfflinePermissions(queued);
+				return moved;
+			});
+		}
 	}
 
 	public void removePermission(UUID uuid) {
-		perms.remove(uuid);
-		permsToAdd.remove(uuid);
+		synchronized (stateLock(uuid)) {
+			perms.remove(uuid);
+			permsToAdd.remove(uuid);
+		}
+	}
+
+	void removePermission(UUID uuid, PlayerPermissionHandler expected) {
+		synchronized (stateLock(uuid)) {
+			perms.remove(uuid, expected);
+			permsToAdd.remove(uuid, expected);
+		}
+	}
+
+	void removePermissionIfEmpty(UUID uuid, PlayerPermissionHandler expected, boolean attachmentIsOffline) {
+		synchronized (stateLock(uuid)) {
+			if (!expected.isHandlerEmpty(attachmentIsOffline)) return;
+			perms.remove(uuid, expected);
+			permsToAdd.remove(uuid, expected);
+		}
 	}
 
 	/**
@@ -251,28 +354,34 @@ public class PermissionHandler {
 			return;
 		}
 
-		PlayerPermissionHandler handle = perms.get(uuid);
-		if (handle == null) {
-			handle = permsToAdd.get(uuid);
-		}
-		if (handle == null) {
-			return;
-		}
+		synchronized (stateLock(uuid)) {
+			PlayerPermissionHandler handle = perms.get(uuid);
+			if (handle == null) handle = permsToAdd.get(uuid);
+			if (handle == null) return;
 
-		for (String perm : permission.split(Pattern.quote("|"))) {
-			handle.removePermission(perm);
-			if (playerName != null && !playerName.isEmpty()) {
-				plugin.debug("Removing temp permission " + perm + " from " + playerName);
-			} else {
-				plugin.debug("Removing temp permission " + perm + " from " + uuid);
+			for (String perm : permission.split(Pattern.quote("|"))) {
+				handle.removePermission(perm);
+				if (playerName != null && !playerName.isEmpty()) {
+					plugin.debug("Removing temp permission " + perm + " from " + playerName);
+				} else {
+					plugin.debug("Removing temp permission " + perm + " from " + uuid);
+				}
 			}
 		}
+	}
+
+	private Object stateLock(UUID uuid) {
+		return stateLocks[(uuid.hashCode() & Integer.MAX_VALUE) % stateLocks.length];
 	}
 
 	/**
 	 * Persists timed permissions for both online + offline handlers.
 	 */
 	public void shutDown() {
+		// Fence every timer/global/entity callback before taking persistence snapshots.
+		// A callback already inside a handler monitor finishes before timedPermissionSnapshot().
+		acceptingExpirations.set(false);
+		timer.shutdownNow();
 		saveTimedPerms(perms);
 		saveTimedPerms(permsToAdd);
 		plugin.getServerDataFile().saveData();
@@ -280,16 +389,13 @@ public class PermissionHandler {
 
 	private void saveTimedPerms(ConcurrentHashMap<UUID, PlayerPermissionHandler> map) {
 		for (PlayerPermissionHandler handle : map.values()) {
-			if (handle.getTimedPermissions() == null || handle.getTimedPermissions().isEmpty()) {
-				continue;
-			}
+			java.util.Map<String, Long> snapshot = handle.timedPermissionSnapshot();
+			if (snapshot.isEmpty()) continue;
 
 			ArrayList<String> list = new ArrayList<>();
-			for (Entry<String, Long> entry : handle.getTimedPermissions().entrySet()) {
-				// Store absolute expireAtMillis
+			for (Entry<String, Long> entry : snapshot.entrySet()) {
 				list.add(entry.getKey() + "%line%" + entry.getValue());
 			}
-
 			plugin.getServerDataFile().getData().set("TimedPermissions." + handle.getUuid(), list);
 		}
 	}
