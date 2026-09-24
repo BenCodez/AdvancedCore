@@ -1191,7 +1191,12 @@ public class UserDataManager {
 			}
 		};
 		if (Bukkit.getServer() == null) capture.run();
-		else plugin.getBukkitScheduler().runTask(plugin, capture);
+		else {
+			try { plugin.getBukkitScheduler().runTask(plugin, capture); }
+			catch (RuntimeException failure) {
+				if (plugin != null && plugin.isEnabled()) reportDeferredStorageFailure(failure);
+			}
+		}
 	}
 
 	private UUID onlineStorageUuid(Player player) {
@@ -1210,8 +1215,18 @@ public class UserDataManager {
 		if (uuid != null) onlineUserSessions.add(uuid);
 	}
 
+	/** Capture an online session from a Bukkit/Folia-owned player event. */
+	public void markUserOnline(Player player) {
+		markUserOnline(onlineStorageUuid(player));
+	}
+
 	public void markUserOffline(UUID uuid) {
 		if (uuid != null) onlineUserSessions.remove(uuid);
+	}
+
+	/** Remove an online session from a Bukkit/Folia-owned player event. */
+	public void markUserOffline(Player player) {
+		markUserOffline(onlineStorageUuid(player));
 	}
 
 	private void clearNonNeededCachedUsers(Set<UUID> onlineSnapshot) {
@@ -1253,6 +1268,7 @@ public class UserDataManager {
 		UserDataCache cache = userDataCache.get(uuid);
 		return cache != null && cache.hasPublishedStorageSnapshot() ? cache : null;
 	}
+	public boolean containsKey(UUID uuid) { return userDataCache.containsKey(uuid); }
 	public UserDataCache getCache(UUID uuid) {
 		if (hasSharedSqlBackend() && Bukkit.getServer() != null && Bukkit.isPrimaryThread()) {
 			UserDataCache cache = userDataCache.get(uuid);

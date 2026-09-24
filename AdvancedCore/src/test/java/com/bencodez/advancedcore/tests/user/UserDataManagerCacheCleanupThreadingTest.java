@@ -1,6 +1,7 @@
 package com.bencodez.advancedcore.tests.user;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -19,6 +20,25 @@ import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class UserDataManagerCacheCleanupThreadingTest {
+	@Test
+	void platformSchedulerRejectionDoesNotStopLaterCleanupAttempts() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+		BukkitScheduler scheduler = mock(BukkitScheduler.class);
+		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+		when(plugin.isEnabled()).thenReturn(true);
+		doThrow(new IllegalStateException("scheduler unavailable"))
+				.doNothing().when(scheduler).runTask(eq(plugin), any(Runnable.class));
+		UserDataManager manager = new UserDataManager(plugin);
+		Server server = mock(Server.class);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			assertDoesNotThrow(manager::clearNonNeededCachedUsers);
+			assertDoesNotThrow(manager::clearNonNeededCachedUsers);
+			verify(scheduler, times(2)).runTask(eq(plugin), any(Runnable.class));
+			assertTrue(manager.getLastDeferredStorageFailure() instanceof IllegalStateException);
+		} finally { manager.getTimer().shutdownNow(); }
+	}
+
 	@Test
 	void capturesOnlinePlayersOnlyFromPlatformTask() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
@@ -67,7 +87,9 @@ class UserDataManagerCacheCleanupThreadingTest {
 			verify(scheduler).runTask(eq(plugin), platform.capture());
 			platform.getValue().run();
 			verify(worker).execute(storage.capture());
-			manager.markUserOnline(uuid);
+			org.bukkit.entity.Player player = mock(org.bukkit.entity.Player.class);
+			when(player.getUniqueId()).thenReturn(uuid);
+			manager.markUserOnline(player);
 			storage.getValue().run();
 			assertTrue(manager.containsKey(uuid));
 		}
