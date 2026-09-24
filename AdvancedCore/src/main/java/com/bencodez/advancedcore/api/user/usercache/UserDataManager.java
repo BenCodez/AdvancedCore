@@ -74,6 +74,8 @@ public class UserDataManager {
 	private final Set<UUID> sharedCachePopulations = ConcurrentHashMap.newKeySet();
 	private final Set<UUID> completedSharedCachePopulations = ConcurrentHashMap.newKeySet();
 	private final ConcurrentHashMap<UUID, SharedCachePopulationState> sharedCachePopulationStates = new ConcurrentHashMap<>();
+	/** Live storage identities, maintained from platform join/quit events. */
+	private final Set<UUID> onlineUserSessions = ConcurrentHashMap.newKeySet();
 
 	private static final class SharedCachePopulationState {
 		private long generation;
@@ -1162,19 +1164,91 @@ public class UserDataManager {
 		if (plugin.getStorageType().equals(UserStorage.MYSQL)) plugin.getMysql().clearCacheBasic();
 	}
 
+	/**
+	 * Capture Bukkit-owned online-player state on the platform scheduler, then do
+	 * cache/storage eviction on the user-storage worker.
+	 */
 	public void clearNonNeededCachedUsers() {
+		Runnable capture = () -> {
+			java.util.HashSet<UUID> online = new java.util.HashSet<>();
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				UUID storageUuid = onlineStorageUuid(player);
+				if (storageUuid != null) {
+					online.add(storageUuid);
+					onlineUserSessions.add(storageUuid);
+				}
+			}
+			try {
+				timer.execute(() -> {
+					try { clearNonNeededCachedUsers(online); }
+					catch (RuntimeException | Error failure) {
+						reportDeferredStorageFailure(failure);
+						throw failure;
+					}
+				});
+			} catch (RejectedExecutionException rejected) {
+				if (plugin != null && plugin.isEnabled()) reportDeferredStorageFailure(rejected);
+			}
+		};
+		if (Bukkit.getServer() == null) capture.run();
+		else plugin.getBukkitScheduler().runTask(plugin, capture);
+	}
+
+	private UUID onlineStorageUuid(Player player) {
+		if (player == null) return null;
+		if (plugin.getOptions().isOnlineMode()) return player.getUniqueId();
+		try {
+			String resolved = UuidLookup.getInstance().getUUID(player.getName());
+			return resolved == null || resolved.isEmpty() ? null : UUID.fromString(resolved);
+		} catch (RuntimeException failure) {
+			plugin.debug(failure);
+			return null;
+		}
+	}
+
+	public void markUserOnline(UUID uuid) {
+		if (uuid != null) onlineUserSessions.add(uuid);
+	}
+
+	public void markUserOffline(UUID uuid) {
+		if (uuid != null) onlineUserSessions.remove(uuid);
+	}
+
+	private void clearNonNeededCachedUsers(Set<UUID> onlineSnapshot) {
 		plugin.devDebug("Clearing cache for non online players (if any)");
-		ArrayList<UUID> onlineUUIDS = new ArrayList<>();
-		for (Player p : Bukkit.getOnlinePlayers()) onlineUUIDS.add(p.getUniqueId());
 		int removed = 0;
-		for (UUID uuid : userDataCache.keySet()) {
-			if (!onlineUUIDS.contains(uuid)) { removeCache(uuid, null); removed++; }
+		for (UUID uuid : Set.copyOf(userDataCache.keySet())) {
+			if (onlineSnapshot.contains(uuid) || onlineUserSessions.contains(uuid)) continue;
+			UserDataCache expected = userDataCache.get(uuid);
+			if (expected == null) continue;
+			long expectedVersion = expected.getSharedSnapshotVersion();
+			java.util.concurrent.atomic.AtomicBoolean retired = new java.util.concurrent.atomic.AtomicBoolean();
+			withSharedSqlBackendExclusive(uuid, () -> {
+				if (onlineUserSessions.contains(uuid)) return;
+				UserDataCache current = userDataCache.get(uuid);
+				if (current != expected || current.getSharedSnapshotVersion() != expectedVersion) return;
+				current.beginRemoval();
+				if (onlineUserSessions.contains(uuid)) {
+					current.cancelRemoval();
+					return;
+				}
+				try {
+					current.clearCache();
+					if (sharedSqlRoute != null) current.retireAfterSharedFlush();
+				} catch (RuntimeException | Error failure) {
+					current.cancelRemoval();
+					throw failure;
+				}
+				boolean cacheRemoved = retireSharedCache(uuid, current);
+				Consumer<UUID> listener = sharedCacheRemovalListener;
+				if (cacheRemoved && listener != null) listener.accept(uuid);
+				retired.set(cacheRemoved);
+			});
+			if (retired.get()) removed++;
 		}
 		if (removed > 0) plugin.devDebug("Removed " + removed + " cached users who are no longer online");
 	}
 
-	public boolean containsKey(UUID fromString) { return userDataCache.containsKey(fromString); }
-	/** Return an already-published cache snapshot without creating or populating one. */
 	public UserDataCache getPublishedCache(UUID uuid) {
 		UserDataCache cache = userDataCache.get(uuid);
 		return cache != null && cache.hasPublishedStorageSnapshot() ? cache : null;

@@ -42,6 +42,8 @@ public class PlayerJoinEvent implements Listener {
 			return;
 		}
 
+		try { plugin.getUserManager().getDataManager().markUserOnline(java.util.UUID.fromString(event.getUuid())); }
+		catch (IllegalArgumentException failure) { plugin.debug(failure); }
 		plugin.getUserManager().getDataManager().cacheUser(player.getUniqueId(), player.getName());
 
 		plugin.getBedrockHandle().learn(user);
@@ -157,6 +159,11 @@ public class PlayerJoinEvent implements Listener {
 
 		Player player = event.getPlayer();
 		plugin.debug("Logout: " + player.getName() + " (" + player.getUniqueId() + ")");
+		try {
+			java.util.UUID storageUuid = plugin.getOptions().isOnlineMode() ? player.getUniqueId()
+					: java.util.UUID.fromString(UuidLookup.getInstance().getUUID(player.getName()));
+			plugin.getUserManager().getDataManager().markUserOffline(storageUuid);
+		} catch (RuntimeException failure) { plugin.debug(failure); }
 
 		if (plugin.getPermissionHandler() != null) {
 			plugin.getPermissionHandler().login(player);
