@@ -147,8 +147,6 @@ class MysqlUserBackendSchemaExpansionTest {
             assertTrue(backend.isOpen());
             assertTrue(fixture.numericColumns.contains("VoteRemindersLast"));
             assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith(
-                    "SELECT IS_NULLABLE, COLUMN_DEFAULT")));
-            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith(
                     "ALTER TABLE `Users` MODIFY COLUMN `VoteRemindersLast`")));
         }
         fixture.assertClosed();
@@ -184,6 +182,23 @@ class MysqlUserBackendSchemaExpansionTest {
             assertTrue(backend.isOpen());
             assertTrue(fixture.sql.contains(
                     "ALTER TABLE `Users` MODIFY COLUMN `Balance` DECIMAL(12,2) NULL;"));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbReconcilesSignedBigintWithUnsignedDeclarationWithoutDuplicatingDefault() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("Balance");
+        fixture.numericColumns.add("Balance");
+        fixture.columnTypeNames.put("Balance", "BIGINT");
+        fixture.columnDefaults.put("Balance", "0");
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("Balance", "BIGINT UNSIGNED DEFAULT '0'", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertTrue(fixture.sql.contains(
+                    "ALTER TABLE `Users` MODIFY COLUMN `Balance` BIGINT UNSIGNED NULL DEFAULT '0';"));
         }
         fixture.assertClosed();
     }
@@ -354,6 +369,8 @@ class MysqlUserBackendSchemaExpansionTest {
                         when(result.getString(2)).thenReturn(columnDefaults.get(column));
                         when(result.getString(3)).thenReturn("");
                         when(result.getString(4)).thenReturn("");
+						when(result.getString(5)).thenReturn(columnTypeNames.getOrDefault(column,
+								numericColumns.contains(column) ? "INT" : "VARCHAR"));
                     } else if (query.startsWith("SELECT pg_catalog.pg_get_expr")) {
                         String column = stringParameters[2];
                         String defaultValue = columnDefaults.get(column);
