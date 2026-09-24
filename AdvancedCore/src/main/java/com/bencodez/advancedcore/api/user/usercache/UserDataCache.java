@@ -427,6 +427,13 @@ public class UserDataCache {
 	}
 	public synchronized boolean hasChangesToProcess() { return cachedChanges != null && !cachedChanges.isEmpty(); }
 	public synchronized boolean isCached(String key) { return cache != null && cache.containsKey(key); }
+	/** Return one cache value while holding the same monitor used by retirement/replacement. */
+	public synchronized DataValue getIfPresent(String key) { return cache == null ? null : cache.get(key); }
+	/** Return a stable entry when the key is present, including a present null value. */
+	public synchronized java.util.Map.Entry<String, DataValue> getEntryIfPresent(String key) {
+		if (cache == null || !cache.containsKey(key)) return null;
+		return new java.util.AbstractMap.SimpleImmutableEntry<>(key, cache.get(key));
+	}
 
 	public synchronized void ensureNoLegacyBatchForSharedBinding() {
 		if (sharedStorageWriter == null && inFlightBatches != 0) throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");

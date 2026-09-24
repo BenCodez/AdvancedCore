@@ -141,7 +141,7 @@ public class UserDataTest {
 		when(users.getDataManager()).thenReturn(manager);
 		when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
 		when(manager.mustDeferSharedStorageAccess()).thenReturn(true);
-		when(cache.isCached(anyString())).thenReturn(false);
+		when(cache.getIfPresent(anyString())).thenReturn(null);
 		HashMap<String, DataValue> published = new HashMap<>();
 		published.put("Points", new DataValueInt(42));
 		published.put("PlayerName", new DataValueString("FreshName"));
@@ -151,4 +151,49 @@ public class UserDataTest {
 		assertEquals(42, data.getInt("Points", 17, UserDataFetchMode.DEFAULT));
 		assertEquals("FreshName", data.getString("PlayerName", UserDataFetchMode.DEFAULT));
 	}
+	@Test
+	public void cachedReadUsesAtomicCacheAccessor() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		UserDataCache cache = mock(UserDataCache.class);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getCache()).thenReturn(cache);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
+		when(cache.getIfPresent("Points")).thenReturn(new DataValueInt(23));
+		when(cache.getEntryIfPresent("PlayerName")).thenReturn(
+				new java.util.AbstractMap.SimpleImmutableEntry<>("PlayerName", new DataValueString("Atomic")));
+
+		UserData data = new UserData(user);
+		assertEquals(23, data.getInt("Points", 0, UserDataFetchMode.CACHE_ONLY));
+		assertEquals("Atomic", data.getString("PlayerName", UserDataFetchMode.CACHE_ONLY));
+		verify(cache).getIfPresent("Points");
+		verify(cache).getEntryIfPresent("PlayerName");
+		verify(cache, never()).getCache();
+	}
+
+	@Test
+	public void presentNullStringCacheEntryDoesNotFallThroughToStorage() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		UserDataCache cache = mock(UserDataCache.class);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getCache()).thenReturn(cache);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
+		when(cache.getEntryIfPresent("PlayerName"))
+				.thenReturn(new java.util.AbstractMap.SimpleImmutableEntry<>("PlayerName", null));
+
+		UserData data = new UserData(user);
+		assertEquals("", data.getString("PlayerName", UserDataFetchMode.DEFAULT));
+	}
+
 }
