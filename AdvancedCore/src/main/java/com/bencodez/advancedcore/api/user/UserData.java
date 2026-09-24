@@ -167,10 +167,9 @@ public class UserData {
 				// preserve previous behavior
 				user.cacheIfNeeded();
 
-				if (cache.isCached(key)) {
-					DataValue cv = cache.getCache().get(key);
-					if (cv != null) {
-						if (cv.isInt()) {
+				DataValue cv = cache.getIfPresent(key);
+				if (cv != null) {
+					if (cv.isInt()) {
 							return cv.getInt();
 						}
 						String str = cv.getString();
@@ -181,7 +180,6 @@ public class UserData {
 							}
 						}
 					}
-				}
 			} else {
 				user.cache();
 			}
@@ -290,13 +288,12 @@ public class UserData {
 			UserDataCache cache = user.getCache();
 			sharedReadCache = cache;
 			if (cache != null) {
-				if (cache.isCached(key)) {
-					DataValue cv = cache.getCache().get(key);
-					if (cv != null) {
-						String str = cv.getString();
-						return (str != null) ? str : "";
-					}
-					return "";
+				java.util.Map.Entry<String, DataValue> cached = cache.getEntryIfPresent(key);
+				if (cached != null) {
+					DataValue cv = cached.getValue();
+					if (cv == null) return "";
+					String str = cv.getString();
+					return (str != null) ? str : "";
 				}
 			} else {
 				user.cache();
