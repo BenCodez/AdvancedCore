@@ -744,6 +744,26 @@ class SharedCacheBindingRegressionTest {
         }
     }
 
+    @Test void absentCacheRemovalDoesNotPopulateUserData() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserDataManager manager = new UserDataManager(plugin) {
+            @Override
+            public UserDataCache getCache(UUID requested) {
+                throw new AssertionError("cache eviction must not populate an absent user");
+            }
+        };
+        manager.getTimer().shutdownNow();
+        UUID uuid = UUID.randomUUID();
+        SqlUserBackend backend = mock(SqlUserBackend.class);
+        manager.bindSharedSqlBackend(backend,
+                (id, operation) -> operation.run(),
+                (id, operation) -> operation.run());
+
+        assertDoesNotThrow(() -> manager.removeCache(uuid, null));
+
+        assertFalse(manager.containsKey(uuid));
+    }
+
     @Test void legacyRemovalUsesTheExclusiveSharedAdmission() {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         UserDataManager manager = new UserDataManager(plugin);

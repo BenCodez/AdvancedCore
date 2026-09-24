@@ -1223,7 +1223,9 @@ public class UserDataManager {
 	}
 
 	private void removeCacheExclusively(UUID uuid, boolean shared) {
-		UserDataCache cache = getCache(uuid);
+		// Eviction must only retire an already-published cache. Loading a missing
+		// user from storage just to remove it adds I/O and extends exclusive admission.
+		UserDataCache cache = userDataCache.get(uuid);
 		if (cache != null) {
 			cache.beginRemoval();
 			try {
