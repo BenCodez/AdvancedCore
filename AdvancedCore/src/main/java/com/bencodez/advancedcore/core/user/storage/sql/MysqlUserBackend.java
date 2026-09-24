@@ -473,7 +473,8 @@ public final class MysqlUserBackend implements SqlUserBackend {
             return baseType.equals("TINYINT") || baseType.equals("SMALLINT") || baseType.equals("MEDIUMINT")
                     || baseType.equals("INT") || baseType.equals("INTEGER") || baseType.equals("BIGINT")
                     || baseType.equals("REAL") || baseType.equals("FLOAT") || baseType.equals("DOUBLE")
-                    || baseType.equals("NUMERIC") || baseType.equals("DECIMAL") || baseType.equals("BOOLEAN")
+					|| baseType.equals("NUMERIC") || baseType.equals("DECIMAL") || baseType.equals("DEC")
+					|| baseType.equals("BOOLEAN")
                     || baseType.equals("BOOL") || baseType.equals("BIT");
         }
 
@@ -504,11 +505,15 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
 		private static boolean mysqlDeclaredTypeMatches(String sqlType, RegisteredColumnType registered,
 				MysqlColumnAttributes attributes) {
-			if (!declaredTypeMatches(sqlType, new RegisteredColumnType(registered.jdbcType(),
-					attributes.columnType(), registered.precision(), registered.scale()))) return false;
 			String declared = declaredPhysicalType(sqlType).toUpperCase(java.util.Locale.ROOT);
 			String actual = attributes.columnType() == null ? ""
 					: attributes.columnType().toUpperCase(java.util.Locale.ROOT);
+			RegisteredColumnType actualType = new RegisteredColumnType(registered.jdbcType(),
+					attributes.columnType(), registered.precision(), registered.scale());
+			boolean mysqlBooleanAlias = "BOOLEAN".equals(canonicalType(normalizedBaseType(declared)))
+					&& "TINYINT".equals(normalizedBaseType(actual))
+					&& java.util.Arrays.equals(declaredTypeParameters(actual), new int[] { 1 });
+			if (!mysqlBooleanAlias && !declaredTypeMatches(declared, actualType)) return false;
 			return declared.matches(".*\\bUNSIGNED\\b.*") == actual.matches(".*\\bUNSIGNED\\b.*")
 					&& declared.matches(".*\\bZEROFILL\\b.*") == actual.matches(".*\\bZEROFILL\\b.*");
 		}
@@ -544,10 +549,11 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
         private static int[] declaredTypeParameters(String sqlType) {
             if (sqlType == null) return new int[0];
-            int open = sqlType.indexOf('(');
-            int close = open < 0 ? -1 : sqlType.indexOf(')', open + 1);
+			String physicalType = declaredPhysicalType(sqlType);
+			int open = physicalType.indexOf('(');
+			int close = open < 0 ? -1 : physicalType.indexOf(')', open + 1);
             if (open < 0 || close < 0) return new int[0];
-            String[] values = sqlType.substring(open + 1, close).split(",");
+			String[] values = physicalType.substring(open + 1, close).split(",");
             try {
                 int[] parsed = new int[values.length];
                 for (int i = 0; i < values.length; i++) parsed[i] = Integer.parseInt(values[i].trim());

@@ -203,6 +203,41 @@ class MysqlUserBackendSchemaExpansionTest {
         fixture.assertClosed();
     }
 
+    @Test void mariaDbRetainsBooleanAliasAndIgnoresDefaultExpressionParentheses() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.addAll(List.of("Flag", "Sequence"));
+        fixture.numericColumns.addAll(List.of("Flag", "Sequence"));
+        fixture.columnTypeNames.put("Flag", "TINYINT(1)");
+        fixture.columnTypeNames.put("Sequence", "BIGINT");
+        fixture.columnDefaults.put("Sequence", "(0)");
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("Flag", "BOOLEAN", DataType.STRING)
+                .column("Sequence", "BIGINT DEFAULT (0)", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith("ALTER TABLE")));
+        }
+        fixture.assertClosed();
+    }
+
+    @Test void mariaDbTreatsDecAsDecimalAlias() throws Exception {
+        Fixture fixture = new Fixture(DbType.MARIADB);
+        fixture.existing.add("Balance");
+        fixture.numericColumns.add("Balance");
+        fixture.columnTypeNames.put("Balance", "DECIMAL");
+        fixture.columnPrecisions.put("Balance", 12);
+        fixture.columnScales.put("Balance", 2);
+        SqlUserSchema schema = SqlUserSchema.builder()
+                .column("Balance", "DEC(12,2)", DataType.STRING).build();
+
+        try (var managers = fixture.managers(); var backend = fixture.open(schema)) {
+            assertTrue(backend.isOpen());
+            assertFalse(fixture.sql.stream().anyMatch(sql -> sql.startsWith("ALTER TABLE")));
+        }
+        fixture.assertClosed();
+    }
+
     @Test void mariaDbAcceptsPeerMigrationAfterConflictingAlter() throws Exception {
         Fixture fixture = new Fixture(DbType.MARIADB);
         fixture.existing.add("VoteRemindersLast");
