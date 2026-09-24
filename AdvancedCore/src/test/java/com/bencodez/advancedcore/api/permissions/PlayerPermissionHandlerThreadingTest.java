@@ -46,8 +46,28 @@ class PlayerPermissionHandlerThreadingTest {
 		handler.expirePermission("example.use", expiry, false);
 
 		assertFalse(handler.getTimedPermissions().containsKey("example.use"));
-		verify(attachment, never()).setPermission("example.use", false);
+		verify(attachment, never()).unsetPermission(anyString());
+		verify(attachment, never()).setPermission(anyString(), anyBoolean());
 	}
+
+	@Test
+	void offlineExpirationDropsEmptyHandlerDespiteStaleAttachmentState() {
+		PermissionHandler manager = mock(PermissionHandler.class);
+		PermissionAttachment attachment = mock(PermissionAttachment.class);
+		when(attachment.getPermissions()).thenReturn(java.util.Map.of("example.use", true));
+		UUID uuid = UUID.randomUUID();
+		PlayerPermissionHandler handler = new PlayerPermissionHandler(uuid, attachment, manager);
+		handler.addExpiration("example.use", ParsedDuration.ofMillis(60_000));
+		long expiry = handler.getTimedPermissions().get("example.use");
+		clearInvocations(attachment);
+
+		handler.expirePermission("example.use", expiry, false);
+
+		verify(manager).removePermission(uuid);
+		verify(attachment, never()).unsetPermission(anyString());
+		verify(attachment, never()).setPermission(anyString(), anyBoolean());
+	}
+
 	@Test
 	void expirationClearsAttachmentEntryInsteadOfInstallingDenial() {
 		PermissionHandler manager = mock(PermissionHandler.class);

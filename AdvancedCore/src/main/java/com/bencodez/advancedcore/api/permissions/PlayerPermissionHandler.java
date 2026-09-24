@@ -207,14 +207,16 @@ public class PlayerPermissionHandler {
 		persistentPermissions.remove(perm);
 		if (permsToAdd != null) permsToAdd.remove(perm);
 		if (updateAttachment && attachment != null) attachment.unsetPermission(perm);
-		removeHandlerIfEmpty();
+		removeHandlerIfEmpty(!updateAttachment);
 	}
 
-	private void removeHandlerIfEmpty() {
+	private void removeHandlerIfEmpty(boolean attachmentIsOffline) {
 		boolean noTracked = persistentPermissions.isEmpty()
 				&& (timedPermissions == null || timedPermissions.isEmpty())
 				&& (permsToAdd == null || permsToAdd.isEmpty());
-		if (noTracked && (attachment == null || attachment.getPermissions().isEmpty())) handler.removePermission(uuid);
+		if (noTracked && (attachmentIsOffline || attachment == null || attachment.getPermissions().isEmpty())) {
+			handler.removePermission(uuid);
+		}
 	}
 
 	/**
@@ -234,6 +236,6 @@ public class PlayerPermissionHandler {
 			attachment.getPermissions().remove(perm);
 		}
 
-		removeHandlerIfEmpty();
+		removeHandlerIfEmpty(false);
 	}
 }

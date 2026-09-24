@@ -159,7 +159,7 @@ public class PlayerJoinEvent implements Listener {
 		plugin.debug("Logout: " + player.getName() + " (" + player.getUniqueId() + ")");
 
 		if (plugin.getPermissionHandler() != null) {
-			plugin.getPermissionHandler().login(player);
+			plugin.getPermissionHandler().logout(player);
 		}
 
 		plugin.getLoginTimer().execute(new Runnable() {
