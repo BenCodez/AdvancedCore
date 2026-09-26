@@ -26,6 +26,20 @@ Confirm the current workflow and POM before relying on these commands. Do not us
 
 Treat public classes, constructors, methods, return values, callback threading, configuration shapes, serialized data, and shaded packages as compatibility surfaces. Before changing one, search downstream usage in VotingPlugin and other affected repositories when authorized.
 
+## Compatibility-first change policy
+
+Compatibility is the default acceptance criterion for every new feature, refactor, fix, storage change, and dependency change. Unless the task explicitly authorizes a breaking change:
+
+- Existing plugins embedding or calling AdvancedCore must continue to compile and run without source, configuration, dependency, or deployment changes.
+- Preserve public and de-facto APIs, constructors, overloads, callback/threading behavior, configuration keys/defaults, serialized forms, database semantics, shaded packages, and reflection-visible names used by downstream plugins.
+- New configuration must be additive: existing files remain valid, missing new keys preserve the previous behavior, and no manual config regeneration or edits are required.
+- Existing persisted user data and database state must remain readable. Any required migration must happen automatically, be restart-safe and idempotent, and not require administrators to delete/recreate data.
+- New integrations or platform support must remain optional and must not force unrelated consumers to add dependencies or coordinate upgrades.
+- Verify compatibility against VotingPlugin and other affected downstream usage when a change touches a shared contract.
+- When a compatibility-preserving implementation is not practical, stop and surface the compatibility impact before implementing a breaking path unless the request explicitly permits it.
+
+For compatibility-sensitive changes, keep regression coverage for established behavior in addition to tests for the new behavior.
+
 ## Runtime invariants
 
 1. Never block the Bukkit/Paper/Folia server or region thread on database, network, or long-running filesystem work.
