@@ -150,6 +150,22 @@ public class TimeCheckerTest {
 	}
 
 	@Test
+	public void monthChangeFailSafeRejectsStaleChangeAfterTwelveHours() {
+		when(serverDataFile.getPrevMonth()).thenReturn("DECEMBER");
+		when(options.isTimeChangeFailSafeBypass()).thenReturn(false);
+		when(plugin.getLogger()).thenReturn(Logger.getLogger("TimeCheckerTest"));
+
+		TimeChecker timeChecker = Mockito.spy(new TimeChecker(plugin));
+
+		Mockito.doReturn(LocalDateTime.of(2025, 1, 1, 12, 0)).when(timeChecker).getTime();
+		assertTrue(timeChecker.hasMonthChanged(false));
+
+		Mockito.doReturn(LocalDateTime.of(2025, 1, 1, 12, 0, 1)).when(timeChecker).getTime();
+		assertFalse(timeChecker.hasMonthChanged(false));
+		verify(serverDataFile).setPrevMonth("JANUARY");
+	}
+
+	@Test
 	public void detectedTransitionAdvancesMarkerOnlyAfterSuccessfulDispatch() {
 		TimeChangeTransitionState transition = transitionState();
 		PluginManager pluginManager = configureDetectedDay(transition);

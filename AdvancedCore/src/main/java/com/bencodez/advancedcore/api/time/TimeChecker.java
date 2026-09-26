@@ -242,13 +242,15 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 
 	public boolean hasMonthChanged(boolean set) {
 		String prevMonth = plugin.getServerDataFile().getPrevMonth();
-		String month = getTime().getMonth().toString();
+		LocalDateTime current = getTime();
+		String month = current.getMonth().toString();
 		if (prevMonth.equals(month)) return false;
 		if (set) plugin.getServerDataFile().setPrevMonth(month);
-		if (!plugin.getOptions().isTimeChangeFailSafeBypass() && getTime().getDayOfMonth() > 3) {
+		LocalDateTime graceEnd = current.withDayOfMonth(1).toLocalDate().atStartOfDay().plusHours(12);
+		if (!plugin.getOptions().isTimeChangeFailSafeBypass() && current.isAfter(graceEnd)) {
 			plugin.getLogger().warning(
-					"Detected a month change, but current day is not near end of a month, ignoring month change, "
-							+ getTime().getDayOfMonth());
+					"Detected a month change outside the first 12 hours of the month, ignoring month change: "
+							+ current);
 			plugin.getServerDataFile().setPrevMonth(month);
 			return false;
 		}
