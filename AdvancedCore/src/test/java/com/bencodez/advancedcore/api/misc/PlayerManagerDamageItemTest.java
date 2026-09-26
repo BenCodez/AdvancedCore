@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -50,6 +51,18 @@ class PlayerManagerDamageItemTest {
 		when(fixture.meta.isUnbreakable()).thenReturn(true);
 		assertFalse(manager.damageItemInHand(fixture.player, 100));
 		verify(fixture.item, never()).setItemMeta(any());
+	}
+
+	@Test
+	void removesItemWhenDamageReachesMaterialLimit() {
+		Fixture fixture = new Fixture(Material.LEGACY_WOOD_SWORD.getMaxDurability() - 1);
+		try (MockedStatic<MiscUtils> misc = mockStatic(MiscUtils.class)) {
+			misc.when(MiscUtils::getInstance).thenReturn(mock(MiscUtils.class));
+			when(fixture.item.getEnchantmentLevel(null)).thenReturn(0);
+			assertFalse(manager.damageItemInHand(fixture.player, 1));
+			verify(fixture.inventory).setItemInMainHand(argThat(item -> item.getType() == Material.AIR));
+			verify(fixture.meta, never()).setDamage(anyInt());
+		}
 	}
 
 	@Test

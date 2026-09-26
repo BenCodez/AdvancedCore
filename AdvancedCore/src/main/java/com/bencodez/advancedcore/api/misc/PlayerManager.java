@@ -64,7 +64,7 @@ public class PlayerManager {
 			int level = itemInHand.getEnchantmentLevel(MiscUtils.getInstance().getEnchant("UNBREAKING", "DURABILITY"));
 			int chance = (int) (100L / (Math.max(0, (long) level) + 1));
 			long currentDamage = Math.max(0L, dMeta.getDamage());
-			long hitsToBreak = Math.max(1L, (long) itemInHand.getType().getMaxDurability() - currentDamage + 1);
+			long hitsToBreak = Math.max(1L, (long) itemInHand.getType().getMaxDurability() - currentDamage);
 			int addedDamage = sampleDamage(damage, chance, hitsToBreak, ThreadLocalRandom.current());
 			if (addedDamage > 0) {
 				if (addedDamage >= hitsToBreak) {
