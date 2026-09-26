@@ -367,6 +367,10 @@ public class BungeeTimeCheckerTest {
 
 		assertTrue(result);
 		verify(timeChecker).setPrevMonth("NOVEMBER");
+
+		Mockito.doReturn(LocalDateTime.of(2023, 11, 1, 12, 0, 1)).when(timeChecker).getTime();
+		assertFalse(timeChecker.hasMonthChanged(false));
+		verify(timeChecker, Mockito.times(2)).setPrevMonth("NOVEMBER");
 	}
 
 	@Test
