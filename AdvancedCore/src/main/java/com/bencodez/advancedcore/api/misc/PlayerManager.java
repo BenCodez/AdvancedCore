@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.misc;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.random.RandomGenerator;
 import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
@@ -38,35 +39,77 @@ public class PlayerManager {
 	}
 
 	public boolean damageItemInHand(Player player, int damage) {
+		if (player == null || player.getInventory() == null) {
+			return false;
+		}
 		ItemStack itemInHand = player.getInventory().getItemInMainHand();
+		if (itemInHand == null || itemInHand.getType() == Material.AIR) {
+			return false;
+		}
 		ItemMeta meta = itemInHand.getItemMeta();
+		if (!(meta instanceof Damageable)) {
+			return false;
+		}
 		boolean isUnbreakable = false;
 		try {
 			isUnbreakable = meta.isUnbreakable();
 		} catch (NoSuchMethodError e) {
 			// Older versions don't have isUnbreakable(), ignore safely
 		}
-		if (meta instanceof Damageable && !isUnbreakable) {
+		if (!isUnbreakable) {
 			Damageable dMeta = (Damageable) meta;
-			int level = itemInHand.getEnchantmentLevel(MiscUtils.getInstance().getEnchant("UNBREAKING", "DURABILITY"));
-			int chance = (100 / (level + 1));
-			int addedDamage = 0;
-			for (int i = 0; i < damage; i++) {
-				if (chance == 100 || ThreadLocalRandom.current().nextInt(100) < chance) {
-					addedDamage++;
-				}
+			if (damage <= 0) {
+				return true;
 			}
+			int level = itemInHand.getEnchantmentLevel(MiscUtils.getInstance().getEnchant("UNBREAKING", "DURABILITY"));
+			int chance = (int) (100L / (Math.max(0, (long) level) + 1));
+			long currentDamage = Math.max(0L, dMeta.getDamage());
+			long hitsToBreak = Math.max(1L, (long) itemInHand.getType().getMaxDurability() - currentDamage);
+			int addedDamage = sampleDamage(damage, chance, hitsToBreak, ThreadLocalRandom.current());
 			if (addedDamage > 0) {
-				dMeta.setDamage(dMeta.getDamage() + addedDamage);
-				itemInHand.setItemMeta(dMeta);
-				if (dMeta.getDamage() > (itemInHand.getType().getMaxDurability())) {
+				if (addedDamage >= hitsToBreak) {
 					player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
 					return false;
 				}
+				dMeta.setDamage((int) (currentDamage + addedDamage));
+				itemInHand.setItemMeta(dMeta);
 			}
 			return true;
 		}
 		return false;
+	}
+
+	// The cap is the number of successful hits needed to remove the item.
+	static int sampleDamage(int attempts, int chance, long cap, RandomGenerator random) {
+		if (attempts <= 0 || chance <= 0) {
+			return 0;
+		}
+		int limit = (int) Math.min(cap, (long) attempts);
+		if (chance >= 100) {
+			return limit;
+		}
+		int hits = 0;
+		if (attempts <= 256) {
+			for (int i = 0; i < attempts && hits < limit; i++) {
+				if (random.nextInt(100) < chance) {
+					hits++;
+				}
+			}
+			return hits;
+		}
+		// Geometric gaps count failures before each success. Work is bounded by the
+		// item's remaining durability rather than the attacker supplied attempts.
+		double logFailure = Math.log1p(-chance / 100.0);
+		long remaining = attempts;
+		while (hits < limit && remaining > 0) {
+			long failures = (long) Math.floor(Math.log1p(-random.nextDouble()) / logFailure);
+			if (failures >= remaining) {
+				break;
+			}
+			remaining -= failures + 1;
+			hits++;
+		}
+		return hits;
 	}
 
 	/**
