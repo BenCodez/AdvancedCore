@@ -175,6 +175,15 @@ public class RewardBuilder {
 		return this;
 	}
 
+	/**
+	 * Adds a value used only by formatted reward output while preserving the raw
+	 * placeholder for commands and other exact-value actions.
+	 */
+	public RewardBuilder withDisplayPlaceHolder(String toReplace, String replaceWith) {
+		RewardDisplayPlaceholders.put(this.rewardOptions.getPlaceholders(), toReplace, replaceWith);
+		return this;
+	}
+
 	public RewardBuilder withPrefix(String prefix) {
 		this.rewardOptions.setPrefix(prefix);
 		return this;

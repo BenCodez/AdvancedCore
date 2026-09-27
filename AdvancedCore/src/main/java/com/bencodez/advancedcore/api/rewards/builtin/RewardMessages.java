@@ -14,6 +14,7 @@ import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditMessages;
@@ -33,7 +34,7 @@ public final class RewardMessages {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
                     HashMap<String, String> placeholders) {
-                user.sendMessage(value, placeholders);
+				sendPlayerMessage(user, value, placeholders);
                 return null;
             }
 		}.requiresPlayerWhen((data, placeholders) -> !data.getString("Message", "").isEmpty())
@@ -56,7 +57,7 @@ public final class RewardMessages {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
                     HashMap<String, String> placeholders) {
-                user.sendMessage(value, placeholders);
+				sendPlayerMessages(user, value, placeholders);
 				return null;
 			}
 		}.requiresPlayerWhen((data, placeholders) -> !data.getStringList("Messages.Player").isEmpty()));
@@ -65,7 +66,7 @@ public final class RewardMessages {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
                     HashMap<String, String> placeholders) {
-                user.sendMessage(value, placeholders);
+				sendPlayerMessages(user, value, placeholders);
 				return null;
 			}
 		}.requiresPlayerWhen((data, placeholders) -> !data.getStringList("Message").isEmpty()));
@@ -74,7 +75,7 @@ public final class RewardMessages {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
                     HashMap<String, String> placeholders) {
-                user.sendMessage(value.get(ThreadLocalRandom.current().nextInt(0, value.size())), placeholders);
+				sendPlayerMessage(user, value.get(ThreadLocalRandom.current().nextInt(0, value.size())), placeholders);
 				return null;
 			}
 		}.requiresPlayerWhen((data, placeholders) -> !data.getStringList("RandomMessage").isEmpty()));
@@ -83,7 +84,7 @@ public final class RewardMessages {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, String value,
                     HashMap<String, String> placeholders) {
-                user.sendMessage(value, placeholders);
+				sendPlayerMessage(user, value, placeholders);
                 return null;
             }
 		}.requiresPlayerWhen((data, placeholders) -> !data.getString("Messages.Player", "").isEmpty())
@@ -105,8 +106,7 @@ public final class RewardMessages {
                     return null;
                 }
                 for (String message : value) {
-                    MiscUtils.getInstance().broadcast(PlaceholderUtils.replacePlaceHolders(user.getPlayer(),
-                            PlaceholderUtils.replacePlaceHolder(message, placeholders)));
+					broadcast(user, message, placeholders);
                 }
                 return null;
             }
@@ -120,8 +120,7 @@ public final class RewardMessages {
                     debug("Not broadcasting for " + user.getPlayerName() + ", in blacklist");
                     return null;
                 }
-                MiscUtils.getInstance().broadcast(PlaceholderUtils.replacePlaceHolders(user.getPlayer(),
-                        PlaceholderUtils.replacePlaceHolder(value, placeholders)));
+				broadcast(user, value, placeholders);
                 return null;
             }
         }.validator(new RewardInjectValidator() {
@@ -133,6 +132,39 @@ public final class RewardMessages {
             }
         }));
     }
+
+	private static void sendPlayerMessage(AdvancedCoreUser user, String message,
+			HashMap<String, String> placeholders) {
+		if (RewardDisplayPlaceholders.hasDisplayValues(placeholders)) {
+			user.sendPreparedMessage(
+					RewardDisplayPlaceholders.replaceFormattedMessage(user.getPlayer(), message, placeholders));
+		} else {
+			user.sendMessage(message, placeholders);
+		}
+	}
+
+	private static void sendPlayerMessages(AdvancedCoreUser user, ArrayList<String> messages,
+			HashMap<String, String> placeholders) {
+		if (RewardDisplayPlaceholders.hasDisplayValues(placeholders)) {
+			for (String message : messages) sendPlayerMessage(user, message, placeholders);
+		} else {
+			user.sendMessage(messages, placeholders);
+		}
+	}
+
+	private static void broadcast(AdvancedCoreUser user, String message, HashMap<String, String> placeholders) {
+		MiscUtils misc = MiscUtils.getInstance();
+		if (RewardDisplayPlaceholders.hasDisplayValues(placeholders)) {
+			misc.broadcastPrepared(
+					player -> RewardDisplayPlaceholders.replaceFormattedBroadcast(
+							user.getPlayer(), player, message, placeholders),
+					RewardDisplayPlaceholders.replaceFormattedBroadcast(
+							user.getPlayer(), null, message, placeholders));
+		} else {
+			misc.broadcast(PlaceholderUtils.replacePlaceHolders(user.getPlayer(),
+					PlaceholderUtils.replacePlaceHolder(message, placeholders)));
+		}
+	}
 
     private static RewardInjectValidator playerMessageValidator() {
         return new RewardInjectValidator() {

@@ -21,6 +21,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -115,6 +116,26 @@ public class MiscUtils {
 				}
 			}
 			Bukkit.getServer().getConsoleSender().sendMessage(MessageAPI.colorize(consoleMsg));
+		}
+	}
+
+	/**
+	 * Broadcasts messages that have already been rendered for each player. The
+	 * renderer must preserve exact interactive attributes because this method only
+	 * parses the resulting message structure.
+	 */
+	public void broadcastPrepared(Function<Player, String> renderer, String consoleMessage) {
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			String message = renderer.apply(player);
+			if (message == null || message.isEmpty()) continue;
+			for (String str1 : message.split(Pattern.quote("%newline%"))) {
+				for (String str : str1.split(Pattern.quote("%NewLine%"))) {
+					PlayerUtils.getServerHandle().sendMessage(player, PlaceholderUtils.parseJson(str));
+				}
+			}
+		}
+		if (consoleMessage != null && !consoleMessage.isEmpty()) {
+			Bukkit.getServer().getConsoleSender().sendMessage(MessageAPI.colorize(consoleMessage));
 		}
 	}
 

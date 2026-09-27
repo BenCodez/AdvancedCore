@@ -2688,6 +2688,19 @@ public class AdvancedCoreUser {
 		}
 	}
 
+	/** Sends an action bar whose configured formatting is already rendered. */
+	public void sendPreparedActionBar(String msg, int delay) {
+		if (msg == null || msg.isEmpty()) return;
+		Player player = getPlayer();
+		if (player == null) return;
+		try {
+			new ActionBar(msg, delay).send(player);
+		} catch (Exception ex) {
+			plugin.debug("Failed to send ActionBar, turn debug on to see stack trace");
+			plugin.debug(ex);
+		}
+	}
+
 	/**
 	 * Send boss bar.
 	 *
@@ -2710,6 +2723,20 @@ public class AdvancedCoreUser {
 					plugin.debug(ex);
 				}
 			}
+		}
+	}
+
+	/** Sends a boss bar whose configured formatting is already rendered. */
+	public void sendPreparedBossBar(String msg, String color, String style, double progress, int delay) {
+		if (msg == null || msg.isEmpty()) return;
+		Player player = getPlayer();
+		if (player == null) return;
+		try {
+			BossBar bossBar = new BossBar(msg, color, style, progress);
+			bossBar.send(player, delay);
+		} catch (Exception ex) {
+			plugin.debug("Failed to send BossBar");
+			plugin.debug(ex);
 		}
 	}
 
@@ -2800,6 +2827,20 @@ public class AdvancedCoreUser {
 	}
 
 	/**
+	 * Sends a message whose visible text and exact interactive attributes have
+	 * already been rendered. This method performs JSON parsing only.
+	 *
+	 * @param msg prepared message
+	 */
+	public void sendPreparedMessage(String msg) {
+		Player player = getPlayer();
+		if (player == null || msg == null || msg.isEmpty()) return;
+		for (String str : msg.split("%NewLine%")) {
+			PlayerUtils.getServerHandle().sendMessage(player, PlaceholderUtils.parseJson(str));
+		}
+	}
+
+	/**
 	 * Sends a message with placeholders to the player.
 	 *
 	 * @param msg          the message
@@ -2869,6 +2910,18 @@ public class AdvancedCoreUser {
 				plugin.getLogger().info("Failed to send Title, turn debug on to see stack trace");
 				plugin.debug(ex);
 			}
+		}
+	}
+
+	/** Sends a title whose configured formatting is already rendered. */
+	public void sendPreparedTitle(String title, String subTitle, int fadeIn, int showTime, int fadeOut) {
+		Player player = getPlayer();
+		if (player == null) return;
+		try {
+			new Title(title, subTitle, fadeIn, showTime, fadeOut).send(player);
+		} catch (Exception ex) {
+			plugin.getLogger().info("Failed to send Title, turn debug on to see stack trace");
+			plugin.debug(ex);
 		}
 	}
 

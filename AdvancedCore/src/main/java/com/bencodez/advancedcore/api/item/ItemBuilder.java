@@ -43,6 +43,7 @@ import org.bukkit.potion.PotionEffectType;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
+import com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.simpleapi.array.ArrayUtils;
 import com.bencodez.simpleapi.messages.MessageAPI;
@@ -90,6 +91,7 @@ public class ItemBuilder {
 	private String identifier;
 
 	private HashMap<String, String> placeholders = new HashMap<>();
+	private HashMap<String, String> displayPlaceholders;
 
 	private String skull = "";
 
@@ -1720,10 +1722,16 @@ public class ItemBuilder {
 		if (player == null) {
 			return toItemStack();
 		}
-		setName(MessageAPI.colorize(PlaceholderUtils.replaceJavascript(player,
-				PlaceholderUtils.replacePlaceHolder(getName(), placeholders))));
-		setLore(ArrayUtils.colorize(PlaceholderUtils.replaceJavascript(player,
-				PlaceholderUtils.replacePlaceHolder(getLore(), placeholders))));
+		if (displayPlaceholders == null) {
+			setName(MessageAPI.colorize(PlaceholderUtils.replaceJavascript(player,
+					PlaceholderUtils.replacePlaceHolder(getName(), placeholders))));
+			setLore(ArrayUtils.colorize(PlaceholderUtils.replaceJavascript(player,
+					PlaceholderUtils.replacePlaceHolder(getLore(), placeholders))));
+		} else {
+			setName(MessageAPI.colorize(RewardDisplayPlaceholders.replaceFormattedJavascript(player, getName(),
+					displayPlaceholders)));
+			setLore(renderDisplayLore(player));
+		}
 		if (skull.contains("%")) {
 			setSkullOwner(PlaceholderUtils.replaceJavascript(player,
 					PlaceholderUtils.replacePlaceHolder(skull, placeholders)));
@@ -2040,6 +2048,32 @@ public class ItemBuilder {
 	}
 
 	/**
+	 * Sets placeholder values used only for player-facing item names and lore.
+	 * Exact-value fields such as skull owners continue to use the ordinary
+	 * placeholder map.
+	 *
+	 * @param displayPlaceholders the display placeholder map
+	 * @return this ItemBuilder
+	 */
+	public ItemBuilder setDisplayPlaceholders(HashMap<String, String> displayPlaceholders) {
+		this.displayPlaceholders = displayPlaceholders;
+		return this;
+	}
+
+	private ArrayList<String> renderDisplayLore(OfflinePlayer player) {
+		ArrayList<String> rendered = new ArrayList<>();
+		for (String line : getLore()) {
+			rendered.add(MessageAPI.colorize(RewardDisplayPlaceholders.replaceFormattedJavascript(player, line,
+					displayPlaceholders)));
+		}
+		return rendered;
+	}
+
+	private HashMap<String, String> getDisplayPlaceholders() {
+		return displayPlaceholders == null ? placeholders : displayPlaceholders;
+	}
+
+	/**
 	 * Sets the skull owner by offline player.
 	 * 
 	 * @param offlinePlayer the offline player
@@ -2120,10 +2154,16 @@ public class ItemBuilder {
 			return setConditional(new JavascriptEngine()).toItemStack();
 		}
 
-		setName(MessageAPI.colorize(
-				PlaceholderUtils.replaceJavascript(PlaceholderUtils.replacePlaceHolder(getName(), placeholders))));
-		setLore(ArrayUtils.colorize(
-				PlaceholderUtils.replaceJavascript(PlaceholderUtils.replacePlaceHolder(getLore(), placeholders))));
+		if (displayPlaceholders == null) {
+			setName(MessageAPI.colorize(PlaceholderUtils.replaceJavascript(
+					PlaceholderUtils.replacePlaceHolder(getName(), placeholders))));
+			setLore(ArrayUtils.colorize(PlaceholderUtils.replaceJavascript(
+					PlaceholderUtils.replacePlaceHolder(getLore(), placeholders))));
+		} else {
+			setName(MessageAPI.colorize(RewardDisplayPlaceholders.replaceFormattedJavascript(null, getName(),
+					displayPlaceholders)));
+			setLore(renderDisplayLore(null));
+		}
 		if (checkLoreLength) {
 			checkLoreLength();
 		}
@@ -2140,8 +2180,12 @@ public class ItemBuilder {
 		if (!placeholders.containsKey("player")) {
 			placeholders.put("player", player.getName());
 		}
+		if (displayPlaceholders != null && !displayPlaceholders.containsKey("player")) {
+			displayPlaceholders.put("player", player.getName());
+		}
 		if (conditional) {
-			return getConditionItemBuilder(player).setPlaceholders(placeholders).toItemStack(player);
+			return getConditionItemBuilder(player).setPlaceholders(placeholders)
+					.setDisplayPlaceholders(displayPlaceholders).toItemStack(player);
 		}
 		parsePlaceholders(player);
 		if (checkLoreLength) {
@@ -2160,9 +2204,12 @@ public class ItemBuilder {
 		if (!placeholders.containsKey("player")) {
 			placeholders.put("player", player.getName());
 		}
+		if (displayPlaceholders != null && !displayPlaceholders.containsKey("player")) {
+			displayPlaceholders.put("player", player.getName());
+		}
 		if (conditional) {
 			return setConditional(new JavascriptEngine().addPlayer(player)).setPlaceholders(placeholders)
-					.toItemStack(player);
+					.setDisplayPlaceholders(displayPlaceholders).toItemStack(player);
 		}
 		parsePlaceholders(player);
 		if (checkLoreLength) {
