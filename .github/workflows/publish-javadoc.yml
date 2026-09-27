@@ -36,8 +36,8 @@ jobs:
             exit 0
           fi
 
-          git fetch --no-tags origin "refs/tags/${TAG_NAME}:refs/tags/release"
-          tag_commit="$(git rev-parse 'refs/tags/release^{commit}')"
+          git fetch --no-tags origin "refs/tags/${TAG_NAME}"
+          tag_commit="$(git rev-parse --verify 'FETCH_HEAD^{commit}')"
           if git merge-base --is-ancestor "$tag_commit" origin/master; then
             echo "eligible=true" >> "$GITHUB_OUTPUT"
             echo "commit=$tag_commit" >> "$GITHUB_OUTPUT"

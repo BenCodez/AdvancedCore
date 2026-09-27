@@ -30,6 +30,8 @@ class BuildInputPinningTest {
 		assertTrue(deployJob.contains("pages: write"));
 		assertTrue(deployJob.contains("id-token: write"));
 		assertTrue(releaseEligibilityJob.contains("git merge-base --is-ancestor \"$tag_commit\" origin/master"));
+		assertTrue(releaseEligibilityJob.contains("FETCH_HEAD^{commit}"));
+		assertFalse(releaseEligibilityJob.contains("refs/tags/release"));
 		assertTrue(releaseEligibilityJob.contains("commit: ${{ steps.eligibility.outputs.commit }}"));
 		assertTrue(releaseEligibilityJob.contains("echo \"commit=$tag_commit\" >> \"$GITHUB_OUTPUT\""));
 		assertFalse(workflow.contains("target_commitish"));
