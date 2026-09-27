@@ -113,6 +113,12 @@ public class RewardOptions {
 		return this;
 	}
 
+	/** Adds a formatted-output value while retaining the ordinary exact-value placeholder. */
+	public RewardOptions addDisplayPlaceholder(String key, String value) {
+		RewardDisplayPlaceholders.put(getPlaceholders(), key, value);
+		return this;
+	}
+
 	public RewardOptions disableDefaultWorlds() {
 		useDefaultWorlds = false;
 		return this;

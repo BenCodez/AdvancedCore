@@ -15,6 +15,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.EditGUIButton;
 import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueInventory;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditItems;
@@ -49,7 +50,7 @@ public final class RewardItems {
                 replayItem(user, placeholders, "payload", () -> {
                     ItemBuilder builder = new ItemBuilder(section);
                     builder.setCheckLoreLength(false);
-                    return builder;
+                    return applyDisplayPlaceholders(builder, placeholders);
                 });
                 return null;
             }
@@ -71,7 +72,7 @@ public final class RewardItems {
                         }
                         ItemBuilder builder = new ItemBuilder(selected);
                         builder.setCheckLoreLength(false);
-                        return builder;
+                        return applyDisplayPlaceholders(builder, placeholders);
                     });
                     return item;
                 }
@@ -93,7 +94,7 @@ public final class RewardItems {
                         ReplayedItem selected = replayItem(user, placeholders, "payload:" + item, () -> {
                             ItemBuilder builder = new ItemBuilder(data.getConfigurationSection(item));
                             builder.setCheckLoreLength(false);
-                            return builder.setPlaceholders(placeholders);
+                            return applyDisplayPlaceholders(builder, placeholders);
                         });
                         debug("Giving item " + item + ":" + selected.item());
                         if (selected.chancePassed() && oneChance) {
@@ -161,6 +162,12 @@ public final class RewardItems {
 		frozen.set("ChancePassed", chancePassed);
         return "v1:" + frozen.saveToString();
     }
+
+	private static ItemBuilder applyDisplayPlaceholders(ItemBuilder builder, HashMap<String, String> placeholders) {
+		if (!RewardDisplayPlaceholders.hasDisplayValues(placeholders)) return builder;
+		return builder.setPlaceholders(placeholders)
+				.setDisplayPlaceholders(placeholders);
+	}
 
 	private record ReplayedItem(ItemStack item, boolean chancePassed) { }
 

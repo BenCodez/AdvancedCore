@@ -12,6 +12,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueIn
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditActionBar;
@@ -30,8 +31,14 @@ public final class RewardActionBar {
             @Override
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
-                user.sendActionBar(PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""), placeholders),
-                        section.getInt("Delay", 30));
+				if (RewardDisplayPlaceholders.hasDisplayValues(placeholders)) {
+					user.sendPreparedActionBar(RewardDisplayPlaceholders.replaceFormattedJavascript(user.getPlayer(),
+							section.getString("Message", ""), placeholders),
+                            section.getInt("Delay", 30));
+                } else {
+                    user.sendActionBar(PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""), placeholders),
+                            section.getInt("Delay", 30));
+                }
                 return null;
             }
 		}.requiresPlayerWhen((data, placeholders) -> !data.getString("ActionBar.Message", "").isEmpty())

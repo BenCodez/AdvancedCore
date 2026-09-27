@@ -11,6 +11,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueIn
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditBossBar;
@@ -28,9 +29,16 @@ public final class RewardBossBar {
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
                 if (section.getBoolean("Enabled")) {
-                    user.sendBossBar(PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""), placeholders),
-                            section.getString("Color", "BLUE"), section.getString("Style", "SOLID"),
-                            section.getDouble("Progress", .5), section.getInt("Delay", 30));
+                    if (RewardDisplayPlaceholders.hasDisplayValues(placeholders)) {
+					user.sendPreparedBossBar(RewardDisplayPlaceholders.replaceFormattedJavascript(user.getPlayer(),
+								section.getString("Message", ""), placeholders),
+                                section.getString("Color", "BLUE"), section.getString("Style", "SOLID"),
+                                section.getDouble("Progress", .5), section.getInt("Delay", 30));
+                    } else {
+                        user.sendBossBar(PlaceholderUtils.replacePlaceHolder(section.getString("Message", ""), placeholders),
+                                section.getString("Color", "BLUE"), section.getString("Style", "SOLID"),
+                                section.getDouble("Progress", .5), section.getInt("Delay", 30));
+                    }
                 }
                 return null;
             }

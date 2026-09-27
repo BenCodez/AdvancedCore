@@ -322,6 +322,7 @@ class RewardAsyncInjectionTest {
 
 		try (MockedConstruction<ItemBuilder> builders = mockConstruction(ItemBuilder.class, (builder, context) -> {
 			when(builder.setPlaceholders(any(HashMap.class))).thenReturn(builder);
+			when(builder.setDisplayPlaceholders(any(HashMap.class))).thenReturn(builder);
 			when(builder.toItemStack(any(Player.class))).thenAnswer(ignored -> new ItemStack(itemType.get()));
 		}); org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenAnswer(ignored -> availablePlayer.get());

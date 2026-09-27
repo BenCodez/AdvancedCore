@@ -9,7 +9,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -50,6 +52,7 @@ import com.bencodez.advancedcore.api.misc.MiscUtils;
 import com.bencodez.advancedcore.api.misc.effects.FireworkHandler;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.rewards.RewardBuilder;
+import com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.advancedcore.api.rewards.builtin.RewardActionBar;
@@ -227,6 +230,20 @@ public class BuiltinRewardBehaviorTest {
         verify(user).sendActionBar("Hello Ben", 42);
     }
 
+    @Test
+    public void actionBarDisplayOverrideUsesPreparedSink() {
+        RewardActionBar.register(handler, plugin);
+        placeholders.put("player", "raw");
+        RewardDisplayPlaceholders.put(placeholders, "player", "display");
+        ConfigurationSection section = section("ActionBar");
+        section.set("Message", "Hello %player%");
+        section.set("Delay", 42);
+
+        configInject(0).onRewardRequested(reward, user, section, placeholders);
+
+        verify(user).sendPreparedActionBar("Hello display", 42);
+    }
+
 	@Test
 	public void emptyActionBarDoesNotRequireAnOnlinePlayer() {
 		RewardActionBar.register(handler, plugin);
@@ -265,6 +282,20 @@ public class BuiltinRewardBehaviorTest {
     }
 
     @Test
+    public void bossBarDisplayOverrideUsesPreparedSink() {
+        RewardBossBar.register(handler, plugin);
+        placeholders.put("player", "raw");
+        RewardDisplayPlaceholders.put(placeholders, "player", "display");
+        ConfigurationSection section = section("BossBar");
+        section.set("Enabled", true);
+        section.set("Message", "Boss %player%");
+
+        configInject(0).onRewardRequested(reward, user, section, placeholders);
+
+        verify(user).sendPreparedBossBar("Boss display", "BLUE", "SOLID", 0.5, 30);
+    }
+
+    @Test
     public void titleActuallySendsConfiguredTitle() {
         RewardTitle.register(handler, plugin);
         placeholders.put("player", "Ben");
@@ -279,6 +310,21 @@ public class BuiltinRewardBehaviorTest {
         configInject(0).onRewardRequested(reward, user, section, placeholders);
 
         verify(user).sendTitle("Hi Ben", "Welcome", 2, 30, 4);
+    }
+
+    @Test
+    public void titleDisplayOverrideUsesPreparedSink() {
+        RewardTitle.register(handler, plugin);
+        placeholders.put("player", "raw");
+        RewardDisplayPlaceholders.put(placeholders, "player", "display");
+        ConfigurationSection section = section("Title");
+        section.set("Enabled", true);
+        section.set("Title", "Hi %player%");
+        section.set("SubTitle", "Welcome");
+
+        configInject(0).onRewardRequested(reward, user, section, placeholders);
+
+        verify(user).sendPreparedTitle("Hi display", "Welcome", 10, 50, 10);
     }
 
     @Test
@@ -544,8 +590,13 @@ public class BuiltinRewardBehaviorTest {
 						.thenReturn(frozenStack))) {
             bukkit.when(Bukkit::getUnsafe).thenReturn(unsafe);
             bukkit.when(Bukkit::getItemFactory).thenReturn(itemFactory);
+			placeholders.put("ServiceSite", "be_secret%20");
+			RewardDisplayPlaceholders.put(placeholders, "ServiceSite", "\u2060be_secret%20\u2060");
             RewardItems.registerItem(handler, plugin);
             configInject(0).onRewardRequested(reward, user, section("Item"), placeholders);
+			ItemBuilder singleItemBuilder = builders.constructed().get(builders.constructed().size() - 1);
+			verify(singleItemBuilder).setPlaceholders(same(placeholders));
+			verify(singleItemBuilder).setDisplayPlaceholders(same(placeholders));
 			int buildersAfterItem = builders.constructed().size();
 			configInject(0).onRewardRequested(reward, user, section("Item"), placeholders);
 			assertEquals(buildersAfterItem, builders.constructed().size());
@@ -558,6 +609,9 @@ public class BuiltinRewardBehaviorTest {
             String selected = ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
                     random.getKeys(false), random, placeholders);
             assertEquals("OnlyItem", selected);
+			ItemBuilder randomItemBuilder = builders.constructed().get(builders.constructed().size() - 1);
+			verify(randomItemBuilder).setPlaceholders(same(placeholders));
+			verify(randomItemBuilder).setDisplayPlaceholders(same(placeholders));
 			int buildersBeforeReplay = builders.constructed().size();
             random.set("OnlyItem", null);
             random.createSection("OtherItem");
@@ -571,10 +625,22 @@ public class BuiltinRewardBehaviorTest {
             ConfigurationSection items = section("Items");
             items.createSection("FirstItem");
             ((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user, items.getKeys(false), items, placeholders);
+			ItemBuilder itemBuilder = builders.constructed().get(builders.constructed().size() - 1);
+			verify(itemBuilder).setPlaceholders(same(placeholders));
+			verify(itemBuilder).setDisplayPlaceholders(same(placeholders));
 			int buildersAfterItems = builders.constructed().size();
 			((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user, items.getKeys(false), items, placeholders);
 			assertEquals(buildersAfterItems, builders.constructed().size());
 			verify(user, atLeastOnce()).giveItem(any(ItemStack.class));
+
+			placeholders.clear();
+			ConfigurationSection ordinaryItems = section("Items");
+			ordinaryItems.createSection("OrdinaryItem");
+			((RewardInjectKeys) injects.get(0)).onRewardRequested(reward, user,
+					ordinaryItems.getKeys(false), ordinaryItems, placeholders);
+			ItemBuilder ordinaryItemBuilder = builders.constructed().get(builders.constructed().size() - 1);
+			verify(ordinaryItemBuilder, never()).setPlaceholders(any());
+			verify(ordinaryItemBuilder, never()).setDisplayPlaceholders(any());
             assertTrue(builders.constructed().size() >= 3);
         }
     }

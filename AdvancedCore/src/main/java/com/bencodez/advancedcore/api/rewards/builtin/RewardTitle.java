@@ -12,6 +12,7 @@ import com.bencodez.advancedcore.api.inventory.editgui.valuetypes.EditGUIValueIn
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders;
 import com.bencodez.advancedcore.api.rewards.RewardEditData;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.editbuttons.RewardEditTitle;
@@ -29,9 +30,17 @@ public final class RewardTitle {
             public String onRewardRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     HashMap<String, String> placeholders) {
                 if (section.getBoolean("Enabled")) {
-                    user.sendTitle(PlaceholderUtils.replacePlaceHolder(section.getString("Title"), placeholders),
-                            PlaceholderUtils.replacePlaceHolder(section.getString("SubTitle"), placeholders),
-                            section.getInt("FadeIn", 10), section.getInt("ShowTime", 50), section.getInt("FadeOut", 10));
+                    if (RewardDisplayPlaceholders.hasDisplayValues(placeholders)) {
+					user.sendPreparedTitle(RewardDisplayPlaceholders.replaceFormattedJavascript(user.getPlayer(),
+							section.getString("Title"), placeholders),
+							RewardDisplayPlaceholders.replaceFormattedJavascript(user.getPlayer(),
+									section.getString("SubTitle"), placeholders),
+                                section.getInt("FadeIn", 10), section.getInt("ShowTime", 50), section.getInt("FadeOut", 10));
+                    } else {
+                        user.sendTitle(PlaceholderUtils.replacePlaceHolder(section.getString("Title"), placeholders),
+                                PlaceholderUtils.replacePlaceHolder(section.getString("SubTitle"), placeholders),
+                                section.getInt("FadeIn", 10), section.getInt("ShowTime", 50), section.getInt("FadeOut", 10));
+                    }
                 }
                 return null;
             }
