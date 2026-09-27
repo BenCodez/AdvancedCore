@@ -45,8 +45,10 @@ class BuildInputPinningTest {
 	@Test
 	void dependencySubmissionCheckoutDoesNotPersistWriteScopedCredentials() throws IOException {
 		String workflow = Files.readString(Path.of("..", ".github", "workflows", "maven.yml"));
+		String buildJob = job(workflow, "build");
 		String dependencySubmissionJob = job(workflow, "dependency-submission");
 
+		assertTrue(buildJob.contains("persist-credentials: false"));
 		assertTrue(dependencySubmissionJob.contains("contents: write"));
 		assertTrue(dependencySubmissionJob.contains("persist-credentials: false"));
 	}
