@@ -50,13 +50,15 @@ A fully malicious installed plugin already shares the JVM and is not meaningfull
 
 Current master already contains important fixes and architecture that older scan results may predate:
 
-- the SQLite user path has prepared-statement regression coverage for values;
-- dynamic SQL identifiers have explicit quoting or validation helpers in important user-storage paths;
-- reward loading normalizes lookup names and validates safe reward filenames before constructing reward files;
-- shared user/cache runtime uses explicit admission/gating and concurrent structures rather than the older simplistic cache model;
-- JavaScript evaluation synchronizes access to the shared engine;
-- inventory click execution has explicit scheduler behavior and tests;
-- compatibility-sensitive Folia/player scheduling has regression coverage.
+- the SQLite user path has prepared-statement regression coverage for values (`AdvancedCore/src/test/java/com/bencodez/advancedcore/tests/user/UserTablePreparedStatementTest.java`);
+- selected user-storage paths quote dynamic SQL identifiers (`AdvancedCore/src/main/java/com/bencodez/advancedcore/api/user/userstorage/sql/UserTable.java`);
+- the normal registry and queued generated-reward resolver paths normalize names and validate safe reward filenames before constructing reward objects (`AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardRegistry.java`, `AdvancedCore/src/main/java/com/bencodez/advancedcore/api/rewards/RewardLoader.java`);
+- shared user/cache runtime uses explicit admission gates and concurrent structures (`AdvancedCore/src/main/java/com/bencodez/advancedcore/core/user/runtime/SharedUserDataRuntime.java` and its regression tests);
+- JavaScript evaluation synchronizes access to the shared engine (`AdvancedCore/src/main/java/com/bencodez/advancedcore/api/javascript/JavascriptEngine.java`);
+- inventory click execution has explicit scheduler behavior and regression tests (`AdvancedCore/src/main/java/com/bencodez/advancedcore/api/inventory/BInventoryListener.java`);
+- compatibility-sensitive Folia/player scheduling has regression coverage in the command/reward scheduler tests.
+
+These are **path-specific controls**, not blanket guarantees for every sibling API. Security review should verify that alternate paths preserve the same boundary instead of assuming one protected path makes the whole subsystem safe.
 
 Security review should look for bypasses, inconsistent sibling paths, and new cross-feature races rather than simply restating the old vulnerability that motivated a control.
 
@@ -103,7 +105,9 @@ Look for:
 
 Generic file helpers are powerful because downstream code may supply names and paths.
 
-Reward loading currently validates safe reward filenames. Test all alternate reward-loading, creation, and editing paths for the same invariant, including directly defined rewards, folders, migrations, GUI editors, and public APIs.
+The normal registry lookup and queued generated-reward replay paths validate safe reward filenames, but that guarantee is not universal. In current master, the public directly-defined path `RewardLoader.getRewardDirectlyDefined` still constructs `new File(directFolder, reward + ".yml")` after only replacing spaces and does not call `RewardRegistry.isSafeRewardFileName`. Treat that sibling path as an outstanding review target: determine whether any lower-trust caller can supply the reward name and whether later save/edit operations can escape the intended `DirectlyDefined` directory.
+
+Test all reward-loading, creation, and editing paths for the same containment invariant, including directly defined rewards, folders, migrations, GUI editors, and public APIs.
 
 Search for:
 
