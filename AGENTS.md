@@ -2,6 +2,10 @@
 
 AdvancedCore is a shared Bukkit/Paper/Folia library embedded by plugins such as VotingPlugin, MCPerks, and GraveStonesPlus. Changes can affect downstream plugins even when this repository builds successfully, so preserve public behavior and packaged compatibility unless a breaking change is explicitly authorized.
 
+## Security threat model
+
+For security reviews, vulnerability triage, and security-sensitive changes, read docs/security-threat-model.md before classifying or fixing findings. Treat it as the repository-specific attacker/trust-boundary model; verify every conclusion against current code and tests. Do not promote compatibility, trusted-operator behavior, or generic correctness bugs into security findings unless the documented boundary is actually crossed.
+
 ## Build and verification
 
 Requirements: JDK 21+ and Maven. The Maven project is in the `AdvancedCore/` subdirectory.
