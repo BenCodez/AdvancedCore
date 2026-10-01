@@ -418,6 +418,25 @@ public class UserDataCache {
 	public synchronized boolean hasCache() { return cache != null && !cache.isEmpty(); }
 	public synchronized boolean hasStoredData() { return storedDataPresent; }
 	public synchronized boolean hasPublishedStorageSnapshot() { return storageSnapshotPublished; }
+	/**
+	 * Retire only externally changed values without flushing or deleting unrelated
+	 * pending writes. Readers must not mistake these missing values for defaults.
+	 * Fence in-flight storage reads so an older load cannot republish stale data.
+	 * The caller must arrange an authoritative worker-side refresh afterwards.
+	 */
+	public synchronized void invalidateStorageSnapshot(String... keys) {
+		if (cache == null || keys == null || keys.length == 0) return;
+		boolean invalidated = false;
+		for (String key : keys) {
+			if (key == null) continue;
+			cache.remove(key);
+			invalidated = true;
+		}
+		if (!invalidated) return;
+		storageSnapshotPublished = false;
+		recordSnapshotReplacement();
+	}
+
 	/** Observe publication and values under the same cache monitor. */
 	public synchronized HashMap<String, DataValue> snapshotIfPublished() {
 		return storageSnapshotPublished ? (cache == null ? new HashMap<>() : new HashMap<>(cache)) : null;
