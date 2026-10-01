@@ -51,3 +51,24 @@ One Maven project, existing package layout, SimpleAPI `1.0.2-SNAPSHOT`, no new
 workflow or dependency pin. Merge the FLAT-removal prerequisite first, reconcile
 #317's overlapping user/cache work, and validate the exact candidate through
 AdvancedCore and VotingPlugin builds plus packaged database/server tests.
+
+## Direct SQL mutation and published snapshots
+
+An integration that commits a direct SQL change must not remove a column from
+`UserDataCache.getCache()` while leaving the snapshot published. That can turn a
+missing `Points` value into an apparent zero on a platform-thread read.
+
+Use `UserDataCache.invalidateStorageSnapshot(String... keys)` to invalidate the
+changed values and their publication atomically. This cache-local operation does
+not flush pending writes or perform SQL. It preserves unrelated queued values and
+advances the snapshot generation so an older in-flight storage read cannot
+republish the removed value. Default shared-user reads fail explicitly while the
+required value is unavailable instead of consulting JDBC on a platform thread.
+
+Arrange an authoritative refresh through `UserDataManager.cacheUser` on the
+existing storage worker, outside the cache monitor. A completed mutation should
+refresh before publishing its completion where that API promises refreshed reads.
+If storage is unavailable, leave publication invalid and report the refresh
+failure. Cache-only/no-database fetch modes retain their explicit default-return
+contract. This is snapshot coherence, not a guarantee that another backend cannot
+commit a later update or that external side effects share the SQL transaction.
