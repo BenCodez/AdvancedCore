@@ -72,3 +72,27 @@ If storage is unavailable, leave publication invalid and report the refresh
 failure. Cache-only/no-database fetch modes retain their explicit default-return
 contract. This is snapshot coherence, not a guarantee that another backend cannot
 commit a later update or that external side effects share the SQL transaction.
+
+## SQL acquisition failures
+
+The headless MySQL/MariaDB/PostgreSQL user backend and Bukkit user-table SQL
+paths acquire connections with SimpleAPI's additive `getConnectionChecked()`.
+A pool timeout reaches the existing SQL failure handling with its original
+`SQLException` cause instead of dereferencing a null connection. Shared user
+operations wrap that cause in `IllegalStateException`; failed acquisition never
+enters the transaction callback, replaces the pool, or closes the backend.
+Operations may be retried after a lease is released. The Bukkit PostgreSQL UUID
+existence lookup also propagates acquisition and query failures with their cause;
+only a successful lookup without a row means absent. Malformed UUID input still
+returns false before acquiring a connection, and cached identities remain local.
+
+The public legacy SimpleAPI `getConnection()` retains its nullable failure
+contract for existing callers. Rebuild both AdvancedCore and shaded VotingPlugin
+consumers against SimpleAPI containing merged PR #106 before validating the
+packaged storage API.
+
+The Bukkit shared MySQL backend uses `getExactStrict` and `deletePlayerStrict`
+to surface acquisition and query failures with their original cause. A failed read
+cannot publish a schema-only/default snapshot, and a failed delete cannot remove
+identity or runtime caches. Existing `getExact`/`getExactQuery` callers retain
+the legacy read fallback; legacy deletion also leaves caches intact on SQL failure.

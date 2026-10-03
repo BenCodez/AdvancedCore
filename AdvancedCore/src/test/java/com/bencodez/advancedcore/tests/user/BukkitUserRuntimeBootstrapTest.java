@@ -76,7 +76,7 @@ class BukkitUserRuntimeBootstrapTest {
                 assertThrows(IllegalStateException.class, () -> manager.withSharedSqlBackend(UUID.randomUUID(),
                         (storage, user) -> user.readRow(storage)));
             }
-            verify(mysql, never()).getExact(anyString());
+            verify(mysql, never()).getExactStrict(anyString());
         } finally {
             CountDownLatch retired = new CountDownLatch(1);
             assertTrue(manager.closeSharedRuntimeAsync(retired::countDown));
@@ -90,14 +90,14 @@ class BukkitUserRuntimeBootstrapTest {
         MySQL mysql = mock(MySQL.class);
         when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
         when(plugin.getMysql()).thenReturn(mysql);
-        when(mysql.getExact(anyString())).thenReturn(new ArrayList<>());
+        when(mysql.getExactStrict(anyString())).thenReturn(new ArrayList<>());
         UserDataManager manager = new UserDataManager(plugin);
         try {
             BukkitUserRuntimeBootstrap.bindAfterStorageInitialization(plugin, manager);
             assertTrue(manager.hasSharedRuntime());
             UUID uuid = UUID.randomUUID();
             manager.withSharedSqlBackend(uuid, (storage, user) -> user.readRow(storage));
-            verify(mysql).getExact(uuid.toString());
+            verify(mysql).getExactStrict(uuid.toString());
 
             CountDownLatch retired = new CountDownLatch(1);
             assertTrue(manager.closeSharedRuntimeAsync(retired::countDown));
@@ -127,7 +127,7 @@ class BukkitUserRuntimeBootstrapTest {
         AtomicReference<UserStorage> configured = new AtomicReference<>(UserStorage.MYSQL);
         when(plugin.getStorageType()).thenAnswer(ignored -> configured.get());
         when(plugin.getMysql()).thenReturn(mysql);
-        when(mysql.getExact(anyString())).thenReturn(new ArrayList<>());
+        when(mysql.getExactStrict(anyString())).thenReturn(new ArrayList<>());
         UserDataManager manager = new UserDataManager(plugin);
         try {
             BukkitUserRuntimeBootstrap.bindAfterStorageInitialization(plugin, manager);
@@ -139,7 +139,7 @@ class BukkitUserRuntimeBootstrapTest {
                 return user.readRow(storage);
             });
 
-            verify(mysql).getExact(uuid.toString());
+            verify(mysql).getExactStrict(uuid.toString());
             verify(plugin, never()).getSQLiteUserTable();
         } finally {
             CountDownLatch retired = new CountDownLatch(1);
