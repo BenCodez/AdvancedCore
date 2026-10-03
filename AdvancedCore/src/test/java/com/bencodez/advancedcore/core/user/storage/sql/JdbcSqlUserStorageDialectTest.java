@@ -178,6 +178,7 @@ class JdbcSqlUserStorageDialectTest {
             try (MockedConstruction<ConnectionManager> managers = mockConstruction(ConnectionManager.class,
                     (manager, context) -> {
                         when(manager.open()).thenReturn(true); when(manager.getDbType()).thenReturn(type);
+                        when(manager.getConnection()).thenReturn(jdbc.connection);
                         when(manager.getConnectionChecked()).thenReturn(jdbc.connection);
                     })) {
                 try (MysqlUserBackend backend = new MysqlUserBackend("ignored", config, SqlUserSchema.builder().build(), SqlBackendLogger.NO_OP)) {
