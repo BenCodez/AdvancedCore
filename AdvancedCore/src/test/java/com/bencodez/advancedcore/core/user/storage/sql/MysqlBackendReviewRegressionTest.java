@@ -9,6 +9,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLTransientConnectionException;
+import java.util.UUID;
+import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.simpleapi.sql.data.DataValueInt;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -117,6 +121,35 @@ class MysqlBackendReviewRegressionTest {
             verify(managers.constructed().get(0)).close();
         }
         fixture.assertClosed();
+    }
+
+    @Test void sqlRequiredOperationsPreserveAcquisitionTimeoutAndRecover() throws Exception {
+        for (DbType type : new DbType[]{DbType.MYSQL, DbType.MARIADB, DbType.POSTGRESQL}) {
+            Fixture fixture = new Fixture(type, "Points");
+            try (var managers = fixture.managers(); var backend = fixture.open()) {
+                ConnectionManager manager = managers.constructed().get(0);
+                var user = backend.user(UUID.randomUUID());
+                SQLTransientConnectionException timeout = new SQLTransientConnectionException("Pool exhausted", "08001");
+                doReturn(null).when(manager).getConnection();
+                doThrow(timeout).when(manager).getConnectionChecked();
+                List<org.junit.jupiter.api.function.Executable> operations = List.of(
+                        () -> user.readRow(UserStorage.MYSQL),
+                        () -> user.contains(UserStorage.MYSQL),
+                        () -> user.delete(UserStorage.MYSQL),
+                        () -> user.write(UserStorage.MYSQL, "Points", new DataValueInt(7)),
+                        () -> user.transaction(UserStorage.MYSQL, transaction -> fail("No transaction work before acquisition")),
+                        backend::enumerateUsers);
+                for (var operation : operations) {
+                    assertSame(timeout, assertThrows(IllegalStateException.class, operation).getCause(), type.name());
+                    assertTrue(backend.isOpen(), "Timeout must not close backend");
+                }
+                doAnswer(ignored -> fixture.connection()).when(manager).getConnectionChecked();
+                assertTrue(user.readRow(UserStorage.MYSQL).isEmpty());
+                assertFalse(user.contains(UserStorage.MYSQL));
+                assertTrue(backend.enumerateUsers().isEmpty());
+            }
+            fixture.assertClosed();
+        }
     }
 
     private static final class Fixture {

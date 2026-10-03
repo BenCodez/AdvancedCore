@@ -58,7 +58,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
         requireAdmissionOpen();
         JdbcSqlUserStorage.Dialect dialect = JdbcSqlUserStorage.Dialect.fromDbType(table.getMysql().getConnectionManager().getDbType());
         SqlUserStorage delegate = new JdbcSqlUserStorage(UserStorage.MYSQL, uuid, table.getTableName(), schema,
-                () -> table.getMysql().getConnectionManager().getConnection(), dialect, logger);
+                () -> table.getMysql().getConnectionManager().getConnectionChecked(), dialect, logger);
         return new SqlUserStorage() {
             @Override public List<Column> readRow(UserStorage storage) { return withOperation(() -> delegate.readRow(storage)); }
             @Override public boolean contains(UserStorage storage) { return withOperation(() -> delegate.contains(storage)); }
@@ -102,7 +102,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
                 + (cursor == null ? "" : " AND " + uuidColumn + " > ?")
                 + " ORDER BY " + uuidColumn + " ASC LIMIT ?";
         JdbcSqlUserStorage.Dialect dialect = JdbcSqlUserStorage.Dialect.fromDbType(table.getDbType());
-        try (Connection connection = table.getMysql().getConnectionManager().getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (Connection connection = table.getMysql().getConnectionManager().getConnectionChecked(); PreparedStatement statement = connection.prepareStatement(sql)) {
             int index = 1;
             if (cursor != null) {
                 if (dialect == JdbcSqlUserStorage.Dialect.POSTGRESQL) dialect.bindUuid(statement, index++, UUID.fromString(cursor)); else statement.setString(index++, cursor);
@@ -239,7 +239,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
                                 + uuidType + " USING NULLIF(" + uuidColumn + ", '')::uuid;"
                         : "ALTER TABLE " + quote(tableName) + " MODIFY " + uuidColumn + " "
                                 + normaliseTypeForDb(uuidType) + ";";
-                try (Connection connection = getMysql().getConnectionManager().getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
+                try (Connection connection = getMysql().getConnectionManager().getConnectionChecked(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
                 catch (SQLException ddlFailure) {
                     try { if (columnNeedsAlter(SqlUserSchema.UUID_COLUMN, uuidType)) throw ddlFailure; }
                     catch (SQLException inspectionFailure) {
@@ -251,7 +251,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
         }
 
         void ensureUuidUnique() {
-            try (Connection connection = getMysql().getConnectionManager().getConnection()) {
+            try (Connection connection = getMysql().getConnectionManager().getConnectionChecked()) {
                 java.sql.DatabaseMetaData metadata = connection.getMetaData();
                 if (metadata == null || hasUniqueUuidConstraint(connection, metadata)) return;
                 String indexName = tableName + "_uuid_unique";
@@ -326,7 +326,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
                         rememberColumn(column); return;
                     }
                     String sql = "ALTER TABLE " + quote(tableName) + " ADD COLUMN " + quote(column.name()) + " " + normaliseTypeForDb(column.sqlType()) + ";";
-                    try (Connection connection = getMysql().getConnectionManager().getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
+                    try (Connection connection = getMysql().getConnectionManager().getConnectionChecked(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
                     catch (SQLException ddlFailure) {
                         if (!isDuplicateColumn(ddlFailure)) throw ddlFailure;
                         try {
@@ -347,7 +347,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
 
         private void renamePostgresColumn(String storedName, String requestedName) throws SQLException {
             String sql = "ALTER TABLE " + quote(tableName) + " RENAME COLUMN " + quote(storedName) + " TO " + quote(requestedName) + ";";
-            try (Connection connection = getMysql().getConnectionManager().getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
+            try (Connection connection = getMysql().getConnectionManager().getConnectionChecked(); PreparedStatement statement = connection.prepareStatement(sql)) { statement.executeUpdate(); }
             catch (SQLException renameFailure) { String current = findRegisteredColumn(requestedName); if (!requestedName.equals(current)) throw renameFailure; }
         }
 
@@ -390,7 +390,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
                         + (attributes.comment() == null || attributes.comment().isEmpty() ? ""
                                 : " COMMENT '" + quoteMysqlLiteral(attributes.comment()) + "'")
                         + ";";
-                try (Connection connection = getMysql().getConnectionManager().getConnection();
+                try (Connection connection = getMysql().getConnectionManager().getConnectionChecked();
                         PreparedStatement statement = connection.prepareStatement(sql)) {
                     statement.executeUpdate();
                 } catch (SQLException ddlFailure) {
@@ -412,7 +412,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     .append(" SET DEFAULT (").append(defaultExpression).append(")::text")
                     .append(declaredStorageType ? "::" + targetType : "");
             sql.append(';');
-            try (Connection connection = getMysql().getConnectionManager().getConnection();
+            try (Connection connection = getMysql().getConnectionManager().getConnectionChecked();
                     PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                 statement.executeUpdate();
             } catch (SQLException ddlFailure) {
@@ -585,7 +585,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
         private MysqlColumnAttributes mysqlColumnAttributes(String name) throws SQLException {
             String sql = "SELECT IS_NULLABLE, COLUMN_DEFAULT, EXTRA, COLUMN_COMMENT, COLUMN_TYPE "
                     + "FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?";
-            try (Connection connection = getMysql().getConnectionManager().getConnection();
+            try (Connection connection = getMysql().getConnectionManager().getConnectionChecked();
                     PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setString(1, tableName);
                 statement.setString(2, name);
@@ -643,7 +643,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
                     + "AND default_value.adnum=attribute.attnum "
                     + "WHERE attribute.attrelid=pg_catalog.to_regclass(?) AND attribute.attname=? "
                     + "AND attribute.attnum>0 AND NOT attribute.attisdropped";
-            try (Connection connection = getMysql().getConnectionManager().getConnection();
+            try (Connection connection = getMysql().getConnectionManager().getConnectionChecked();
                     PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setString(1, regclass);
                 statement.setString(2, name);
@@ -654,7 +654,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
         }
 
         private RegisteredColumnType registeredColumnType(String name) throws SQLException {
-            try (Connection connection = getMysql().getConnectionManager().getConnection();
+            try (Connection connection = getMysql().getConnectionManager().getConnectionChecked();
                     PreparedStatement statement = connection.prepareStatement(
                             "SELECT * FROM " + quote(tableName) + " WHERE 1=0");
                     ResultSet result = statement.executeQuery()) {
@@ -675,7 +675,7 @@ public final class MysqlUserBackend implements SqlUserBackend {
         }
 
         private String findRegisteredColumn(String name) throws SQLException {
-            try (Connection connection = getMysql().getConnectionManager().getConnection(); PreparedStatement statement = connection.prepareStatement("SELECT * FROM " + quote(tableName) + " WHERE 1=0"); ResultSet result = statement.executeQuery()) {
+            try (Connection connection = getMysql().getConnectionManager().getConnectionChecked(); PreparedStatement statement = connection.prepareStatement("SELECT * FROM " + quote(tableName) + " WHERE 1=0"); ResultSet result = statement.executeQuery()) {
                 ResultSetMetaData metadata = result.getMetaData(); String exactMatch = null; String foldedMatch = null; int foldedMatches = 0;
                 for (int i = 1; i <= metadata.getColumnCount(); i++) {
                     String storedName = metadata.getColumnName(i);
