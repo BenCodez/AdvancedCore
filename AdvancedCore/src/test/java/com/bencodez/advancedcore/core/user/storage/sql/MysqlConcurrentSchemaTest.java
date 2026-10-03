@@ -88,6 +88,7 @@ class MysqlConcurrentSchemaTest {
                 when(manager.open()).thenReturn(true);
                 when(manager.getDbType()).thenReturn(type);
                 when(manager.getConnection()).thenAnswer(ignored -> connection());
+                when(manager.getConnectionChecked()).thenAnswer(ignored -> connection());
             });
         }
         MysqlUserBackend open() {

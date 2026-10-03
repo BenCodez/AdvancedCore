@@ -181,6 +181,7 @@ class MysqlBorrowedSchemaReconciliationTest {
             when(mysql.getConnectionManager()).thenReturn(manager);
             when(manager.getDbType()).thenReturn(DbType.MARIADB);
             when(manager.getConnection()).thenAnswer(ignored -> connection());
+            when(manager.getConnectionChecked()).thenAnswer(ignored -> connection());
         }
 
         /**
