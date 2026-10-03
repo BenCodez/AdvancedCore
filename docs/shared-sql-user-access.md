@@ -81,7 +81,10 @@ A pool timeout reaches the existing SQL failure handling with its original
 `SQLException` cause instead of dereferencing a null connection. Shared user
 operations wrap that cause in `IllegalStateException`; failed acquisition never
 enters the transaction callback, replaces the pool, or closes the backend.
-Operations may be retried after a lease is released.
+Operations may be retried after a lease is released. The Bukkit PostgreSQL UUID
+existence lookup also propagates acquisition and query failures with their cause;
+only a successful lookup without a row means absent. Malformed UUID input still
+returns false before acquiring a connection, and cached identities remain local.
 
 The public legacy SimpleAPI `getConnection()` retains its nullable failure
 contract for existing callers. Rebuild both AdvancedCore and shaded VotingPlugin

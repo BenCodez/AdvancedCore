@@ -168,7 +168,7 @@ public class MySQL extends AbstractSqlTable {
 				}
 			} catch (SQLException e) {
 				debug(e);
-				return false;
+				throw new IllegalStateException("Failed to check UUID existence", e);
 			}
 		}
 
