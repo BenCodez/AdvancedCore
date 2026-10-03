@@ -112,7 +112,7 @@ public class MySQL extends AbstractSqlTable {
 	}
 
 	public void loadData() {
-		try (Connection con = mysql.getConnectionManager().getConnection()) {
+		try (Connection con = mysql.getConnectionManager().getConnectionChecked()) {
 			useBatchUpdates = con != null && con.getMetaData().supportsBatchUpdates();
 		} catch (SQLException e) {
 			debug(e);
@@ -160,7 +160,7 @@ public class MySQL extends AbstractSqlTable {
 				return false;
 			}
 			String sql = "SELECT 1 FROM " + qi(tableName) + " WHERE " + qi("uuid") + " = ?::uuid LIMIT 1;";
-			try (Connection conn = mysql.getConnectionManager().getConnection();
+			try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 					PreparedStatement ps = conn.prepareStatement(sql)) {
 				ps.setString(1, uuid);
 				try (ResultSet rs = ps.executeQuery()) {
@@ -225,7 +225,7 @@ public class MySQL extends AbstractSqlTable {
 						+ " ASC " + " LIMIT " + pageSize + ";";
 			}
 
-			try (Connection conn = mysql.getConnectionManager().getConnection();
+			try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 					PreparedStatement ps = conn.prepareStatement(sqlStr, ResultSet.TYPE_FORWARD_ONLY,
 							ResultSet.CONCUR_READ_ONLY)) {
 
@@ -435,7 +435,7 @@ public class MySQL extends AbstractSqlTable {
 		String query = "SELECT " + qi("uuid") + " FROM " + qi(tableName) + " WHERE " + qi("PlayerName") + "=?;";
 		plugin.devDebug("DB QUERY: " + query);
 
-		try (Connection conn = mysql.getConnectionManager().getConnection();
+		try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 				PreparedStatement sql = conn.prepareStatement(query)) {
 			sql.setString(1, playerName);
 			try (ResultSet rs = sql.executeQuery()) {
@@ -462,7 +462,7 @@ public class MySQL extends AbstractSqlTable {
 		String sqlStr = "SELECT " + qi(column) + " FROM " + qi(tableName) + ";";
 		plugin.devDebug("DB QUERY: " + sqlStr);
 
-		try (Connection conn = mysql.getConnectionManager().getConnection();
+		try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 				PreparedStatement sql = conn.prepareStatement(sqlStr);
 				ResultSet rs = sql.executeQuery()) {
 
@@ -481,7 +481,7 @@ public class MySQL extends AbstractSqlTable {
 		String sqlStr = "SELECT " + qi("PlayerName") + " FROM " + qi(tableName) + ";";
 		plugin.devDebug("DB QUERY: " + sqlStr);
 
-		try (Connection conn = mysql.getConnectionManager().getConnection();
+		try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 				PreparedStatement sql = conn.prepareStatement(sqlStr);
 				ResultSet rs = sql.executeQuery()) {
 
@@ -500,7 +500,7 @@ public class MySQL extends AbstractSqlTable {
 		String sqlStr = "SELECT " + qi("uuid") + " FROM " + qi(tableName) + ";";
 		plugin.devDebug("DB QUERY: " + sqlStr);
 
-		try (Connection conn = mysql.getConnectionManager().getConnection();
+		try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 				PreparedStatement sql = conn.prepareStatement(sqlStr);
 				ResultSet rs = sql.executeQuery()) {
 
@@ -529,7 +529,7 @@ public class MySQL extends AbstractSqlTable {
 		String sqlStr = "SELECT " + qi("uuid") + ", " + qi("PlayerName") + " FROM " + qi(tableName) + ";";
 		plugin.devDebug("DB QUERY: " + sqlStr);
 
-		try (Connection conn = mysql.getConnectionManager().getConnection();
+		try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 				PreparedStatement sql = conn.prepareStatement(sqlStr);
 				ResultSet rs = sql.executeQuery()) {
 
@@ -576,7 +576,7 @@ public class MySQL extends AbstractSqlTable {
 		String q = "DELETE FROM " + qi(tableName) + " WHERE " + qi("uuid") + "=?;";
 		plugin.devDebug("DB QUERY: " + q);
 
-		try (Connection conn = mysql.getConnectionManager().getConnection();
+		try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 				PreparedStatement statement = conn.prepareStatement(q)) {
 			bindUuid(statement, 1, uuid);
 			statement.executeUpdate();
@@ -600,7 +600,7 @@ public class MySQL extends AbstractSqlTable {
 	}
 
 	public void executeQueryReturn(String str) {
-		try (Connection conn = mysql.getConnectionManager().getConnection();
+		try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 				PreparedStatement sql = conn.prepareStatement(str);
 				ResultSet rs = sql.executeQuery()) {
 			plugin.devDebug("DB QUERY: " + str);
@@ -614,7 +614,7 @@ public class MySQL extends AbstractSqlTable {
 		String query = "SELECT * FROM " + qi(tableName) + ";";
 		plugin.devDebug("DB QUERY: " + query);
 
-		try (Connection conn = mysql.getConnectionManager().getConnection();
+		try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 				PreparedStatement sql = conn.prepareStatement(query);
 				ResultSet rs = sql.executeQuery()) {
 
@@ -687,7 +687,7 @@ public class MySQL extends AbstractSqlTable {
 
 		plugin.devDebug("DB QUERY: " + query);
 
-		try (Connection conn = mysql.getConnectionManager().getConnection();
+		try (Connection conn = mysql.getConnectionManager().getConnectionChecked();
 				PreparedStatement sql = conn.prepareStatement(query)) {
 			if (dbType == DbType.POSTGRESQL && "uuid".equalsIgnoreCase(column.getName())) {
 				bindUuid(sql, 1, column.getValue().getString());
