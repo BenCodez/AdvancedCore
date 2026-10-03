@@ -133,7 +133,7 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
     private List<Column> read(UserStorage storage, UUID uuid) {
         requireOpen();
         requireStorage(storage);
-        if (storage == UserStorage.MYSQL) return mysql().getExact(uuid.toString());
+        if (storage == UserStorage.MYSQL) return mysql().getExactStrict(uuid.toString());
         synchronized (sqliteOperations) { return table().getExact(primary(uuid)); }
     }
 
@@ -147,7 +147,7 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
     private void delete(UserStorage storage, UUID uuid) {
         requireOpen();
         requireStorage(storage);
-        if (storage == UserStorage.MYSQL) mysql().deletePlayer(uuid.toString());
+        if (storage == UserStorage.MYSQL) mysql().deletePlayerStrict(uuid.toString());
         else synchronized (sqliteOperations) { table().delete(primary(uuid)); }
     }
 

@@ -90,3 +90,9 @@ The public legacy SimpleAPI `getConnection()` retains its nullable failure
 contract for existing callers. Rebuild both AdvancedCore and shaded VotingPlugin
 consumers against SimpleAPI containing merged PR #106 before validating the
 packaged storage API.
+
+The Bukkit shared MySQL backend uses `getExactStrict` and `deletePlayerStrict`
+to surface acquisition and query failures with their original cause. A failed read
+cannot publish a schema-only/default snapshot, and a failed delete cannot remove
+identity or runtime caches. Existing `getExact`/`getExactQuery` callers retain
+the legacy read fallback; legacy deletion also leaves caches intact on SQL failure.
