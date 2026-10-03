@@ -36,7 +36,7 @@ class MysqlUserBackendAdmissionRaceTest {
         MysqlConfig config = new MysqlConfig();
         config.setDbType(DbType.MYSQL); config.setDatabase("test_database"); config.setTablePrefix(""); config.setTableName("Users"); config.setMaxThreads(1);
         try (MockedConstruction<ConnectionManager> managers = mockConstruction(ConnectionManager.class, (manager, context) -> {
-            when(manager.open()).thenReturn(true); when(manager.getDbType()).thenReturn(DbType.MYSQL); when(manager.getConnection()).thenReturn(connection);
+            when(manager.open()).thenReturn(true); when(manager.getDbType()).thenReturn(DbType.MYSQL); when(manager.getConnectionChecked()).thenReturn(connection);
         })) {
             MysqlUserBackend backend = new MysqlUserBackend("Users", config, SqlUserSchema.builder().build(), SqlBackendLogger.NO_OP);
             SqlUserStorage retained = backend.user(UUID.randomUUID());

@@ -162,7 +162,7 @@ class MysqlUserBackendUuidMigrationTest {
             return mockConstruction(ConnectionManager.class, (manager, context) -> {
                 when(manager.open()).thenReturn(true);
                 when(manager.getDbType()).thenReturn(dbType);
-                when(manager.getConnection()).thenAnswer(ignored -> connection());
+                when(manager.getConnectionChecked()).thenAnswer(ignored -> connection());
             });
         }
 

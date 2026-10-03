@@ -63,7 +63,7 @@ class MysqlUserBackendLifecycleReviewTest {
                 (manager, context) -> {
                     when(manager.open()).thenReturn(true);
                     when(manager.getDbType()).thenReturn(DbType.MYSQL);
-                    when(manager.getConnection()).thenReturn(connection);
+                    when(manager.getConnectionChecked()).thenReturn(connection);
                 })) {
             MysqlUserBackend backend = new MysqlUserBackend("Users", config, schema, SqlBackendLogger.NO_OP);
             CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
