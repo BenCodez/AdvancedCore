@@ -546,6 +546,76 @@ class CoreRuntimeTest {
 		verify(mysql).close();
 	}
 
+	@Test void bukkitAdapterWaitsForPluginAdmissionHookBeforeRetiringStorage() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		CompletableFuture<Void> hook = new CompletableFuture<>();
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		when(plugin.onBeforeStorageShutdown()).thenReturn(hook);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(retirement);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+
+		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
+		hook.complete(null);
+		verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		hook.complete(null);
+		retirement.complete(null);
+		assertDoesNotThrow(() -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
+	}
+
+	@Test void bukkitAdapterReportsAdmissionHookFailureWithoutStartingStorageRetirement() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		IllegalStateException failure = new IllegalStateException("admission hook failed");
+		when(plugin.onBeforeStorageShutdown()).thenReturn(CompletableFuture.failedFuture(failure));
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+
+		CompletionException reported = assertThrows(CompletionException.class,
+				() -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
+		assertSame(failure, reported.getCause());
+		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+	}
+
+	@Test void defaultAdmissionHookCompletesForExistingSubclasses() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+		assertDoesNotThrow(() -> plugin.onBeforeStorageShutdown().toCompletableFuture().join());
+	}
+
+	@Test void bukkitAdapterRunsShutdownCompletionHookAfterNativeCleanup() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		List<String> order = new ArrayList<>();
+		doAnswer(invocation -> { order.add("unload"); return null; }).when(plugin).onUnLoad();
+		doAnswer(invocation -> { order.add("complete"); return null; }).when(plugin).onShutdownComplete();
+		when(plugin.getSkullCacheHandler()).thenReturn(null);
+		when(plugin.getHologramHandler()).thenReturn(null);
+		when(plugin.getPermissionHandler()).thenReturn(null);
+		when(plugin.getDialogService()).thenReturn(null);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		List<RuntimePlatform.Cleanup> cleanups = platform.afterExecutorShutdown();
+		assertEquals("plugin shutdown completion hook", cleanups.get(cleanups.size() - 1).name());
+		cleanups.forEach(cleanup -> cleanup.action().run());
+		assertEquals(List.of("unload", "complete"), order);
+		verify(plugin).onShutdownComplete();
+	}
+
 	@Test void bukkitAdapterDoesNotRetireStorageBeforeAnAdmittedTimeTransitionDrains() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		TimeChecker checker = mock(TimeChecker.class);

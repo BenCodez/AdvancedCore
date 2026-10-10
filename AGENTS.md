@@ -50,7 +50,7 @@ For compatibility-sensitive changes, keep regression coverage for established be
 2. Do not access Bukkit entities, inventories, worlds, or other thread-confined state from arbitrary async callbacks.
 3. Reward execution must not be lost or duplicated across delay, disconnect, reload, retry, or partial failure. Preserve the component's documented delivery contract.
 4. Read-only lookups must not create users, mutate caches, or trigger persistence unless that behavior is part of the established API.
-5. Keep user identity and UUID resolution consistent across online/offline paths. Coordinate cache updates, database writes, resets, and shutdown flushing.
+5. Keep user identity and UUID resolution consistent across online/offline paths. Coordinate cache updates, database writes, resets, and shutdown flushing. Final shared-runtime retirement fences queued notifications before marking storage retiring; callbacks already holding lifecycle admission may finish and re-enter storage. The optional pre-storage shutdown stage must finish before native storage retirement. Platform cleanup and the completion hook may run earlier on deferred shutdown; consumers must retain their own persistence owner until their stage settles.
 6. Reload and disable must cancel or retire tasks, listeners, executors, connections, and callbacks without allowing stale work to mutate new state.
 7. GUI/editor actions must recheck permissions and ownership and must not duplicate items, lose configuration, or save to the wrong path or user.
 8. Optional integrations must be guarded against absent classes and incompatible versions. One platform must not load another platform's API accidentally.

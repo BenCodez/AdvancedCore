@@ -470,6 +470,10 @@ public class UserDataManager {
 			// A second shutdown caller must not interpret an in-flight retirement as
 			// "no runtime" and close the native provider underneath its final flush.
 			if (runtime == null) return sharedRuntimeRetiring ? sharedRuntimeRetirement : null;
+            // Fence queued notifications before closeAsync marks the runtime retiring.
+            // An already-running callback retains its lifecycle read admission and
+            // finishes before the runtime's final writer can close storage.
+            closeSharedUserDataNotifications();
 			sharedRuntime = null;
 			sharedRuntimeRetiring = true;
 			completion = new CompletableFuture<>();

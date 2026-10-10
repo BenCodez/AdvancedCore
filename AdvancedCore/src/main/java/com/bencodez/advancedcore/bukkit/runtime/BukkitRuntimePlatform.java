@@ -22,6 +22,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     private final AdvancedCorePlugin plugin;
     private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
 	private CompletionStage<Void> startedUserStorageRetirement;
+	private CompletionStage<Void> preStorageShutdownHook;
 	private volatile CompletionStage<Void> timeChangeRetirement = CompletableFuture.completedFuture(null);
 	private final Object userStorageRetirementLock = new Object();
     private final AtomicBoolean userStorageOwnerClosed = new AtomicBoolean();
@@ -108,7 +109,8 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                 }),
                 new Cleanup("dialog service", () -> {
                     if (plugin.getDialogService() != null) plugin.getDialogService().unregister();
-                }));
+                }),
+                new Cleanup("plugin shutdown completion hook", plugin::onShutdownComplete));
     }
 
     @Override public void info(String message) { plugin.getLogger().info(message); }
@@ -139,9 +141,35 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 	private CompletionStage<Void> ensureUserStorageRetirementStarted() {
 		synchronized (userStorageRetirementLock) {
 			if (startedUserStorageRetirement == null) {
-				startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
+				CompletionStage<Void> hook = ensurePreStorageShutdownHook();
+				if (hook.toCompletableFuture().isDone()) {
+					try {
+						hook.toCompletableFuture().join();
+						// Preserve the legacy stage identity for the normal completed
+						// default hook and existing callers that observe it.
+						startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
+					} catch (java.util.concurrent.CompletionException failure) {
+						startedUserStorageRetirement = hook;
+					}
+				} else {
+					startedUserStorageRetirement = hook
+							.thenCompose(ignored -> closeUserStorageAfterSharedRetirement());
+				}
 			}
 			return startedUserStorageRetirement;
+		}
+	}
+
+	private CompletionStage<Void> ensurePreStorageShutdownHook() {
+		synchronized (userStorageRetirementLock) {
+			if (preStorageShutdownHook != null) return preStorageShutdownHook;
+			try {
+				CompletionStage<Void> hook = plugin.onBeforeStorageShutdown();
+				preStorageShutdownHook = hook == null ? CompletableFuture.completedFuture(null) : hook;
+			} catch (Throwable failure) {
+				preStorageShutdownHook = CompletableFuture.failedFuture(failure);
+			}
+			return preStorageShutdownHook;
 		}
 	}
 
