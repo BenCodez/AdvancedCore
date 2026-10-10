@@ -49,3 +49,16 @@ A rejected continuation reports failure and leaves the shared runtime attached;
 it does not report a successful flush. Failed or cancelled preparation still
 retires accepted writes, with the preparation failure retained. No new executor,
 configuration, or storage format is introduced.
+
+If consumer preparation exceeds the default five-second shutdown watchdog, the
+watchdog reports it and retains the existing daemon storage worker and native
+provider. Preparation is acknowledged only after its callback has submitted the
+final retirement task. A future becoming complete alone is insufficient because
+its callbacks can still be running. After that acknowledgement, a stalled storage
+retirement still receives the bounded watchdog and worker grace; terminal native
+cleanup waits for the actual storage worker to terminate.
+
+A consumer hook that never settles retains its storage owner until JVM exit.
+This does not block the server thread or keep the JVM alive, but an abrupt exit
+cannot guarantee the pending checkpoint was persisted. Consumers must complete,
+fail, or cancel their preparation stage. No new executor or polling loop is added.

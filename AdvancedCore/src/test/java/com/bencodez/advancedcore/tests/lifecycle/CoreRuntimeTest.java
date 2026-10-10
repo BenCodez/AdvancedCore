@@ -347,6 +347,44 @@ class CoreRuntimeTest {
 		assertEquals(List.of("unload"), events);
 	}
 
+	@Test void pendingPreparationRetainsIdleWorkerThenAdmittedRetirementStillTimesOut() throws Exception {
+		RuntimePlatform platform = platform();
+		var timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(task -> {
+			Thread worker = new Thread(task, "pending-preparation-test");
+			worker.setDaemon(true);
+			return worker;
+		});
+		var preparation = new CompletableFuture<Void>();
+		var retirement = new CompletableFuture<Void>();
+		CountDownLatch reported = new CountDownLatch(1);
+		CountDownLatch terminal = new CountDownLatch(1);
+		when(platform.storageRetirementPreparationCompletion()).thenReturn(preparation);
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retirement);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(20L);
+		when(platform.getUserStorageTimer()).thenReturn(timer);
+		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("native storage", terminal::countDown)));
+		doAnswer(call -> { reported.countDown(); return null; }).when(platform)
+				.cleanupFailed(eq("pre-executor shutdown"), any(java.util.concurrent.TimeoutException.class));
+		try {
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertTrue(reported.await(2, TimeUnit.SECONDS));
+			assertFalse(timer.isShutdown(), "idle storage must stay open for a separate consumer checkpoint");
+			assertEquals(1, terminal.getCount());
+			preparation.complete(null);
+			assertTrue(terminal.await(2, TimeUnit.SECONDS), "admitted retirement still has a bounded watchdog");
+			assertTrue(timer.isTerminated());
+			assertFalse(retirement.isDone(), "timeout does not fabricate a successful flush");
+			verify(platform, times(2)).cleanupFailed(eq("pre-executor shutdown"),
+					any(java.util.concurrent.TimeoutException.class));
+		} finally {
+			preparation.complete(null);
+			retirement.complete(null);
+			timer.shutdownNow();
+		}
+	}
+
 	@Test void watchdogLetsQueuedRetirementFlushBeforeForcingStorageWorker() throws Exception {
 		RuntimePlatform platform = platform();
 		var timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();

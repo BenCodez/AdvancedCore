@@ -7,6 +7,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
+import com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -34,7 +36,21 @@ class PreStorageHookAdmissionTest {
         completeInsideReadAdmission("cancelled");
     }
 
+    @Test void successfulHookAfterWatchdogStillFlushesBeforeNativeClose() throws Exception {
+        completeInsideReadAdmission("success", true);
+    }
+    @Test void failedHookAfterWatchdogStillFlushesBeforeReportingFailure() throws Exception {
+        completeInsideReadAdmission("failure", true);
+    }
+    @Test void cancelledHookAfterWatchdogStillRetiresStorage() throws Exception {
+        completeInsideReadAdmission("cancelled", true);
+    }
+
     private void completeInsideReadAdmission(String mode) throws Exception {
+        completeInsideReadAdmission(mode, false);
+    }
+
+    private void completeInsideReadAdmission(String mode, boolean runWatchdog) throws Exception {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         UserManager users = mock(UserManager.class);
         UserDataManager manager = new UserDataManager(plugin);
@@ -57,11 +73,26 @@ class PreStorageHookAdmissionTest {
         when(plugin.onBeforeStorageShutdown()).thenReturn(hook);
         SharedUserDataRuntime runtime = new SharedUserDataRuntime(backend, cache);
         manager.bindSharedRuntime(runtime);
-        BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+        when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getAnonymousLogger());
+        BukkitRuntimePlatform platform = spy(new BukkitRuntimePlatform(plugin));
+        var timedOut = new CountDownLatch(1);
+        if (runWatchdog) {
+            doReturn(false).when(platform).canBlockForPreExecutorShutdown();
+            doReturn(20L).when(platform).deferredShutdownTimeoutMillis();
+            doAnswer(call -> { timedOut.countDown(); return null; })
+                    .when(platform).cleanupFailed(eq("pre-executor shutdown"),
+                            any(java.util.concurrent.TimeoutException.class));
+        }
         Runnable shutdown = platform.beforeExecutorShutdown().stream()
                 .filter(cleanup -> cleanup.name().equals("user storage")).findFirst().orElseThrow().action();
         try {
-            shutdown.run();
+            if (runWatchdog) {
+                new AdvancedCoreRuntime(platform).shutdown();
+                assertTrue(timedOut.await(2, TimeUnit.SECONDS));
+                assertFalse(manager.getTimer().isShutdown(), "pending consumer preparation retains admission");
+                verify(nativeOwner, never()).close();
+                assertFalse(runtime.isRetiring());
+            } else shutdown.run();
             var retirement = platform.beforeExecutorShutdownCompletion().toCompletableFuture();
             manager.getTimer().submit(() -> runtime.withStorageReadAdmission(() -> {
                 if (mode.equals("success")) hook.complete(null);
@@ -95,6 +126,7 @@ class PreStorageHookAdmissionTest {
             assertTrue(runtime.isClosed());
             assertFalse(manager.hasSharedRuntimeLifecycle());
             assertNull(manager.getLastDeferredStorageFailure());
+            if (runWatchdog) assertTrue(manager.getTimer().awaitTermination(5, TimeUnit.SECONDS));
         } finally { manager.getTimer().shutdownNow(); }
     }
 
@@ -135,6 +167,47 @@ class PreStorageHookAdmissionTest {
             assertFalse(runtime.isRetiring());
             verify(backend, never()).close();
         } finally { manager.getTimer().shutdownNow(); }
+    }
+
+    @Test void completedHookDoesNotSignalPreparationUntilRetirementIsAdmitted() throws Exception {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserManager users = mock(UserManager.class);
+        UserDataManager manager = new UserDataManager(plugin);
+        var admission = mock(java.util.concurrent.ScheduledExecutorService.class);
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        when(plugin.isLoadUserData()).thenReturn(true);
+        when(plugin.getLoadedUserManager()).thenReturn(users);
+        when(users.getDataManager()).thenReturn(manager);
+        var hook = new CompletableFuture<Void>();
+        when(plugin.onBeforeStorageShutdown()).thenReturn(hook);
+        BukkitRuntimePlatform platform = spy(new BukkitRuntimePlatform(plugin));
+        doReturn(admission).when(platform).getUserStorageTimer();
+        doAnswer(call -> {
+            entered.countDown();
+            assertTrue(release.await(2, TimeUnit.SECONDS));
+            manager.getTimer().execute(call.getArgument(0, Runnable.class));
+            return null;
+        }).when(admission).execute(any(Runnable.class));
+        var callback = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            platform.beforeExecutorShutdown().stream().filter(cleanup -> cleanup.name().equals("user storage"))
+                    .findFirst().orElseThrow().action().run();
+            var preparation = platform.storageRetirementPreparationCompletion().toCompletableFuture();
+            var completing = callback.submit(() -> hook.complete(null));
+            assertTrue(entered.await(2, TimeUnit.SECONDS));
+            assertTrue(hook.isDone(), "CompletableFuture becomes done before its callback unwinds");
+            assertFalse(preparation.isDone(), "watchdog must retain admission during callback dispatch");
+            assertFalse(manager.getTimer().isShutdown());
+            release.countDown();
+            completing.get(2, TimeUnit.SECONDS);
+            preparation.get(2, TimeUnit.SECONDS);
+            platform.beforeExecutorShutdownCompletion().toCompletableFuture().get(2, TimeUnit.SECONDS);
+        } finally {
+            release.countDown();
+            callback.shutdownNow();
+            manager.getTimer().shutdownNow();
+        }
     }
 
     @Test void delayedHookWithNoUserStorageRemainsSupported() {

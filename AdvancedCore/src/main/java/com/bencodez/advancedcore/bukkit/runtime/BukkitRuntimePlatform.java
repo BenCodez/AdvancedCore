@@ -23,6 +23,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
 	private CompletionStage<Void> startedUserStorageRetirement;
 	private CompletionStage<Void> preStorageShutdownHook;
+	private CompletableFuture<Void> storageRetirementPreparation = CompletableFuture.completedFuture(null);
 	private volatile CompletionStage<Void> timeChangeRetirement = CompletableFuture.completedFuture(null);
 	private final Object userStorageRetirementLock = new Object();
     private final AtomicBoolean userStorageOwnerClosed = new AtomicBoolean();
@@ -63,6 +64,11 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     }
 
 	@Override public CompletionStage<Void> beforeExecutorShutdownCompletion() { return userStorageRetirement; }
+	@Override public CompletionStage<Void> storageRetirementPreparationCompletion() {
+		synchronized (userStorageRetirementLock) {
+			return storageRetirementPreparation;
+		}
+	}
 	@Override public boolean holdTimeTimerUntilPreExecutorShutdownCompletion() {
 		return timeChangeRetirement != null && !timeChangeRetirement.toCompletableFuture().isDone();
 	}
@@ -151,8 +157,17 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                     // Preserve the successful default hook's legacy retirement stage identity.
                     startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
 				} else {
+					var preparation = new CompletableFuture<Void>();
+					storageRetirementPreparation = preparation;
 					startedUserStorageRetirement = hook.handle((ignored, failure) -> failure)
-							.thenCompose(this::deferUserStorageRetirement);
+							.thenCompose(failure -> {
+								try { return deferUserStorageRetirement(failure); }
+								finally {
+									// Future completion can precede its callbacks. Signal only
+									// after the final retirement task has been admitted.
+									preparation.complete(null);
+								}
+							});
 				}
 			}
 			return startedUserStorageRetirement;
