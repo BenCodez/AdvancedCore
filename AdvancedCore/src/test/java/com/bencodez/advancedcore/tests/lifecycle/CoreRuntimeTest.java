@@ -161,11 +161,22 @@ class CoreRuntimeTest {
         verify(platform, times(1)).getTimeTimer();
     }
 
+    private ScheduledExecutorService terminatingExecutor(boolean gracefulTermination) {
+        ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
+        var terminated = new java.util.concurrent.atomic.AtomicBoolean();
+        when(executor.isTerminated()).thenAnswer(call -> terminated.get());
+        doAnswer(call -> { terminated.set(gracefulTermination); return null; }).when(executor).shutdown();
+        when(executor.shutdownNow()).thenAnswer(call -> { terminated.set(true); return List.of(); });
+        return executor;
+    }
+
     private ScheduledExecutorService executor(String name, List<String> events) throws Exception {
         ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
+        var terminated = new java.util.concurrent.atomic.AtomicBoolean();
+        when(executor.isTerminated()).thenAnswer(call -> terminated.get());
         doAnswer(call -> { events.add(name + "-stop"); return null; }).when(executor).shutdown();
         when(executor.awaitTermination(anyLong(), any())).thenAnswer(call -> { events.add(name + "-wait"); return false; });
-        when(executor.shutdownNow()).thenAnswer(call -> { events.add(name + "-force"); return List.of(); });
+        when(executor.shutdownNow()).thenAnswer(call -> { events.add(name + "-force"); terminated.set(true); return List.of(); });
         return executor;
     }
 
@@ -222,7 +233,7 @@ class CoreRuntimeTest {
 
 	@Test void nonBlockingPlatformLeavesStorageWorkerAliveUntilRetirementCompletes() throws Exception {
 		RuntimePlatform platform = platform();
-		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledExecutorService timer = terminatingExecutor(true);
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
 		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
@@ -313,7 +324,7 @@ class CoreRuntimeTest {
 
 	@Test void deferredRetirementTimeoutForcesStorageWorkerWithoutRepeatingPlatformCleanup() {
 		RuntimePlatform platform = platform();
-		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledExecutorService timer = terminatingExecutor(false);
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
 		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
@@ -433,7 +444,7 @@ class CoreRuntimeTest {
 
 	@Test void failedRetirementTerminatesStorageWorkerAfterReportingTheFailure() {
 		RuntimePlatform platform = platform();
-		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledExecutorService timer = terminatingExecutor(false);
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
 		retiring.completeExceptionally(new IllegalStateException("write failed"));
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);

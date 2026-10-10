@@ -468,6 +468,7 @@ class SharedUserLifecycleRegressionTest {
         final MemoryBackend first = new MemoryBackend(UserStorage.SQLITE);
         final BukkitUserCacheOwner owner;
 		Fixture() {
+			when(manager.isPlatformOwnedThread()).thenCallRealMethod();
 			when(manager.getPlugin()).thenReturn(plugin);
 			when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
             when(manager.getUserDataCache()).thenReturn(caches);
