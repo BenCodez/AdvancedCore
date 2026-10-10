@@ -152,13 +152,49 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                     startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
 				} else {
 					startedUserStorageRetirement = hook.handle((ignored, failure) -> failure)
-							.thenCompose(failure -> failure == null ? closeUserStorageAfterSharedRetirement()
-									: retireAfterPreparationFailure(failure));
+							.thenCompose(this::deferUserStorageRetirement);
 				}
 			}
 			return startedUserStorageRetirement;
 		}
 	}
+
+    /** A completing consumer callback may still hold shared storage read admission. */
+    private CompletionStage<Void> deferUserStorageRetirement(Throwable preparationFailure) {
+        if (!plugin.isLoadUserData() || plugin.getLoadedUserManager() == null) {
+            return preparationFailure == null ? closeUserStorageAfterSharedRetirement()
+                    : retireAfterPreparationFailure(preparationFailure);
+        }
+        var result = new CompletableFuture<Void>();
+        try {
+            Objects.requireNonNull(getUserStorageTimer(), "user storage timer").execute(() -> {
+                try {
+                    CompletionStage<Void> retirement = preparationFailure == null
+                            ? closeUserStorageAfterSharedRetirement()
+                            : retireAfterPreparationFailure(preparationFailure);
+                    retirement.whenComplete((ignored, failure) -> {
+                        if (failure == null) result.complete(null);
+                        else result.completeExceptionally(failure);
+                    });
+                } catch (Throwable failure) {
+                    result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));
+                }
+            });
+        } catch (RuntimeException | Error failure) {
+            // Do not detach the shared runtime or pretend rejected work flushed storage.
+            result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));
+        }
+        return result;
+    }
+
+    private static Throwable preparationAndStorageFailure(Throwable preparationFailure, Throwable storageFailure) {
+        if (preparationFailure == null) return storageFailure;
+        Throwable cause = preparationFailure instanceof java.util.concurrent.CompletionException
+                && preparationFailure.getCause() != null ? preparationFailure.getCause() : preparationFailure;
+        var reported = new java.util.concurrent.CompletionException(cause);
+        if (storageFailure != null && storageFailure != cause) reported.addSuppressed(storageFailure);
+        return reported;
+    }
 
     /** A failed consumer preparation still has accepted cache writes to retire. */
     private CompletionStage<Void> retireAfterPreparationFailure(Throwable preparationFailure) {

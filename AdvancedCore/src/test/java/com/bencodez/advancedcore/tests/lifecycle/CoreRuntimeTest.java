@@ -550,6 +550,7 @@ class CoreRuntimeTest {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		UserManager users = mock(UserManager.class);
 		UserDataManager dataManager = mock(UserDataManager.class);
+		var workerTasks = queuedStorageWorker(dataManager);
 		CompletableFuture<Void> hook = new CompletableFuture<>();
 		CompletableFuture<Void> retirement = new CompletableFuture<>();
 		when(plugin.onBeforeStorageShutdown()).thenReturn(hook);
@@ -566,6 +567,8 @@ class CoreRuntimeTest {
 		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
 		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
 		hook.complete(null);
+		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		workerTasks.remove().run();
 		verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
 		hook.complete(null);
 		retirement.complete(null);
@@ -577,6 +580,7 @@ class CoreRuntimeTest {
             AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
             UserManager users = mock(UserManager.class);
             UserDataManager dataManager = mock(UserDataManager.class);
+            var workerTasks = queuedStorageWorker(dataManager);
             var hook = new CompletableFuture<Void>(); var retirement = new CompletableFuture<Void>();
             var failure = new IllegalStateException("admission hook failed");
             if (mode.equals("failed")) hook.completeExceptionally(failure);
@@ -594,6 +598,8 @@ class CoreRuntimeTest {
             if (mode.startsWith("late")) {
                 verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
                 if (mode.equals("late-failed")) hook.completeExceptionally(failure); else hook.cancel(false);
+                verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+                workerTasks.remove().run();
             }
             verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
             assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone(), mode);
@@ -622,6 +628,15 @@ class CoreRuntimeTest {
                 () -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
         assertSame(preparation, reported.getCause()); assertArrayEquals(new Throwable[] {storage}, reported.getSuppressed());
         verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+    }
+
+    private static java.util.Queue<Runnable> queuedStorageWorker(UserDataManager manager) {
+        var tasks = new java.util.ArrayDeque<Runnable>();
+        ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+        when(manager.getTimer()).thenReturn(worker);
+        doAnswer(call -> { tasks.add(call.getArgument(0, Runnable.class)); return null; })
+                .when(worker).execute(any(Runnable.class));
+        return tasks;
     }
 
 	@Test void defaultAdmissionHookCompletesForExistingSubclasses() {

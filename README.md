@@ -40,3 +40,12 @@ Repeated requests coalesce while one check is queued or running. Shutdown waits
 for admitted checks; queued callbacks skip a retired checker or replaced timer.
 Normal periodic checks remain unchanged. This does not move the remaining reload
 file reads off the caller, or make reload completion await all date-event listeners.
+
+When an asynchronous `onBeforeStorageShutdown()` stage settles, storage retirement
+is queued on the existing user storage worker. The completing callback can finish
+its admitted storage work before the shared cache flush and native provider close.
+Already completed default hooks retain their existing retirement-stage behavior.
+A rejected continuation reports failure and leaves the shared runtime attached;
+it does not report a successful flush. Failed or cancelled preparation still
+retires accepted writes, with the preparation failure retained. No new executor,
+configuration, or storage format is introduced.
