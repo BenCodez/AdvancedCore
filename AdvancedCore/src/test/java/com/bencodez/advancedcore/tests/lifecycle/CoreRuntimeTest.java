@@ -572,26 +572,57 @@ class CoreRuntimeTest {
 		assertDoesNotThrow(() -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
 	}
 
-	@Test void bukkitAdapterReportsAdmissionHookFailureWithoutStartingStorageRetirement() {
-		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
-		UserManager users = mock(UserManager.class);
-		UserDataManager dataManager = mock(UserDataManager.class);
-		IllegalStateException failure = new IllegalStateException("admission hook failed");
-		when(plugin.onBeforeStorageShutdown()).thenReturn(CompletableFuture.failedFuture(failure));
-		when(plugin.isLoadUserData()).thenReturn(true);
-		when(plugin.getLoadedUserManager()).thenReturn(users);
-		when(users.getDataManager()).thenReturn(dataManager);
-		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+	@Test void bukkitAdapterRetiresStorageAfterEachPreparationFailureAndWaitsForItsCompletion() {
+        for (String mode : List.of("failed", "cancelled", "throwing", "late-failed", "late-cancelled")) {
+            AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+            UserManager users = mock(UserManager.class);
+            UserDataManager dataManager = mock(UserDataManager.class);
+            var hook = new CompletableFuture<Void>(); var retirement = new CompletableFuture<Void>();
+            var failure = new IllegalStateException("admission hook failed");
+            if (mode.equals("failed")) hook.completeExceptionally(failure);
+            if (mode.equals("cancelled")) hook.cancel(false);
+            if (mode.equals("throwing")) when(plugin.onBeforeStorageShutdown()).thenThrow(failure);
+            else when(plugin.onBeforeStorageShutdown()).thenReturn(hook);
+            when(plugin.isLoadUserData()).thenReturn(true);
+            when(plugin.getLoadedUserManager()).thenReturn(users);
+            when(users.getDataManager()).thenReturn(dataManager);
+            when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(retirement);
+            BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+            Runnable shutdown = platform.beforeExecutorShutdown().stream().filter(cleanup -> cleanup.name().equals("user storage"))
+                    .findFirst().orElseThrow().action();
+            assertDoesNotThrow(shutdown::run, mode);
+            if (mode.startsWith("late")) {
+                verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+                if (mode.equals("late-failed")) hook.completeExceptionally(failure); else hook.cancel(false);
+            }
+            verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+            assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone(), mode);
+            retirement.complete(null);
+            CompletionException reported = assertThrows(CompletionException.class,
+                    () -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
+            if (mode.contains("cancelled")) assertInstanceOf(java.util.concurrent.CancellationException.class, reported.getCause());
+            else assertSame(failure, reported.getCause());
+            shutdown.run(); verify(dataManager, times(1)).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+            verify(plugin, times(1)).onBeforeStorageShutdown();
+        }
+    }
 
-		platform.beforeExecutorShutdown().stream()
-				.filter(cleanup -> cleanup.name().equals("user storage"))
-				.findFirst().orElseThrow().action().run();
-
-		CompletionException reported = assertThrows(CompletionException.class,
-				() -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
-		assertSame(failure, reported.getCause());
-		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
-	}
+    @Test void bukkitAdapterRetainsBothPreparationAndStorageFailures() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserManager users = mock(UserManager.class); UserDataManager dataManager = mock(UserDataManager.class);
+        var preparation = new IllegalStateException("preparation failed"); var storage = new IllegalStateException("flush failed");
+        when(plugin.onBeforeStorageShutdown()).thenReturn(CompletableFuture.failedFuture(preparation));
+        when(plugin.isLoadUserData()).thenReturn(true); when(plugin.getLoadedUserManager()).thenReturn(users);
+        when(users.getDataManager()).thenReturn(dataManager);
+        when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(CompletableFuture.failedFuture(storage));
+        BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+        platform.beforeExecutorShutdown().stream().filter(cleanup -> cleanup.name().equals("user storage"))
+                .findFirst().orElseThrow().action().run();
+        CompletionException reported = assertThrows(CompletionException.class,
+                () -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
+        assertSame(preparation, reported.getCause()); assertArrayEquals(new Throwable[] {storage}, reported.getSuppressed());
+        verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+    }
 
 	@Test void defaultAdmissionHookCompletesForExistingSubclasses() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);

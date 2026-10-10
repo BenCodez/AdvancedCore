@@ -143,22 +143,40 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 			if (startedUserStorageRetirement == null) {
 				CompletionStage<Void> hook = ensurePreStorageShutdownHook();
 				if (hook.toCompletableFuture().isDone()) {
-					try {
-						hook.toCompletableFuture().join();
-						// Preserve the legacy stage identity for the normal completed
-						// default hook and existing callers that observe it.
-						startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
-					} catch (java.util.concurrent.CompletionException failure) {
-						startedUserStorageRetirement = hook;
+					try { hook.toCompletableFuture().join(); }
+					catch (java.util.concurrent.CompletionException | java.util.concurrent.CancellationException failure) {
+						startedUserStorageRetirement = retireAfterPreparationFailure(failure);
+                        return startedUserStorageRetirement;
 					}
+                    // Preserve the successful default hook's legacy retirement stage identity.
+                    startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
 				} else {
-					startedUserStorageRetirement = hook
-							.thenCompose(ignored -> closeUserStorageAfterSharedRetirement());
+					startedUserStorageRetirement = hook.handle((ignored, failure) -> failure)
+							.thenCompose(failure -> failure == null ? closeUserStorageAfterSharedRetirement()
+									: retireAfterPreparationFailure(failure));
 				}
 			}
 			return startedUserStorageRetirement;
 		}
 	}
+
+    /** A failed consumer preparation still has accepted cache writes to retire. */
+    private CompletionStage<Void> retireAfterPreparationFailure(Throwable preparationFailure) {
+        Throwable cause = preparationFailure instanceof java.util.concurrent.CompletionException
+                && preparationFailure.getCause() != null ? preparationFailure.getCause() : preparationFailure;
+        var reported = new java.util.concurrent.CompletionException(cause);
+        var result = new CompletableFuture<Void>();
+        try {
+            closeUserStorageAfterSharedRetirement().whenComplete((ignored, storageFailure) -> {
+                if (storageFailure != null && storageFailure != cause) reported.addSuppressed(storageFailure);
+                result.completeExceptionally(reported);
+            });
+        } catch (Throwable storageFailure) {
+            if (storageFailure != cause) reported.addSuppressed(storageFailure);
+            result.completeExceptionally(reported);
+        }
+        return result;
+    }
 
 	private CompletionStage<Void> ensurePreStorageShutdownHook() {
 		synchronized (userStorageRetirementLock) {

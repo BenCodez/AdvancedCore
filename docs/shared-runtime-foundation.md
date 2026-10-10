@@ -30,6 +30,13 @@ parallel runtime with different caches or a second set of background tasks.
   synchronous; the executor grace periods are not a global bound on all cleanup
   callbacks. No stronger transactional or idempotency guarantee is claimed.
 
+Consumer `onBeforeStorageShutdown()` stages settle before shared user storage
+retirement begins. A thrown exception, exceptional completion, or cancellation
+still starts shared-cache retirement and waits for that retirement to settle.
+The preparation failure remains the reported cause; a storage failure is retained
+as a suppressed failure. Successful default hooks preserve the existing retirement
+stage identity. A failing hook does not bypass accepted user-data flushing.
+
 ## What this does not port yet
 
 This is the executor/lifecycle slice of the future shared runtime, not a complete

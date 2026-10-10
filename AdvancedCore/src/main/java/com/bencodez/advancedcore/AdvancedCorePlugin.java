@@ -1354,6 +1354,8 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * sequence unchanged. Implementations must return promptly and may use the
 	 * returned stage to account for work admitted before storage retirement;
 	 * they must not wait synchronously for that work here.
+	 * Exceptional completion or cancellation is reported after shared storage
+	 * retirement settles; it does not skip flushing accepted cache writes.
 	 *
 	 * @return completion of plugin-owned pre-storage-shutdown work
 	 */
