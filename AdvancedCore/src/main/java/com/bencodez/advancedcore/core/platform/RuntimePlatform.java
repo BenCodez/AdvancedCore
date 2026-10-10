@@ -39,7 +39,17 @@ public interface RuntimePlatform {
 	 */
 	default boolean canBlockForPreExecutorShutdown() { return true; }
 
-	/** Maximum time a non-blocking lifecycle waits before forcing its storage worker. */
+	/**
+	 * Consumer preparation and final-task admission that must settle before the storage worker can stop.
+	 * A watchdog may report a timeout while this stage is pending, but must retain
+	 * storage admission and the native provider for its eventual final checkpoint.
+	 * The default has no separate preparation phase.
+	 */
+	default CompletionStage<Void> storageRetirementPreparationCompletion() {
+		return CompletableFuture.completedFuture(null);
+	}
+
+	/** Maximum grace for admitted retirement; pending consumer preparation retains its owner. */
 	default long deferredShutdownTimeoutMillis() { return 5_000; }
 
 	/**

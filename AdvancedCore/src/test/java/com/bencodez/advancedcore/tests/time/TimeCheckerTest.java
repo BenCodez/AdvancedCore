@@ -869,6 +869,31 @@ public class TimeCheckerTest {
 		verify(serverDataFile).completeTimeChangeTransition(transition);
 	}
 
+	@Test
+	public void reloadRequestDispatchesRealAsyncDateEventsOnCalendarWorker() throws Exception {
+		TimeChangeTransitionState transition = transitionState();
+		PluginManager manager = configureDetectedDay(transition);
+		when(plugin.isEnabled()).thenReturn(true);
+		Thread owner = Thread.currentThread();
+		java.util.concurrent.atomic.AtomicInteger delivered = new java.util.concurrent.atomic.AtomicInteger();
+		Mockito.doAnswer(call -> {
+			Event event = call.getArgument(0);
+			if (!event.isAsynchronous() || Thread.currentThread() == owner)
+				throw new IllegalStateException("Date event dispatched from server owner");
+			delivered.incrementAndGet(); return null;
+		}).when(manager).callEvent(any(Event.class));
+		TimeChecker checker = new TimeChecker(plugin,
+				Clock.fixed(Instant.parse("2025-01-02T12:00:00Z"), ZoneOffset.UTC));
+		ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(); checker.setTimer(timer);
+		try {
+			checker.requestUpdate(); timer.submit(() -> {}).get(5, TimeUnit.SECONDS);
+			assertEquals(3, delivered.get());
+			verify(serverDataFile).completeTimeChangeTransition(transition);
+			verify(serverDataFile, Mockito.never()).failTimeChangeTransition(any());
+			checker.beginShutdown().toCompletableFuture().get(5, TimeUnit.SECONDS);
+		} finally { timer.shutdownNow(); assertTrue(timer.awaitTermination(5, TimeUnit.SECONDS)); }
+	}
+
 	private PluginManager configureDetectedDay(TimeChangeTransitionState transition) {
 		Server server = mock(Server.class);
 		PluginManager pluginManager = mock(PluginManager.class);

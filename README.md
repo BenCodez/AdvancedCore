@@ -32,3 +32,33 @@ API used in the plugins developed by BenCodez, can be used in any project.
   Versions:  
   LATEST - latest stable release  
   Check out all tags [on the releases tab](https://github.com/BenCodez/AdvancedCore/tags).
+
+
+Calendar checks requested by reload run on the existing background calendar timer,
+so asynchronous date events are not called inline from a Bukkit or Folia owner.
+Repeated requests coalesce while one check is queued or running. Shutdown waits
+for admitted checks; queued callbacks skip a retired checker or replaced timer.
+Normal periodic checks remain unchanged. This does not move the remaining reload
+file reads off the caller, or make reload completion await all date-event listeners.
+
+When an asynchronous `onBeforeStorageShutdown()` stage settles, storage retirement
+is queued on the existing user storage worker. The completing callback can finish
+its admitted storage work before the shared cache flush and native provider close.
+Already completed default hooks retain their existing retirement-stage behavior.
+A rejected continuation reports failure and leaves the shared runtime attached;
+it does not report a successful flush. Failed or cancelled preparation still
+retires accepted writes, with the preparation failure retained. No new executor,
+configuration, or storage format is introduced.
+
+If consumer preparation exceeds the default five-second shutdown watchdog, the
+watchdog reports it and retains the existing daemon storage worker and native
+provider. Preparation is acknowledged only after its callback has submitted the
+final retirement task. A future becoming complete alone is insufficient because
+its callbacks can still be running. After that acknowledgement, a stalled storage
+retirement still receives the bounded watchdog and worker grace; terminal native
+cleanup waits for the actual storage worker to terminate.
+
+A consumer hook that never settles retains its storage owner until JVM exit.
+This does not block the server thread or keep the JVM alive, but an abrupt exit
+cannot guarantee the pending checkpoint was persisted. Consumers must complete,
+fail, or cancel their preparation stage. No new executor or polling loop is added.

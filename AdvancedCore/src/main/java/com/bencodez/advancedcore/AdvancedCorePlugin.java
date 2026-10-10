@@ -1348,6 +1348,29 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		javaPlugin = null;
 	}
 
+	/**
+	 * Gives a plugin one asynchronous admission boundary before native user
+	 * storage starts retiring. The default keeps the established shutdown
+	 * sequence unchanged. Implementations must return promptly and may use the
+	 * returned stage to account for work admitted before storage retirement;
+	 * they must not wait synchronously for that work here.
+	 * Exceptional completion or cancellation is reported after shared storage
+	 * retirement settles; it does not skip flushing accepted cache writes.
+	 *
+	 * @return completion of plugin-owned pre-storage-shutdown work
+	 */
+	public CompletionStage<Void> onBeforeStorageShutdown() {
+		return CompletableFuture.completedFuture(null);
+	}
+
+	/**
+	 * Called after platform cleanup, including the final permission-data save.
+	 * Deferred storage retirement may still be running; implementations must
+	 * retain any owner needed by their pre-storage stage until that stage settles.
+	 * The default is a no-op so existing subclasses retain their lifecycle.
+	 */
+	public void onShutdownComplete() { }
+
 	@Override
 	public void onEnable() {
 		javaPlugin = this;
@@ -1651,7 +1674,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void finishReloadAdvancedCore() {
-		timeChecker.update();
+		timeChecker.requestUpdate();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 		getRewardHandler().checkSubRewards();

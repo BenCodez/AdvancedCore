@@ -196,12 +196,7 @@ public final class AdvancedCoreRuntime {
 			finishDeferredStorageTimer(storageTimer, failure != null, failure != null, terminalStorageCleanup);
 		});
 		long timeoutMillis = Math.max(1, platform.deferredShutdownTimeoutMillis());
-		Runnable timeout = () -> {
-			// Mark a still-draining transition recoverable before racing its final
-			// lease acknowledgement. Once this hook returns, it cannot advance a
-			// time marker even if the worker ignores interruption briefly.
-			if (holdTimeTimer) clean(List.of(new Cleanup("forced time transition shutdown",
-					platform::beforeForcedTimeTimerShutdown)));
+		Runnable forceRetirement = () -> {
 			if (!finished.compareAndSet(false, true)) return;
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
@@ -212,6 +207,30 @@ public final class AdvancedCoreRuntime {
 			shutdown(storageTimer);
 			finishDeferredStorageTimer(storageTimer, false, true, terminalStorageCleanup);
 		};
+		Runnable timeout = () -> {
+			if (finished.get()) return;
+			// Mark a still-draining time transition recoverable before racing its
+			// final lease acknowledgement. This may start consumer preparation.
+			if (holdTimeTimer) clean(List.of(new Cleanup("forced time transition shutdown",
+					platform::beforeForcedTimeTimerShutdown)));
+			CompletionStage<Void> preparation = platform.storageRetirementPreparationCompletion();
+			if (preparation != null && !preparation.toCompletableFuture().isDone()) {
+				platform.cleanupFailed(component, new TimeoutException(
+						"Consumer storage preparation exceeded " + timeoutMillis
+						+ " ms; retaining storage until preparation completes"));
+				// One continuation, not a polling loop. Keep the daemon storage worker
+				// open for a checkpoint accepted by a separate consumer worker. Once
+				// preparation settles, admitted retirement gets its own bounded grace.
+				preparation.whenComplete((ignored, failure) ->
+						scheduleStorageWatchdog(timeoutMillis, forceRetirement));
+				return;
+			}
+			forceRetirement.run();
+		};
+		scheduleStorageWatchdog(timeoutMillis, timeout);
+	}
+
+	private void scheduleStorageWatchdog(long timeoutMillis, Runnable timeout) {
 		try { CompletableFuture.delayedExecutor(timeoutMillis, TimeUnit.MILLISECONDS).execute(timeout); }
 		catch (RuntimeException | Error schedulingFailure) {
 			platform.cleanupFailed("deferred storage shutdown watchdog", schedulingFailure);

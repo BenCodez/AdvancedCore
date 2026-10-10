@@ -22,6 +22,8 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     private final AdvancedCorePlugin plugin;
     private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
 	private CompletionStage<Void> startedUserStorageRetirement;
+	private CompletionStage<Void> preStorageShutdownHook;
+	private CompletableFuture<Void> storageRetirementPreparation = CompletableFuture.completedFuture(null);
 	private volatile CompletionStage<Void> timeChangeRetirement = CompletableFuture.completedFuture(null);
 	private final Object userStorageRetirementLock = new Object();
     private final AtomicBoolean userStorageOwnerClosed = new AtomicBoolean();
@@ -62,6 +64,11 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     }
 
 	@Override public CompletionStage<Void> beforeExecutorShutdownCompletion() { return userStorageRetirement; }
+	@Override public CompletionStage<Void> storageRetirementPreparationCompletion() {
+		synchronized (userStorageRetirementLock) {
+			return storageRetirementPreparation;
+		}
+	}
 	@Override public boolean holdTimeTimerUntilPreExecutorShutdownCompletion() {
 		return timeChangeRetirement != null && !timeChangeRetirement.toCompletableFuture().isDone();
 	}
@@ -108,7 +115,8 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                 }),
                 new Cleanup("dialog service", () -> {
                     if (plugin.getDialogService() != null) plugin.getDialogService().unregister();
-                }));
+                }),
+                new Cleanup("plugin shutdown completion hook", plugin::onShutdownComplete));
     }
 
     @Override public void info(String message) { plugin.getLogger().info(message); }
@@ -139,9 +147,98 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 	private CompletionStage<Void> ensureUserStorageRetirementStarted() {
 		synchronized (userStorageRetirementLock) {
 			if (startedUserStorageRetirement == null) {
-				startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
+				CompletionStage<Void> hook = ensurePreStorageShutdownHook();
+				if (hook.toCompletableFuture().isDone()) {
+					try { hook.toCompletableFuture().join(); }
+					catch (java.util.concurrent.CompletionException | java.util.concurrent.CancellationException failure) {
+						startedUserStorageRetirement = retireAfterPreparationFailure(failure);
+                        return startedUserStorageRetirement;
+					}
+                    // Preserve the successful default hook's legacy retirement stage identity.
+                    startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
+				} else {
+					var preparation = new CompletableFuture<Void>();
+					storageRetirementPreparation = preparation;
+					startedUserStorageRetirement = hook.handle((ignored, failure) -> failure)
+							.thenCompose(failure -> {
+								try { return deferUserStorageRetirement(failure); }
+								finally {
+									// Future completion can precede its callbacks. Signal only
+									// after the final retirement task has been admitted.
+									preparation.complete(null);
+								}
+							});
+				}
 			}
 			return startedUserStorageRetirement;
+		}
+	}
+
+    /** A completing consumer callback may still hold shared storage read admission. */
+    private CompletionStage<Void> deferUserStorageRetirement(Throwable preparationFailure) {
+        if (!plugin.isLoadUserData() || plugin.getLoadedUserManager() == null) {
+            return preparationFailure == null ? closeUserStorageAfterSharedRetirement()
+                    : retireAfterPreparationFailure(preparationFailure);
+        }
+        var result = new CompletableFuture<Void>();
+        try {
+            Objects.requireNonNull(getUserStorageTimer(), "user storage timer").execute(() -> {
+                try {
+                    CompletionStage<Void> retirement = preparationFailure == null
+                            ? closeUserStorageAfterSharedRetirement()
+                            : retireAfterPreparationFailure(preparationFailure);
+                    retirement.whenComplete((ignored, failure) -> {
+                        if (failure == null) result.complete(null);
+                        else result.completeExceptionally(failure);
+                    });
+                } catch (Throwable failure) {
+                    result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));
+                }
+            });
+        } catch (RuntimeException | Error failure) {
+            // Do not detach the shared runtime or pretend rejected work flushed storage.
+            result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));
+        }
+        return result;
+    }
+
+    private static Throwable preparationAndStorageFailure(Throwable preparationFailure, Throwable storageFailure) {
+        if (preparationFailure == null) return storageFailure;
+        Throwable cause = preparationFailure instanceof java.util.concurrent.CompletionException
+                && preparationFailure.getCause() != null ? preparationFailure.getCause() : preparationFailure;
+        var reported = new java.util.concurrent.CompletionException(cause);
+        if (storageFailure != null && storageFailure != cause) reported.addSuppressed(storageFailure);
+        return reported;
+    }
+
+    /** A failed consumer preparation still has accepted cache writes to retire. */
+    private CompletionStage<Void> retireAfterPreparationFailure(Throwable preparationFailure) {
+        Throwable cause = preparationFailure instanceof java.util.concurrent.CompletionException
+                && preparationFailure.getCause() != null ? preparationFailure.getCause() : preparationFailure;
+        var reported = new java.util.concurrent.CompletionException(cause);
+        var result = new CompletableFuture<Void>();
+        try {
+            closeUserStorageAfterSharedRetirement().whenComplete((ignored, storageFailure) -> {
+                if (storageFailure != null && storageFailure != cause) reported.addSuppressed(storageFailure);
+                result.completeExceptionally(reported);
+            });
+        } catch (Throwable storageFailure) {
+            if (storageFailure != cause) reported.addSuppressed(storageFailure);
+            result.completeExceptionally(reported);
+        }
+        return result;
+    }
+
+	private CompletionStage<Void> ensurePreStorageShutdownHook() {
+		synchronized (userStorageRetirementLock) {
+			if (preStorageShutdownHook != null) return preStorageShutdownHook;
+			try {
+				CompletionStage<Void> hook = plugin.onBeforeStorageShutdown();
+				preStorageShutdownHook = hook == null ? CompletableFuture.completedFuture(null) : hook;
+			} catch (Throwable failure) {
+				preStorageShutdownHook = CompletableFuture.failedFuture(failure);
+			}
+			return preStorageShutdownHook;
 		}
 	}
 

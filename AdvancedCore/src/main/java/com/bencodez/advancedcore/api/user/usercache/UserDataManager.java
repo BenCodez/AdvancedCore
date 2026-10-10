@@ -49,6 +49,8 @@ public class UserDataManager {
 	@Getter private ArrayList<String> booleanColumns;
 	@Getter private AdvancedCorePlugin plugin;
 	@Getter private ScheduledExecutorService timer;
+	/** Exact private executor identity; Spigot reports every thread as primary after stop. */
+	private volatile Thread storageWorker;
 	@Getter private ConcurrentHashMap<UUID, UserDataCache> userDataCache;
 
 	private volatile Consumer<UserDataCache> sharedCacheInitializer;
@@ -468,6 +470,10 @@ public class UserDataManager {
 			// A second shutdown caller must not interpret an in-flight retirement as
 			// "no runtime" and close the native provider underneath its final flush.
 			if (runtime == null) return sharedRuntimeRetiring ? sharedRuntimeRetirement : null;
+            // Fence queued notifications before closeAsync marks the runtime retiring.
+            // An already-running callback retains its lifecycle read admission and
+            // finishes before the runtime's final writer can close storage.
+            closeSharedUserDataNotifications();
 			sharedRuntime = null;
 			sharedRuntimeRetiring = true;
 			completion = new CompletableFuture<>();
@@ -646,6 +652,7 @@ public class UserDataManager {
 			// this component-owned worker daemon prevents that hung call from retaining
 			// the server JVM after the bounded lifecycle watchdog has reported it.
 			worker.setDaemon(true);
+			storageWorker = worker;
 			return worker;
 		});
 		loadKeys();
@@ -1360,6 +1367,9 @@ public class UserDataManager {
 	 * platform-owned execution lanes and must never wait on JDBC/shared-runtime admission.
 	 */
 	public boolean isPlatformOwnedThread() {
+		// This thread is created by our single-threaded executor, never by Bukkit.
+		// Do not infer ownership from its name, plugin enabled state, or shutdown state.
+		if (Thread.currentThread() == storageWorker) return false;
 		Object server = Bukkit.getServer();
 		if (server == null) return false;
 		try { if (Bukkit.isPrimaryThread()) return true; }
