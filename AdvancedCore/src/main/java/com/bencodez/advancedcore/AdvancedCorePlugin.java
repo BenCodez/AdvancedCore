@@ -1674,7 +1674,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void finishReloadAdvancedCore() {
-		timeChecker.update();
+		timeChecker.requestUpdate();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 		getRewardHandler().checkSubRewards();

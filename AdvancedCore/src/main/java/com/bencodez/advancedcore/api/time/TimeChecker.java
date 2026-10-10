@@ -39,6 +39,8 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	private volatile ActiveTransition activeTransition;
 	private CompletableFuture<Void> noActiveTransition = CompletableFuture.completedFuture(null);
 	private CompletableFuture<Void> noPendingManualTransitions = CompletableFuture.completedFuture(null);
+	private CompletableFuture<Void> noRequestedUpdate = CompletableFuture.completedFuture(null);
+	private boolean requestedUpdatePending;
 	private boolean acceptingTransitions = true;
 	private boolean abortingTransitions;
 
@@ -121,7 +123,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		synchronized (transitionLock) {
 			acceptingTransitions = false;
 			transitionLock.notifyAll();
-			return CompletableFuture.allOf(noActiveTransition, noPendingManualTransitions);
+			return CompletableFuture.allOf(noActiveTransition, noPendingManualTransitions, noRequestedUpdate);
 		}
 	}
 
@@ -316,6 +318,42 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	public void setProcessingEnabled(boolean value) {
 		processingEnabled = value;
 		plugin.debug("Local time change processing " + (value ? "enabled" : "disabled"));
+	}
+
+	/** Requests one coalesced calendar check on its existing background timer.
+	 * Reload callers may be Bukkit/Folia owners; asynchronous date events must
+	 * never be dispatched inline there. Shutdown drains an admitted check.
+	 */
+	public void requestUpdate() {
+		final ScheduledExecutorService executor;
+		final CompletableFuture<Void> drain;
+		synchronized (transitionLock) {
+			if (!acceptingTransitions || abortingTransitions || requestedUpdatePending || timer == null) return;
+			executor = timer;
+			requestedUpdatePending = true;
+			drain = new CompletableFuture<>();
+			noRequestedUpdate = drain;
+		}
+		try {
+			executor.execute(() -> {
+				try {
+					synchronized (transitionLock) {
+						if (!acceptingTransitions || abortingTransitions || timer != executor) return;
+					}
+					if (plugin != null && plugin.isEnabled()) runRecurringTask("requested time change check", this::update);
+				} finally { finishRequestedUpdate(drain); }
+			});
+		} catch (RejectedExecutionException rejected) {
+			finishRequestedUpdate(drain);
+			plugin.debug("Ignoring requested time check while the calendar timer is unavailable");
+		}
+	}
+
+	private void finishRequestedUpdate(CompletableFuture<Void> drain) {
+		synchronized (transitionLock) {
+			if (noRequestedUpdate == drain) requestedUpdatePending = false;
+		}
+		drain.complete(null);
 	}
 
 	public void update() {
