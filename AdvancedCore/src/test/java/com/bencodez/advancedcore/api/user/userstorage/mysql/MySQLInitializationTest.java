@@ -121,6 +121,57 @@ class MySQLInitializationTest {
         }
     }
 
+    @Test void globalConnectionAcquisitionPreservesUncheckedFailures() throws Exception {
+        assertGlobalSelectionFailures(0);
+    }
+
+    @Test void globalStatementPreparationPreservesUncheckedFailures() throws Exception {
+        assertGlobalSelectionFailures(1);
+    }
+
+    @Test void globalStatementExecutionPreservesUncheckedFailures() throws Exception {
+        assertGlobalSelectionFailures(2);
+    }
+
+    private void assertGlobalSelectionFailures(int phase) throws Exception {
+        for (Throwable original : new Throwable[] { new IllegalArgumentException("driver failure"),
+                new LinkageError("driver linkage failure"), new SQLException("database selection failure") }) {
+            RuntimeException cleanup = new IllegalStateException("pool cleanup failure");
+            try (var managers = mockConstruction(ConnectionManager.class, (manager, context) -> {
+                when(manager.open()).thenReturn(true);
+                when(manager.getDbType()).thenReturn(com.bencodez.simpleapi.sql.mysql.DbType.MYSQL);
+                var connection = mock(java.sql.Connection.class);
+                var statement = mock(java.sql.PreparedStatement.class);
+                if (phase == 0) when(manager.getConnectionChecked()).thenThrow(original);
+                else {
+                    when(manager.getConnectionChecked()).thenReturn(connection);
+                    if (phase == 1) when(connection.prepareStatement(anyString())).thenThrow(original);
+                    else {
+                        when(connection.prepareStatement(anyString())).thenReturn(statement);
+                        when(statement.executeUpdate()).thenThrow(original);
+                    }
+                }
+                doThrow(cleanup).when(manager).close();
+            })) {
+                Throwable actual = assertThrows(Throwable.class, () ->
+                    new com.bencodez.advancedcore.bungeeapi.globaldata.GlobalMySQL("Global",
+                            new com.bencodez.simpleapi.sql.mysql.config.MysqlConfigSpigot(config())) {
+                        public void debugEx(Exception e) { fail("constructor callback"); }
+                        public void debugLog(String text) { fail("constructor callback"); }
+                        public void info(String text) { fail("constructor callback"); }
+                        public void logSevere(String text) { fail("constructor callback"); }
+                        public void warning(String text) { fail("constructor callback"); }
+                    });
+                if (original instanceof SQLException) {
+                    assertInstanceOf(IllegalStateException.class, actual);
+                    assertSame(original, actual.getCause());
+                } else assertSame(original, actual);
+                assertArrayEquals(new Throwable[] { cleanup }, original.getSuppressed());
+                verify(managers.constructed().get(0)).close();
+            }
+        }
+    }
+
     private static YamlConfiguration config() {
         YamlConfiguration result = new YamlConfiguration();
         result.set("Host", "localhost"); result.set("Port", 3306);

@@ -122,7 +122,11 @@ public abstract class GlobalMySQL {
 				statement.executeUpdate();
 			} catch (SQLException | RuntimeException | Error failure) {
 				try { mysql.disconnect(); }
-				catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
+				catch (RuntimeException | Error cleanupFailure) {
+					if (cleanupFailure != failure) failure.addSuppressed(cleanupFailure);
+				}
+				if (failure instanceof RuntimeException runtime) throw runtime;
+				if (failure instanceof Error error) throw error;
 				throw new IllegalStateException("Failed to initialize global SQL database selection", failure);
 			}
 		}
