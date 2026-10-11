@@ -497,8 +497,9 @@ public class BInventory {
 	}
 
 	private String getDisplayName(Player player) {
-		return PlaceholderUtils.replaceJavascript(player,
-				PlaceholderUtils.replacePlaceHolder(inventoryName, placeholders));
+		return com.bencodez.advancedcore.api.messages.DisplayTextBoundaries.afterFormatting(
+				PlaceholderUtils.replaceJavascript(player,
+						PlaceholderUtils.replacePlaceHolder(inventoryName, placeholders)));
 	}
 
 	private int getProperSize(int size) {
