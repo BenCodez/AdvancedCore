@@ -49,13 +49,19 @@ public class MySQL extends AbstractSqlTable {
 		super(tableName, new MysqlConfigSpigot(section), plugin.getOptions().getDebug().isDebug(), true);
 		this.plugin = plugin;
 
-		init();
-
-		loadData();
-		plugin.debug("UseBatchUpdates: " + isUseBatchUpdates());
-
-		// old behavior: ensure uuid type is best-case for db
-		alterColumnType("uuid", bestUuidType());
+		// Superclass connection setup must not invoke our hooks before plugin is assigned.
+		// All subclass-dependent initialization belongs here, with ownership of cleanup.
+		try {
+			init();
+			loadData();
+			plugin.debug("UseBatchUpdates: " + isUseBatchUpdates());
+			// Preserve the existing UUID schema reconciliation.
+			alterColumnType("uuid", bestUuidType());
+		} catch (RuntimeException | Error failure) {
+			try { mysql.disconnect(); }
+			catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
+			throw failure;
+		}
 	}
 
 	// -------------------------
