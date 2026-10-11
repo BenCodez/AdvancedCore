@@ -20,7 +20,7 @@ public class BossBar {
 	private org.bukkit.boss.BossBar bossBar;
 
 	public BossBar(String msg, String barColor, String barStyle, double progress) {
-		bossBar = Bukkit.createBossBar(MessageAPI.colorize(msg), EffectCompatibility.parseBarColor(barColor),
+		bossBar = Bukkit.createBossBar(com.bencodez.advancedcore.api.messages.DisplayTextBoundaries.afterFormatting(MessageAPI.colorize(msg)), EffectCompatibility.parseBarColor(barColor),
 				EffectCompatibility.parseBarStyle(barStyle));
 		bossBar.setProgress(EffectCompatibility.clampProgress(progress));
 	}
@@ -116,7 +116,7 @@ public class BossBar {
 
 	public void setTitle(String title) {
 		if (title != null) {
-			bossBar.setTitle(MessageAPI.colorize(title));
+			bossBar.setTitle(com.bencodez.advancedcore.api.messages.DisplayTextBoundaries.afterFormatting(MessageAPI.colorize(title)));
 		}
 	}
 
