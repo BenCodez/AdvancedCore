@@ -41,6 +41,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	private CompletableFuture<Void> noPendingManualTransitions = CompletableFuture.completedFuture(null);
 	private CompletableFuture<Void> noRequestedUpdate = CompletableFuture.completedFuture(null);
 	private boolean requestedUpdatePending;
+	private boolean requestedUpdateRunning;
 	private boolean acceptingTransitions = true;
 	private boolean abortingTransitions;
 
@@ -336,17 +337,36 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		}
 		try {
 			executor.execute(() -> {
+				boolean started = false;
 				try {
 					synchronized (transitionLock) {
 						if (!acceptingTransitions || abortingTransitions || timer != executor) return;
+						requestedUpdateRunning = true;
+						started = true;
 					}
 					if (plugin != null && plugin.isEnabled()) runRecurringTask("requested time change check", this::update);
-				} finally { finishRequestedUpdate(drain); }
+				} finally {
+					synchronized (transitionLock) {
+						if (started) requestedUpdateRunning = false;
+					}
+					finishRequestedUpdate(drain);
+				}
 			});
 		} catch (RejectedExecutionException rejected) {
 			finishRequestedUpdate(drain);
 			plugin.debug("Ignoring requested time check while the calendar timer is unavailable");
 		}
+	}
+
+	/** Settles an admitted request that has not started before deferred cleanup. */
+	public void cancelQueuedUpdate() {
+		CompletableFuture<Void> drain = null;
+		synchronized (transitionLock) {
+			if (!acceptingTransitions && requestedUpdatePending && !requestedUpdateRunning) {
+				drain = noRequestedUpdate;
+			}
+		}
+		if (drain != null) finishRequestedUpdate(drain);
 	}
 
 	private void finishRequestedUpdate(CompletableFuture<Void> drain) {

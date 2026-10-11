@@ -44,6 +44,32 @@ class TimeCheckerRequestedUpdateTest {
         task.get().run(); assertTrue(stopped.isDone()); verify(checker, never()).update();
         checker.requestUpdate(); verify(timer).execute(any(Runnable.class));
     }
+    @Test void deferredCleanupSettlesQueuedRequestBeforeExecutorIsForcedDown() {
+        var checker = spy(new TimeChecker(plugin())); var timer = mock(ScheduledExecutorService.class);
+        AtomicReference<Runnable> task = new AtomicReference<>();
+        doAnswer(call -> { task.set(call.getArgument(0)); return null; }).when(timer).execute(any(Runnable.class));
+        checker.setTimer(timer); checker.requestUpdate();
+        var stopped = checker.beginShutdown().toCompletableFuture();
+        assertFalse(stopped.isDone());
+        checker.cancelQueuedUpdate();
+        assertTrue(stopped.isDone());
+        task.get().run();
+        verify(checker, never()).update();
+    }
+    @Test void deferredCleanupLeavesRunningRequestOwnedUntilItFinishes() throws Exception {
+        var plugin = plugin(); var checker = spy(new TimeChecker(plugin));
+        var timer = Executors.newSingleThreadScheduledExecutor(); checker.setTimer(timer);
+        var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+        doAnswer(call -> { entered.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS)); return null; }).when(checker).update();
+        try {
+            checker.requestUpdate(); assertTrue(entered.await(5, TimeUnit.SECONDS));
+            var stopped = checker.beginShutdown().toCompletableFuture();
+            checker.cancelQueuedUpdate();
+            assertFalse(stopped.isDone());
+            release.countDown();
+            stopped.get(5, TimeUnit.SECONDS);
+        } finally { release.countDown(); timer.shutdownNow(); assertTrue(timer.awaitTermination(5, TimeUnit.SECONDS)); }
+    }
     @Test void rejectedSubmissionReleasesAdmissionForRetry() {
         var checker = spy(new TimeChecker(plugin())); var timer = mock(ScheduledExecutorService.class);
         doThrow(new RejectedExecutionException()).doNothing().when(timer).execute(any(Runnable.class));
