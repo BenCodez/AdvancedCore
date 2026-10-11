@@ -62,6 +62,7 @@ public class PlaceholderUtils {
 
 				if (type.equalsIgnoreCase("hover")) {
 					BaseComponent[] hoverContent = TextComponent.fromLegacyText(typeData);
+					for (BaseComponent hover : hoverContent) DisplayTextBoundaries.afterFormatting(hover);
 					t.setHoverEvent(MessageAPI.getHoverEventSupport().createHoverEvent(hoverContent));
 				} else if (type.equalsIgnoreCase("command")) {
 					t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, typeData));
@@ -87,6 +88,9 @@ public class PlaceholderUtils {
 
 			comp.addExtra(new TextComponent(TextComponent.fromLegacyText(msg)));
 		}
+		// Syntax and legacy-color parsing are finished; restore the literal site
+		// name for the client without allowing another formatting pass.
+		DisplayTextBoundaries.afterFormatting(comp);
 		return comp;
 	}
 
