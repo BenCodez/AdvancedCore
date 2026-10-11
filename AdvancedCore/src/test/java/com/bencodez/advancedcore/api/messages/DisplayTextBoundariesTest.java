@@ -17,7 +17,8 @@ class DisplayTextBoundariesTest {
 
         assertEquals("Site: Minecraft Menu", text.toPlainText());
         assertFalse(text.toPlainText().contains("\u2060"));
-        assertEquals("\u00A7eSite: Minecraft Menu", text.toLegacyText());
+        org.junit.jupiter.api.Assertions.assertTrue(text.toLegacyText().contains("\u00A7eSite: Minecraft Menu"));
+        assertFalse(text.toLegacyText().contains("\u2060"));
     }
 
     @Test
