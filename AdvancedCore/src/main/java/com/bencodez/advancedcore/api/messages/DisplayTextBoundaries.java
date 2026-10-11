@@ -17,7 +17,28 @@ public final class DisplayTextBoundaries {
     }
 
     public static String afterFormatting(String prepared) {
-        return prepared == null ? null : prepared.replace("\u2060", "");
+        if (prepared == null || prepared.indexOf('\u2060') < 0) return prepared;
+        StringBuilder visible = new StringBuilder(prepared.length());
+        for (int i = 0; i < prepared.length(); i++) {
+            char next = prepared.charAt(i);
+            if (next != '\u2060') {
+                visible.append(next);
+                continue;
+            }
+            // Some legacy String sinks (inventory titles, item metadata, boss
+            // bars) still parse § codes on the client. Prevent an incomplete
+            // § in a trusted template from joining the next site-name letter
+            // into an active legacy color code when dropping this guard.
+            if (i > 0 && prepared.charAt(i - 1) == '\u00A7'
+                    && i + 1 < prepared.length() && isLegacyColorCode(prepared.charAt(i + 1))) {
+                visible.append(' ');
+            }
+        }
+        return visible.toString();
+    }
+
+    private static boolean isLegacyColorCode(char code) {
+        return "0123456789abcdefklmnorx".indexOf(Character.toLowerCase(code)) >= 0;
     }
 
     public static void afterFormatting(BaseComponent component) {
