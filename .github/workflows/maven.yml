@@ -22,19 +22,8 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-      # The SQL lifecycle fix is merged upstream but the public snapshot may lag.
-      # Build the reviewed source so this job tests and packages the required API.
-      - name: Check out SimpleAPI SQL lifecycle dependency
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: BenCodez/SimpleAPI
-          ref: fdbf26eec885ec3f1c1dbd937a243a0acfaa0a5e
-          path: .ci/simpleapi
-          persist-credentials: false
-      - name: Build and install SimpleAPI dependency
-        run: mvn -B -f .ci/simpleapi/SimpleAPI/pom.xml clean install
       - name: Build with Maven
-        run: mvn -B -nsu -f AdvancedCore/pom.xml package
+        run: mvn -B -f AdvancedCore/pom.xml package
 
   dependency-submission:
     if: github.event_name == 'push'

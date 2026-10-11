@@ -23,21 +23,14 @@ pattern. It now aborts before invoking its subclass diagnostics or issuing queri
 and closes the pool if initial database selection fails.
 
 
-## Reproducing the dependency build
+## Building against the published dependency
 
-SimpleAPI's SQL lifecycle fix is merged as
-`fdbf26eec885ec3f1c1dbd937a243a0acfaa0a5e` (PR #111). The public
-`1.0.2-SNAPSHOT` can still resolve to an older build without the required API.
-GitHub CI checks out this exact reviewed commit, runs its full `clean install`,
-then builds AdvancedCore against the installed artifact with snapshot refresh
-disabled (`-nsu`), so the older remote snapshot cannot replace it. A failed dependency
-build stops the consumer build. It does not deploy either artifact or change
-runtime configuration.
+The POM pins published SimpleAPI `1.0.2-20261011.161601-40`, which includes the
+merged SQL lifecycle fix from PR #111 (`fdbf26eec885ec3f1c1dbd937a243a0acfaa0a5e`).
+A normal clean checkout can run `mvn -B -f AdvancedCore/pom.xml clean package`
+without checking out or installing SimpleAPI manually. CI uses the same dependency
+resolution path. The immutable timestamp avoids older rolling snapshot cache entries.
 
-For a local build, first check out that SimpleAPI revision and run
-`mvn -B -f SimpleAPI/pom.xml clean install` in its checkout, then run
-`mvn -B -nsu -f AdvancedCore/pom.xml clean package` in AdvancedCore. Normal server
-installation uses the shaded AdvancedCore JAR; no separate runtime SimpleAPI
-installation is added. This CI source pin can be removed once the repository's
-configured snapshot reliably includes the corrected lifecycle API, or updated
-explicitly alongside a later dependency change.
+Normal server installation uses the shaded AdvancedCore JAR; no separate runtime
+SimpleAPI installation, configuration change, schema migration or storage fallback
+is added. The dependency must be available from the configured Maven repository.
