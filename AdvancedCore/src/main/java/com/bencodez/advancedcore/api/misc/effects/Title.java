@@ -168,7 +168,9 @@ public class Title {
 	}
 
 	public void send(Player player, String title, String subtitle, int fadeInTime, int stayTime, int fadeOutTime) {
-		player.sendTitle(MessageAPI.colorize(title), MessageAPI.colorize(subtitle), fadeInTime, stayTime, fadeOutTime);
+		player.sendTitle(com.bencodez.advancedcore.api.messages.DisplayTextBoundaries.afterFormatting(MessageAPI.colorize(title)),
+				com.bencodez.advancedcore.api.messages.DisplayTextBoundaries.afterFormatting(MessageAPI.colorize(subtitle)),
+				fadeInTime, stayTime, fadeOutTime);
 	}
 
 	/**
@@ -226,7 +228,7 @@ public class Title {
 	}
 
 	public void updateSubtitle(Player player, String subtitle) {
-		player.sendTitle("", MessageAPI.colorize(subtitle), -1, -1, -1);
+		player.sendTitle("", com.bencodez.advancedcore.api.messages.DisplayTextBoundaries.afterFormatting(MessageAPI.colorize(subtitle)), -1, -1, -1);
 	}
 
 	/**
@@ -252,6 +254,6 @@ public class Title {
 	}
 
 	public void updateTitle(Player player, String title) {
-		player.sendTitle(MessageAPI.colorize(title), "", -1, -1, -1);
+		player.sendTitle(com.bencodez.advancedcore.api.messages.DisplayTextBoundaries.afterFormatting(MessageAPI.colorize(title)), "", -1, -1, -1);
 	}
 }
