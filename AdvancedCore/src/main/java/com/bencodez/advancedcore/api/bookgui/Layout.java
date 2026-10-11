@@ -50,7 +50,8 @@ public class Layout {
 	}
 
 	private String colorize(String s) {
-		return ChatColor.translateAlternateColorCodes('&', s);
+		return com.bencodez.advancedcore.api.messages.DisplayTextBoundaries.afterFormatting(
+				ChatColor.translateAlternateColorCodes('&', s));
 	}
 
 	/**
