@@ -137,7 +137,8 @@ public class BookWrapper {
 	 * @return the colorized string
 	 */
 	public String colorize(String s) {
-		return MessageAPI.colorize(s);
+		return com.bencodez.advancedcore.api.messages.DisplayTextBoundaries.afterFormatting(
+				MessageAPI.colorize(s));
 	}
 
 	/**
