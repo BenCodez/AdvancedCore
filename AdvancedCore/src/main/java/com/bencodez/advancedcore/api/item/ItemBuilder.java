@@ -42,6 +42,7 @@ import org.bukkit.potion.PotionEffectType;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngine;
+import com.bencodez.advancedcore.api.messages.DisplayTextBoundaries;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
@@ -1736,7 +1737,7 @@ public class ItemBuilder {
 			setSkullOwner(PlaceholderUtils.replaceJavascript(player,
 					PlaceholderUtils.replacePlaceHolder(skull, placeholders)));
 		}
-		return is;
+		return finishedDisplayItem();
 	}
 
 	/**
@@ -2142,6 +2143,38 @@ public class ItemBuilder {
 	}
 
 	/**
+	 * Creates a final client-facing copy only when protected identifiers are
+	 * present. The builder retains its guarded template for later GUI refreshes,
+	 * which must never re-parse a previously unguarded display name.
+	 */
+	private ItemStack finishedDisplayItem() {
+		ItemMeta sourceMeta = is.getItemMeta();
+		if (sourceMeta == null) return is;
+		String name = sourceMeta.hasDisplayName() ? sourceMeta.getDisplayName() : null;
+		List<String> lore = sourceMeta.hasLore() ? sourceMeta.getLore() : null;
+		boolean guarded = name != null && name.indexOf('\u2060') >= 0;
+		if (lore != null) {
+			for (String line : lore) {
+				if (line != null && line.indexOf('\u2060') >= 0) {
+					guarded = true;
+					break;
+				}
+			}
+		}
+		if (!guarded) return is;
+		ItemStack displayed = is.clone();
+		ItemMeta displayMeta = displayed.getItemMeta();
+		if (name != null) displayMeta.setDisplayName(DisplayTextBoundaries.afterFormatting(name));
+		if (lore != null) {
+			ArrayList<String> visibleLore = new ArrayList<>(lore.size());
+			for (String line : lore) visibleLore.add(DisplayTextBoundaries.afterFormatting(line));
+			displayMeta.setLore(visibleLore);
+		}
+		displayed.setItemMeta(displayMeta);
+		return displayed;
+	}
+
+	/**
 	 * Retrieves the itemstack from the ItemBuilder.
 	 *
 	 * @return The itemstack created/modified by the ItemBuilder instance.
@@ -2167,7 +2200,7 @@ public class ItemBuilder {
 		if (checkLoreLength) {
 			checkLoreLength();
 		}
-		return is;
+		return finishedDisplayItem();
 	}
 
 	/**
@@ -2191,7 +2224,7 @@ public class ItemBuilder {
 		if (checkLoreLength) {
 			checkLoreLength();
 		}
-		return is;
+		return finishedDisplayItem();
 	}
 
 	/**
@@ -2215,7 +2248,7 @@ public class ItemBuilder {
 		if (checkLoreLength) {
 			checkLoreLength();
 		}
-		return is;
+		return finishedDisplayItem();
 	}
 
 	@Override
