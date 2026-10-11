@@ -30,6 +30,13 @@ class DisplayTextBoundariesTest {
     }
 
     @Test
+    void unfinishedSectionColorCodesCannotBecomeActiveAtLegacyStringSinks() {
+        assertEquals("\u00A7 a", DisplayTextBoundaries.afterFormatting("\u00A7\u2060a\u2060"));
+        assertEquals("Minecraft Menu", DisplayTextBoundaries.afterFormatting("\u2060Minecraft Menu\u2060"));
+        assertEquals("&aGreen", DisplayTextBoundaries.afterFormatting("\u2060&\u2060aGreen\u2060"));
+    }
+
+    @Test
     void interactiveActionsStayExactWhileVisibleTextIsClean() {
         TextComponent text = PlaceholderUtils.parseJson(
                 "[Text=\"\u2060Site name\u2060\",Url=\"https://example.com/vote\"]");
