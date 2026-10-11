@@ -44,7 +44,9 @@ public final class DisplayTextBoundaries {
     public static void afterFormatting(BaseComponent component) {
         if (component == null) return;
         if (component instanceof TextComponent text) {
-            text.setText(afterFormatting(text.getText()));
+            // A component already passed legacy parsing, so it can retain the
+            // exact literal text without inserting a String-sink separator.
+            text.setText(text.getText() == null ? null : text.getText().replace("\u2060", ""));
         }
         List<BaseComponent> children = component.getExtra();
         if (children != null) {
