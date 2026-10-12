@@ -211,6 +211,135 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void missingRawActionNeverUsesTheLiteralDisplayAsACommandOrUrl() {
+        HashMap<String, String> stored = new HashMap<>();
+        RewardDisplayPlaceholders.putLiteral(stored, "SiteName", "external-display", "legacy-safe");
+        TextComponent[] rendered = render(
+                "[Text=\"%SiteName%\",Command=\"/inspect %SiteName%\"]", stored);
+        assertEquals("external-display", BaseComponent.toPlainText(rendered));
+        String json = ComponentSerializer.toString(rendered);
+        assertTrue(json.contains("/inspect "), json);
+        assertFalse(json.contains("/inspect external-display"), json);
+        assertTrue(ComponentSerializer.toString(render(
+                "[Text=\"%SiteName%\",Url=\"https://example.com/%SiteName%\"]", stored))
+                .contains("https://example.com/\""));
+    }
+
+    @Test
+    void directLiteralPreparationResolvesMixedCaseRawActionKeys() {
+        for (String marker : List.of("%sItEnAmE%", "{sItEnAmE}")) {
+            var prepared = com.bencodez.advancedcore.api.messages.LiteralMessageTemplate.prepare(
+                    "[Text=\"" + marker + "\",Command=\"/inspect " + marker + "\"]",
+                    java.util.Map.of("SiteName", "display"), java.util.Map.of("SiTeNaMe", "raw-site"));
+            TextComponent rendered = prepared.finish(PlaceholderUtils.parseJson(prepared.template()));
+            assertEquals("display", rendered.toPlainText());
+            assertTrue(ComponentSerializer.toString(rendered).contains("/inspect raw-site"));
+            assertFalse(ComponentSerializer.toString(rendered).contains("/inspect display"));
+        }
+    }
+
+    @Test
+    void directLiteralPreparationRejectsAmbiguousCaseVariantActionKeys() {
+        HashMap<String, String> actions = new HashMap<>();
+        actions.put("SiteName", "one");
+        actions.put("sitename", "two");
+        assertThrows(IllegalArgumentException.class,
+                () -> com.bencodez.advancedcore.api.messages.LiteralMessageTemplate.prepare("%SiteName%",
+                        java.util.Map.of("SiteName", "display"), actions));
+    }
+
+    @Test
+    void rewardMessageAndBroadcastRejectAmbiguousCaseVariantActionKeys() {
+        var stored = values("display");
+        stored.put("SiteName", "one");
+        stored.put("sitename", "two");
+        for (String attribute : List.of("Command", "Url")) {
+            String template = "[Text=\"%SiteName%\"," + attribute + "=\"%SiteName%\"]";
+            assertThrows(IllegalArgumentException.class, () -> render(template, stored));
+            assertThrows(IllegalArgumentException.class,
+                    () -> RewardDisplayPlaceholders.prepareLiteralBroadcast(null, template, stored));
+        }
+    }
+
+    @Test
+    void nonAsciiLiteralAtTheDeclaredCharacterLimitSurvivesOfflineSerialization() {
+        for (String literal : List.of("界".repeat(8192), "Ж".repeat(8192), "\uD83D\uDE00".repeat(4096))) {
+            var restored = ArrayUtils.fromString(ArrayUtils.makeString(values(literal)));
+            assertEquals("[" + literal + "]", BaseComponent.toPlainText(render("[%SiteName%]", restored)));
+            var broadcast = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, "{%SiteName%}", restored);
+            assertEquals("{" + literal + "}", BaseComponent.toPlainText(broadcast.render(null)));
+        }
+    }
+
+    @Test
+    void persistedLiteralCannotExceedTheDecodedCharacterLimit() {
+        var map = values("safe");
+        String key = map.keySet().stream().filter(name -> name.contains("literal:")).findFirst().orElseThrow();
+        String oversized = "x".repeat(8193);
+        map.put(key, "b" + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
+                oversized.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        assertThrows(IllegalArgumentException.class, () -> render("%SiteName%", map));
+        assertThrows(IllegalArgumentException.class,
+                () -> RewardDisplayPlaceholders.prepareLiteralBroadcast(null, "%SiteName%", map));
+    }
+
+    @Test
+    void providerProducedSectionPrefixIsProtectedBeforeTheFinalMessageParser() {
+        Player player = mock(Player.class);
+        try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+            placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(eq(player), anyString()))
+                    .thenAnswer(call -> call.<String>getArgument(1).replace("%prefix%", "§"));
+            placeholders.when(() -> PlaceholderUtils.replaceJavascript(eq(player), anyString()))
+                    .thenAnswer(call -> call.getArgument(1));
+            var rendered = RewardDisplayPlaceholders.renderLiteralComponents(player, "%prefix%%SiteName%",
+                    values("Minecraft Menu"));
+            assertEquals("(section)Minecraft Menu", BaseComponent.toPlainText(rendered));
+            assertFalse(ComponentSerializer.toString(rendered).contains("VCORELITERAL"));
+        }
+    }
+
+    @Test
+    void recipientProviderSectionPrefixIsProtectedBeforeTheBroadcastParser() {
+        Player recipient = mock(Player.class);
+        try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+            placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(eq(recipient), anyString()))
+                    .thenAnswer(call -> call.<String>getArgument(1).replace("%prefix%", "§"));
+            var broadcast = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, "%prefix%%SiteName%",
+                    values("Minecraft Menu"));
+            var rendered = broadcast.render(recipient);
+            assertEquals("(section)Minecraft Menu", BaseComponent.toPlainText(rendered));
+            assertFalse(ComponentSerializer.toString(rendered).contains("VCORELITERAL"));
+        }
+    }
+
+    @Test
+    void providerBoundaryTokenKeepsItsExactActionValueSeparateFromALiteralSectionLabel() {
+        Player recipient = mock(Player.class);
+        String template = "[Text=\"%SiteName%\",Command=\"/inspect %prefix%%SiteName%\"]";
+        try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+            placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(eq(recipient), anyString()))
+                    .thenAnswer(call -> call.<String>getArgument(1).replace("%prefix%", "§"));
+            placeholders.when(() -> PlaceholderUtils.replaceJavascript(eq(recipient), anyString()))
+                    .thenAnswer(call -> call.getArgument(1));
+            for (boolean hasRaw : List.of(true, false)) {
+                HashMap<String, String> stored = new HashMap<>();
+                if (hasRaw) stored.put("SiteName", "raw-site");
+                RewardDisplayPlaceholders.putLiteral(stored, "SiteName", "§", "legacy-safe");
+                String expectedAction = "/inspect §" + (hasRaw ? "raw-site" : "");
+                var message = RewardDisplayPlaceholders.renderLiteralComponents(recipient, template, stored);
+                var broadcast = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, template, stored)
+                        .render(recipient);
+                for (var rendered : List.of(message, broadcast)) {
+                    assertEquals("(section)", BaseComponent.toPlainText(rendered));
+                    String json = ComponentSerializer.toString(rendered);
+                    assertTrue(json.contains(expectedAction + "\""), json);
+                    assertFalse(json.contains("VCORELITERAL"), json);
+                }
+            }
+        }
+    }
+
+    @Test
     void invalidBindingDoesNotPartiallyChangeCallerMetadata() {
         var map = values("safe");
         var before = new HashMap<>(map);

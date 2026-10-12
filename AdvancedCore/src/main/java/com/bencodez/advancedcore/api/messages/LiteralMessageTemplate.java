@@ -60,14 +60,19 @@ public final class LiteralMessageTemplate {
         Map<String, String> tokens = new LinkedHashMap<>();
         Map<String, String> replacements = new LinkedHashMap<>();
         Map<String, String> actionTokens = new LinkedHashMap<>();
-        Map<String, String> exact = actionValues == null ? Map.of() : actionValues;
+        Map<String, String> exact = new LinkedHashMap<>();
+        if (actionValues != null) for (Map.Entry<String, String> entry : actionValues.entrySet()) {
+            String key = Objects.requireNonNull(entry.getKey(), "action key").toLowerCase(Locale.ROOT);
+            if (exact.containsKey(key)) throw new IllegalArgumentException("duplicate action key");
+            exact.put(key, entry.getValue());
+        }
         Map<String, String> collisions = new LinkedHashMap<>(values);
         exact.forEach((key, value) -> { if (value != null) collisions.put("action:" + key, value); });
         for (Map.Entry<String, String> entry : values.entrySet()) {
             String token = newToken(source, collisions, tokens);
             replacements.put(entry.getKey(), token);
             tokens.put(token, entry.getValue());
-            String action = exact.getOrDefault(entry.getKey(), entry.getValue());
+            String action = exact.getOrDefault(entry.getKey(), "");
             if (action == null || action.length() > MAX_VALUE) throw new IllegalArgumentException("invalid action value");
             actionTokens.put(token, action);
         }
@@ -89,6 +94,14 @@ public final class LiteralMessageTemplate {
                 if (tokens.size() >= MAX_VALUES) throw new IllegalArgumentException("too many literal script segments");
                 String token = newToken(source, collisions, tokens);
                 tokens.put(token, substituted);
+                // The visible script is kept as text, while an action containing the
+                // same protected block must retain the exact raw values (or empty
+                // values when no raw action was supplied).  Only literal bindings
+                // are substituted here; unrelated provider markers remain for the
+                // normal action/provider pass.
+                Map<String, String> scriptActions = new LinkedHashMap<>();
+                for (String key : values.keySet()) scriptActions.put(key, exact.getOrDefault(key, ""));
+                actionTokens.put(token, replaceMarkers(block, scriptActions));
                 protectedScripts.append(token);
             } else {
                 protectedScripts.append(block);
@@ -208,7 +221,8 @@ public final class LiteralMessageTemplate {
         return result.toString();
     }
 
-    private static String protectSectionTokenBoundaries(String source, Map<String, String> tokens) {
+    private static String protectSectionTokenBoundaries(String source, Map<String, String> tokens,
+            Map<String, String> actionTokens) {
         if (source.indexOf('§') < 0 || tokens.isEmpty()) return source;
         List<String> originalTokens = List.copyOf(tokens.keySet());
         String guard = null;
@@ -219,7 +233,10 @@ public final class LiteralMessageTemplate {
                 boolean tokenFollows = originalTokens.stream().anyMatch(token -> source.startsWith(token, following));
                 if (tokenFollows) {
                     if (guard == null) {
-                        guard = tokens.entrySet().stream().filter(entry -> entry.getValue().equals("§"))
+                        // A section-sign label may have a different raw action value.
+                        // Reuse a boundary token only when both restoration lanes agree.
+                        guard = tokens.entrySet().stream().filter(entry -> entry.getValue().equals("§")
+                                && "§".equals(actionTokens.getOrDefault(entry.getKey(), entry.getValue())))
                                 .map(Map.Entry::getKey).findFirst().orElse(null);
                         if (guard == null) {
                             guard = newToken(source, tokens, tokens);
@@ -245,9 +262,9 @@ public final class LiteralMessageTemplate {
 
         private Prepared(String template, Map<String, String> tokens, Map<String, String> actionTokens) {
             Map<String, String> bindings = new LinkedHashMap<>(tokens);
-            this.template = protectSectionTokenBoundaries(template, bindings);
-            this.tokens = Collections.unmodifiableMap(bindings);
             Map<String, String> actions = new LinkedHashMap<>(actionTokens);
+            this.template = protectSectionTokenBoundaries(template, bindings, actions);
+            this.tokens = Collections.unmodifiableMap(bindings);
             bindings.forEach(actions::putIfAbsent);
             this.actionTokens = Collections.unmodifiableMap(actions);
         }

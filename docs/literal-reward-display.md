@@ -22,11 +22,16 @@ old literal metadata, including case variants.
 
 Player messages and reward broadcasts replace literal placeholders with opaque
 printable tokens before trusted color, PlaceholderAPI, JavaScript and rich-text
-processing. Visible text and hover text are restored only into final components.
+processing. Provider-expanded text is protected again immediately before component parsing.
+Visible text and hover text are restored only into final components.
+Action binding keys are case-insensitive; conflicting case variants are rejected.
+A missing raw binding inserts an empty action value, never the visible label.
 Click actions receive exact raw values after parsing; external visible labels
 cannot create or modify those actions. A configured JavaScript block containing
 literal display data is displayed as text rather than executed with a data
-fragment. Unrelated configured scripts retain their existing handling.
+fragment. When that protected block appears inside an authored click attribute,
+its placeholders use the raw action bindings (or empty values when absent),
+independently of the visible label. Unrelated configured scripts retain their existing handling.
 
 Spacing comes from the trusted template. No padding or invisible separator is
 added by the literal renderer. A literal section sign uses `(section)` because
@@ -61,7 +66,9 @@ A recipient removed before dispatch settles as skipped; reward continuations run
 outside the scheduler's critical retirement callback. Reflection keeps these
 optional Paper API types out of Spigot class loading.
 
-Literal values are limited to 8192 characters; their guarded legacy display
+Literal values are limited to 8192 UTF-16 units; serialized UTF-8/Base64 metadata
+allows the corresponding worst-case byte expansion and rechecks the decoded limit.
+Their guarded legacy display
 representations may use up to 32768 characters. Metadata, templates and component
 trees retain their separate bounds. Invalid literal
 metadata fails rendering rather than being parsed as ordinary executable text.

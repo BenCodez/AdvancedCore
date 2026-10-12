@@ -29,6 +29,9 @@ public final class RewardDisplayPlaceholders {
 	private static final String MANIFEST_VALUE = "v1";
 	private static final String VALUE_PREFIX = PREFIX + "value:";
 	private static final String LITERAL_PREFIX = PREFIX + "literal:";
+	private static final int MAX_LITERAL_CHARACTERS = 8192;
+	// At most three UTF-8 bytes per UTF-16 unit, four Base64 characters per three bytes, plus prefix.
+	private static final int MAX_ENCODED_LITERAL_CHARACTERS = MAX_LITERAL_CHARACTERS * 4 + 1;
 	private static final Pattern MESSAGE_ATTRIBUTE = Pattern.compile(
 			"(?i)(command|url|suggest_command|hover)\\s*=\\s*\"([^\"]*)\"");
 
@@ -48,7 +51,7 @@ public final class RewardDisplayPlaceholders {
 	public static void putLiteral(HashMap<String, String> placeholders, String key, String literal,
 			String legacySafeDisplay) {
 		if (placeholders == null || key == null) return;
-		if (!key.matches("[A-Za-z_][A-Za-z0-9_]{0,127}") || (literal != null && literal.length() > 8192)
+		if (!key.matches("[A-Za-z_][A-Za-z0-9_]{0,127}") || (literal != null && literal.length() > MAX_LITERAL_CHARACTERS)
 				|| (legacySafeDisplay != null && legacySafeDisplay.length() > 32768))
 			throw new IllegalArgumentException("invalid literal binding");
 		put(placeholders, key, legacySafeDisplay == null ? "" : legacySafeDisplay);
@@ -86,7 +89,8 @@ public final class RewardDisplayPlaceholders {
 				String text = PlaceholderUtils.replacePlaceHolder(line.template(), forDisplay(legacy));
 				parsed = player == null ? PlaceholderUtils.parseText(text) : PlaceholderUtils.parseText(player, text);
 			}
-			result.add(line.withTemplate(parsed).finish(PlaceholderUtils.parseJson(parsed)));
+			var finalTemplate = line.withTemplate(parsed);
+			result.add(finalTemplate.finish(PlaceholderUtils.parseJson(finalTemplate.template())));
 		}
 		return result.toArray(new net.md_5.bungee.api.chat.TextComponent[0]);
 	}
@@ -132,7 +136,8 @@ public final class RewardDisplayPlaceholders {
 					text = recipient == null ? line.template() : PlaceholderUtils.replacePlaceHolders(recipient, line.template());
 					text = MessageAPI.colorize(text);
 				}
-				result.add(line.withTemplate(text).finish(PlaceholderUtils.parseJson(text)));
+				var finalTemplate = line.withTemplate(text);
+				result.add(finalTemplate.finish(PlaceholderUtils.parseJson(finalTemplate.template())));
 			}
 			return result.toArray(new net.md_5.bungee.api.chat.TextComponent[0]);
 		}
@@ -144,7 +149,7 @@ public final class RewardDisplayPlaceholders {
 		Map<String, String> actions = new HashMap<>();
 		if (placeholders != null) for (Map.Entry<String, String> entry : placeholders.entrySet()) {
 			if (entry.getKey() != null && literals.containsKey(entry.getKey().toLowerCase(java.util.Locale.ROOT)))
-				actions.put(entry.getKey().toLowerCase(java.util.Locale.ROOT), entry.getValue() == null ? "" : entry.getValue());
+				actions.put(entry.getKey(), entry.getValue() == null ? "" : entry.getValue());
 		}
 		return com.bencodez.advancedcore.api.messages.LiteralMessageTemplate.prepare(template, literals, actions);
 	}
@@ -170,10 +175,12 @@ public final class RewardDisplayPlaceholders {
 		for (Map.Entry<String, String> entry : placeholders.entrySet()) {
 			String key = entry.getKey();
 			if (key == null || !key.startsWith(LITERAL_PREFIX)) continue;
-			if (key.length() > 1024 || entry.getValue() == null || entry.getValue().length() > 16384)
+			if (key.length() > 1024 || entry.getValue() == null || entry.getValue().length() > MAX_ENCODED_LITERAL_CHARACTERS)
 				throw new IllegalArgumentException("literal metadata exceeds limits");
 			String decoded = decode(key.substring(LITERAL_PREFIX.length())).toLowerCase(java.util.Locale.ROOT);
-			if (values.putIfAbsent(decoded, decode(entry.getValue())) != null)
+			String literal = decode(entry.getValue());
+			if (literal.length() > MAX_LITERAL_CHARACTERS) throw new IllegalArgumentException("literal metadata exceeds limits");
+			if (values.putIfAbsent(decoded, literal) != null)
 				throw new IllegalArgumentException("duplicate literal binding");
 		}
 		return values;
