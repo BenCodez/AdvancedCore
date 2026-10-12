@@ -79,8 +79,14 @@ representations may use up to 32768 characters. Public preparation admits at mos
 Literal keys retain their 128-character limit; raw action keys are bounded to
 1024 characters. Unreferenced bindings do not consume the 4096 active-binding
 limit. Template and action marker matching uses indexes rather than one
-full template scan per binding. Metadata, templates and component
-trees retain their separate bounds. Invalid literal
+full template scan per binding. Collision detection indexes the existing printable
+token grammar once per input corpus; allocations use exact membership checks.
+Restoration scans the parsed output once and never reinterprets inserted values.
+Line and recipient variants share immutable bindings and collision metadata,
+while each recipient owns any newly formatted action bindings. Retained formatted
+action text and protected script text each have a 262144-character budget;
+collision metadata is capped at 131072 distinct tokens across repeated transformations.
+Metadata, templates and component trees retain their separate bounds. Invalid literal
 metadata fails rendering rather than being parsed as ordinary executable text.
 Callers of the public preparation/rendering methods must use the appropriate
 player owner for player-aware placeholder providers. The existing reward

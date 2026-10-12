@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Keeps literal placeholder values out of the formatting and component parsers.
@@ -35,6 +36,10 @@ public final class LiteralMessageTemplate {
     private static final Pattern LITERAL_KEY = Pattern.compile("[A-Za-z_][A-Za-z0-9_]{0,127}");
     private static final int MAX_VALUE = 8192;
     private static final int MAX_COMPONENTS = 4096;
+    private static final int MAX_RESULT = 262144;
+    private static final String TOKEN_PREFIX = "VCORELITERAL";
+    // Bounds retained collision metadata even if callers repeatedly format an existing Prepared.
+    private static final int MAX_FORBIDDEN_TOKENS = 131072;
     private static final Pattern EXACT_ATTRIBUTE = Pattern.compile(
             "(?i)(?<![A-Za-z0-9_])(command|url|suggest_command)\\s*=\\s*\"([^\"]*)\"");
 
@@ -47,6 +52,14 @@ public final class LiteralMessageTemplate {
             throw new IllegalArgumentException("template is too large");
         }
         validateBindings(literalValues, actionValues);
+        TokenIndex tokenIndex = new TokenIndex(Set.of());
+        tokenIndex.addCorpus(source);
+        for (Map<String, String> bindings : java.util.Arrays.asList(literalValues, actionValues)) {
+            if (bindings != null) bindings.forEach((key, value) -> {
+                tokenIndex.addCorpus(key);
+                tokenIndex.addCorpus(value);
+            });
+        }
         Set<String> referenced = literalMarkerKeys(source);
         Map<String, String> values = new LinkedHashMap<>();
         Set<String> keys = new HashSet<>();
@@ -73,10 +86,8 @@ public final class LiteralMessageTemplate {
             if (exact.containsKey(key)) throw new IllegalArgumentException("duplicate action key");
             exact.put(key, entry.getValue());
         }
-        Map<String, String> collisions = new LinkedHashMap<>(values);
-        exact.forEach((key, value) -> { if (value != null) collisions.put("action:" + key, value); });
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            String token = newToken(source, collisions, tokens);
+            String token = newToken(tokenIndex);
             replacements.put(entry.getKey(), token);
             tokens.put(token, entry.getValue());
             String action = exact.getOrDefault(entry.getKey(), "");
@@ -94,24 +105,33 @@ public final class LiteralMessageTemplate {
         MarkerMatcher scriptActionMarkers = new MarkerMatcher(scriptActions);
         StringBuilder protectedScripts = new StringBuilder(source.length());
         int cursor = 0;
+        int scriptTextCharacters = 0;
+        int scriptActionCharacters = 0;
         while (cursor < source.length()) {
             int start = indexOfIgnoreCase(source, "[Javascript=", cursor);
             if (start < 0) break;
             int end = source.indexOf(']', start + "[Javascript=".length());
             if (end < 0) break;
             String block = source.substring(start, end + 1);
-            String substituted = literalMarkers.replace(block);
+            String substituted = literalMarkers.replace(block, MAX_RESULT);
             protectedScripts.append(source, cursor, start);
             if (!block.equals(replacementMarkers.replace(block))) {
                 if (tokens.size() >= MAX_VALUES) throw new IllegalArgumentException("too many literal script segments");
-                String token = newToken(source, collisions, tokens);
+                String rawAction = scriptActionMarkers.replace(block, MAX_RESULT);
+                scriptTextCharacters += substituted.length();
+                scriptActionCharacters += rawAction.length();
+                if (scriptTextCharacters > MAX_RESULT || scriptActionCharacters > MAX_RESULT)
+                    throw new IllegalArgumentException("literal scripts exceed limits");
+                tokenIndex.addCorpus(substituted);
+                tokenIndex.addCorpus(rawAction);
+                String token = newToken(tokenIndex);
                 tokens.put(token, substituted);
                 // The visible script is kept as text, while an action containing the
                 // same protected block must retain the exact raw values (or empty
                 // values when no raw action was supplied).  Only literal bindings
                 // are substituted here; unrelated provider markers remain for the
                 // normal action/provider pass.
-                actionTokens.put(token, scriptActionMarkers.replace(block));
+                actionTokens.put(token, rawAction);
                 protectedScripts.append(token);
             } else {
                 protectedScripts.append(block);
@@ -119,16 +139,16 @@ public final class LiteralMessageTemplate {
             cursor = end + 1;
         }
         protectedScripts.append(source, cursor, source.length());
-        String protectedActions = protectExactAttributes(protectedScripts.toString(), values, exact, tokens, actionTokens);
-        return new Prepared(replacementMarkers.replace(protectedActions), tokens, actionTokens);
+        String protectedActions = protectExactAttributes(protectedScripts.toString(), values, exact, tokens, actionTokens,
+                tokenIndex);
+        return Prepared.create(replacementMarkers.replace(protectedActions), tokens, actionTokens, tokenIndex, 0);
     }
 
     /** Shield raw legacy display overrides only in administrator-authored click attributes. */
     private static String protectExactAttributes(String source, Map<String, String> literalValues,
-            Map<String, String> exactValues, Map<String, String> tokens, Map<String, String> actionTokens) {
+            Map<String, String> exactValues, Map<String, String> tokens, Map<String, String> actionTokens,
+            TokenIndex tokenIndex) {
         Map<String, String> replacements = new LinkedHashMap<>();
-        Map<String, String> collisions = new LinkedHashMap<>(literalValues);
-        exactValues.forEach((key, value) -> { if (value != null) collisions.put("action:" + key, value); });
         Map<String, String> actionOnlyValues = new LinkedHashMap<>();
         exactValues.forEach((key, value) -> { if (!literalValues.containsKey(key)) actionOnlyValues.put(key, value); });
         MarkerMatcher exactMarkers = new MarkerMatcher(actionOnlyValues);
@@ -147,7 +167,7 @@ public final class LiteralMessageTemplate {
                 String exact = exactValues.get(key);
                 if (exact == null) throw new IllegalArgumentException("invalid action value");
                 if (tokens.size() >= MAX_VALUES) throw new IllegalArgumentException("too many action values");
-                String token = newToken(source, collisions, tokens);
+                String token = newToken(tokenIndex);
                 replacements.put(key, token);
                 tokens.put(token, exact);
                 actionTokens.put(token, exact);
@@ -197,16 +217,82 @@ public final class LiteralMessageTemplate {
         return result.append(source, cursor, source.length()).toString();
     }
 
-    private static String newToken(String source, Map<String, String> values, Map<String, String> tokens) {
+    private static String newToken(TokenIndex index) {
+        return newToken(index, () -> TOKEN_PREFIX + Long.toUnsignedString(ThreadLocalRandom.current().nextLong(), 36)
+                + "Q" + Long.toUnsignedString(ThreadLocalRandom.current().nextLong(), 36) + "Z");
+    }
+
+    private static String newToken(TokenIndex index, Supplier<String> candidates) {
         for (int attempts = 0; attempts < 16; attempts++) {
             // No percent signs or underscores: this cannot introduce a PAPI provider
             // token. The first character cannot complete a legacy color code.
-            String token = "VCORELITERAL" + Long.toUnsignedString(ThreadLocalRandom.current().nextLong(), 36)
-                    + "Q" + Long.toUnsignedString(ThreadLocalRandom.current().nextLong(), 36) + "Z";
-            if (!source.contains(token) && !tokens.containsKey(token)
-                    && values.values().stream().noneMatch(value -> value.contains(token))) return token;
+            String token = candidates.get();
+            if (index.reserve(token)) return token;
         }
         throw new IllegalStateException("literal token allocation failed");
+    }
+
+    /** Recognize exactly the existing random-token grammar, including tokens embedded in other text. */
+    private static int tokenEnd(CharSequence source, int start) {
+        if (start >= source.length() || source.charAt(start) != TOKEN_PREFIX.charAt(0)
+                || source.length() - start < TOKEN_PREFIX.length() + 4) return -1;
+        for (int offset = 1; offset < TOKEN_PREFIX.length(); offset++) {
+            if (source.charAt(start + offset) != TOKEN_PREFIX.charAt(offset)) return -1;
+        }
+        int cursor = start + TOKEN_PREFIX.length();
+        for (int part = 0; part < 2; part++) {
+            char delimiter = part == 0 ? 'Q' : 'Z';
+            int digits = 0;
+            while (cursor < source.length()) {
+                char character = source.charAt(cursor++);
+                if (character == delimiter) {
+                    if (digits == 0) return -1;
+                    break;
+                }
+                if (++digits > 13 || !((character >= '0' && character <= '9')
+                        || (character >= 'a' && character <= 'z'))) return -1;
+                if (cursor == source.length()) return -1;
+            }
+            if (digits == 0 || source.charAt(cursor - 1) != delimiter) return -1;
+        }
+        return cursor;
+    }
+
+    /** A shared immutable corpus plus operation-local additions; never rescan it for each allocation. */
+    private static final class TokenIndex {
+        private final Set<String> corpus;
+        private final Set<String> additions = new HashSet<>();
+
+        private TokenIndex(Set<String> corpus) {
+            this.corpus = corpus;
+        }
+
+        private boolean reserve(String token) {
+            if (corpus.contains(token) || additions.contains(token)) return false;
+            if (corpus.size() + additions.size() >= MAX_FORBIDDEN_TOKENS)
+                throw new IllegalArgumentException("literal token corpus exceeds limits");
+            additions.add(token);
+            return true;
+        }
+
+        private void addCorpus(CharSequence source) {
+            if (source == null) return;
+            for (int cursor = 0; cursor < source.length();) {
+                int end = tokenEnd(source, cursor);
+                if (end < 0) cursor++;
+                else {
+                    reserve(source.subSequence(cursor, end).toString());
+                    cursor = end;
+                }
+            }
+        }
+
+        private Set<String> snapshot() {
+            if (additions.isEmpty()) return corpus;
+            Set<String> snapshot = new HashSet<>(corpus);
+            snapshot.addAll(additions);
+            return Collections.unmodifiableSet(snapshot);
+        }
     }
 
     private static int indexOfIgnoreCase(String source, String target, int from) {
@@ -323,12 +409,21 @@ public final class LiteralMessageTemplate {
 
         /** Replace only original markers; inserted values are never scanned again. */
         private String replace(String source) {
+            return replace(source, Integer.MAX_VALUE);
+        }
+
+        private String replace(String source, int limit) {
             StringBuilder result = new StringBuilder(source.length());
             int cursor = 0;
             while (cursor < source.length()) {
                 MarkerNode selected = match(source, cursor, null);
-                if (selected == null) result.append(source.charAt(cursor++));
+                if (selected == null) {
+                    if (result.length() >= limit) throw new IllegalArgumentException("literal scripts exceed limits");
+                    result.append(source.charAt(cursor++));
+                }
                 else {
+                    if (selected.value.length() > limit - result.length())
+                        throw new IllegalArgumentException("literal scripts exceed limits");
                     result.append(selected.value);
                     cursor += selected.key.length() + 2;
                 }
@@ -344,26 +439,33 @@ public final class LiteralMessageTemplate {
         private int order;
     }
 
-    private static String protectSectionTokenBoundaries(String source, Map<String, String> tokens,
-            Map<String, String> actionTokens) {
-        if (source.indexOf('§') < 0 || tokens.isEmpty()) return source;
-        List<String> originalTokens = List.copyOf(tokens.keySet());
+    private static ProtectedBoundaries protectSectionTokenBoundaries(String source, Map<String, String> tokens,
+            Map<String, String> actionTokens, TokenIndex tokenIndex) {
+        if (source.indexOf('§') < 0 || tokens.isEmpty()) return new ProtectedBoundaries(source, tokens, actionTokens);
         String guard = null;
         StringBuilder protectedText = new StringBuilder(source.length());
         for (int index = 0; index < source.length(); index++) {
             if (source.charAt(index) == '§') {
                 int following = index + 1;
-                boolean tokenFollows = originalTokens.stream().anyMatch(token -> source.startsWith(token, following));
-                if (tokenFollows) {
+                int end = tokenEnd(source, following);
+                if (end >= 0 && tokens.containsKey(source.substring(following, end))) {
                     if (guard == null) {
                         // A section-sign label may have a different raw action value.
                         // Reuse a boundary token only when both restoration lanes agree.
-                        guard = tokens.entrySet().stream().filter(entry -> entry.getValue().equals("§")
-                                && "§".equals(actionTokens.getOrDefault(entry.getKey(), entry.getValue())))
-                                .map(Map.Entry::getKey).findFirst().orElse(null);
+                        for (Map.Entry<String, String> entry : tokens.entrySet()) {
+                            if (entry.getValue().equals("§") && "§".equals(actionTokens.get(entry.getKey()))) {
+                                guard = entry.getKey();
+                                break;
+                            }
+                        }
                         if (guard == null) {
-                            guard = newToken(source, tokens, tokens);
+                            guard = newToken(tokenIndex);
+                            tokens = new LinkedHashMap<>(tokens);
+                            actionTokens = new LinkedHashMap<>(actionTokens);
                             tokens.put(guard, "§");
+                            actionTokens.put(guard, "§");
+                            tokens = Collections.unmodifiableMap(tokens);
+                            actionTokens = Collections.unmodifiableMap(actionTokens);
                         }
                     }
                     // Invalid §V is consumed by legacy parsers before restoration.
@@ -375,21 +477,37 @@ public final class LiteralMessageTemplate {
             }
             protectedText.append(source.charAt(index));
         }
-        return protectedText.toString();
+        return new ProtectedBoundaries(protectedText.toString(), tokens, actionTokens);
+    }
+
+    private record ProtectedBoundaries(String template, Map<String, String> tokens, Map<String, String> actionTokens) {
     }
 
     public static final class Prepared {
         private final String template;
         private final Map<String, String> tokens;
         private final Map<String, String> actionTokens;
+        private final Set<String> forbiddenTokens;
+        private final int formattedActionCharacters;
 
-        private Prepared(String template, Map<String, String> tokens, Map<String, String> actionTokens) {
-            Map<String, String> bindings = new LinkedHashMap<>(tokens);
-            Map<String, String> actions = new LinkedHashMap<>(actionTokens);
-            this.template = protectSectionTokenBoundaries(template, bindings, actions);
-            this.tokens = Collections.unmodifiableMap(bindings);
-            bindings.forEach(actions::putIfAbsent);
-            this.actionTokens = Collections.unmodifiableMap(actions);
+        /** All maps passed here are immutable and can be shared by lines and recipients. */
+        private Prepared(String template, Map<String, String> tokens, Map<String, String> actionTokens,
+                TokenIndex tokenIndex, int formattedActionCharacters) {
+            tokenIndex.addCorpus(template);
+            ProtectedBoundaries protectedText = protectSectionTokenBoundaries(template, tokens, actionTokens, tokenIndex);
+            this.template = protectedText.template();
+            this.tokens = protectedText.tokens();
+            this.actionTokens = protectedText.actionTokens();
+            this.forbiddenTokens = tokenIndex.snapshot();
+            this.formattedActionCharacters = formattedActionCharacters;
+        }
+
+        /** Publish newly owned maps; no mutable index or map survives into Prepared. */
+        private static Prepared create(String template, Map<String, String> tokens, Map<String, String> actions,
+                TokenIndex tokenIndex, int formattedActionCharacters) {
+            tokens.forEach(actions::putIfAbsent);
+            return new Prepared(template, Collections.unmodifiableMap(tokens), Collections.unmodifiableMap(actions),
+                    tokenIndex, formattedActionCharacters);
         }
 
         public String template() {
@@ -400,7 +518,7 @@ public final class LiteralMessageTemplate {
         public List<Prepared> splitLines() {
             List<Prepared> lines = new ArrayList<>();
             for (String line : template.split("(?i)" + java.util.regex.Pattern.quote("%NewLine%"))) {
-                lines.add(new Prepared(line, tokens, actionTokens));
+                lines.add(new Prepared(line, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters));
             }
             return List.copyOf(lines);
         }
@@ -410,25 +528,39 @@ public final class LiteralMessageTemplate {
             if (formattedTemplate == null || formattedTemplate.length() > MAX_TEMPLATE) {
                 throw new IllegalArgumentException("formatted template is invalid");
             }
-            return new Prepared(formattedTemplate, tokens, actionTokens);
+            return new Prepared(formattedTemplate, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters);
         }
 
         /** Render authored action values once, then keep their exact output out of the component parser. */
         public Prepared protectFormattedActions(Function<String, String> renderer) {
             Objects.requireNonNull(renderer, "renderer");
-            Map<String, String> bindings = new LinkedHashMap<>(tokens);
-            Map<String, String> actions = new LinkedHashMap<>(actionTokens);
+            final class FormattedBindings {
+                private Map<String, String> bindings = tokens;
+                private Map<String, String> actions = actionTokens;
+                private int characters = formattedActionCharacters;
+                private boolean changed;
+            }
+            FormattedBindings formatted = new FormattedBindings();
+            TokenIndex tokenIndex = new TokenIndex(forbiddenTokens);
             String protectedTemplate = mapExactAttributes(template, value -> {
                 String rendered = restore(renderer.apply(value), actionTokens, false);
-                if (rendered == null || rendered.length() > 262144)
+                if (rendered == null || rendered.length() > MAX_RESULT - formatted.characters)
                     throw new IllegalArgumentException("formatted action exceeds limits");
-                if (bindings.size() >= MAX_VALUES) throw new IllegalArgumentException("too many formatted actions");
-                String token = newToken(template, Map.of("action", rendered), bindings);
-                bindings.put(token, rendered);
-                actions.put(token, rendered);
+                formatted.characters += rendered.length();
+                if (formatted.bindings.size() >= MAX_VALUES) throw new IllegalArgumentException("too many formatted actions");
+                if (!formatted.changed) {
+                    formatted.bindings = new LinkedHashMap<>(tokens);
+                    formatted.actions = new LinkedHashMap<>(actionTokens);
+                    formatted.changed = true;
+                }
+                tokenIndex.addCorpus(rendered);
+                String token = newToken(tokenIndex);
+                formatted.bindings.put(token, rendered);
+                formatted.actions.put(token, rendered);
                 return token;
             });
-            return new Prepared(protectedTemplate, bindings, actions);
+            if (!formatted.changed) return this;
+            return create(protectedTemplate, formatted.bindings, formatted.actions, tokenIndex, formatted.characters);
         }
 
         public TextComponent finish(TextComponent parsedComponent) {
@@ -455,7 +587,7 @@ public final class LiteralMessageTemplate {
         if (component instanceof TextComponent text) count[1] += text.getText().length();
         if (component.getInsertion() != null) count[1] += component.getInsertion().length();
         if (component.getClickEvent() != null) count[1] += component.getClickEvent().getValue().length();
-        if (count[1] > 262144) throw new IllegalArgumentException("literal component text exceeds limits");
+        if (count[1] > MAX_RESULT) throw new IllegalArgumentException("literal component text exceeds limits");
         if (component.getExtra() != null) {
             for (BaseComponent child : component.getExtra()) validateTree(child, depth + 1, count, path);
         }
@@ -537,33 +669,52 @@ public final class LiteralMessageTemplate {
     }
 
     private static String restore(String value, Map<String, String> tokens, boolean visible, boolean legacySink) {
-        if (value == null || value.isEmpty()) return value;
-        StringBuilder result = new StringBuilder(value.length());
+        return restoreTokens(value, tokens, visible, legacySink);
+    }
+
+    /** Scan only the parser's original output, never the literal strings appended to it. */
+    private static String restoreTokens(CharSequence value, Map<String, String> tokens, boolean visible, boolean legacySink) {
+        if (value == null || value.isEmpty()) return value == null ? null : "";
+        StringBuilder result = new StringBuilder(Math.min(value.length(), MAX_RESULT));
         int cursor = 0;
+        int copied = 0;
         while (cursor < value.length()) {
-            int next = -1;
-            Map.Entry<String, String> selected = null;
-            for (Map.Entry<String, String> entry : tokens.entrySet()) {
-                int position = value.indexOf(entry.getKey(), cursor);
-                if (position >= 0 && (next < 0 || position < next)) {
-                    next = position;
-                    selected = entry;
-                }
+            int end = tokenEnd(value, cursor);
+            if (end < 0) {
+                cursor++;
+                continue;
             }
-            if (selected == null) break;
-            result.append(value, cursor, next);
+            String literal = tokens.get(value.subSequence(cursor, end).toString());
+            if (literal == null) {
+                cursor = end;
+                continue;
+            }
+            appendBounded(result, value, copied, cursor);
             // A trusted but incomplete section-sign code must not acquire its
             // missing character from an external value at a later legacy sink.
             if (legacySink && result.length() > 0 && result.charAt(result.length() - 1) == '§') {
                 result.setLength(result.length() - 1);
-                result.append("(section)");
+                appendBounded(result, "(section)", 0, "(section)".length());
             }
-            if (result.length() + selected.getValue().length() > 262144)
-                throw new IllegalArgumentException("literal text exceeds limits");
-            String literal = selected.getValue();
-            result.append(visible ? literal.replace("§", "(section)") : literal);
-            cursor = next + selected.getKey().length();
+            int start = 0;
+            if (visible) {
+                for (int section = literal.indexOf('§'); section >= 0; section = literal.indexOf('§', start)) {
+                    appendBounded(result, literal, start, section);
+                    appendBounded(result, "(section)", 0, "(section)".length());
+                    start = section + 1;
+                }
+            }
+            appendBounded(result, literal, start, literal.length());
+            cursor = end;
+            copied = end;
         }
-        return result.append(value, cursor, value.length()).toString();
+        appendBounded(result, value, copied, value.length());
+        return result.toString();
+    }
+
+    private static void appendBounded(StringBuilder result, CharSequence source, int start, int end) {
+        if (end - start > MAX_RESULT - result.length())
+            throw new IllegalArgumentException("literal text exceeds limits");
+        result.append(source, start, end);
     }
 }
