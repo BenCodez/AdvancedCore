@@ -135,6 +135,10 @@ public final class RewardMessages {
 
 	private static void sendPlayerMessage(AdvancedCoreUser user, String message,
 			HashMap<String, String> placeholders) {
+		if (RewardDisplayPlaceholders.hasLiteralValues(placeholders)) {
+			user.sendLiteralDisplayMessage(message, placeholders);
+			return;
+		}
 		if (RewardDisplayPlaceholders.hasDisplayValues(placeholders)) {
 			user.sendPreparedMessage(
 					RewardDisplayPlaceholders.replaceFormattedMessage(user.getPlayer(), message, placeholders));
@@ -154,6 +158,10 @@ public final class RewardMessages {
 
 	private static void broadcast(AdvancedCoreUser user, String message, HashMap<String, String> placeholders) {
 		MiscUtils misc = MiscUtils.getInstance();
+		if (RewardDisplayPlaceholders.hasLiteralValues(placeholders)) {
+			user.sendLiteralDisplayBroadcast(message, placeholders);
+			return;
+		}
 		if (RewardDisplayPlaceholders.hasDisplayValues(placeholders)) {
 			misc.broadcastPrepared(
 					player -> RewardDisplayPlaceholders.replaceFormattedBroadcast(

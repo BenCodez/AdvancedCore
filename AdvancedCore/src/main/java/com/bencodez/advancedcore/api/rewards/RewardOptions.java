@@ -119,6 +119,12 @@ public class RewardOptions {
 		return this;
 	}
 
+	/** Adds a literal display value and a safe v1 fallback for older queued readers. */
+	public RewardOptions addLiteralDisplayPlaceholder(String key, String literal, String legacySafeDisplay) {
+		RewardDisplayPlaceholders.putLiteral(getPlaceholders(), key, literal, legacySafeDisplay);
+		return this;
+	}
+
 	public RewardOptions disableDefaultWorlds() {
 		useDefaultWorlds = false;
 		return this;

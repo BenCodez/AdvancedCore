@@ -2840,6 +2840,72 @@ public class AdvancedCoreUser {
 		}
 	}
 
+	/** Schedules literal reward formatting and delivery on the live player's owner. */
+	public void sendLiteralDisplayMessage(String template, HashMap<String, String> placeholders) {
+		sendLiteralDisplay(template, placeholders, false);
+	}
+
+	/** Captures source placeholders on its owner before independently scheduled recipients. */
+	public void sendLiteralDisplayBroadcast(String template, HashMap<String, String> placeholders) {
+		sendLiteralDisplay(template, placeholders, true);
+	}
+
+	private void sendLiteralDisplay(String template, HashMap<String, String> placeholders, boolean broadcast) {
+		if (placeholders != null) {
+			if (placeholders.size() > 8192) throw new IllegalArgumentException("literal message bindings exceed limits");
+			long characters = 0;
+			for (var entry : placeholders.entrySet()) {
+				characters += entry.getKey() == null ? 0 : entry.getKey().length();
+				characters += entry.getValue() == null ? 0 : entry.getValue().length();
+				if (characters > 1048576) throw new IllegalArgumentException("literal message bindings exceed limits");
+			}
+		}
+		HashMap<String, String> captured = placeholders == null ? new HashMap<>() : new HashMap<>(placeholders);
+		Supplier<CompletionStage<Void>> delivery = () -> {
+			AtomicBoolean formattingStarted = new AtomicBoolean();
+			return Reward.continueOnServerThread(plugin, this, () -> {
+				Player player = getPlayer();
+				if (!broadcast && (player == null || !player.isOnline())) return CompletableFuture.failedFuture(
+						replayActionNotStarted("Player unavailable before literal message delivery"));
+				formattingStarted.set(true);
+				if (broadcast) {
+					var prepared = com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders
+							.prepareLiteralBroadcast(player, template, captured);
+					return com.bencodez.advancedcore.api.misc.MiscUtils.getInstance()
+							.broadcastPreparedComponentsAsync(prepared::render, prepared.render(null));
+				}
+				sendPreparedComponents(com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders
+						.renderLiteralComponents(player, template, captured));
+				return CompletableFuture.<Void>completedFuture(null);
+			}).handle((ignored, failure) -> {
+				if (failure != null) {
+					Throwable cause = AsyncActionCollection.unwrapCompletionFailure(failure);
+					if (!formattingStarted.get()) throw new java.util.concurrent.CompletionException(
+							replayActionNotStarted("Literal reward message was not dispatched", cause));
+					throw new java.util.concurrent.CompletionException(cause);
+				}
+				return null;
+			});
+		};
+		// The configured template identifies the action. Replay metadata and live
+		// placeholder values change while its already-completed prefix is resumed.
+		String descriptor = "literal-message:" + broadcast + ":" + canonicalActionDescriptor(template);
+		if (!collectAsyncAction(delivery, descriptor)) {
+			delivery.get().whenComplete((ignored, failure) -> {
+				if (failure != null) plugin.getLogger().warning("A literal reward message could not be delivered");
+			});
+		}
+	}
+
+	/** Sends final parsed components without a second formatting pass. */
+	public void sendPreparedComponents(BaseComponent... components) {
+		Player player = getPlayer();
+		if (player == null || components == null || components.length == 0) return;
+		for (BaseComponent line : components) {
+			if (line != null) PlayerUtils.getServerHandle().sendMessage(player, line);
+		}
+	}
+
 	/**
 	 * Sends a message with placeholders to the player.
 	 *

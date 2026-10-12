@@ -184,6 +184,12 @@ public class RewardBuilder {
 		return this;
 	}
 
+	/** Adds a literal display value while preserving a safe fallback for old queues. */
+	public RewardBuilder withLiteralDisplayPlaceHolder(String key, String literal, String legacySafeDisplay) {
+		rewardOptions.addLiteralDisplayPlaceholder(key, literal, legacySafeDisplay);
+		return this;
+	}
+
 	public RewardBuilder withPrefix(String prefix) {
 		this.rewardOptions.setPrefix(prefix);
 		return this;

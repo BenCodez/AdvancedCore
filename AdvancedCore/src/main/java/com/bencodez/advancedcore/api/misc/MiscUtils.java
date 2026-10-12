@@ -22,10 +22,12 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
@@ -136,6 +138,123 @@ public class MiscUtils {
 		}
 		if (consoleMessage != null && !consoleMessage.isEmpty()) {
 			Bukkit.getServer().getConsoleSender().sendMessage(MessageAPI.colorize(consoleMessage));
+		}
+	}
+
+	/** Broadcasts final components on each recipient owner; never reparses literal text. */
+	public void broadcastPreparedComponents(
+			Function<Player, net.md_5.bungee.api.chat.TextComponent[]> renderer,
+			net.md_5.bungee.api.chat.TextComponent[] consoleLines) {
+		AdvancedCorePlugin owner = plugin;
+		broadcastPreparedComponentsAsync(renderer, consoleLines).whenComplete((ignored, failure) -> {
+			if (failure != null) owner.getLogger().warning("Prepared broadcast could not complete");
+		});
+	}
+
+	/**
+	 * Completes after global console output and all scheduled recipient deliveries.
+	 * A recipient that disconnects before its callback is skipped. Disable, scheduler
+	 * rejection, rendering/transport failure, and a 30-second deadline fail the stage
+	 * and fence queued callbacks, checking again after rendering; values are never reparsed.
+	 */
+	public CompletionStage<Void> broadcastPreparedComponentsAsync(
+			Function<Player, net.md_5.bungee.api.chat.TextComponent[]> renderer,
+			net.md_5.bungee.api.chat.TextComponent[] consoleLines) {
+		return broadcastPreparedComponentsAsync(renderer, consoleLines, deadline ->
+				CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(deadline));
+	}
+
+	private CompletionStage<Void> broadcastPreparedComponentsAsync(
+			Function<Player, net.md_5.bungee.api.chat.TextComponent[]> renderer,
+			net.md_5.bungee.api.chat.TextComponent[] consoleLines, Consumer<Runnable> timeoutScheduler) {
+		if (renderer == null) throw new IllegalArgumentException("renderer is required");
+		AdvancedCorePlugin owner = plugin;
+		BroadcastCompletion delivery = new BroadcastCompletion();
+		AtomicBoolean globalClaim = new AtomicBoolean();
+		var consoleSnapshot = consoleLines == null ? null : consoleLines.clone();
+		try {
+			timeoutScheduler.accept(() -> delivery.fail(
+					new TimeoutException("Timed out waiting for prepared broadcast delivery")));
+			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
+				if (!globalClaim.compareAndSet(false, true) || delivery.closed.get()) return;
+				try {
+					if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before broadcast dispatch");
+					for (Player player : new ArrayList<>(Bukkit.getOnlinePlayers())) {
+						if (delivery.closed.get()) break;
+						delivery.remaining.incrementAndGet();
+						AtomicBoolean recipientClaim = new AtomicBoolean();
+						try {
+							runBroadcastRecipient(owner, player, () -> {
+								if (!recipientClaim.compareAndSet(false, true) || delivery.closed.get()) return;
+								try {
+									if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before broadcast delivery");
+									if (player.isOnline()) {
+										var lines = renderer.apply(player);
+										if (lines != null) for (var line : lines) {
+											if (delivery.closed.get()) break;
+											if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled while rendering broadcast");
+											if (line != null) PlayerUtils.getServerHandle().sendMessage(player, line);
+										}
+									}
+								} catch (Throwable failure) { delivery.fail(failure); }
+								finally { delivery.settle(); }
+							}, () -> {
+								if (recipientClaim.compareAndSet(false, true)) {
+									// Native retirement runs in critical entity-removal code.
+									// Complete outside it so reward continuations cannot run there.
+									CompletableFuture.runAsync(delivery::settle);
+								}
+							});
+						} catch (Throwable failure) { delivery.fail(failure); delivery.settle(); }
+					}
+					if (consoleSnapshot != null) for (var line : consoleSnapshot) {
+						if (delivery.closed.get()) break;
+						if (line != null) Bukkit.getConsoleSender().sendMessage(line.toLegacyText());
+					}
+				} catch (Throwable failure) { delivery.fail(failure); }
+				finally { delivery.settle(); }
+			});
+		} catch (Throwable failure) { delivery.fail(failure); }
+		return delivery.completion;
+	}
+
+	private static void runBroadcastRecipient(AdvancedCorePlugin owner, Player player,
+			Runnable action, Runnable retired) throws ReflectiveOperationException {
+		var scheduler = owner.getBukkitScheduler();
+		var folia = scheduler.getFoliaLib();
+		if (folia == null || !folia.isFolia()) {
+			scheduler.executeOrScheduleSync(owner, action, player);
+			return;
+		}
+		// Use the supported native retirement callback without linking Paper-only
+		// classes on Spigot. FoliaLib's void wrapper cannot report retired entities.
+		var getter = player.getClass().getMethod("getScheduler");
+		Object entityScheduler = getter.invoke(player);
+		var execute = getter.getReturnType().getMethod("execute", org.bukkit.plugin.Plugin.class,
+				Runnable.class, Runnable.class, long.class);
+		try {
+			boolean admitted = (Boolean) execute.invoke(entityScheduler, owner, action, retired, 1L);
+			if (!admitted) retired.run();
+		} catch (java.lang.reflect.InvocationTargetException failure) {
+			Throwable cause = failure.getCause();
+			if (cause instanceof RuntimeException runtime) throw runtime;
+			if (cause instanceof Error error) throw error;
+			throw failure;
+		}
+	}
+
+	private static final class BroadcastCompletion {
+		private final CompletableFuture<Void> completion = new CompletableFuture<>();
+		private final AtomicBoolean closed = new AtomicBoolean();
+		private final AtomicInteger remaining = new AtomicInteger(1);
+		private BroadcastCompletion() {
+			completion.whenComplete((ignored, failure) -> { if (completion.isCancelled()) closed.set(true); });
+		}
+		private void fail(Throwable failure) {
+			if (closed.compareAndSet(false, true)) completion.completeExceptionally(failure);
+		}
+		private void settle() {
+			if (remaining.decrementAndGet() == 0 && closed.compareAndSet(false, true)) completion.complete(null);
 		}
 	}
 
