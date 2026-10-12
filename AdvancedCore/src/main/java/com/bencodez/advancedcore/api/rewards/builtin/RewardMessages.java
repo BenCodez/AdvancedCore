@@ -75,7 +75,11 @@ public final class RewardMessages {
             @Override
             public String onRewardRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> value,
                     HashMap<String, String> placeholders) {
-				sendPlayerMessage(user, value.get(ThreadLocalRandom.current().nextInt(0, value.size())), placeholders);
+                if (RewardDisplayPlaceholders.hasLiteralValues(placeholders)) {
+                    user.sendLiteralRandomDisplayMessage(value, placeholders);
+                } else {
+                    sendPlayerMessage(user, value.get(ThreadLocalRandom.current().nextInt(0, value.size())), placeholders);
+                }
 				return null;
 			}
 		}.requiresPlayerWhen((data, placeholders) -> !data.getStringList("RandomMessage").isEmpty()));

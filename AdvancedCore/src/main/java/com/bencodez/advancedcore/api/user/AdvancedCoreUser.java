@@ -12,6 +12,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
@@ -114,6 +115,18 @@ public class AdvancedCoreUser {
 			actions.add(new ReplayAction(fingerprint + "/" + occurrence, fingerprint, action,
 					!descriptor.startsWith("failure:")));
 			return true;
+		}
+
+		/** Recover the configured choice of older literal random-message checkpoints. */
+		private synchronized String reservedLiteralMessage(List<String> templates) {
+			HashMap<String, String> reserved = snapshot(readReplayValue(snapshotKey));
+			if (reserved.isEmpty()) return null;
+			for (String template : templates) {
+				String fingerprint = Reward.legacyActionFingerprint(literalMessageDescriptor(template, false));
+				int occurrence = actionOccurrences.getOrDefault(fingerprint, 0);
+				if (fingerprint.equals(reserved.get(fingerprint + "/" + occurrence))) return template;
+			}
+			throw new IllegalStateException("The queued random message is no longer configured");
 		}
 
 		private boolean belongsTo(AdvancedCoreUser user) {
@@ -2850,16 +2863,41 @@ public class AdvancedCoreUser {
 		sendLiteralDisplay(template, placeholders, true);
 	}
 
-	private void sendLiteralDisplay(String template, HashMap<String, String> placeholders, boolean broadcast) {
-		if (placeholders != null) {
-			if (placeholders.size() > 8192) throw new IllegalArgumentException("literal message bindings exceed limits");
-			long characters = 0;
-			for (var entry : placeholders.entrySet()) {
-				characters += entry.getKey() == null ? 0 : entry.getKey().length();
-				characters += entry.getValue() == null ? 0 : entry.getValue().length();
-				if (characters > 1048576) throw new IllegalArgumentException("literal message bindings exceed limits");
-			}
+	/** Uses the existing replay ledger to retain a configured random message choice. */
+	public void sendLiteralRandomDisplayMessage(List<String> templates, HashMap<String, String> placeholders) {
+		validateLiteralDisplayBindings(placeholders);
+		if (templates == null || templates.isEmpty() || templates.size() > 4096) {
+			throw new IllegalArgumentException("Invalid literal random message choices");
 		}
+		ArrayList<String> choices = new ArrayList<>(templates.size());
+		long characters = 0;
+		for (String template : templates) {
+			if (choices.size() >= 4096) throw new IllegalArgumentException("Too many literal random message choices");
+			if (template == null || template.length() > 65536) {
+				throw new IllegalArgumentException("Invalid literal random message template");
+			}
+			characters += template.length();
+			if (characters > 1048576) throw new IllegalArgumentException("Literal random messages exceed limits");
+			choices.add(template);
+		}
+		String message = Reward.replaySelection(placeholders, "literal-random-message", () -> {
+			AsyncActionCollection current = ASYNC_ACTION_COLLECTION.get();
+			String reserved = current != null && current.belongsTo(this)
+					? current.reservedLiteralMessage(choices) : null;
+			return reserved != null ? reserved : choices.get(
+					java.util.concurrent.ThreadLocalRandom.current().nextInt(choices.size()));
+		});
+		// Persisted selection metadata never supplies a new trusted template.
+		if (!choices.contains(message)) throw new IllegalStateException("The queued random message is no longer configured");
+		sendLiteralDisplayMessage(message, placeholders);
+	}
+
+	private static String literalMessageDescriptor(String template, boolean broadcast) {
+		return "literal-message:" + broadcast + ":" + canonicalActionDescriptor(template);
+	}
+
+	private void sendLiteralDisplay(String template, HashMap<String, String> placeholders, boolean broadcast) {
+		validateLiteralDisplayBindings(placeholders);
 		HashMap<String, String> captured = placeholders == null ? new HashMap<>() : new HashMap<>(placeholders);
 		Supplier<CompletionStage<Void>> delivery = () -> {
 			AtomicBoolean formattingStarted = new AtomicBoolean();
@@ -2889,11 +2927,23 @@ public class AdvancedCoreUser {
 		};
 		// The configured template identifies the action. Replay metadata and live
 		// placeholder values change while its already-completed prefix is resumed.
-		String descriptor = "literal-message:" + broadcast + ":" + canonicalActionDescriptor(template);
+		String descriptor = literalMessageDescriptor(template, broadcast);
 		if (!collectAsyncAction(delivery, descriptor)) {
 			delivery.get().whenComplete((ignored, failure) -> {
 				if (failure != null) plugin.getLogger().warning("A literal reward message could not be delivered");
 			});
+		}
+	}
+
+	private static void validateLiteralDisplayBindings(HashMap<String, String> placeholders) {
+		if (placeholders != null) {
+			if (placeholders.size() > 8192) throw new IllegalArgumentException("literal message bindings exceed limits");
+			long characters = 0;
+			for (var entry : placeholders.entrySet()) {
+				characters += entry.getKey() == null ? 0 : entry.getKey().length();
+				characters += entry.getValue() == null ? 0 : entry.getValue().length();
+				if (characters > 1048576) throw new IllegalArgumentException("literal message bindings exceed limits");
+			}
 		}
 	}
 

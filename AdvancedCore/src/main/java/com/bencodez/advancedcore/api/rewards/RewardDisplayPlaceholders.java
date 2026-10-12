@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderValue;
 import com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
+import com.bencodez.advancedcore.api.messages.LiteralMessageTemplate;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
 /**
@@ -72,21 +73,20 @@ public final class RewardDisplayPlaceholders {
 	/** Parses trusted formatting before literal values enter final components. Caller owns the player. */
 	public static net.md_5.bungee.api.chat.TextComponent[] renderLiteralComponents(Player player, String template,
 			HashMap<String, String> placeholders) {
-		com.bencodez.advancedcore.api.messages.LiteralMessageTemplate.Prepared prepared =
-				prepareLiteral(template, placeholders);
-		HashMap<String, String> legacy = legacyPlaceholders(placeholders);
-		boolean hasLegacyDisplay = !displayOverrides(legacy).isEmpty();
+		LiteralPreparation preparation = prepareLiteral(template, placeholders);
+		var prepared = preparation.prepared();
+		var legacy = preparation.legacy();
+		var rendering = legacy.renderer();
 		java.util.ArrayList<net.md_5.bungee.api.chat.TextComponent> result = new java.util.ArrayList<>();
 		for (var line : prepared.splitLines()) {
 			String parsed;
-			if (hasLegacyDisplay) {
-				line = line.protectFormattedActions(value -> renderExact(player, value, legacy));
-				// Legacy display bindings are restored after their provider/script pass.
+			if (legacy.hasDisplayValues()) {
+				line = line.protectFormattedActions(value -> renderIndexedExact(player, value, rendering));
 				// Color only visible text and hover; raw action attributes stay shielded.
-				parsed = renderInteractive(line.template(),
-						value -> MessageAPI.colorize(renderVisible(player, value, legacy)), Function.identity());
+				parsed = renderInteractiveBounded(line.template(),
+						value -> MessageAPI.colorize(renderIndexedVisible(player, value, rendering)), Function.identity());
 			} else {
-				String text = PlaceholderUtils.replacePlaceHolder(line.template(), forDisplay(legacy));
+				String text = rendering.protect(line.template(), false, true);
 				parsed = player == null ? PlaceholderUtils.parseText(text) : PlaceholderUtils.parseText(player, text);
 			}
 			var finalTemplate = line.withTemplate(parsed);
@@ -98,40 +98,35 @@ public final class RewardDisplayPlaceholders {
 	/** Captures source-player placeholders once on that player's owner before recipient handoffs. */
 	public static LiteralBroadcast prepareLiteralBroadcast(Player triggeringPlayer, String template,
 			HashMap<String, String> placeholders) {
-		var prepared = prepareLiteral(template, placeholders);
-		HashMap<String, String> legacyPlaceholders = legacyPlaceholders(placeholders);
-		boolean hasLegacyDisplay = !displayOverrides(legacyPlaceholders).isEmpty();
-		BroadcastValues legacy = new BroadcastValues(legacyPlaceholders, prepared.template());
-		prepared = prepared.withTemplate(hasLegacyDisplay ? renderInteractive(prepared.template(),
-				value -> legacy.protect(value, false), value -> legacy.protect(value, true))
-				: PlaceholderUtils.replacePlaceHolder(prepared.template(), forDisplay(legacyPlaceholders)));
+		LiteralPreparation preparation = prepareLiteral(template, placeholders);
+		var legacy = preparation.legacy();
+		var rendering = legacy.renderer();
+		var prepared = preparation.prepared();
+		prepared = prepared.withTemplate(legacy.hasDisplayValues() ? renderInteractiveBounded(prepared.template(),
+				value -> rendering.protect(value, false, false), value -> rendering.protect(value, true, false))
+				: rendering.protect(prepared.template(), false, false));
 		if (triggeringPlayer != null) prepared = prepared.withTemplate(
 				PlaceholderUtils.replacePlaceHolders(triggeringPlayer, prepared.template()));
-		return new LiteralBroadcast(prepared, legacy, hasLegacyDisplay);
+		return new LiteralBroadcast(prepared, legacy);
 	}
 
-	/** Immutable protected template; retains no player or user reference. */
+	/** Immutable protected template and indexes; retains no player, user, or caller-owned map reference. */
 	public static final class LiteralBroadcast {
-		private final com.bencodez.advancedcore.api.messages.LiteralMessageTemplate.Prepared prepared;
-		private final Map<String, String> visibleTokens;
-		private final Map<String, String> exactTokens;
-		private final boolean hasLegacyDisplay;
-		private LiteralBroadcast(com.bencodez.advancedcore.api.messages.LiteralMessageTemplate.Prepared prepared,
-				BroadcastValues legacy, boolean hasLegacyDisplay) {
+		private final LiteralMessageTemplate.Prepared prepared;
+		private final LiteralMessageTemplate.LegacyBindings legacy;
+		private LiteralBroadcast(LiteralMessageTemplate.Prepared prepared, LiteralMessageTemplate.LegacyBindings legacy) {
 			this.prepared = prepared;
-			visibleTokens = Map.copyOf(legacy.visibleTokens);
-			exactTokens = Map.copyOf(legacy.exactTokens);
-			this.hasLegacyDisplay = hasLegacyDisplay;
+			this.legacy = legacy;
 		}
 		/** Recipient placeholders must run on that recipient's owner; console uses null on the global owner. */
 		public net.md_5.bungee.api.chat.TextComponent[] render(Player recipient) {
 			java.util.ArrayList<net.md_5.bungee.api.chat.TextComponent> result = new java.util.ArrayList<>();
 			for (var line : prepared.splitLines()) {
 				String text;
-				if (hasLegacyDisplay) {
-					line = line.protectFormattedActions(value -> finishBroadcast(value, recipient, exactTokens, true));
-					text = renderInteractive(line.template(),
-							value -> MessageAPI.colorize(finishBroadcast(value, recipient, visibleTokens, false)), Function.identity());
+				if (legacy.hasDisplayValues()) {
+					line = line.protectFormattedActions(value -> finishIndexedBroadcast(value, recipient, legacy, true));
+					text = renderInteractiveBounded(line.template(),
+							value -> MessageAPI.colorize(finishIndexedBroadcast(value, recipient, legacy, false)), Function.identity());
 				} else {
 					text = recipient == null ? line.template() : PlaceholderUtils.replacePlaceHolders(recipient, line.template());
 					text = MessageAPI.colorize(text);
@@ -143,26 +138,94 @@ public final class RewardDisplayPlaceholders {
 		}
 	}
 
-	private static com.bencodez.advancedcore.api.messages.LiteralMessageTemplate.Prepared prepareLiteral(
-			String template, HashMap<String, String> placeholders) {
+	private static LiteralPreparation prepareLiteral(String template, HashMap<String, String> placeholders) {
 		Map<String, String> literals = literalValues(placeholders);
 		Map<String, String> actions = new HashMap<>();
 		if (placeholders != null) for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-			if (entry.getKey() != null && literals.containsKey(entry.getKey().toLowerCase(java.util.Locale.ROOT)))
+			if (entry.getKey() != null && literals.containsKey(LiteralMessageTemplate.normalizeBindingKey(entry.getKey())))
 				actions.put(entry.getKey(), entry.getValue() == null ? "" : entry.getValue());
 		}
-		return com.bencodez.advancedcore.api.messages.LiteralMessageTemplate.prepare(template, literals, actions);
+		var legacy = indexedLegacyValues(legacyPlaceholders(placeholders, literals.keySet()));
+		var prepared = LiteralMessageTemplate.prepare(template, literals, actions, legacy);
+		return new LiteralPreparation(prepared, legacy.bind(prepared));
+	}
+
+	private record LiteralPreparation(LiteralMessageTemplate.Prepared prepared,
+			LiteralMessageTemplate.LegacyBindings legacy) { }
+
+	/** Decode and admit the mixed lane once; avoid rebuilding or probing the override table for every segment. */
+	private static LiteralMessageTemplate.LegacyValues indexedLegacyValues(HashMap<String, String> placeholders) {
+		if (placeholders.size() > 8192) throw new IllegalArgumentException("literal metadata exceeds limits");
+		Map<String, String> display = new java.util.LinkedHashMap<>();
+		Map<String, String> displayKeys = new HashMap<>();
+		Map<String, String> exact = new java.util.LinkedHashMap<>();
+		Map<String, String> ordinary = new HashMap<>();
+		int characters = 0;
+		if (hasDisplayValues(placeholders)) for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+			String key = entry.getKey();
+			if (key == null || !key.startsWith(VALUE_PREFIX)) continue;
+			if (key.length() > VALUE_PREFIX.length() + 4097 || entry.getValue() == null
+					|| entry.getValue().length() > 131073) throw new IllegalArgumentException("legacy metadata exceeds limits");
+			String decodedKey;
+			String value;
+			try {
+				decodedKey = decode(key.substring(VALUE_PREFIX.length()));
+				value = decode(entry.getValue());
+			} catch (IllegalArgumentException ignored) {
+				// Malformed v1 metadata keeps its historical ignored behavior.
+				continue;
+			}
+			if (decodedKey.isEmpty() || decodedKey.length() > 1024 || value.length() > 32768)
+				throw new IllegalArgumentException("legacy metadata exceeds limits");
+			characters += decodedKey.length() + value.length();
+			if (characters > 1048576) throw new IllegalArgumentException("legacy metadata exceeds limits");
+			String normalized = LiteralMessageTemplate.normalizeBindingKey(decodedKey);
+			if (displayKeys.putIfAbsent(normalized, decodedKey) == null) display.put(decodedKey, value);
+		}
+		for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+			String key = entry.getKey();
+			if (key == null || key.equals(MANIFEST_KEY) || key.startsWith(VALUE_PREFIX) || key.startsWith(LITERAL_PREFIX)) continue;
+			String value = entry.getValue() == null ? "" : entry.getValue();
+			if (key.isEmpty() || key.length() > 1024 || value.length() > 32768)
+				throw new IllegalArgumentException("legacy bindings exceed limits");
+			characters += key.length() + value.length();
+			if (characters > 1048576) throw new IllegalArgumentException("legacy bindings exceed limits");
+			String normalized = LiteralMessageTemplate.normalizeBindingKey(key);
+			if (displayKeys.containsKey(normalized)) exact.put(normalized, value);
+			else ordinary.put(key, value);
+		}
+		return new LiteralMessageTemplate.LegacyValues(display, exact, ordinary);
+	}
+
+	private static String renderIndexedVisible(Player player, String source, LiteralMessageTemplate.LegacyBindings.Renderer values) {
+		String protectedValue = values.protect(source, false, true);
+		String parsed = player == null ? PlaceholderUtils.parseText(protectedValue) : PlaceholderUtils.parseText(player, protectedValue);
+		return values.finish(parsed, false);
+	}
+
+	private static String renderIndexedExact(Player player, String source, LiteralMessageTemplate.LegacyBindings.Renderer values) {
+		String protectedValue = values.protect(source, true, true);
+		String parsed = player == null ? PlaceholderUtils.parseText(protectedValue) : PlaceholderUtils.parseText(player, protectedValue);
+		return values.finish(parsed, true);
+	}
+
+	private static String finishIndexedBroadcast(String source, Player recipient, LiteralMessageTemplate.LegacyBindings values,
+			boolean action) {
+		String parsed = recipient == null ? source : PlaceholderUtils.replacePlaceHolders(recipient, source);
+		return values.finish(MessageAPI.colorize(parsed), action);
 	}
 
 	/** Snapshot only the existing legacy lane; explicit literal bindings remain protected separately. */
-	private static HashMap<String, String> legacyPlaceholders(HashMap<String, String> placeholders) {
+	private static HashMap<String, String> legacyPlaceholders(HashMap<String, String> placeholders, java.util.Set<String> literals) {
 		HashMap<String, String> legacy = placeholders == null ? new HashMap<>() : new HashMap<>(placeholders);
-		java.util.Set<String> literals = literalValues(placeholders).keySet();
+		HashMap<String, String> replay = new HashMap<>();
+		Reward.mergeReplayMetadata(replay, legacy);
+		legacy.keySet().removeAll(replay.keySet());
 		legacy.keySet().removeIf(key -> {
 			if (key == null) return false;
-			if (key.startsWith(LITERAL_PREFIX) || literals.contains(key.toLowerCase(java.util.Locale.ROOT))) return true;
+			if (key.startsWith(LITERAL_PREFIX) || literals.contains(LiteralMessageTemplate.normalizeBindingKey(key))) return true;
 			if (!key.startsWith(VALUE_PREFIX)) return false;
-			try { return literals.contains(decode(key.substring(VALUE_PREFIX.length())).toLowerCase(java.util.Locale.ROOT)); }
+			try { return literals.contains(LiteralMessageTemplate.normalizeBindingKey(decode(key.substring(VALUE_PREFIX.length())))); }
 			catch (IllegalArgumentException ignored) { return false; }
 		});
 		return legacy;
@@ -170,6 +233,7 @@ public final class RewardDisplayPlaceholders {
 
 	private static Map<String, String> literalValues(HashMap<String, String> placeholders) {
 		Map<String, String> values = new HashMap<>();
+		int characters = 0;
 		if (!hasLiteralValues(placeholders)) return values;
 		if (placeholders.size() > 8192) throw new IllegalArgumentException("literal metadata exceeds limits");
 		for (Map.Entry<String, String> entry : placeholders.entrySet()) {
@@ -177,8 +241,13 @@ public final class RewardDisplayPlaceholders {
 			if (key == null || !key.startsWith(LITERAL_PREFIX)) continue;
 			if (key.length() > 1024 || entry.getValue() == null || entry.getValue().length() > MAX_ENCODED_LITERAL_CHARACTERS)
 				throw new IllegalArgumentException("literal metadata exceeds limits");
-			String decoded = decode(key.substring(LITERAL_PREFIX.length())).toLowerCase(java.util.Locale.ROOT);
+			String decodedKey = decode(key.substring(LITERAL_PREFIX.length()));
+			if (!decodedKey.matches("[A-Za-z_][A-Za-z0-9_]{0,127}"))
+				throw new IllegalArgumentException("invalid literal binding");
+			String decoded = LiteralMessageTemplate.normalizeBindingKey(decodedKey);
 			String literal = decode(entry.getValue());
+			characters += decodedKey.length() + literal.length();
+			if (characters > 1048576) throw new IllegalArgumentException("literal metadata exceeds limits");
 			if (literal.length() > MAX_LITERAL_CHARACTERS) throw new IllegalArgumentException("literal metadata exceeds limits");
 			if (values.putIfAbsent(decoded, literal) != null)
 				throw new IllegalArgumentException("duplicate literal binding");
@@ -279,6 +348,18 @@ public final class RewardDisplayPlaceholders {
 		return renderInteractive(template,
 				value -> renderBroadcastVisible(triggeringPlayer, recipient, value, placeholders),
 				value -> renderBroadcastExact(triggeringPlayer, recipient, value, placeholders));
+	}
+
+	private static String renderInteractiveBounded(String template, Function<String, String> visibleRenderer,
+			Function<String, String> exactRenderer) {
+		int[] characters = { template.length() };
+		Function<Function<String, String>, Function<String, String>> bounded = renderer -> source -> {
+			String rendered = renderer.apply(source);
+			characters[0] += rendered.length() - source.length();
+			if (characters[0] > 262144) throw new IllegalArgumentException("legacy text exceeds limits");
+			return rendered;
+		};
+		return renderInteractive(template, bounded.apply(visibleRenderer), bounded.apply(exactRenderer));
 	}
 
 	private static String renderInteractive(String template, Function<String, String> visibleRenderer,
@@ -424,58 +505,6 @@ public final class RewardDisplayPlaceholders {
 		rendered = MessageAPI.colorize(rendered);
 		for (Map.Entry<String, String> entry : tokenValues.entrySet()) {
 			rendered = replaceInertToken(rendered, entry.getKey(), entry.getValue());
-		}
-		return rendered;
-	}
-
-	/** The existing broadcast policy, separated at its source/recipient handoff. */
-	private static final class BroadcastValues {
-		private final VisibleValues visible;
-		private final VisibleValues exact;
-		private final String source;
-		private final HashMap<String, String> visibleTokens = new HashMap<>();
-		private final HashMap<String, String> exactTokens = new HashMap<>();
-		private BroadcastValues(HashMap<String, String> placeholders, String source) {
-			visible = visibleValues(placeholders);
-			exact = exactValues(placeholders);
-			this.source = source;
-		}
-		private String protect(String value, boolean action) {
-			VisibleValues values = action ? exact : visible;
-			HashMap<String, String> replacements = new HashMap<>();
-			for (Map.Entry<String, String> entry : values.overrides().entrySet()) {
-				HashMap<String, String> probe = new HashMap<>();
-				probe.put(entry.getKey(), "VCORELITERALPROBE");
-				if (PlaceholderUtils.replacePlaceHolder(value, probe).equals(value)) continue;
-				if (visibleTokens.size() + exactTokens.size() >= 4096)
-					throw new IllegalArgumentException("too many broadcast display values");
-				String raw = entry.getValue() == null ? "" : entry.getValue();
-				String token = token(raw);
-				replacements.put(entry.getKey(), token);
-				(action ? exactTokens : visibleTokens).put(token, action ? raw : neutralizeInteractiveSyntax(raw));
-			}
-			return PlaceholderUtils.replacePlaceHolder(
-					PlaceholderUtils.replacePlaceHolder(value, replacements), values.ordinary());
-		}
-		private String token(String value) {
-			for (int attempt = 0; attempt < 16; attempt++) {
-				String token = "VCORELITERAL" + Long.toUnsignedString(java.util.concurrent.ThreadLocalRandom.current().nextLong(), 36)
-						+ "Q" + Long.toUnsignedString(java.util.concurrent.ThreadLocalRandom.current().nextLong(), 36) + "Z";
-				if (!source.contains(token) && !value.contains(token) && !visibleTokens.containsKey(token)
-						&& !exactTokens.containsKey(token)
-						&& visible.overrides().values().stream().noneMatch(text -> text != null && text.contains(token))
-						&& exact.overrides().values().stream().noneMatch(text -> text != null && text.contains(token))) return token;
-			}
-			throw new IllegalStateException("broadcast token allocation failed");
-		}
-	}
-
-	private static String finishBroadcast(String value, Player recipient, Map<String, String> tokens, boolean exact) {
-		String rendered = recipient == null ? value : PlaceholderUtils.replacePlaceHolders(recipient, value);
-		rendered = MessageAPI.colorize(rendered);
-		for (Map.Entry<String, String> entry : tokens.entrySet()) {
-			rendered = exact ? rendered.replace(entry.getKey(), entry.getValue())
-					: replaceInertToken(rendered, entry.getKey(), entry.getValue());
 		}
 		return rendered;
 	}

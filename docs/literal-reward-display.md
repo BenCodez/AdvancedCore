@@ -65,6 +65,15 @@ already have run, this failure retains the existing replay identity; retrying
 the same action can deliver its uncompleted message. Replay identity uses the configured
 template rather than mutable checkpoint metadata or live placeholder values.
 
+With literal metadata, `RandomMessage` records its first configured choice in
+existing replay-selection metadata before formatting. Retry and restart retain
+that choice, including recovery of older literal action reservations. Reordering
+the list does not reroll it. Removing the chosen template leaves the queued action
+pending rather than interpreting arbitrary stored text or delivering a new choice.
+Restore the original choice before retrying. This opt-in lane permits up to 4096
+choices, 65536 UTF-16 units per template and 1048576 combined template units.
+The ordinary non-literal `RandomMessage` path keeps its existing behavior.
+
 On Folia, broadcast recipients use the supported native
 [entity scheduler retirement callback](https://jd.papermc.io/paper/1.20.6/io/papermc/paper/threadedregions/scheduler/EntityScheduler.html).
 A recipient removed before dispatch settles as skipped; reward continuations run
@@ -86,6 +95,10 @@ Line and recipient variants share immutable bindings and collision metadata,
 while each recipient owns any newly formatted action bindings. Retained formatted
 action text and protected script text each have a 262144-character budget;
 collision metadata is capped at 131072 distinct tokens across repeated transformations.
+Mixed legacy/literal messages use the same indexed marker and collision authority.
+Configured legacy colors and ordered ordinary-placeholder expansion are retained.
+Exceptional shared-boundary or arbitrary-key expansion has a 16 MiB scan-work
+budget; exceeding it fails rendering instead of monopolizing an owner thread.
 Metadata, templates and component trees retain their separate bounds. Invalid literal
 metadata fails rendering rather than being parsed as ordinary executable text.
 Callers of the public preparation/rendering methods must use the appropriate
@@ -95,3 +108,7 @@ pipeline remains responsible for scheduling its injectors.
 Tests cover final component output, raw click actions, metadata serialization,
 legacy behavior and mock scheduler ownership. This is not a claim of live
 Minecraft client or Folia verification.
+
+Replay selections and action checkpoints remain internal durable metadata, outside the display-binding index. Their encoded size does not reduce the documented random-message template limit. Ordered ordinary substitution also retains markers formed by adjacent text after an empty or delimiter-free replacement.
+Trusted formatted templates may expand to the existing 262144-character result budget, while authored input remains limited to 65536 UTF-16 units. This accommodates opaque token expansion without unbounded rendered text.
+Ordered expansion charges pending buffers before descending as well as completed cached text, within the same combined character budget. Ordinary bindings retain the historical fresh-map iteration order independently of unused metadata.

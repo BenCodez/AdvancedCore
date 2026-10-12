@@ -21,6 +21,16 @@ import net.md_5.bungee.api.chat.TextComponent;
 
 class LiteralTemplateBoundsTest {
     @Test
+    void trustedFormattingHasABoundedExpansionBudgetSeparateFromAuthoredInput() {
+        var prepared = LiteralMessageTemplate.prepare("%Site%", Map.of("Site", "literal"), null);
+        String expanded = "x".repeat(262144);
+        assertEquals(expanded, prepared.withTemplate(expanded).finishText(expanded));
+        assertThrows(IllegalArgumentException.class, () -> prepared.withTemplate(expanded + "x"));
+        assertThrows(IllegalArgumentException.class,
+                () -> LiteralMessageTemplate.prepare("x".repeat(65537), Map.of(), null));
+    }
+
+    @Test
     void acceptsMaximumBindingCountWithOnlyOneReferencedLiteral() {
         Map<String, String> values = summary(8192);
         String source = "x".repeat(65524) + "%Site0%";

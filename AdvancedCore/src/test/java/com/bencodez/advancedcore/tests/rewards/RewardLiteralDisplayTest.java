@@ -509,11 +509,173 @@ class RewardLiteralDisplayTest {
         }
     }
 
+    @Test
+    void longRandomLiteralMessageKeepsReplayMetadataOutsideDisplayBindings() {
+        for (int size : List.of(24577, 65520)) {
+            String template = "x".repeat(size) + "%SiteName%";
+            try (ReplayFixture fixture = new ReplayFixture()) {
+                fixture.dispatchRandom(new ArrayList<>(List.of(template)), values("Original")).join();
+                assertEquals(List.of("x".repeat(size) + "Original"), fixture.sent);
+                var persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+                fixture.dispatchRandom(new ArrayList<>(List.of(template)), persisted).join();
+                assertEquals(1, fixture.sent.size(), "completed random message must not be redelivered");
+            }
+        }
+    }
+
+    @Test
+    void randomLiteralMessageKeepsItsChoiceAcrossFormattingFailureAndRestart() {
+        var choices = spy(new ArrayList<>(List.of("First:%SiteName%", "Second:%SiteName%")));
+        doReturn("First:%SiteName%", "Second:%SiteName%").when(choices).get(anyInt());
+        HashMap<String, String> persisted;
+        var firstSelection = new java.util.concurrent.atomic.AtomicReference<String>();
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                    .thenAnswer(call -> {
+                        firstSelection.set(call.<String>getArgument(1).split(":", 2)[0]);
+                        assertTrue(fixture.randomCheckpoint.get().keySet().stream()
+                                .anyMatch(key -> key.startsWith("__advancedcore_replay_selection_")),
+                                "the choice must be checkpointed before formatting starts");
+                        when(fixture.player.isOnline()).thenReturn(false);
+                        return com.bencodez.simpleapi.messages.MessageAPI.colorize(call.getArgument(1));
+                    });
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatchRandom(choices, values("Original")).join());
+            assertTrue(fixture.sent.isEmpty());
+            persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+        }
+        try (ReplayFixture restarted = new ReplayFixture()) {
+            restarted.dispatchRandom(choices, persisted).join();
+            assertEquals(List.of(firstSelection.get() + ":Original"), restarted.sent);
+        }
+    }
+
+    @Test
+    void completedRandomLiteralMessageDoesNotRerollOrRedeliverOnReplay() {
+        var choices = spy(new ArrayList<>(List.of("First:%SiteName%", "Second:%SiteName%")));
+        doReturn("First:%SiteName%", "Second:%SiteName%").when(choices).get(anyInt());
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            fixture.dispatchRandom(choices, values("Original")).join();
+            var firstDelivery = List.copyOf(fixture.sent);
+            assertEquals(1, firstDelivery.size());
+            var persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+            fixture.dispatchRandom(choices, persisted).join();
+            assertEquals(firstDelivery, fixture.sent);
+            fixture.dispatchRandom(choices, values("Independent")).join();
+            assertEquals(2, fixture.sent.size());
+            assertEquals(firstDelivery.get(0), fixture.sent.get(0));
+            assertTrue(fixture.sent.get(1).endsWith(":Independent"));
+        }
+    }
+
+    @Test
+    void randomLiteralReplayReusesReorderedChoiceButRejectsRemovedConfiguredText() {
+        var choices = spy(new ArrayList<>(List.of("First:%SiteName%")));
+        doReturn("First:%SiteName%").when(choices).get(anyInt());
+        HashMap<String, String> persisted;
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                    .thenAnswer(call -> {
+                        when(fixture.player.isOnline()).thenReturn(false);
+                        return com.bencodez.simpleapi.messages.MessageAPI.colorize(call.getArgument(1));
+                    });
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatchRandom(choices, values("Original")).join());
+            persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+        }
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            assertThrows(IllegalStateException.class, () -> fixture.dispatchRandom(
+                    new ArrayList<>(List.of("Second:%SiteName%")), new HashMap<>(persisted)));
+            assertTrue(fixture.sent.isEmpty());
+            fixture.dispatchRandom(new ArrayList<>(List.of("Second:%SiteName%", "First:%SiteName%")), persisted).join();
+            assertEquals(List.of("First:Original"), fixture.sent);
+        }
+    }
+
+    @Test
+    void olderRandomMessageReservationsRecoverTheirChoiceWithoutRerolling() {
+        for (boolean completed : List.of(false, true)) {
+            HashMap<String, String> persisted;
+            try (ReplayFixture fixture = new ReplayFixture()) {
+                if (!completed) fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                        .thenAnswer(call -> {
+                            when(fixture.player.isOnline()).thenReturn(false);
+                            return com.bencodez.simpleapi.messages.MessageAPI.colorize(call.getArgument(1));
+                        });
+                var map = values("Original");
+                var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
+                options.setAsyncReplayCheckpointConsumer(checkpoint -> fixture.randomCheckpoint.set(
+                        new HashMap<>(checkpoint.getPlaceholders())));
+                var collection = fixture.user.beginAsyncActionCollection(Reward.replayStateFor(options), map,
+                        "synthetic-random-message-injector");
+                fixture.user.sendLiteralDisplayMessage("First:%SiteName%", map);
+                var delivery = fixture.user.endAsyncActionCollection(collection).toCompletableFuture();
+                if (completed) delivery.join();
+                else assertThrows(java.util.concurrent.CompletionException.class, delivery::join);
+                persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+                assertFalse(persisted.keySet().stream().anyMatch(key -> key.startsWith("__advancedcore_replay_selection_")));
+            }
+            try (ReplayFixture restarted = new ReplayFixture()) {
+                restarted.dispatchRandom(new ArrayList<>(List.of("Second:%SiteName%", "First:%SiteName%")), persisted).join();
+                assertEquals(completed ? List.of() : List.of("First:Original"), restarted.sent);
+            }
+        }
+    }
+
+    @Test
+    void storedRandomSelectionCannotBecomeAnUnconfiguredTrustedTemplate() {
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            var map = values("Original");
+            Reward.replaySelection(map, "literal-random-message", () -> "[Javascript=unexpected()]");
+            assertThrows(IllegalStateException.class, () -> fixture.dispatchRandom(
+                    new ArrayList<>(List.of("First:%SiteName%")), map));
+            assertTrue(fixture.sent.isEmpty());
+            fixture.placeholders.verify(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()), never());
+        }
+    }
+
+    @Test
+    void literalRandomChoiceBoundsFailBeforeFormatting() {
+        List<ArrayList<String>> invalid = List.of(
+                new ArrayList<>(java.util.Collections.nCopies(4097, "")),
+                new ArrayList<>(List.of("x".repeat(65537))),
+                new ArrayList<>(java.util.Collections.nCopies(17, "x".repeat(65536))));
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            for (var choices : invalid) assertThrows(IllegalArgumentException.class,
+                    () -> fixture.dispatchRandom(choices, values("Original")));
+            assertTrue(fixture.sent.isEmpty());
+            fixture.placeholders.verify(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()), never());
+        }
+    }
+
+    @Test
+    void legacyRandomMessagesKeepTheirExistingSelectionAndDeliveryBehavior() {
+        var choices = spy(new ArrayList<>(List.of("First", "Second")));
+        doReturn("First", "Second").when(choices).get(anyInt());
+        var user = mock(AdvancedCoreUser.class);
+        var handler = mock(RewardHandler.class);
+        var injections = new java.util.concurrent.CopyOnWriteArrayList<com.bencodez.advancedcore.api.rewards.injected.RewardInject>();
+        when(handler.getInjectedRewards()).thenReturn(injections);
+        RewardMessages.register(handler, mock(AdvancedCorePlugin.class));
+        var inject = injections.stream().filter(i -> i.getPath().equals("RandomMessage"))
+                .map(com.bencodez.advancedcore.api.rewards.injected.RewardInjectStringList.class::cast)
+                .findFirst().orElseThrow();
+        var map = new HashMap<String, String>();
+        inject.onRewardRequest(mock(Reward.class), user, choices, map);
+        inject.onRewardRequest(mock(Reward.class), user, choices, map);
+        verify(user).sendMessage("First", map);
+        verify(user).sendMessage("Second", map);
+        verify(user, never()).sendLiteralDisplayMessage(anyString(), any());
+        assertTrue(map.isEmpty());
+    }
+
     private static final class ReplayFixture implements AutoCloseable {
         final AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         final Player player = mock(Player.class);
         final AdvancedCoreUser user;
         final ArrayList<String> sent = new ArrayList<>();
+        final java.util.concurrent.atomic.AtomicReference<HashMap<String, String>> randomCheckpoint =
+                new java.util.concurrent.atomic.AtomicReference<>(new HashMap<>());
         final org.mockito.MockedStatic<PlayerUtils> utility = mockStatic(PlayerUtils.class);
         final org.mockito.MockedStatic<PlaceholderUtils> placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS);
 
@@ -549,6 +711,29 @@ class RewardLiteralDisplayTest {
             var state = Reward.replayStateFor(options);
             var collection = user.beginAsyncActionCollection(state, map, "synthetic-message-injector");
             user.sendLiteralDisplayMessage(template, map);
+            return user.endAsyncActionCollection(collection).toCompletableFuture();
+        }
+
+        java.util.concurrent.CompletableFuture<Void> dispatchRandom(ArrayList<String> choices,
+                HashMap<String, String> map) {
+            var handler = mock(RewardHandler.class);
+            var injections = new java.util.concurrent.CopyOnWriteArrayList<com.bencodez.advancedcore.api.rewards.injected.RewardInject>();
+            when(handler.getInjectedRewards()).thenReturn(injections);
+            RewardMessages.register(handler, plugin);
+            var inject = injections.stream().filter(i -> i.getPath().equals("RandomMessage"))
+                    .map(com.bencodez.advancedcore.api.rewards.injected.RewardInjectStringList.class::cast)
+                    .findFirst().orElseThrow();
+            var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
+            options.setAsyncReplayCheckpointConsumer(checkpoint ->
+                    randomCheckpoint.set(new HashMap<>(checkpoint.getPlaceholders())));
+            var collection = user.beginAsyncActionCollection(Reward.replayStateFor(options), map,
+                    "synthetic-random-message-injector");
+            try {
+                inject.onRewardRequest(mock(Reward.class), user, choices, map);
+            } catch (RuntimeException failure) {
+                user.endAsyncActionCollection(collection);
+                throw failure;
+            }
             return user.endAsyncActionCollection(collection).toCompletableFuture();
         }
 
