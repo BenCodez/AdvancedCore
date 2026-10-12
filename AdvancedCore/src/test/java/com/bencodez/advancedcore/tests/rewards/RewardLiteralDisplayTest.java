@@ -191,6 +191,26 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void guardedLegacyDisplayHasItsOwnBoundWithoutIncreasingTheLiteralBound() {
+        var map = new HashMap<String, String>();
+        map.put("SiteName", "raw-site");
+        String literal = "x".repeat(8192);
+        String legacy = "y".repeat(32768);
+        RewardDisplayPlaceholders.putLiteral(map, "SiteName", literal, legacy);
+        var restored = ArrayUtils.fromString(ArrayUtils.makeString(map));
+        assertEquals("raw-site", restored.get("SiteName"));
+        assertEquals(legacy, RewardDisplayPlaceholders.forDisplay(restored).get("SiteName"));
+        assertEquals(literal, BaseComponent.toPlainText(render("%SiteName%", restored)));
+        var before = new HashMap<>(map);
+        assertThrows(IllegalArgumentException.class,
+                () -> RewardDisplayPlaceholders.putLiteral(map, "SiteName", literal, "y".repeat(32769)));
+        assertEquals(before, map);
+        assertThrows(IllegalArgumentException.class,
+                () -> RewardDisplayPlaceholders.putLiteral(map, "SiteName", "x".repeat(8193), legacy));
+        assertEquals(before, map);
+    }
+
+    @Test
     void invalidBindingDoesNotPartiallyChangeCallerMetadata() {
         var map = values("safe");
         var before = new HashMap<>(map);

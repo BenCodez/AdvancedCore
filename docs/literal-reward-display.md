@@ -61,7 +61,9 @@ A recipient removed before dispatch settles as skipped; reward continuations run
 outside the scheduler's critical retirement callback. Reflection keeps these
 optional Paper API types out of Spigot class loading.
 
-Bindings, templates and component trees have bounded sizes. Invalid literal
+Literal values are limited to 8192 characters; their guarded legacy display
+representations may use up to 32768 characters. Metadata, templates and component
+trees retain their separate bounds. Invalid literal
 metadata fails rendering rather than being parsed as ordinary executable text.
 Callers of the public preparation/rendering methods must use the appropriate
 player owner for player-aware placeholder providers. The existing reward

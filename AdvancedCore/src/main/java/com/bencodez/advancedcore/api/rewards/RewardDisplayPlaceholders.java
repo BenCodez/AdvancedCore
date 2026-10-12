@@ -49,7 +49,7 @@ public final class RewardDisplayPlaceholders {
 			String legacySafeDisplay) {
 		if (placeholders == null || key == null) return;
 		if (!key.matches("[A-Za-z_][A-Za-z0-9_]{0,127}") || (literal != null && literal.length() > 8192)
-				|| (legacySafeDisplay != null && legacySafeDisplay.length() > 8192))
+				|| (legacySafeDisplay != null && legacySafeDisplay.length() > 32768))
 			throw new IllegalArgumentException("invalid literal binding");
 		put(placeholders, key, legacySafeDisplay == null ? "" : legacySafeDisplay);
 		placeholders.put(LITERAL_PREFIX + encode(key), encode(literal == null ? "" : literal));
