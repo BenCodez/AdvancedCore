@@ -7,6 +7,9 @@ import net.md_5.bungee.api.chat.TextComponent;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.IdentityHashMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -25,6 +28,11 @@ import java.util.function.Function;
 public final class LiteralMessageTemplate {
     private static final int MAX_TEMPLATE = 65536;
     private static final int MAX_VALUES = 4096;
+    private static final int MAX_BINDINGS = 8192;
+    private static final int MAX_BINDING_CHARACTERS = 1048576;
+    private static final int MAX_LITERAL_KEY = 128;
+    private static final int MAX_ACTION_KEY = 1024;
+    private static final Pattern LITERAL_KEY = Pattern.compile("[A-Za-z_][A-Za-z0-9_]{0,127}");
     private static final int MAX_VALUE = 8192;
     private static final int MAX_COMPONENTS = 4096;
     private static final Pattern EXACT_ATTRIBUTE = Pattern.compile(
@@ -38,19 +46,17 @@ public final class LiteralMessageTemplate {
         if (source.length() > MAX_TEMPLATE) {
             throw new IllegalArgumentException("template is too large");
         }
+        validateBindings(literalValues, actionValues);
+        Set<String> referenced = literalMarkerKeys(source);
         Map<String, String> values = new LinkedHashMap<>();
-        java.util.Set<String> keys = new java.util.HashSet<>();
+        Set<String> keys = new HashSet<>();
         if (literalValues != null) {
             for (Map.Entry<String, String> entry : literalValues.entrySet()) {
                 String key = Objects.requireNonNull(entry.getKey(), "literal key");
-                if (!key.matches("[A-Za-z_][A-Za-z0-9_]{0,127}") || entry.getValue() == null
-                        || entry.getValue().length() > MAX_VALUE) {
-                    throw new IllegalArgumentException("invalid literal value");
-                }
                 if (!keys.add(key.toLowerCase(Locale.ROOT))) throw new IllegalArgumentException("duplicate literal key");
                 // A summary may have many sites but only a few occur in this line.
                 // Unreferenced bindings never enter a parser or the restoration map.
-                if (!containsMarker(source, key)) continue;
+                if (!referenced.contains(key.toLowerCase(Locale.ROOT))) continue;
                 if (values.size() >= MAX_VALUES) throw new IllegalArgumentException("too many referenced literal values");
                 if (values.putIfAbsent(key.toLowerCase(Locale.ROOT), entry.getValue()) != null) {
                     throw new IllegalArgumentException("duplicate literal key");
@@ -63,6 +69,7 @@ public final class LiteralMessageTemplate {
         Map<String, String> exact = new LinkedHashMap<>();
         if (actionValues != null) for (Map.Entry<String, String> entry : actionValues.entrySet()) {
             String key = Objects.requireNonNull(entry.getKey(), "action key").toLowerCase(Locale.ROOT);
+            if (key.length() > MAX_ACTION_KEY) throw new IllegalArgumentException("invalid action key");
             if (exact.containsKey(key)) throw new IllegalArgumentException("duplicate action key");
             exact.put(key, entry.getValue());
         }
@@ -80,6 +87,11 @@ public final class LiteralMessageTemplate {
         // Match the existing JavaScript parser's authored marker/first-closing-bracket
         // grammar. A script containing literal display data is displayed as text;
         // it is never evaluated with externally supplied program fragments.
+        MarkerMatcher literalMarkers = new MarkerMatcher(values);
+        MarkerMatcher replacementMarkers = new MarkerMatcher(replacements);
+        Map<String, String> scriptActions = new LinkedHashMap<>();
+        for (String key : values.keySet()) scriptActions.put(key, exact.getOrDefault(key, ""));
+        MarkerMatcher scriptActionMarkers = new MarkerMatcher(scriptActions);
         StringBuilder protectedScripts = new StringBuilder(source.length());
         int cursor = 0;
         while (cursor < source.length()) {
@@ -88,9 +100,9 @@ public final class LiteralMessageTemplate {
             int end = source.indexOf(']', start + "[Javascript=".length());
             if (end < 0) break;
             String block = source.substring(start, end + 1);
-            String substituted = replaceMarkers(block, values);
+            String substituted = literalMarkers.replace(block);
             protectedScripts.append(source, cursor, start);
-            if (!block.equals(replaceMarkers(block, replacements))) {
+            if (!block.equals(replacementMarkers.replace(block))) {
                 if (tokens.size() >= MAX_VALUES) throw new IllegalArgumentException("too many literal script segments");
                 String token = newToken(source, collisions, tokens);
                 tokens.put(token, substituted);
@@ -99,9 +111,7 @@ public final class LiteralMessageTemplate {
                 // values when no raw action was supplied).  Only literal bindings
                 // are substituted here; unrelated provider markers remain for the
                 // normal action/provider pass.
-                Map<String, String> scriptActions = new LinkedHashMap<>();
-                for (String key : values.keySet()) scriptActions.put(key, exact.getOrDefault(key, ""));
-                actionTokens.put(token, replaceMarkers(block, scriptActions));
+                actionTokens.put(token, scriptActionMarkers.replace(block));
                 protectedScripts.append(token);
             } else {
                 protectedScripts.append(block);
@@ -110,7 +120,7 @@ public final class LiteralMessageTemplate {
         }
         protectedScripts.append(source, cursor, source.length());
         String protectedActions = protectExactAttributes(protectedScripts.toString(), values, exact, tokens, actionTokens);
-        return new Prepared(replaceMarkers(protectedActions, replacements), tokens, actionTokens);
+        return new Prepared(replacementMarkers.replace(protectedActions), tokens, actionTokens);
     }
 
     /** Shield raw legacy display overrides only in administrator-authored click attributes. */
@@ -119,20 +129,33 @@ public final class LiteralMessageTemplate {
         Map<String, String> replacements = new LinkedHashMap<>();
         Map<String, String> collisions = new LinkedHashMap<>(literalValues);
         exactValues.forEach((key, value) -> { if (value != null) collisions.put("action:" + key, value); });
-        return mapExactAttributes(source, value -> {
-            for (Map.Entry<String, String> entry : exactValues.entrySet()) {
-                String key = Objects.requireNonNull(entry.getKey(), "action key").toLowerCase(Locale.ROOT);
-                if (literalValues.containsKey(key) || replacements.containsKey(key) || !containsMarker(value, key)) continue;
-                if (key.isEmpty() || key.length() > 1024 || entry.getValue() == null
-                        || entry.getValue().length() > MAX_VALUE) throw new IllegalArgumentException("invalid action value");
+        Map<String, String> actionOnlyValues = new LinkedHashMap<>();
+        exactValues.forEach((key, value) -> { if (!literalValues.containsKey(key)) actionOnlyValues.put(key, value); });
+        MarkerMatcher exactMarkers = new MarkerMatcher(actionOnlyValues);
+        Map<String, Integer> bindingOrder = new HashMap<>();
+        int ordinal = 0;
+        for (String key : exactValues.keySet()) bindingOrder.put(key, ordinal++);
+        mapExactAttributes(source, value -> {
+            Set<String> referenced = new HashSet<>();
+            exactMarkers.collectKeys(value, referenced);
+            List<String> ordered = new ArrayList<>(referenced);
+            ordered.sort(java.util.Comparator.comparingInt(bindingOrder::get));
+            // Preserve first-use admission across attributes, then input-map order
+            // within each attribute, without scanning its text once per binding.
+            for (String key : ordered) {
+                if (literalValues.containsKey(key) || replacements.containsKey(key)) continue;
+                String exact = exactValues.get(key);
+                if (exact == null) throw new IllegalArgumentException("invalid action value");
                 if (tokens.size() >= MAX_VALUES) throw new IllegalArgumentException("too many action values");
                 String token = newToken(source, collisions, tokens);
                 replacements.put(key, token);
-                tokens.put(token, entry.getValue());
-                actionTokens.put(token, entry.getValue());
+                tokens.put(token, exact);
+                actionTokens.put(token, exact);
             }
-            return replaceMarkers(value, replacements);
+            return value;
         });
+        MarkerMatcher replacementMarkers = new MarkerMatcher(replacements);
+        return mapExactAttributes(source, replacementMarkers::replace);
     }
 
     /** Visit only administrator-authored attributes, before any inserted value is parsed. */
@@ -193,32 +216,132 @@ public final class LiteralMessageTemplate {
         return -1;
     }
 
-    private static boolean containsMarker(String source, String key) {
-        return indexOfIgnoreCase(source, "%" + key + "%", 0) >= 0
-                || indexOfIgnoreCase(source, "{" + key + "}", 0) >= 0;
+    /** Admit bounded input before constructing indexes or scanning the template. */
+    private static void validateBindings(Map<String, String> literals, Map<String, String> actions) {
+        int characters = 0;
+        for (Map<String, String> bindings : java.util.Arrays.asList(literals, actions)) {
+            if (bindings == null) continue;
+            if (bindings.size() > MAX_BINDINGS) throw new IllegalArgumentException("too many literal bindings");
+            int count = 0;
+            for (Map.Entry<String, String> entry : bindings.entrySet()) {
+                if (++count > MAX_BINDINGS) throw new IllegalArgumentException("too many literal bindings");
+                String key = Objects.requireNonNull(entry.getKey(), "binding key");
+                String value = entry.getValue();
+                if (bindings == literals) {
+                    if (!LITERAL_KEY.matcher(key).matches() || value == null)
+                        throw new IllegalArgumentException("invalid literal value");
+                } else if (key.isEmpty() || key.length() > MAX_ACTION_KEY) {
+                    throw new IllegalArgumentException("invalid action key");
+                }
+                if (value != null && value.length() > MAX_VALUE)
+                    throw new IllegalArgumentException("invalid binding value");
+                characters += key.length() + (value == null ? 0 : value.length());
+                if (characters > MAX_BINDING_CHARACTERS)
+                    throw new IllegalArgumentException("literal bindings exceed character limits");
+            }
+        }
     }
 
-    /** Replace only markers in the original input, never markers inside inserted values. */
-    private static String replaceMarkers(String source, Map<String, String> values) {
-        StringBuilder result = new StringBuilder(source.length());
-        int cursor = 0;
-        while (cursor < source.length()) {
-            boolean matched = false;
-            char opening = source.charAt(cursor);
-            if (opening == '%' || opening == '{') {
-                for (Map.Entry<String, String> entry : values.entrySet()) {
-                    String marker = opening + entry.getKey() + (opening == '%' ? "%" : "}");
-                    if (source.regionMatches(true, cursor, marker, 0, marker.length())) {
-                        result.append(entry.getValue());
-                        cursor += marker.length();
-                        matched = true;
-                        break;
-                    }
+    private static char foldCase(char value) {
+        // Preserve Java case-insensitive ASCII equivalents, including long s,
+        // dotless i and the Kelvin sign, without Locale string expansions.
+        return Character.toLowerCase(Character.toUpperCase(value));
+    }
+
+    /** Index valid literal markers once, including markers sharing a percent boundary. */
+    private static Set<String> literalMarkerKeys(CharSequence source) {
+        Set<String> keys = new HashSet<>();
+        for (int start = 0; start < source.length(); start++) {
+            char opening = source.charAt(start);
+            if (opening != '%' && opening != '{') continue;
+            char closing = opening == '%' ? '%' : '}';
+            StringBuilder key = new StringBuilder();
+            for (int cursor = start + 1; cursor < source.length() && cursor <= start + MAX_LITERAL_KEY + 1; cursor++) {
+                char character = source.charAt(cursor);
+                if (character == closing) {
+                    if (!key.isEmpty()) keys.add(key.toString());
+                    break;
+                }
+                character = foldCase(character);
+                boolean letter = character >= 'a' && character <= 'z';
+                boolean digit = character >= '0' && character <= '9';
+                if ((!letter && character != '_' && (key.isEmpty() || !digit)) || key.length() == MAX_LITERAL_KEY) break;
+                key.append(character);
+            }
+        }
+        return keys;
+    }
+
+    /** One bounded key index per replacement lane, never one source scan per binding. */
+    private static final class MarkerMatcher {
+        private final MarkerNode root = new MarkerNode();
+
+        private MarkerMatcher(Map<String, String> values) {
+            int order = 0;
+            for (Map.Entry<String, String> entry : values.entrySet()) {
+                MarkerNode node = root;
+                for (int index = 0; index < entry.getKey().length();) {
+                    int character = entry.getKey().codePointAt(index);
+                    index += Character.charCount(character);
+                    character = Character.toLowerCase(Character.toUpperCase(character));
+                    if (node.children == null) node.children = new HashMap<>();
+                    node = node.children.computeIfAbsent(character, ignored -> new MarkerNode());
+                }
+                // Case-equivalent non-ASCII action keys retain insertion-order priority.
+                if (node.key == null) {
+                    node.key = entry.getKey();
+                    node.value = entry.getValue();
+                    node.order = order;
+                }
+                order++;
+            }
+        }
+
+        private MarkerNode match(CharSequence source, int start, Set<String> keys) {
+            char opening = source.charAt(start);
+            if (opening != '%' && opening != '{') return null;
+            char closing = opening == '%' ? '%' : '}';
+            MarkerNode node = root;
+            MarkerNode selected = null;
+            for (int cursor = start + 1; cursor < source.length();) {
+                int character = Character.codePointAt(source, cursor);
+                if (character == closing && node.key != null) {
+                    if (keys != null) keys.add(node.key);
+                    if (selected == null || node.order < selected.order) selected = node;
+                }
+                cursor += Character.charCount(character);
+                character = Character.toLowerCase(Character.toUpperCase(character));
+                node = node.children == null ? null : node.children.get(character);
+                if (node == null) break;
+            }
+            return selected;
+        }
+
+        private void collectKeys(String source, Set<String> keys) {
+            for (int cursor = 0; cursor < source.length(); cursor++) match(source, cursor, keys);
+        }
+
+        /** Replace only original markers; inserted values are never scanned again. */
+        private String replace(String source) {
+            StringBuilder result = new StringBuilder(source.length());
+            int cursor = 0;
+            while (cursor < source.length()) {
+                MarkerNode selected = match(source, cursor, null);
+                if (selected == null) result.append(source.charAt(cursor++));
+                else {
+                    result.append(selected.value);
+                    cursor += selected.key.length() + 2;
                 }
             }
-            if (!matched) result.append(source.charAt(cursor++));
+            return result.toString();
         }
-        return result.toString();
+    }
+
+    private static final class MarkerNode {
+        private Map<Integer, MarkerNode> children;
+        private String key;
+        private String value;
+        private int order;
     }
 
     private static String protectSectionTokenBoundaries(String source, Map<String, String> tokens,

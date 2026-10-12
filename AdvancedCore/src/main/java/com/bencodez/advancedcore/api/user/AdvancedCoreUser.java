@@ -2874,7 +2874,7 @@ public class AdvancedCoreUser {
 					return com.bencodez.advancedcore.api.misc.MiscUtils.getInstance()
 							.broadcastPreparedComponentsAsync(prepared::render, prepared.render(null));
 				}
-				sendPreparedComponents(com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders
+				sendLiteralRewardComponents(player, com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders
 						.renderLiteralComponents(player, template, captured));
 				return CompletableFuture.<Void>completedFuture(null);
 			}).handle((ignored, failure) -> {
@@ -2894,6 +2894,20 @@ public class AdvancedCoreUser {
 			delivery.get().whenComplete((ignored, failure) -> {
 				if (failure != null) plugin.getLogger().warning("A literal reward message could not be delivered");
 			});
+		}
+	}
+
+	private void sendLiteralRewardComponents(Player expectedPlayer, BaseComponent... components) {
+		if (components == null) throw new IllegalStateException("Literal reward components unavailable");
+		for (BaseComponent line : components) {
+			if (line == null) continue;
+			if (getPlayer() != expectedPlayer || !expectedPlayer.isOnline()) {
+				// Rendering already began and trusted providers/scripts may have run.
+				// Fail without checkpointing delivery; retain the replay identity rather
+				// than claiming that the entire action was conclusively never started.
+				throw new IllegalStateException("Player unavailable after literal reward formatting");
+			}
+			PlayerUtils.getServerHandle().sendMessage(expectedPlayer, line);
 		}
 	}
 

@@ -467,6 +467,48 @@ class RewardLiteralDisplayTest {
         }
     }
 
+    @Test
+    void disconnectDuringRenderingFailsAndRetainsAnUncompletedReplayForRetry() {
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            var current = new java.util.concurrent.atomic.AtomicReference<Player>(fixture.player);
+            doAnswer(call -> current.get()).when(fixture.user).getPlayer();
+            fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                    .thenAnswer(call -> {
+                        current.set(null);
+                        return com.bencodez.simpleapi.messages.MessageAPI.colorize(call.getArgument(1));
+                    });
+            var map = values("Original");
+            var failure = assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatch("Site:%SiteName%", map).join());
+            assertFalse(AdvancedCoreUser.isReplayActionNotStarted(failure),
+                    "trusted formatting ran, so its replay reservation remains conservative");
+            assertTrue(fixture.sent.isEmpty());
+            current.set(fixture.player);
+            fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                    .thenAnswer(call -> com.bencodez.simpleapi.messages.MessageAPI.colorize(call.getArgument(1)));
+            fixture.dispatch("Site:%SiteName%", ArrayUtils.fromString(ArrayUtils.makeString(map))).join();
+            assertEquals(List.of("Site:Original"), fixture.sent,
+                    "the unavailable delivery must not have been checkpointed as completed");
+        }
+    }
+
+    @Test
+    void offlineOrReplacedPlayerAfterFormattingCannotReceiveOrCompleteTheReward() {
+        for (boolean replaced : List.of(false, true)) {
+            try (ReplayFixture fixture = new ReplayFixture()) {
+                fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                        .thenAnswer(call -> {
+                            if (replaced) doReturn(mock(Player.class)).when(fixture.user).getPlayer();
+                            else when(fixture.player.isOnline()).thenReturn(false);
+                            return com.bencodez.simpleapi.messages.MessageAPI.colorize(call.getArgument(1));
+                        });
+                assertThrows(java.util.concurrent.CompletionException.class,
+                        () -> fixture.dispatch("Site:%SiteName%", values("Original")).join());
+                assertTrue(fixture.sent.isEmpty());
+            }
+        }
+    }
+
     private static final class ReplayFixture implements AutoCloseable {
         final AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         final Player player = mock(Player.class);

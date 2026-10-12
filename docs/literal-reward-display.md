@@ -57,7 +57,12 @@ rendering or transport failure, disable, and a 30-second dispatch deadline fail
 the action and invalidate pending callbacks. An already delivered message cannot
 be rolled back if another recipient fails; interrupted or ambiguous actions keep
 the existing conservative replay reservation. Failures proven to occur before
-formatting starts release that reservation. Replay identity uses the configured
+formatting starts release that reservation. Player delivery rechecks the same
+player instance and online state after formatting and before each component.
+A disconnect or reconnect during formatting fails delivery instead of silently
+checkpointing an unsent message. Because trusted providers or scripts may
+already have run, this failure retains the existing replay identity; retrying
+the same action can deliver its uncompleted message. Replay identity uses the configured
 template rather than mutable checkpoint metadata or live placeholder values.
 
 On Folia, broadcast recipients use the supported native
@@ -69,7 +74,12 @@ optional Paper API types out of Spigot class loading.
 Literal values are limited to 8192 UTF-16 units; serialized UTF-8/Base64 metadata
 allows the corresponding worst-case byte expansion and rechecks the decoded limit.
 Their guarded legacy display
-representations may use up to 32768 characters. Metadata, templates and component
+representations may use up to 32768 characters. Public preparation admits at most 8192 entries in each binding map and
+1,048,576 combined key/value UTF-16 units before building marker indexes.
+Literal keys retain their 128-character limit; raw action keys are bounded to
+1024 characters. Unreferenced bindings do not consume the 4096 active-binding
+limit. Template and action marker matching uses indexes rather than one
+full template scan per binding. Metadata, templates and component
 trees retain their separate bounds. Invalid literal
 metadata fails rendering rather than being parsed as ordinary executable text.
 Callers of the public preparation/rendering methods must use the appropriate
