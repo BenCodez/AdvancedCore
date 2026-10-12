@@ -211,8 +211,13 @@ public final class AdvancedCoreRuntime {
 			if (finished.get()) return;
 			// Mark a still-draining time transition recoverable before racing its
 			// final lease acknowledgement. This may start consumer preparation.
-			if (holdTimeTimer) clean(List.of(new Cleanup("forced time transition shutdown",
-					platform::beforeForcedTimeTimerShutdown)));
+			if (holdTimeTimer) {
+				clean(List.of(new Cleanup("forced time transition shutdown",
+						platform::beforeForcedTimeTimerShutdown)));
+				// Consumer preparation retains only storage ownership. Its completion
+				// must not delay interruption of the fenced non-daemon calendar worker.
+				shutdownNow(grace.timeTimer());
+			}
 			CompletionStage<Void> preparation = platform.storageRetirementPreparationCompletion();
 			if (preparation != null && !preparation.toCompletableFuture().isDone()) {
 				platform.cleanupFailed(component, new TimeoutException(

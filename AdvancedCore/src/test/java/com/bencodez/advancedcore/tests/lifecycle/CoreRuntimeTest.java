@@ -385,6 +385,79 @@ class CoreRuntimeTest {
 		}
 	}
 
+	@Test void pendingPreparationDoesNotRetainFencedNonDaemonTimeWorker() throws Exception {
+		RuntimePlatform platform = platform();
+		AtomicReference<Thread> timeWorker = new AtomicReference<>();
+		AtomicReference<Thread> storageWorker = new AtomicReference<>();
+		var timeTimer = Executors.newSingleThreadScheduledExecutor(task -> {
+			Thread worker = new Thread(task, "held-calendar-test");
+			worker.setDaemon(false);
+			timeWorker.set(worker);
+			return worker;
+		});
+		var storageTimer = Executors.newSingleThreadScheduledExecutor(task -> {
+			Thread worker = new Thread(task, "retained-storage-test");
+			worker.setDaemon(true);
+			storageWorker.set(worker);
+			return worker;
+		});
+		var preparation = new CompletableFuture<Void>();
+		var retirement = new CompletableFuture<Void>();
+		var fenced = new java.util.concurrent.atomic.AtomicBoolean();
+		var interruptedAfterFence = new java.util.concurrent.atomic.AtomicBoolean();
+		CountDownLatch started = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		CountDownLatch reported = new CountDownLatch(1);
+		CountDownLatch checkpoint = new CountDownLatch(1);
+		CountDownLatch terminal = new CountDownLatch(1);
+		when(platform.getTimeTimer()).thenReturn(timeTimer);
+		when(platform.getTimer()).thenReturn(storageTimer);
+		when(platform.getUserStorageTimer()).thenReturn(storageTimer);
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retirement);
+		when(platform.storageRetirementPreparationCompletion()).thenReturn(preparation);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.holdTimeTimerUntilPreExecutorShutdownCompletion()).thenReturn(true);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(20L);
+		doAnswer(call -> { fenced.set(true); return null; }).when(platform).beforeForcedTimeTimerShutdown();
+		doAnswer(call -> { reported.countDown(); return null; }).when(platform)
+				.cleanupFailed(eq("pre-executor shutdown"), any(java.util.concurrent.TimeoutException.class));
+		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("native storage", terminal::countDown)));
+		try {
+			timeTimer.execute(() -> {
+				started.countDown();
+				try { release.await(); }
+				catch (InterruptedException interrupted) {
+					interruptedAfterFence.set(fenced.get());
+					Thread.currentThread().interrupt();
+				}
+			});
+			assertTrue(started.await(2, TimeUnit.SECONDS));
+			assertFalse(timeWorker.get().isDaemon(), "fixture must exercise the calendar's non-daemon owner");
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertTrue(reported.await(2, TimeUnit.SECONDS));
+			assertTrue(timeTimer.awaitTermination(2, TimeUnit.SECONDS),
+					"first watchdog must interrupt the held calendar without awaiting consumer preparation");
+			timeWorker.get().join(1_000L);
+			assertFalse(timeWorker.get().isAlive(), "no non-daemon calendar worker may remain");
+			assertTrue(interruptedAfterFence.get(), "recovery authority must be fenced before interruption");
+			assertFalse(preparation.isDone(), "fixture preparation remains permanently incomplete");
+			assertFalse(retirement.isDone(), "interruption does not fabricate storage completion");
+			assertFalse(storageTimer.isShutdown(), "consumer checkpoint admission must remain open");
+			storageTimer.execute(checkpoint::countDown);
+			assertTrue(checkpoint.await(2, TimeUnit.SECONDS));
+			assertTrue(storageWorker.get().isDaemon(), "only the daemon storage owner remains retained");
+			assertEquals(1, terminal.getCount(), "native storage cannot close before consumer preparation");
+			verify(platform, never()).afterStorageExecutorShutdown();
+		} finally {
+			release.countDown();
+			timeTimer.shutdownNow();
+			storageTimer.shutdownNow();
+			assertTrue(timeTimer.awaitTermination(2, TimeUnit.SECONDS));
+			assertTrue(storageTimer.awaitTermination(2, TimeUnit.SECONDS));
+		}
+	}
+
 	@Test void watchdogLetsQueuedRetirementFlushBeforeForcingStorageWorker() throws Exception {
 		RuntimePlatform platform = platform();
 		var timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();

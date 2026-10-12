@@ -58,6 +58,12 @@ its callbacks can still be running. After that acknowledgement, a stalled storag
 retirement still receives the bounded watchdog and worker grace; terminal native
 cleanup waits for the actual storage worker to terminate.
 
+The first watchdog fences an outstanding calendar transition and immediately
+interrupts its held calendar executor, even while consumer preparation remains
+pending. Interruptible calendar listeners can therefore retire without waiting
+for that hook. Storage admission and its native provider remain available for the
+eventual checkpoint; interrupting a listener does not prove its work persisted.
+
 A consumer hook that never settles retains its storage owner until JVM exit.
 This does not block the server thread or keep the JVM alive, but an abrupt exit
 cannot guarantee the pending checkpoint was persisted. Consumers must complete,
