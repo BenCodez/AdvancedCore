@@ -15,6 +15,7 @@ import com.bencodez.advancedcore.api.javascript.JavascriptEngineHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 
 /** Bukkit services for the shared executor lifecycle; no duplicate owners are created. */
@@ -26,6 +27,8 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 	private CompletableFuture<Void> storageRetirementPreparation = CompletableFuture.completedFuture(null);
 	private volatile CompletionStage<Void> timeChangeRetirement = CompletableFuture.completedFuture(null);
 	private final Object userStorageRetirementLock = new Object();
+    private record UserStorageAdmission(boolean enabled, UserManager users, UserDataManager manager) { }
+    private volatile UserStorageAdmission userStorageAdmission;
     private final AtomicBoolean userStorageOwnerClosed = new AtomicBoolean();
 
     public BukkitRuntimePlatform(AdvancedCorePlugin plugin) {
@@ -34,6 +37,8 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
     @Override public ScheduledExecutorService getTimer() { return plugin.getTimer(); }
 	@Override public ScheduledExecutorService getUserStorageTimer() {
+		UserStorageAdmission admission = userStorageAdmission;
+		if (admission != null) return admission.manager() == null ? null : admission.manager().getTimer();
 		UserManager users = plugin.getLoadedUserManager();
 		return users == null || users.getDataManager() == null ? null : users.getDataManager().getTimer();
 	}
@@ -99,7 +104,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 			CompletionStage<Void> retirement = userStorageRetirement;
 			if (retirement != null && (!retirement.toCompletableFuture().isDone()
 					|| retirement.toCompletableFuture().isCompletedExceptionally())) {
-				closeCurrentUserStorageOwner(plugin.getLoadedUserManager());
+				closeCurrentUserStorageOwner(captureUserStorageAdmission());
 			}
 		}));
 	}
@@ -134,6 +139,9 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 	}
 
 	private void closeUserStorageAfterTimeChangeRetirement() {
+		// Deferred platform unload may change configuration or manager references.
+		// Storage already admitted for this shutdown retains its own retirement identity.
+		captureUserStorageAdmission();
 		CompletionStage<Void> timeRetirement = timeChangeRetirement;
 		if (timeRetirement.toCompletableFuture().isDone()) {
 			try {
@@ -179,7 +187,8 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
     /** A completing consumer callback may still hold shared storage read admission. */
     private CompletionStage<Void> deferUserStorageRetirement(Throwable preparationFailure) {
-        if (!plugin.isLoadUserData() || plugin.getLoadedUserManager() == null) {
+        UserStorageAdmission admission = captureUserStorageAdmission();
+        if (!admission.enabled() || admission.users() == null) {
             return preparationFailure == null ? closeUserStorageAfterSharedRetirement()
                     : retireAfterPreparationFailure(preparationFailure);
         }
@@ -246,19 +255,19 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 	}
 
 	private CompletionStage<Void> closeUserStorageAfterSharedRetirement() {
-        if (!plugin.isLoadUserData()) {
+        UserStorageAdmission admission = captureUserStorageAdmission();
+        if (!admission.enabled()) {
 			return CompletableFuture.completedFuture(null);
         }
-		UserManager users = plugin.getLoadedUserManager();
 		// Resolve this only after shared retirement. A successful replacement may
 		// install a new owner while shutdown is waiting for its worker, and closing
 		// the owner observed before that wait leaks the installed MySQL provider.
-		Runnable closeMysql = () -> closeCurrentUserStorageOwner(users);
-        if (users == null) {
+		Runnable closeMysql = () -> closeCurrentUserStorageOwner(admission);
+        if (admission.users() == null) {
             closeMysql.run();
 			return CompletableFuture.completedFuture(null);
         }
-		CompletionStage<Void> retirement = users.getDataManager().closeSharedRuntimeAsyncCompletion(closeMysql);
+		CompletionStage<Void> retirement = admission.manager().closeSharedRuntimeAsyncCompletion(closeMysql);
         if (retirement == null) {
             closeMysql.run();
 			return CompletableFuture.completedFuture(null);
@@ -266,7 +275,20 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 		return retirement;
 	}
 
-	private void closeCurrentUserStorageOwner(UserManager users) {
+    private UserStorageAdmission captureUserStorageAdmission() {
+        synchronized (userStorageRetirementLock) {
+            if (userStorageAdmission == null) {
+                boolean enabled = plugin.isLoadUserData();
+                // Even disabled user loading can have an existing worker to retire.
+                UserManager users = plugin.getLoadedUserManager();
+                userStorageAdmission = new UserStorageAdmission(enabled, users,
+                        users == null ? null : users.getDataManager());
+            }
+            return userStorageAdmission;
+        }
+    }
+
+	private void closeCurrentUserStorageOwner(UserStorageAdmission admission) {
 		if (!userStorageOwnerClosed.compareAndSet(false, true)) return;
 		try {
 			AdvancedCorePlugin.UserStorageOwner owner = plugin.getNativeUserStorageOwner();
@@ -276,8 +298,8 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 						&& owner.table().getSqLite() != null) owner.table().getSqLite().closeConnection();
 				return;
 			}
-			boolean ownsMysql = users != null && users.getDataManager().hasSharedSqlBackend()
-					? users.getDataManager().usesSharedSqlStorage(UserStorage.MYSQL)
+			boolean ownsMysql = admission.users() != null && admission.manager().hasSharedSqlBackend()
+					? admission.manager().usesSharedSqlStorage(UserStorage.MYSQL)
 					: plugin.getOptions() != null && UserStorage.MYSQL.equals(plugin.getOptions().getStorageType());
 			if (ownsMysql && plugin.getMysql() != null) plugin.getMysql().close();
 		} catch (RuntimeException | Error failure) {

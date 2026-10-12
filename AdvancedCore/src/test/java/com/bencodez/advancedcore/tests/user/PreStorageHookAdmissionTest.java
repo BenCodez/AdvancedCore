@@ -219,6 +219,10 @@ class PreStorageHookAdmissionTest {
                 .findFirst().orElseThrow().action().run();
         hook.complete(null);
         assertDoesNotThrow(() -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
-        verify(plugin, never()).getLoadedUserManager();
+        // The admitted identity is a non-creating snapshot, even with loading disabled.
+        verify(plugin).getLoadedUserManager();
+        verify(plugin, never()).getUserManager();
+        verify(plugin, never()).getNativeUserStorageOwner();
+        verify(plugin, never()).getMysql();
     }
 }

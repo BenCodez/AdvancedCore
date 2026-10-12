@@ -50,6 +50,12 @@ it does not report a successful flush. Failed or cancelled preparation still
 retires accepted writes, with the preparation failure retained. No new executor,
 configuration, or storage format is introduced.
 
+Shutdown captures user-storage admission and its manager before waiting for the
+calendar or consumer hook. Deferred unload can disable user loading or replace
+the public manager reference without skipping that admitted manager's flush and
+cleanup. The native provider is still resolved after shared retirement so a
+provider replacement completed by admitted work closes its current owner.
+
 If consumer preparation exceeds the default five-second shutdown watchdog, the
 watchdog reports it and retains the existing daemon storage worker and native
 provider. Preparation is acknowledged only after its callback has submitted the
