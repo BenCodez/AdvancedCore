@@ -982,6 +982,64 @@ public final class LiteralMessageTemplate {
     private record ProtectedBoundaries(String template, Map<String, String> tokens, Map<String, String> actionTokens) {
     }
 
+    /** One finite output budget shared by all lines of a rendered recipient batch. */
+    public static final class OutputBudget {
+        private int admittedCharacters;
+        private int admittedBindingCharacters;
+        private final int[] treeCounts = new int[] { 0, 0 };
+
+        /** Count restored values without allocating them or exposing them to a parser. */
+        public void admit(Prepared prepared, boolean broadcast) {
+            String source = prepared.template;
+            int characters = 0;
+            int bindingCharacters = 0;
+            for (int cursor = 0; cursor < source.length();) {
+                if (source.startsWith("%NewLine%", cursor)
+                        || (broadcast && source.startsWith("%newline%", cursor))) {
+                    cursor += "%NewLine%".length();
+                    continue;
+                }
+                int end = tokenEnd(source, cursor);
+                if (end >= 0) {
+                    String marker = source.substring(cursor, end);
+                    String visible = prepared.tokens.get(marker);
+                    String action = prepared.actionTokens.get(marker);
+                    int length = end - cursor;
+                    if (visible != null) {
+                        length = visible.length();
+                        for (int section = visible.indexOf('§'); section >= 0;
+                                section = visible.indexOf('§', section + 1)) length += "(section)".length() - 1;
+                        if (action != null) length = Math.max(length, action.length());
+                        if (length > MAX_RESULT - admittedBindingCharacters - bindingCharacters)
+                            throw new IllegalArgumentException("literal batch binding output exceeds limits");
+                        bindingCharacters += length;
+                    }
+                    // Trusted parser syntax has its own finite allowance; it is not client output.
+                    if (length > MAX_RESULT + MAX_TEMPLATE - admittedCharacters - characters)
+                        throw new IllegalArgumentException("literal batch output exceeds limits");
+                    characters += length;
+                    cursor = end;
+                } else {
+                    if (characters >= MAX_RESULT + MAX_TEMPLATE - admittedCharacters)
+                        throw new IllegalArgumentException("literal batch output exceeds limits");
+                    characters++;
+                    cursor++;
+                }
+            }
+            admittedCharacters += characters;
+            admittedBindingCharacters += bindingCharacters;
+        }
+
+        /** Parse only while capacity remains; count the actual final trees across the batch. */
+        public TextComponent finish(Prepared prepared, Supplier<TextComponent> parser) {
+            if (treeCounts[0] >= MAX_COMPONENTS || treeCounts[1] >= MAX_RESULT)
+                throw new IllegalArgumentException("literal component batch exceeds limits");
+            TextComponent result = prepared.finish(parser.get());
+            validateTree(result, 0, treeCounts, new IdentityHashMap<>());
+            return result;
+        }
+    }
+
     public static final class Prepared {
         private final String template;
         private final Map<String, String> tokens;

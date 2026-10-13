@@ -91,9 +91,11 @@ public final class RewardDisplayPlaceholders {
 			parsed = player == null ? PlaceholderUtils.parseText(text) : PlaceholderUtils.parseText(player, text);
 		}
 		prepared = prepared.withTemplate(parsed);
+		var budget = new LiteralMessageTemplate.OutputBudget();
+		budget.admit(prepared, false);
 		java.util.ArrayList<net.md_5.bungee.api.chat.TextComponent> result = new java.util.ArrayList<>();
 		for (var line : prepared.splitLines()) {
-			result.add(line.finish(PlaceholderUtils.parseJson(line.template())));
+			result.add(budget.finish(line, () -> PlaceholderUtils.parseJson(line.template())));
 		}
 		return result.toArray(new net.md_5.bungee.api.chat.TextComponent[0]);
 	}
@@ -126,9 +128,10 @@ public final class RewardDisplayPlaceholders {
 		}
 		/** Recipient placeholders must run on that recipient's owner; console uses null on the global owner. */
 		public net.md_5.bungee.api.chat.TextComponent[] render(Player recipient) {
+			var budget = new LiteralMessageTemplate.OutputBudget();
 			java.util.ArrayList<net.md_5.bungee.api.chat.TextComponent> result = new java.util.ArrayList<>();
 			for (int index = 0; index < lineCount(); index++) {
-				for (var fragment : renderRecipientLineFragments(recipient, index)) {
+				for (var fragment : renderRecipientLineFragments(recipient, index, budget)) {
 					if (result.size() >= 4096) throw new IllegalArgumentException("Literal broadcast has too many rendered lines");
 					result.add(fragment);
 				}
@@ -152,13 +155,19 @@ public final class RewardDisplayPlaceholders {
 
 		/** Expand recipient placeholders before splitting; exact actions and literal values stay protected. */
 		public net.md_5.bungee.api.chat.TextComponent[] renderRecipientLineFragments(Player recipient, int index) {
+			return renderRecipientLineFragments(recipient, index, new LiteralMessageTemplate.OutputBudget());
+		}
+
+		private net.md_5.bungee.api.chat.TextComponent[] renderRecipientLineFragments(Player recipient, int index,
+				LiteralMessageTemplate.OutputBudget budget) {
 			var preparedLine = renderProtectedLine(recipient, index);
+			budget.admit(preparedLine, true);
 			var fragments = preparedLine.splitBroadcastLines();
 			if (fragments.size() > 4096) throw new IllegalArgumentException("Literal broadcast has too many rendered lines");
 			var result = new net.md_5.bungee.api.chat.TextComponent[fragments.size()];
 			for (int fragment = 0; fragment < result.length; fragment++) {
 				var line = fragments.get(fragment);
-				result[fragment] = line.finish(PlaceholderUtils.parseJson(line.template()));
+				result[fragment] = budget.finish(line, () -> PlaceholderUtils.parseJson(line.template()));
 			}
 			return result;
 		}
