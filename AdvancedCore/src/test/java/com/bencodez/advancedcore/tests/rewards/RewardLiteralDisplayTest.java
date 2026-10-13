@@ -1004,10 +1004,113 @@ class RewardLiteralDisplayTest {
             assertEquals(List.of("first:One:Original", "first:Two:Original", "second:One:Original",
                     "second:Two:Original"), successful);
             var consoleMessages = org.mockito.ArgumentCaptor.forClass(String.class);
-            verify(console, times(2)).sendMessage(consoleMessages.capture());
-            assertEquals(List.of("One:Original", "Two:Original"), consoleMessages.getAllValues().stream()
+            verify(console, times(1)).sendMessage(consoleMessages.capture());
+            assertEquals(List.of("One:Original%NewLine%Two:Original"), consoleMessages.getAllValues().stream()
                     .map(net.md_5.bungee.api.ChatColor::stripColor).toList());
             bukkit.verify(org.bukkit.Bukkit::getOnlinePlayers, times(1));
+        }
+    }
+
+    @Test
+    void consoleBroadcastKeepsOneRawColoredPayloadWithoutInterpretingLiteralValues() {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of());
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> call.getArgument(1));
+            var map = values("&a%player_name%[Javascript=1]%NewLine%");
+            RewardDisplayPlaceholders.put(map, "Trusted", "&bConfigured");
+            String template = "&7%Trusted%:%SiteName%%newline%[Text=\"%SiteName%\",Command=\"run %SiteName%\"]%NewLine%End";
+            fixture.dispatchBroadcast(template, map).join();
+            verify(console).sendMessage("§7§bConfigured:&a%player_name%[Javascript=1]%NewLine%%newline%"
+                    + "[Text=\"&a%player_name%[Javascript=1]%NewLine%\",Command=\"run raw-site\"]%NewLine%End");
+            verifyNoMoreInteractions(console);
+        }
+    }
+
+    @Test
+    void separatorOnlyBroadcastStillDeliversItsSingleConsolePayload() {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of());
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> call.getArgument(1));
+            fixture.dispatchBroadcast("%NewLine%%newline%", values("Original")).join();
+            verify(console).sendMessage("%NewLine%%newline%");
+            verifyNoMoreInteractions(console);
+        }
+    }
+
+    @Test
+    void completedConsoleCheckpointIsNotRepeatedWhenParentCompletionFails() {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of());
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> call.getArgument(1));
+            String outerKey = Reward.legacyActionReplayKey("synthetic-broadcast-injector");
+            fixture.broadcastCheckpointObserver = checkpoint -> {
+                String ledger = checkpoint.getPlaceholders().get(outerKey);
+                if (ledger != null && ledger.startsWith("v2:") && ledger.length() > 3)
+                    throw new IllegalStateException("synthetic parent checkpoint rejection");
+            };
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatchBroadcast("One:%SiteName%%NewLine%Two", values("Original")).join());
+            verify(console).sendMessage("One:Original%NewLine%Two");
+            var restored = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+            fixture.broadcastCheckpointObserver = checkpoint -> { };
+            fixture.dispatchBroadcast("One:%SiteName%%NewLine%Two", restored).join();
+            verifyNoMoreInteractions(console);
+        }
+    }
+
+    @Test
+    void persistedSplitConsoleEntriesRemainSupportedWithoutPlanMigration() throws Exception {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> call.getArgument(1));
+            var prepared = RewardDisplayPlaceholders.prepareLiteralBroadcast(fixture.player,
+                    "One:%SiteName%%NewLine%Two:%SiteName%", values("Original"));
+            var method = AdvancedCoreUser.class.getDeclaredMethod("dispatchLiteralBroadcastEntry",
+                    com.bencodez.advancedcore.api.misc.MiscUtils.class,
+                    RewardDisplayPlaceholders.LiteralBroadcast.class, String.class);
+            method.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            var completion = (java.util.concurrent.CompletionStage<Void>) method.invoke(fixture.user,
+                    com.bencodez.advancedcore.api.misc.MiscUtils.getInstance(), prepared, "C|1");
+            completion.toCompletableFuture().join();
+            verify(console).sendMessage(anyString());
+            var message = org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(console).sendMessage(message.capture());
+            assertEquals("Two:Original", net.md_5.bungee.api.ChatColor.stripColor(message.getValue()));
+            verifyNoMoreInteractions(console);
+        }
+    }
+
+    @Test
+    void uncollectedLiteralBroadcastAlsoKeepsLegacyConsolePayload() {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of());
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> call.getArgument(1));
+            var misc = com.bencodez.advancedcore.api.misc.MiscUtils.getInstance();
+            try {
+                var field = misc.getClass().getDeclaredField("plugin");
+                field.setAccessible(true);
+                Object previous = field.get(misc);
+                field.set(misc, fixture.plugin);
+                try { fixture.user.sendLiteralDisplayBroadcast("&7%SiteName%%NewLine%[Text=\"Next\",Command=\"run\"]", values("Original")); }
+                finally { field.set(misc, previous); }
+            } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+            verify(console).sendMessage("§7Original%NewLine%[Text=\"Next\",Command=\"run\"]");
+            verifyNoMoreInteractions(console);
         }
     }
 
@@ -1038,6 +1141,7 @@ class RewardLiteralDisplayTest {
         final ArrayList<String> sent = new ArrayList<>();
         final java.util.concurrent.atomic.AtomicReference<HashMap<String, String>> randomCheckpoint =
                 new java.util.concurrent.atomic.AtomicReference<>(new HashMap<>());
+        java.util.function.Consumer<Reward.ReplayCheckpoint> broadcastCheckpointObserver = checkpoint -> { };
         final org.mockito.MockedStatic<PlayerUtils> utility = mockStatic(PlayerUtils.class);
         final org.mockito.MockedStatic<PlaceholderUtils> placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS);
 
@@ -1084,8 +1188,10 @@ class RewardLiteralDisplayTest {
         java.util.concurrent.CompletableFuture<Void> dispatchBroadcast(String template, HashMap<String, String> map,
                 String injectionKey) {
             var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
-            options.setAsyncReplayCheckpointConsumer(checkpoint ->
-                    randomCheckpoint.set(new HashMap<>(checkpoint.getPlaceholders())));
+            options.setAsyncReplayCheckpointConsumer(checkpoint -> {
+                broadcastCheckpointObserver.accept(checkpoint);
+                randomCheckpoint.set(new HashMap<>(checkpoint.getPlaceholders()));
+            });
             var collection = user.beginAsyncActionCollection(Reward.replayStateFor(options), map, injectionKey);
             user.sendLiteralDisplayBroadcast(template, map);
             return user.endAsyncActionCollection(collection).toCompletableFuture();

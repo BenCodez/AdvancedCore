@@ -165,6 +165,14 @@ public class MiscUtils {
 				CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(deadline));
 	}
 
+	/** Broadcasts player components and one final, unsplit console string; neither is reparsed. */
+	public CompletionStage<Void> broadcastPreparedMessageAsync(
+			Function<Player, net.md_5.bungee.api.chat.TextComponent[]> renderer,
+			java.util.function.Supplier<String> consoleMessage) {
+		return broadcastPreparedComponentsAsync(renderer, null, consoleMessage, deadline ->
+				CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(deadline));
+	}
+
 	/** Dispatches one already prepared literal line to the original recipient. */
 	public CompletionStage<List<UUID>> captureOnlinePlayerIdsAsync(AdvancedCorePlugin owner) {
 		return captureOnlinePlayerIdsAsync(owner,
@@ -245,6 +253,32 @@ public class MiscUtils {
 		return dispatchPreparedConsoleLineAsync(owner, () -> line);
 	}
 
+	/** Sends one legacy-shaped prepared console payload without parsing rich text JSON. */
+	public CompletionStage<Void> dispatchPreparedConsoleMessageAsync(AdvancedCorePlugin owner,
+			java.util.function.Supplier<String> renderer) {
+		if (owner == null || renderer == null) return CompletableFuture.completedFuture(null);
+		CompletableFuture<Void> result = new CompletableFuture<>();
+		AtomicBoolean finished = new AtomicBoolean();
+		result.whenComplete((ignored, failure) -> { if (result.isCancelled()) finished.set(true); });
+		CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(() -> {
+			if (finished.compareAndSet(false, true)) result.completeExceptionally(
+					new TimeoutException("Timed out waiting for literal console delivery"));
+		});
+		try {
+			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
+				try {
+					if (finished.get()) return;
+					if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before literal console delivery");
+					String message = renderer.get();
+					if (finished.get() || !owner.isEnabled()) throw new IllegalStateException("Plugin disabled during literal console delivery");
+					if (message != null && !message.isEmpty()) Bukkit.getConsoleSender().sendMessage(message);
+					if (finished.compareAndSet(false, true)) result.complete(null);
+				} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+			});
+		} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+		return result;
+	}
+
 	/** Renders and sends one console line on the global owner. */
 	public CompletionStage<Void> dispatchPreparedConsoleLineAsync(AdvancedCorePlugin owner,
 			java.util.function.Supplier<net.md_5.bungee.api.chat.TextComponent> renderer) {
@@ -274,6 +308,13 @@ public class MiscUtils {
 	private CompletionStage<Void> broadcastPreparedComponentsAsync(
 			Function<Player, net.md_5.bungee.api.chat.TextComponent[]> renderer,
 			net.md_5.bungee.api.chat.TextComponent[] consoleLines, Consumer<Runnable> timeoutScheduler) {
+		return broadcastPreparedComponentsAsync(renderer, consoleLines, null, timeoutScheduler);
+	}
+
+	private CompletionStage<Void> broadcastPreparedComponentsAsync(
+			Function<Player, net.md_5.bungee.api.chat.TextComponent[]> renderer,
+			net.md_5.bungee.api.chat.TextComponent[] consoleLines,
+			java.util.function.Supplier<String> consoleMessage, Consumer<Runnable> timeoutScheduler) {
 		if (renderer == null) throw new IllegalArgumentException("renderer is required");
 		AdvancedCorePlugin owner = plugin;
 		BroadcastCompletion delivery = new BroadcastCompletion();
@@ -313,6 +354,12 @@ public class MiscUtils {
 								}
 							});
 						} catch (Throwable failure) { delivery.fail(failure); delivery.settle(); }
+					}
+					if (consoleMessage != null && !delivery.closed.get()) {
+						String message = consoleMessage.get();
+						if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled while rendering broadcast");
+						if (!delivery.closed.get() && message != null && !message.isEmpty())
+							Bukkit.getConsoleSender().sendMessage(message);
 					}
 					if (consoleSnapshot != null) for (var line : consoleSnapshot) {
 						if (delivery.closed.get()) break;

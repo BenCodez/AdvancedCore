@@ -1052,6 +1052,11 @@ public final class LiteralMessageTemplate {
         public String finishText(String parsedText) {
             return restore(parsedText, tokens, true);
         }
+
+        /** Restores raw action values only at a terminal that will not interpret them again. */
+        public String finishActionText(String parsedText) {
+            return restore(parsedText, actionTokens, false);
+        }
     }
 
     @SuppressWarnings("deprecation")

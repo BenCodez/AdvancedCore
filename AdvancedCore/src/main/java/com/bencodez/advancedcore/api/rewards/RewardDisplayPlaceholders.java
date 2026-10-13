@@ -115,9 +115,11 @@ public final class RewardDisplayPlaceholders {
 
 	/** Immutable protected template and indexes; retains no player, user, or caller-owned map reference. */
 	public static final class LiteralBroadcast {
+		private final LiteralMessageTemplate.Prepared prepared;
 		private final java.util.List<LiteralMessageTemplate.Prepared> lines;
 		private final LiteralMessageTemplate.LegacyBindings legacy;
 		private LiteralBroadcast(LiteralMessageTemplate.Prepared prepared, LiteralMessageTemplate.LegacyBindings legacy) {
+			this.prepared = prepared;
 			this.lines = prepared.splitBroadcastLines();
 			this.legacy = legacy;
 		}
@@ -129,6 +131,13 @@ public final class RewardDisplayPlaceholders {
 		}
 
 		public int lineCount() { return lines.size(); }
+
+		/** Recreates the old single console payload; rich JSON syntax remains literal. */
+		public String renderConsoleMessage() {
+			return renderInteractiveBounded(prepared.template(),
+					value -> prepared.finishText(MessageAPI.colorize(legacy.finish(value, false))),
+					value -> prepared.finishActionText(MessageAPI.colorize(legacy.finish(value, true))));
+		}
 
 		public net.md_5.bungee.api.chat.TextComponent renderLine(Player recipient, int index) {
 			if (index < 0 || index >= lines.size()) throw new IllegalArgumentException("broadcast line index out of range");

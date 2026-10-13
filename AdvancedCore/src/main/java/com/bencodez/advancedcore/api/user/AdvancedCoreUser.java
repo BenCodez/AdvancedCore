@@ -2986,7 +2986,7 @@ public class AdvancedCoreUser {
 							.prepareLiteralBroadcast(player, template, captured);
 					var misc = com.bencodez.advancedcore.api.misc.MiscUtils.getInstance();
 					var current = registration.get();
-					if (current == null) return misc.broadcastPreparedComponentsAsync(prepared::render, prepared.render(null));
+					if (current == null) return misc.broadcastPreparedMessageAsync(prepared::render, prepared::renderConsoleMessage);
 					String lane = "literal-broadcast:" + current.nestedActiveKey();
 					if (current.previouslyReserved && !Reward.hasReplayNestedRewardSnapshot(
 							current.placeholders, lane, current.replayState, current.nestedActiveKey()))
@@ -2997,14 +2997,16 @@ public class AdvancedCoreUser {
 						return Reward.replayNestedRewardSequence(current.plugin, current.placeholders,
 								lane, List.of(), current.replayState, current.nestedActiveKey(),
 								(entry, ignored) -> dispatchLiteralBroadcastEntry(misc, prepared, entry),
-								entry -> validLiteralBroadcastEntry(entry) && literalBroadcastEntryLine(entry) < prepared.lineCount(),
+								entry -> validLiteralBroadcastEntry(entry) && ("C".equals(entry)
+									|| literalBroadcastEntryLine(entry) < prepared.lineCount()),
 								8192, 96, 1048576L);
 					return misc.captureOnlinePlayerIdsAsync(current.plugin).thenCompose(ids -> {
 						var plan = literalBroadcastPlan(prepared, ids);
 						return Reward.replayNestedRewardSequence(current.plugin, current.placeholders,
 								lane, plan, current.replayState, current.nestedActiveKey(),
 								(entry, ignored) -> dispatchLiteralBroadcastEntry(misc, prepared, entry),
-								entry -> validLiteralBroadcastEntry(entry) && literalBroadcastEntryLine(entry) < prepared.lineCount(),
+								entry -> validLiteralBroadcastEntry(entry) && ("C".equals(entry)
+									|| literalBroadcastEntryLine(entry) < prepared.lineCount()),
 								8192, 96, 1048576L);
 					}).exceptionallyCompose(failure -> {
 						Throwable cause = AsyncActionCollection.unwrapCompletionFailure(failure);
@@ -3073,17 +3075,16 @@ public class AdvancedCoreUser {
 				plan.add("P|" + id + "|" + line);
 			}
 		}
-		for (int line = 0; line < lines; line++) {
-			if (plan.size() >= 8192) throw new IllegalArgumentException("Literal broadcast audience is too large");
-			plan.add("C|" + line);
-		}
+		if (plan.size() >= 8192) throw new IllegalArgumentException("Literal broadcast audience is too large");
+		plan.add("C");
 		return plan;
 	}
 
 	private static boolean validLiteralBroadcastEntry(String entry) {
 		if (entry == null || entry.length() > 96) return false;
 		String[] parts = entry.split("\\|", -1);
-		if ("C".equals(parts[0])) return parts.length == 2 && parseLiteralLineIndex(parts[1]) != null;
+		if ("C".equals(parts[0])) return (parts.length == 1)
+				|| (parts.length == 2 && parseLiteralLineIndex(parts[1]) != null);
 		if (parts.length != 3) return false;
 		if (!"P".equals(parts[0])) return false;
 		try {
@@ -3095,6 +3096,7 @@ public class AdvancedCoreUser {
 
 	private static int literalBroadcastEntryLine(String entry) {
 		String[] parts = entry.split("\\|", -1);
+		if ("C".equals(parts[0]) && parts.length == 1) return 0;
 		return Integer.parseInt(parts["C".equals(parts[0]) ? 1 : 2]);
 	}
 
@@ -3112,6 +3114,8 @@ public class AdvancedCoreUser {
 		if (!validLiteralBroadcastEntry(entry)) return CompletableFuture.failedFuture(
 				new IllegalStateException("Malformed literal broadcast delivery plan"));
 		String[] parts = entry.split("\\|", -1);
+		if ("C".equals(parts[0]) && parts.length == 1)
+			return misc.dispatchPreparedConsoleMessageAsync(plugin, prepared::renderConsoleMessage);
 		Integer line = parseLiteralLineIndex("C".equals(parts[0]) ? parts[1] : parts[2]);
 		if (line == null || line >= prepared.lineCount()) return CompletableFuture.failedFuture(
 				new IllegalStateException("Literal broadcast line is no longer available"));

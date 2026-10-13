@@ -35,6 +35,35 @@ public class LiteralBroadcastSchedulingTest {
         boolean execute(org.bukkit.plugin.Plugin plugin, Runnable action, Runnable retired, long delay);
     }
 
+    @Test void singleConsolePayloadUsesGlobalOwnerAndDoesNotReparseFinalText() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            String message = "§7R&D &aLiteral%NewLine%[Text=\"literal\",Command=\"run\"]";
+            var completion = fixture.misc.dispatchPreparedConsoleMessageAsync(fixture.plugin, () -> {
+                assertTrue(fixture.globalOwner.get());
+                return message;
+            });
+            verifyNoInteractions(fixture.console);
+            fixture.global.get(0).run();
+            fixture.global.get(0).run();
+            completion.toCompletableFuture().join();
+            verify(fixture.console).sendMessage(message);
+            verifyNoMoreInteractions(fixture.console);
+        }
+    }
+
+    @Test void cancelledConsolePayloadFencesQueuedGlobalCallback() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var rendered = new AtomicBoolean();
+            var completion = fixture.misc.dispatchPreparedConsoleMessageAsync(fixture.plugin, () -> {
+                rendered.set(true); return "Original";
+            }).toCompletableFuture();
+            completion.cancel(false);
+            fixture.global.get(0).run();
+            assertFalse(rendered.get());
+            verifyNoInteractions(fixture.console);
+        }
+    }
+
     @Test void audienceCaptureDeadlineFencesLateGlobalCallback() throws Exception {
         try (Fixture fixture = new Fixture()) {
             var capture = fixture.misc.captureOnlinePlayerIdsAsync(fixture.plugin, fixture.deadline::set);

@@ -71,6 +71,13 @@ template rather than mutable checkpoint metadata or live placeholder values.
 
 Replay-aware literal broadcasts freeze the original audience as player UUIDs and console delivery steps. The existing reward journal checkpoints each successfully completed recipient line before advancing; retry and serialized recovery skip that completed prefix, even if the current audience changes. Each action occurrence has a separate lane, so two identical configured broadcasts remain distinct. The plan allows at most 8192 delivery steps and 4096 authored lines. Recipient lookup uses the global scheduler, and rendering and delivery use the recipient owner; console rendering uses the global owner. Each outstanding delivery has a 30-second deadline.
 
+New broadcast plans retain one unsplit console payload, including the configured
+`%NewLine%`/`%newline%` markers and rich `[Text=...]` syntax as text. Trusted colors
+still apply; literal bindings are restored after color handling and are never
+reparsed. This preserves the established console shape while players retain
+per-line progress. Persisted older split-console plans keep their existing steps
+and completion checkpoints; recovery does not migrate or repeat their prefix.
+
 Delivery and journal persistence are not one atomic transaction. A crash or failed checkpoint after a transport handoff can still leave an ambiguous step; this does not provide universal exactly-once messaging. Older pending literal broadcast reservations without recipient progress remain pending rather than blindly repeating the whole broadcast. Completed older actions remain completed. Disconnected or retired original recipients are skipped, and newly connected players do not join a replayed audience. No vote accounting or additional reward path is introduced.
 
 Replay-aware literal player messages also checkpoint each successfully delivered
