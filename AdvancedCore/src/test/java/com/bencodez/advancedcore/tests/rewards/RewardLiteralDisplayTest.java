@@ -171,6 +171,14 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void authoredLineBreaksAcceptEstablishedLowercaseSpelling() {
+        var lines = render("First:%SiteName%%newline%Second:%SiteName%", values("literal"));
+        assertEquals(2, lines.length);
+        assertEquals("First:literal", lines[0].toPlainText());
+        assertEquals("Second:literal", lines[1].toPlainText());
+    }
+
+    @Test
     void broadcastCapturesSourceOnceAndEvaluatesEachRecipientWithoutRestoringEarly() {
         Player source = mock(Player.class);
         Player recipient = mock(Player.class);
@@ -434,8 +442,16 @@ class RewardLiteralDisplayTest {
             assertTrue(sent.isEmpty());
             assertEquals(1, owners.size());
             owners.get(0).run();
+            assertFalse(finished.isDone());
+            assertTrue(sent.isEmpty());
+            assertEquals(2, global.size());
+            global.get(1).run();
+            assertEquals(2, owners.size());
+            assertFalse(finished.isDone());
+            owners.get(1).run();
             finished.join();
             owners.get(0).run();
+            owners.get(1).run();
             assertEquals(List.of("Site:Original"), sent);
         }
     }
@@ -489,6 +505,59 @@ class RewardLiteralDisplayTest {
             fixture.dispatch("Site:%SiteName%", ArrayUtils.fromString(ArrayUtils.makeString(map))).join();
             assertEquals(List.of("Site:Original"), fixture.sent,
                     "the unavailable delivery must not have been checkpointed as completed");
+        }
+    }
+
+    @Test
+    void playerMultilineRetryResumesAfterDeliveredPrefix() {
+        HashMap<String, String> persisted;
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
+            options.setAsyncReplayCheckpointConsumer(checkpoint ->
+                    fixture.randomCheckpoint.set(new HashMap<>(checkpoint.getPlaceholders())));
+            var map = values("Original");
+            var collection = fixture.user.beginAsyncActionCollection(Reward.replayStateFor(options), map,
+                    "synthetic-message-injector");
+            doAnswer(call -> {
+                fixture.sent.add(call.<BaseComponent>getArgument(1).toPlainText());
+                if (fixture.sent.size() == 1) when(fixture.player.isOnline()).thenReturn(false);
+                return null;
+            }).when(fixture.transport).sendMessage(eq(fixture.player), any(BaseComponent.class));
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> {
+                        fixture.user.sendLiteralDisplayMessage("First:%SiteName%%NewLine%Second:%SiteName%", map);
+                        fixture.user.endAsyncActionCollection(collection).toCompletableFuture().join();
+                    });
+            assertEquals(List.of("First:Original"), fixture.sent);
+            persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+        }
+        try (ReplayFixture restored = new ReplayFixture()) {
+            restored.dispatch("First:%SiteName%%NewLine%Second:%SiteName%", persisted).join();
+            assertEquals(List.of("Second:Original"), restored.sent,
+                    "serialized retry must skip the already delivered player line");
+        }
+    }
+
+    @Test
+    void legacyPendingPlayerActionWithoutLineSnapshotRefusesAmbiguousReplay() {
+        HashMap<String, String> persisted;
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            var map = values("Original");
+            doAnswer(call -> {
+                fixture.sent.add(call.<BaseComponent>getArgument(1).toPlainText());
+                when(fixture.player.isOnline()).thenReturn(false);
+                return null;
+            }).when(fixture.transport).sendMessage(eq(fixture.player), any(BaseComponent.class));
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatch("First:%SiteName%%NewLine%Second:%SiteName%", map).join());
+            persisted = ArrayUtils.fromString(ArrayUtils.makeString(map));
+            persisted.keySet().removeIf(key -> key.startsWith("__advancedcore_replay_nested_list_")
+                    || key.startsWith("__advancedcore_replay_single_child_"));
+        }
+        try (ReplayFixture restored = new ReplayFixture()) {
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> restored.dispatch("First:%SiteName%%NewLine%Second:%SiteName%", persisted).join());
+            assertTrue(restored.sent.isEmpty(), "legacy ambiguous replay must not redeliver a prefix");
         }
     }
 
@@ -709,6 +778,27 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void completedUnrelatedActionInRandomScopeDoesNotBlockNewChoice() {
+        HashMap<String, String> persisted;
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            var map = values("Original");
+            var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
+            options.setAsyncReplayCheckpointConsumer(checkpoint -> fixture.randomCheckpoint.set(
+                    new HashMap<>(checkpoint.getPlaceholders())));
+            var collection = fixture.user.beginAsyncActionCollection(Reward.replayStateFor(options), map,
+                    "synthetic-random-message-injector");
+            fixture.user.sendLiteralDisplayMessage("Unrelated:%SiteName%", map);
+            fixture.user.endAsyncActionCollection(collection).toCompletableFuture().join();
+            persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+            assertFalse(persisted.isEmpty(), "restore the actual non-empty same-scope checkpoint");
+        }
+        try (ReplayFixture restored = new ReplayFixture()) {
+            restored.dispatchRandom(new ArrayList<>(List.of("New:%SiteName%")), persisted).join();
+            assertEquals(List.of("New:Original"), restored.sent);
+        }
+    }
+
+    @Test
     void storedRandomSelectionCannotBecomeAnUnconfiguredTrustedTemplate() {
         try (ReplayFixture fixture = new ReplayFixture()) {
             var map = values("Original");
@@ -822,6 +912,7 @@ class RewardLiteralDisplayTest {
     }
 
     private static final class ReplayFixture implements AutoCloseable {
+        private static final UUID REPLAY_PLAYER_ID = UUID.randomUUID();
         final AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         final Player player = mock(Player.class);
         final AdvancedCoreUser user;
@@ -848,8 +939,10 @@ class RewardLiteralDisplayTest {
             when(plugin.getTimer()).thenReturn(timer);
             doAnswer(call -> { call.getArgument(0, Runnable.class).run(); return null; }).when(timer).execute(any());
             when(player.isOnline()).thenReturn(true);
-            user = spy(new AdvancedCoreUser(plugin, UUID.randomUUID(), "SyntheticPlayer"));
+            user = spy(new AdvancedCoreUser(plugin, REPLAY_PLAYER_ID, "SyntheticPlayer"));
             doReturn(player).when(user).getPlayer();
+            UUID playerId = UUID.fromString(user.getUUID());
+            when(player.getUniqueId()).thenReturn(playerId);
             utility.when(PlayerUtils::getServerHandle).thenReturn(transport);
             doAnswer(call -> { sent.add(call.<BaseComponent>getArgument(1).toPlainText()); return null; })
                     .when(transport).sendMessage(eq(player), any(BaseComponent.class));

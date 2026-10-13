@@ -69,6 +69,16 @@ Replay-aware literal broadcasts freeze the original audience as player UUIDs and
 
 Delivery and journal persistence are not one atomic transaction. A crash or failed checkpoint after a transport handoff can still leave an ambiguous step; this does not provide universal exactly-once messaging. Older pending literal broadcast reservations without recipient progress remain pending rather than blindly repeating the whole broadcast. Completed older actions remain completed. Disconnected or retired original recipients are skipped, and newly connected players do not join a replayed audience. No vote accounting or additional reward path is introduced.
 
+Replay-aware literal player messages also checkpoint each successfully delivered
+line in the existing reward journal. Serialized retry resumes after that prefix,
+revalidates the original player identity on its owner scheduler, and fails when
+the player disconnects before an outstanding line. Older pending player-message
+reservations without line progress remain pending rather than repeating an
+ambiguous prefix. Completed older actions remain completed. The same 4096-line
+bound applies; transport delivery and checkpoint publication are still not atomic.
+Both established authored separators, `%NewLine%` and `%newline%`, are supported;
+separator-like text inside a literal value stays literal.
+
 With literal metadata, `RandomMessage` records its first configured choice in
 existing replay-selection metadata before formatting. Retry and restart retain
 that choice, including recovery of older literal action reservations. Reordering

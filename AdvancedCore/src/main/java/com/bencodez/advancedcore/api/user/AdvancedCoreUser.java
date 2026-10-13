@@ -2988,9 +2988,28 @@ public class AdvancedCoreUser {
 						return CompletableFuture.failedFuture(cause);
 					});
 				}
-				sendLiteralRewardComponents(player, com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders
-						.renderLiteralComponents(player, template, captured));
-				return CompletableFuture.<Void>completedFuture(null);
+				var current = registration.get();
+				if (current == null) {
+					sendLiteralRewardComponents(player, com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders
+							.renderLiteralComponents(player, template, captured));
+					return CompletableFuture.completedFuture(null);
+				}
+				String lane = "literal-player:" + current.nestedActiveKey();
+				if (current.previouslyReserved && !Reward.hasReplayNestedRewardSnapshot(
+						current.placeholders, lane, current.replayState, current.nestedActiveKey()))
+					return CompletableFuture.failedFuture(new IllegalStateException(
+							"Legacy literal player message has no durable line progress; refusing ambiguous replay"));
+				var rendered = com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders
+						.renderLiteralComponents(player, template, captured);
+				List<String> plan = new ArrayList<>();
+				if (rendered.length > 4096) return CompletableFuture.failedFuture(
+						new IllegalArgumentException("Literal player message has too many lines"));
+				for (int line = 0; line < rendered.length; line++) plan.add("P|" + getUUID() + "|" + line);
+				return Reward.replayNestedRewardSequence(current.plugin, current.placeholders, lane, plan,
+						current.replayState, current.nestedActiveKey(),
+						(entry, ignored) -> dispatchLiteralPlayerEntry(player, rendered, entry),
+						entry -> validLiteralBroadcastEntry(entry) && literalBroadcastEntryLine(entry) < rendered.length,
+						8192, 96, 1048576L);
 			}).handle((ignored, failure) -> {
 				if (failure != null) {
 					Throwable cause = AsyncActionCollection.unwrapCompletionFailure(failure);
@@ -3073,6 +3092,24 @@ public class AdvancedCoreUser {
 				() -> prepared.renderLine(null, line));
 		return misc.dispatchPreparedComponentLineAsync(plugin, UUID.fromString(parts[1]),
 				player -> prepared.renderLine(player, line));
+	}
+
+	private CompletionStage<Void> dispatchLiteralPlayerEntry(
+			Player expectedPlayer, BaseComponent[] rendered, String entry) {
+		if (!validLiteralBroadcastEntry(entry)) return CompletableFuture.failedFuture(
+				new IllegalStateException("Malformed literal player delivery plan"));
+		String[] parts = entry.split("\\|", -1);
+		if (!"P".equals(parts[0]) || !getUUID().equalsIgnoreCase(parts[1]))
+			return CompletableFuture.failedFuture(new IllegalStateException("Literal player delivery target changed"));
+		int line = Integer.parseInt(parts[2]);
+		if (line >= rendered.length) return CompletableFuture.failedFuture(
+				new IllegalStateException("Literal player line is no longer available"));
+		return Reward.continueOnServerThread(plugin, this, () -> {
+			if (getPlayer() != expectedPlayer || !expectedPlayer.isOnline() || !plugin.isEnabled())
+				return CompletableFuture.failedFuture(new IllegalStateException("Player unavailable during literal line delivery"));
+			if (rendered[line] != null) PlayerUtils.getServerHandle().sendMessage(expectedPlayer, rendered[line]);
+			return CompletableFuture.<Void>completedFuture(null);
+		});
 	}
 
 	private static void validateLiteralDisplayBindings(HashMap<String, String> placeholders) {
