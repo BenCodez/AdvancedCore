@@ -161,32 +161,36 @@ public class MiscUtils {
 	public CompletionStage<Void> broadcastPreparedComponentsAsync(
 			Function<Player, net.md_5.bungee.api.chat.TextComponent[]> renderer,
 			net.md_5.bungee.api.chat.TextComponent[] consoleLines) {
-		return broadcastPreparedComponentsAsync(renderer, consoleLines, deadline ->
-				CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(deadline));
+		return broadcastPreparedComponentsAsync(renderer, consoleLines, null);
 	}
 
 	/** Broadcasts player components and one final, unsplit console string; neither is reparsed. */
 	public CompletionStage<Void> broadcastPreparedMessageAsync(
 			Function<Player, net.md_5.bungee.api.chat.TextComponent[]> renderer,
 			java.util.function.Supplier<String> consoleMessage) {
-		return broadcastPreparedComponentsAsync(renderer, null, consoleMessage, deadline ->
-				CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(deadline));
+		return broadcastPreparedComponentsAsync(renderer, null, consoleMessage, null);
 	}
 
 	/** Dispatches one already prepared literal line to the original recipient. */
 	public CompletionStage<List<UUID>> captureOnlinePlayerIdsAsync(AdvancedCorePlugin owner) {
-		return captureOnlinePlayerIdsAsync(owner,
-				deadline -> CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(deadline));
+		return captureOnlinePlayerIdsWithDeadline(owner, null);
 	}
 
 	/** Testable/embedding form with an explicit bounded deadline scheduler. */
 	public CompletionStage<List<UUID>> captureOnlinePlayerIdsAsync(AdvancedCorePlugin owner,
 			Consumer<Runnable> timeoutScheduler) {
+		if (timeoutScheduler == null) return CompletableFuture.failedFuture(new IllegalArgumentException("timeout scheduler is required"));
+		return captureOnlinePlayerIdsWithDeadline(owner, timeoutScheduler);
+	}
+
+	private CompletionStage<List<UUID>> captureOnlinePlayerIdsWithDeadline(AdvancedCorePlugin owner,
+			Consumer<Runnable> timeoutScheduler) {
 		if (owner == null) return CompletableFuture.failedFuture(new IllegalArgumentException("plugin is required"));
 		CompletableFuture<List<UUID>> result = new CompletableFuture<>();
 		AtomicBoolean claimed = new AtomicBoolean();
 		try {
-			timeoutScheduler.accept(() -> {
+			if (timeoutScheduler == null) armLiteralDeadline(result, claimed);
+			else timeoutScheduler.accept(() -> {
 				if (claimed.compareAndSet(false, true)) result.completeExceptionally(
 						new TimeoutException("Timed out capturing literal broadcast audience"));
 			});
@@ -212,11 +216,7 @@ public class MiscUtils {
 			return CompletableFuture.failedFuture(new IllegalArgumentException("literal delivery arguments are required"));
 		CompletableFuture<Void> result = new CompletableFuture<>();
 		AtomicBoolean finished = new AtomicBoolean();
-		result.whenComplete((ignored, failure) -> { if (result.isCancelled()) finished.set(true); });
-		CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(() -> {
-			if (finished.compareAndSet(false, true)) result.completeExceptionally(
-					new TimeoutException("Timed out waiting for literal recipient delivery"));
-		});
+		armLiteralDeadline(result, finished);
 		try {
 			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
 				Player player = Bukkit.getPlayer(recipientId);
@@ -259,11 +259,7 @@ public class MiscUtils {
 		if (owner == null || renderer == null) return CompletableFuture.completedFuture(null);
 		CompletableFuture<Void> result = new CompletableFuture<>();
 		AtomicBoolean finished = new AtomicBoolean();
-		result.whenComplete((ignored, failure) -> { if (result.isCancelled()) finished.set(true); });
-		CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(() -> {
-			if (finished.compareAndSet(false, true)) result.completeExceptionally(
-					new TimeoutException("Timed out waiting for literal console delivery"));
-		});
+		armLiteralDeadline(result, finished);
 		try {
 			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
 				try {
@@ -285,11 +281,7 @@ public class MiscUtils {
 		if (owner == null || renderer == null) return CompletableFuture.completedFuture(null);
 		CompletableFuture<Void> result = new CompletableFuture<>();
 		AtomicBoolean finished = new AtomicBoolean();
-		result.whenComplete((ignored, failure) -> { if (result.isCancelled()) finished.set(true); });
-		CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(() -> {
-			if (finished.compareAndSet(false, true)) result.completeExceptionally(
-					new TimeoutException("Timed out waiting for literal console delivery"));
-		});
+		armLiteralDeadline(result, finished);
 		try {
 			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
 				try {
@@ -321,7 +313,8 @@ public class MiscUtils {
 		AtomicBoolean globalClaim = new AtomicBoolean();
 		var consoleSnapshot = consoleLines == null ? null : consoleLines.clone();
 		try {
-			timeoutScheduler.accept(() -> delivery.fail(
+			if (timeoutScheduler == null) armLiteralDeadline(delivery.completion, delivery.closed);
+			else timeoutScheduler.accept(() -> delivery.fail(
 					new TimeoutException("Timed out waiting for prepared broadcast delivery")));
 			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
 				if (!globalClaim.compareAndSet(false, true) || delivery.closed.get()) return;
@@ -395,6 +388,11 @@ public class MiscUtils {
 			if (cause instanceof Error error) throw error;
 			throw failure;
 		}
+	}
+
+	/** orTimeout cancels its scheduled deadline when the operation settles, including failure/cancellation. */
+	private static void armLiteralDeadline(CompletableFuture<?> completion, AtomicBoolean settled) {
+		completion.orTimeout(30L, TimeUnit.SECONDS).whenComplete((ignored, failure) -> settled.set(true));
 	}
 
 	private static final class BroadcastCompletion {
