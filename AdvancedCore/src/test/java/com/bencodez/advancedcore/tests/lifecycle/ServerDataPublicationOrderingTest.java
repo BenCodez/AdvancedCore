@@ -41,6 +41,76 @@ class ServerDataPublicationOrderingTest {
         verifyPublicationOrder(false);
     }
 
+    @Test void legacyFinalMutationReachesLiveOwnerAndSavedYamlExactlyOnceWithoutClaimingDurability() {
+        try (var scheduler = mockConstruction(BukkitScheduler.class)) {
+            LegacySavingOwner data = legacySavingOwner();
+            FileConfiguration live = data.getData();
+            var mutations = new java.util.concurrent.atomic.AtomicInteger();
+            var failure = assertThrows(CompletionException.class, () -> data.mutateFinalData(yaml -> {
+                mutations.incrementAndGet();
+                assertSame(live, yaml, "a legacy save override publishes its existing live YAML");
+                yaml.set("FullInventory.example.Items.0", "stored-item");
+                yaml.set("TimedPermissions.example", java.util.List.of("example.use%line%12345"));
+                yaml.set("LastUpdated", 2468L);
+            }).toCompletableFuture().join());
+
+            assertInstanceOf(UnsupportedOperationException.class, failure.getCause(),
+                    "returning from a void save does not confirm durable publication");
+            assertEquals(1, mutations.get());
+            assertEquals(1, data.saves);
+            assertSame(live, data.getData());
+            assertSame(live, data.savedData);
+            assertEquals(2468L, live.getLong("LastUpdated"));
+            YamlConfiguration saved = YamlConfiguration.loadConfiguration(data.getdFile());
+            assertEquals("stored-item", saved.getString("FullInventory.example.Items.0"));
+            assertEquals(java.util.List.of("example.use%line%12345"), saved.getStringList("TimedPermissions.example"));
+            assertEquals(2468L, saved.getLong("LastUpdated"));
+        }
+    }
+
+    @Test void legacyFinalMutationFailureIsObservableWithoutInvokingSave() {
+        try (var scheduler = mockConstruction(BukkitScheduler.class)) {
+            LegacySavingOwner data = legacySavingOwner();
+            FileConfiguration live = data.getData();
+            var mutations = new java.util.concurrent.atomic.AtomicInteger();
+            var mutationFailure = new IllegalStateException("legacy mutation failed");
+            var failure = assertThrows(CompletionException.class, () -> data.mutateFinalData(yaml -> {
+                mutations.incrementAndGet();
+                yaml.set("LastUpdated", 2468L);
+                throw mutationFailure;
+            }).toCompletableFuture().join());
+
+            assertSame(mutationFailure, failure.getCause());
+            assertEquals(1, mutations.get());
+            assertEquals(0, data.saves, "a failed legacy mutation must not proceed to save");
+            assertSame(live, data.getData());
+            assertEquals(2468L, live.getLong("LastUpdated"), "legacy mutation retains its existing live-YAML semantics");
+            assertFalse(data.getdFile().exists());
+        }
+    }
+
+    @Test void legacyFinalSaveFailureIsObservableAfterExactlyOneMutationAndOneSave() {
+        try (var scheduler = mockConstruction(BukkitScheduler.class)) {
+            LegacySavingOwner data = legacySavingOwner();
+            FileConfiguration live = data.getData();
+            var mutations = new java.util.concurrent.atomic.AtomicInteger();
+            data.saveFailure = new IllegalStateException("legacy save failed");
+            var failure = assertThrows(CompletionException.class, () -> data.mutateFinalData(yaml -> {
+                mutations.incrementAndGet();
+                yaml.set("LastUpdated", 2468L);
+            }).toCompletableFuture().join());
+
+            assertSame(data.saveFailure, failure.getCause());
+            assertEquals(1, mutations.get());
+            assertEquals(1, data.saves);
+            assertSame(live, data.getData());
+            assertSame(live, data.savedData);
+            assertEquals(2468L, data.savedData.getLong("LastUpdated"));
+            assertFalse(data.getdFile().exists());
+        }
+    }
+
+
 	@Test void inheritedSetValueCannotMutateLiveYamlDuringNativePublication() throws Exception {
 		verifyInheritedMutatorIsPublicationOrdered(data -> data.setValue("Inherited.Value", "new"),
 				"Inherited.Value");
@@ -254,6 +324,28 @@ class ServerDataPublicationOrderingTest {
         final java.util.concurrent.atomic.AtomicInteger saved = new java.util.concurrent.atomic.AtomicInteger();
         CustomOwner(AdvancedCorePlugin plugin) { super(plugin); }
         @Override public void saveData() { saved.incrementAndGet(); }
+    }
+
+    private LegacySavingOwner legacySavingOwner() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        when(plugin.getDataFolder()).thenReturn(dataFolder);
+        LegacySavingOwner data = new LegacySavingOwner(plugin);
+        data.setData(new YamlConfiguration());
+        return data;
+    }
+
+    private static final class LegacySavingOwner extends ServerData {
+        int saves;
+        FileConfiguration savedData;
+        RuntimeException saveFailure;
+        LegacySavingOwner(AdvancedCorePlugin plugin) { super(plugin); }
+        @Override public void saveData() {
+            saves++;
+            savedData = getData();
+            if (saveFailure != null) throw saveFailure;
+            try { savedData.save(getdFile()); }
+            catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+        }
     }
 
     private void verifyPublicationOrder(boolean heartbeat) throws Exception {

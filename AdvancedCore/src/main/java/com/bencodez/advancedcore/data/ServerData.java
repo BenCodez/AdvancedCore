@@ -28,7 +28,7 @@ import com.bencodez.simpleapi.file.YMLFile;
  */
 public class ServerData extends YMLFile {
 	// Selected only while the checked publisher owns this monitor. Unconfirmed
-	// final mutations must never become input to a following whole-file save.
+	// native final mutations must never become input to a following whole-file save.
 	private org.bukkit.configuration.file.FileConfiguration finalDataSnapshot;
 	/**
 	 * Durable state for one locally detected time transition. The identifier is
@@ -97,8 +97,9 @@ public class ServerData extends YMLFile {
 	 * publication by this file's actual owner. Adapters with another persistence
 	 * owner must override this method and return that owner's publication stage.
 	 * No caller may wait for the stage while holding a YAML owner's monitor.
-	 * Legacy saveData overrides are still invoked, but their void return cannot
-	 * prove durable publication and therefore produces an exceptional stage.
+	 * Legacy saveData overrides still receive the mutation on their live YAML and
+	 * are invoked once, but their void return cannot prove durable publication and
+	 * therefore produces an exceptional stage.
 	 */
 	public java.util.concurrent.CompletionStage<Void> mutateFinalData(
 			java.util.function.Consumer<org.bukkit.configuration.file.FileConfiguration> mutation) {
@@ -107,8 +108,9 @@ public class ServerData extends YMLFile {
 				java.util.Objects.requireNonNull(mutation, "mutation");
 				Class<?> saveOwner = getClass().getMethod("saveData").getDeclaringClass();
 				if (saveOwner != YMLFile.class && saveOwner != ServerData.class) {
-					// Preserve the legacy callback, but do not expose a mutation whose
-					// publication this owner cannot confirm.
+					// Preserve the legacy mutation-and-save contract without treating
+					// its void return as confirmation of durable publication.
+					mutation.accept(getData());
 					saveData();
 					return java.util.concurrent.CompletableFuture.failedFuture(new UnsupportedOperationException(
 							"Legacy ServerData owner does not confirm final publication"));

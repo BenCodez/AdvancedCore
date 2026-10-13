@@ -99,7 +99,7 @@ class ServerDataTimeTransitionTest {
 				() -> owner.mutateFinalData(yaml -> yaml.set("LastUpdated", 1234L)).toCompletableFuture().join());
 		assertTrue(failure.getCause() instanceof UnsupportedOperationException);
 		assertEquals(1, owner.saves);
-		assertFalse(owner.getData().contains("LastUpdated"), "an unconfirmed legacy save cannot expose the final mutation");
+		assertEquals(1234L, owner.getData().getLong("LastUpdated"), "legacy owners retain the established live mutation before their void save");
 	}
 
 	@Test

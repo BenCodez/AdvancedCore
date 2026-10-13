@@ -40,17 +40,20 @@ standalone callers, while lifecycle shutdown supplies only its remaining budget.
 
 Final inventory, server timestamp, and timed-permission mutations are admitted in
 order on one bounded daemon persistence worker. `ServerData.mutateFinalData`
-returns the actual file owner's publication stage. Final mutations are staged in
-a private YAML candidate and become live only after confirmed publication.
+returns the actual file owner's publication stage. Native and completion-aware
+final mutations are staged in a private YAML candidate and become live only after confirmed publication.
 Native ServerData forces that candidate on the shutdown worker; an ordered
 adapter serializes under its own YAML monitor and confirms its existing publisher.
 Later unrelated saves cannot publish a failed final overflow mutation. Ordered
 snapshots carry only successfully published final changes forward and preserve
 newer explicit edits, including an edit that writes the same previous value.
 No caller waits for publication while holding the YAML owner's monitor. Legacy
-void `saveData` overrides retain their callback but cannot claim confirmed
-publication without overriding the additive completion contract; they report an
-unsupported confirmation. An I/O failure remains a failed stage. Inventory persistence gates user-storage
+void `saveData` overrides retain the established live-YAML mutation followed by
+one save callback, but cannot claim confirmed publication without overriding the
+additive completion contract; they report an unsupported confirmation. A legacy
+callback failure remains observable, with no second mutation or save invocation.
+Its live changes retain the old non-transactional behavior; candidate isolation
+remains specific to native and completion-aware owners. An I/O failure remains a failed stage. Inventory persistence gates user-storage
 retirement and cannot acknowledge reserved replay overflow before its actual
 save succeeds. The public synchronous handler shutdown methods remain available.
 The shutdown-completion hook follows submission of final file saves; it is not a
