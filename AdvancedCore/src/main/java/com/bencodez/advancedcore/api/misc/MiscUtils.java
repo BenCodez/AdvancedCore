@@ -225,21 +225,40 @@ public class MiscUtils {
 				try {
 					if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before recipient rendering");
 					Player player = Bukkit.getPlayer(recipientId);
-					if (player == null) { if (finished.compareAndSet(false, true)) result.complete(PreparedRecipient.absent()); return; }
+					if (finished.get()) return;
+					if (player == null) {
+						if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled while skipping absent recipient");
+						if (finished.compareAndSet(false, true)) result.complete(PreparedRecipient.absent());
+						return;
+					}
 					AtomicBoolean claimed = new AtomicBoolean();
 					runBroadcastRecipient(owner, player, () -> {
 						if (!claimed.compareAndSet(false, true) || finished.get()) return;
 						try {
 							if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before recipient rendering");
-							if (!player.isOnline()) { if (finished.compareAndSet(false, true)) result.complete(PreparedRecipient.absent()); return; }
+							if (!player.isOnline()) {
+								if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled while skipping offline recipient");
+								if (finished.compareAndSet(false, true)) result.complete(PreparedRecipient.absent());
+								return;
+							}
 							var rendered = new PreparedRecipient(player, renderer.apply(player));
 							if (finished.get() || !owner.isEnabled() || !player.isOnline() || Bukkit.getPlayer(recipientId) != player)
 								throw new IllegalStateException("Literal recipient rendering is no longer active");
+							if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before recipient capture completion");
 							if (finished.compareAndSet(false, true)) result.complete(rendered);
 						} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
 					}, () -> {
-						if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true))
-							CompletableFuture.runAsync(() -> result.complete(PreparedRecipient.absent()));
+						if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true)) {
+							try {
+								CompletableFuture.runAsync(() -> {
+									if (result.isDone()) return;
+									try {
+										if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before retired recipient capture completion");
+										result.complete(PreparedRecipient.absent());
+									} catch (Throwable failure) { result.completeExceptionally(failure); }
+								});
+							} catch (Throwable failure) { result.completeExceptionally(failure); }
+						}
 					});
 				} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
 			});
@@ -264,13 +283,22 @@ public class MiscUtils {
 			return CompletableFuture.failedFuture(new IllegalArgumentException("literal delivery arguments are required"));
 		CompletableFuture<Void> result = new CompletableFuture<>();
 		AtomicBoolean finished = new AtomicBoolean();
+		AtomicBoolean globalClaim = new AtomicBoolean();
 		armLiteralDeadline(result, finished);
 		try {
 			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
-				Player player = Bukkit.getPlayer(recipientId);
-				if (player == null) { if (finished.compareAndSet(false, true)) result.complete(null); return; }
-				AtomicBoolean claimed = new AtomicBoolean();
+				if (!globalClaim.compareAndSet(false, true) || finished.get()) return;
 				try {
+					if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before literal recipient lookup");
+					Player player = Bukkit.getPlayer(recipientId);
+					if (finished.get()) return;
+					if (player == null) {
+						if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled while skipping absent recipient");
+						if (finished.compareAndSet(false, true)) result.complete(null);
+						return;
+					}
+					if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before literal recipient scheduling");
+					AtomicBoolean claimed = new AtomicBoolean();
 					runBroadcastRecipient(owner, player, () -> {
 						if (!claimed.compareAndSet(false, true) || finished.get()) return;
 						try {
@@ -280,16 +308,25 @@ public class MiscUtils {
 								if (finished.get() || !owner.isEnabled()) throw new IllegalStateException("Literal delivery is no longer active");
 								if (line != null) PlayerUtils.getServerHandle().sendMessage(player, line);
 							}
+							if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before literal delivery completion");
 							if (finished.compareAndSet(false, true)) result.complete(null);
 						} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
 				}, () -> {
 					if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true)) {
 						// Native retirement callbacks run inside critical entity-removal code.
 						// Keep completion continuations off that callback stack.
-						CompletableFuture.runAsync(() -> result.complete(null));
+						try {
+							CompletableFuture.runAsync(() -> {
+								if (result.isDone()) return;
+								try {
+									if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before retired literal delivery completion");
+									result.complete(null);
+								} catch (Throwable failure) { result.completeExceptionally(failure); }
+							});
+						} catch (Throwable failure) { result.completeExceptionally(failure); }
 					}
 				});
-				} catch (Throwable failure) { if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+				} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
 			});
 		} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
 		return result;
@@ -386,13 +423,22 @@ public class MiscUtils {
 											if (line != null) PlayerUtils.getServerHandle().sendMessage(player, line);
 										}
 									}
+									if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before broadcast recipient completion");
 								} catch (Throwable failure) { delivery.fail(failure); }
 								finally { delivery.settle(); }
 							}, () -> {
-								if (recipientClaim.compareAndSet(false, true)) {
+								if (recipientClaim.compareAndSet(false, true) && !delivery.closed.get()) {
 									// Native retirement runs in critical entity-removal code.
 									// Complete outside it so reward continuations cannot run there.
-									CompletableFuture.runAsync(delivery::settle);
+									try {
+										CompletableFuture.runAsync(() -> {
+											if (delivery.closed.get()) return;
+											try {
+												if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before retired broadcast recipient completion");
+												delivery.settle();
+											} catch (Throwable failure) { delivery.fail(failure); }
+										});
+									} catch (Throwable failure) { delivery.fail(failure); }
 								}
 							});
 						} catch (Throwable failure) { delivery.fail(failure); delivery.settle(); }

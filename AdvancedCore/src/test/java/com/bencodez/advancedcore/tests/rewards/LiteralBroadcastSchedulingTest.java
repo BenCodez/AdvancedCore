@@ -22,6 +22,8 @@ import org.junit.jupiter.api.Test;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.misc.MiscUtils;
+import com.bencodez.advancedcore.api.rewards.Reward;
+import com.bencodez.advancedcore.api.rewards.RewardOptions;
 import com.bencodez.simpleapi.player.PlayerUtils;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 import com.bencodez.simpleapi.serverhandle.IServerHandle;
@@ -478,6 +480,197 @@ public class LiteralBroadcastSchedulingTest {
         }
     }
 
+    @Test void disabledQueuedAbsentRecipientFailsBeforeLookupAndReplayCheckpoints() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var id = fixture.first.getUniqueId();
+            var checkpoints = new ArrayList<Reward.ReplayCheckpoint>();
+            var completion = fixture.replayLiteralFragment(id, checkpoints).toCompletableFuture();
+            assertEquals(2, checkpoints.size(), "outer and fragment snapshots were admitted before dispatch");
+            assertFalse(completion.isDone());
+            when(fixture.plugin.isEnabled()).thenReturn(false);
+            assertDoesNotThrow(() -> fixture.global.get(0).run());
+            assertInstanceOf(IllegalStateException.class,
+                    assertThrows(CompletionException.class, completion::join).getCause());
+            assertEquals(2, checkpoints.size(), "shutdown must not persist fragment or outer completion");
+            fixture.bukkit.verify(() -> Bukkit.getPlayer(id), never());
+            assertTrue(fixture.owners.isEmpty());
+            assertTrue(fixture.rendered.isEmpty());
+            verifyNoInteractions(fixture.transport, fixture.console);
+        }
+    }
+
+    @Test void disabledRetiredRecipientDeliveryFailsWithoutAdvancingReplayCheckpoints() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var nativeScheduler = fixture.nativeSchedulers();
+            var id = fixture.first.getUniqueId();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(fixture.first);
+            var checkpoints = new ArrayList<Reward.ReplayCheckpoint>();
+            var completion = fixture.replayLiteralFragment(id, checkpoints).toCompletableFuture();
+            fixture.global.get(0).run();
+            assertEquals(2, checkpoints.size());
+            when(fixture.plugin.isEnabled()).thenReturn(false);
+            assertDoesNotThrow(() -> nativeScheduler.retired.get(0).run());
+            var failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> completion.get(2, java.util.concurrent.TimeUnit.SECONDS));
+            assertInstanceOf(IllegalStateException.class, failure.getCause());
+            assertEquals(2, checkpoints.size(), "retirement after disable is failure, not completed delivery");
+            fixture.owners.get(0).run();
+            assertTrue(fixture.rendered.isEmpty());
+            verifyNoInteractions(fixture.transport);
+        }
+    }
+
+    @Test void disabledRetiredRecipientCaptureFailsInsteadOfPublishingAbsence() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var nativeScheduler = fixture.nativeSchedulers();
+            var id = fixture.first.getUniqueId();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(fixture.first);
+            var capture = fixture.misc.capturePreparedRecipientAsync(fixture.plugin, id, fixture.renderer)
+                    .toCompletableFuture();
+            fixture.global.get(0).run();
+            when(fixture.plugin.isEnabled()).thenReturn(false);
+            assertDoesNotThrow(() -> nativeScheduler.retired.get(0).run());
+            var failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> capture.get(2, java.util.concurrent.TimeUnit.SECONDS));
+            assertInstanceOf(IllegalStateException.class, failure.getCause());
+            fixture.owners.get(0).run();
+            assertTrue(fixture.rendered.isEmpty());
+            verifyNoInteractions(fixture.transport);
+        }
+    }
+
+    @Test void disabledRetiredOrdinaryBroadcastFailsAndFencesLateOwners() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var nativeScheduler = fixture.nativeSchedulers();
+            var completion = fixture.withControlledDeadline(fixture.renderer).toCompletableFuture();
+            fixture.global.get(0).run();
+            when(fixture.plugin.isEnabled()).thenReturn(false);
+            nativeScheduler.retired.forEach(Runnable::run);
+            var failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> completion.get(2, java.util.concurrent.TimeUnit.SECONDS));
+            assertInstanceOf(IllegalStateException.class, failure.getCause());
+            fixture.owners.forEach(Runnable::run);
+            assertTrue(fixture.rendered.isEmpty());
+            verifyNoInteractions(fixture.transport);
+        }
+    }
+
+    @Test void enabledAbsentAndOfflineRecipientsStillAdvanceTheirReplayCheckpointsOnce() throws Exception {
+        for (boolean absent : List.of(true, false)) {
+            try (Fixture fixture = new Fixture()) {
+                var id = fixture.first.getUniqueId();
+                if (!absent) {
+                    fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(fixture.first);
+                    when(fixture.first.isOnline()).thenReturn(false);
+                }
+                var checkpoints = new ArrayList<Reward.ReplayCheckpoint>();
+                var completion = fixture.replayLiteralFragment(id, checkpoints).toCompletableFuture();
+                fixture.global.get(0).run(); fixture.global.get(0).run();
+                if (!absent) { assertEquals(1, fixture.owners.size()); fixture.owners.get(0).run(); }
+                completion.join();
+                assertEquals(4, checkpoints.size(), "live skip completes the fragment and its outer recipient once");
+                fixture.bukkit.verify(() -> Bukkit.getPlayer(id), times(1));
+                assertTrue(fixture.rendered.isEmpty());
+                verifyNoInteractions(fixture.transport);
+            }
+        }
+    }
+
+    @Test void enabledRetirementStillSkipsRecipientCaptureAndDelivery() throws Exception {
+        for (boolean capture : List.of(true, false)) {
+            try (Fixture fixture = new Fixture()) {
+                var nativeScheduler = fixture.nativeSchedulers();
+                var id = fixture.first.getUniqueId();
+                fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(fixture.first);
+                var checkpoints = new ArrayList<Reward.ReplayCheckpoint>();
+                var completion = capture ? fixture.misc.capturePreparedRecipientAsync(fixture.plugin, id, fixture.renderer)
+                        : fixture.replayLiteralFragment(id, checkpoints);
+                fixture.global.get(0).run();
+                nativeScheduler.retired.get(0).run(); nativeScheduler.retired.get(0).run();
+                Object value = completion.toCompletableFuture().get(2, java.util.concurrent.TimeUnit.SECONDS);
+                if (capture) assertNull(((MiscUtils.PreparedRecipient) value).player());
+                else assertEquals(4, checkpoints.size());
+                fixture.owners.get(0).run();
+                assertTrue(fixture.rendered.isEmpty());
+                verifyNoInteractions(fixture.transport);
+            }
+        }
+    }
+
+    @Test void cancelledLiteralDeliveryFencesQueuedGlobalLookup() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var id = fixture.first.getUniqueId();
+            var completion = fixture.misc.dispatchPreparedComponentLineAsync(fixture.plugin, id,
+                    player -> new TextComponent("Late")).toCompletableFuture();
+            assertTrue(completion.cancel(false));
+            fixture.global.get(0).run(); fixture.global.get(0).run();
+            fixture.bukkit.verify(() -> Bukkit.getPlayer(id), never());
+            assertTrue(fixture.owners.isEmpty());
+            verifyNoInteractions(fixture.transport);
+        }
+    }
+
+    @Test void recipientLookupFailureCompletesExceptionallyWithoutEscapingQueuedCallback() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var id = fixture.first.getUniqueId();
+            var failure = new IllegalStateException("synthetic player lookup failure");
+            fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenThrow(failure);
+            var completion = fixture.misc.dispatchPreparedComponentLineAsync(fixture.plugin, id,
+                    player -> new TextComponent("Late")).toCompletableFuture();
+            assertDoesNotThrow(() -> fixture.global.get(0).run());
+            assertSame(failure, assertThrows(CompletionException.class, completion::join).getCause());
+            assertTrue(fixture.owners.isEmpty());
+        }
+    }
+
+    @Test void disableDuringAbsentLookupFailsBeforeSuccessfulSkip() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var id = fixture.first.getUniqueId();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenAnswer(call -> {
+                when(fixture.plugin.isEnabled()).thenReturn(false); return null;
+            });
+            var checkpoints = new ArrayList<Reward.ReplayCheckpoint>();
+            var completion = fixture.replayLiteralFragment(id, checkpoints).toCompletableFuture();
+            fixture.global.get(0).run();
+            assertThrows(CompletionException.class, completion::join);
+            assertEquals(2, checkpoints.size());
+        }
+    }
+
+    @Test void disableDuringOfflineCheckFailsBeforeSuccessfulSkip() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var id = fixture.first.getUniqueId();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(fixture.first);
+            when(fixture.first.isOnline()).thenAnswer(call -> {
+                when(fixture.plugin.isEnabled()).thenReturn(false); return false;
+            });
+            var checkpoints = new ArrayList<Reward.ReplayCheckpoint>();
+            var completion = fixture.replayLiteralFragment(id, checkpoints).toCompletableFuture();
+            fixture.global.get(0).run(); fixture.owners.get(0).run();
+            assertThrows(CompletionException.class, completion::join);
+            assertEquals(2, checkpoints.size());
+            verifyNoInteractions(fixture.transport);
+        }
+    }
+
+    @Test void disableAfterNativeSendRetainsPendingReplayCheckpoints() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var id = fixture.first.getUniqueId();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(fixture.first);
+            doAnswer(call -> {
+                assertSame(fixture.first, fixture.currentOwner.get());
+                when(fixture.plugin.isEnabled()).thenReturn(false);
+                return null;
+            }).when(fixture.transport).sendMessage(eq(fixture.first), any(BaseComponent.class));
+            var checkpoints = new ArrayList<Reward.ReplayCheckpoint>();
+            var completion = fixture.replayLiteralFragment(id, checkpoints).toCompletableFuture();
+            fixture.global.get(0).run(); fixture.owners.get(0).run();
+            assertThrows(CompletionException.class, completion::join);
+            assertEquals(2, checkpoints.size(), "the ambiguous native effect must not be acknowledged after disable");
+            verify(fixture.transport, times(1)).sendMessage(eq(fixture.first), any(BaseComponent.class));
+        }
+    }
+
     private static final class Fixture implements AutoCloseable {
         final AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         final BukkitScheduler scheduler = mock(BukkitScheduler.class);
@@ -530,6 +723,26 @@ public class LiteralBroadcastSchedulingTest {
         }
 
         TextComponent[] consoleLines() { return new TextComponent[] {new TextComponent("R&D &aLiteral")}; }
+
+        CompletionStage<Void> replayLiteralFragment(java.util.UUID id, List<Reward.ReplayCheckpoint> checkpoints) {
+            var timer = mock(java.util.concurrent.ScheduledExecutorService.class);
+            when(plugin.getTimer()).thenReturn(timer);
+            doAnswer(call -> { call.getArgument(0, Runnable.class).run(); return null; })
+                    .when(timer).execute(any(Runnable.class));
+            var options = new RewardOptions();
+            options.setAsyncReplayCheckpointConsumer(checkpoints::add);
+            var state = Reward.replayStateFor(options);
+            var metadata = new java.util.HashMap<String, String>();
+            return Reward.replayNestedRewardSequence(plugin, metadata, "shutdown-outer", List.of("R|" + id + "|0"),
+                    state, "shutdown-occurrence", (entry, ignored) -> Reward.replayNestedRewardSequence(plugin,
+                            metadata, "shutdown-fragments", List.of("F|0"), state, "shutdown-occurrence",
+                            (fragment, unused) -> misc.dispatchPreparedComponentLineAsync(plugin, id, player -> {
+                                assertSame(player, currentOwner.get());
+                                rendered.add(player);
+                                return new TextComponent("Original");
+                            }), fragment -> fragment.equals("F|0"), 4096, 16, 1048576L),
+                    entry -> entry.equals("R|" + id + "|0"), 8192, 96, 1048576L);
+        }
 
         private static final class NativeCallbacks {
             final ArrayList<Runnable> retired = new ArrayList<>();
