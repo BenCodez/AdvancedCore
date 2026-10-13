@@ -69,8 +69,11 @@ interrupt-ignoring JDBC call or filesystem operation cannot retain the JVM. A
 timeout is reported while the actual stage stays pending. The native storage
 owner remains open until its executing storage worker ends; accepted final file
 saves are not discarded to meet the deadline. Preparation that settles after
-the deadline still admits its final checkpoint and retains the daemon worker
-until that retirement actually settles, without renewing any caller wait.
+or just before the deadline still admits its final checkpoint and retains the
+daemon worker until that accepted retirement actually settles, without renewing
+any caller wait. The runtime distinguishes an accepted native retirement from a
+pending time transition or consumer hook; its watchdog cannot discard that
+retirement's queued final task.
 Consequently, durable completion
 can outlive plugin disable, and a JVM exit before that completion can lose the
 unfinished work. A timeout never means that persistence succeeded.
@@ -88,6 +91,20 @@ still starts shared-cache retirement and waits for that retirement to settle.
 The preparation failure remains the reported cause; a storage failure is retained
 as a suppressed failure. Successful default hooks preserve the existing retirement
 stage identity. A failing hook does not bypass accepted user-data flushing.
+
+Delayed-reward admission closes before storage preparation. The additive
+`RewardHandler.beginShutdown()` stage reports actual delayed-worker termination;
+the existing bounded shutdown methods still cancel queued timers and interrupt
+the worker when their wait ends. An interruption request does not release native
+storage while an admitted check continues running. After that worker exits, a
+manager-worker barrier includes checks it deferred under Spigot/Folia thread
+classification and snapshots the existing per-user persisted replay tails.
+Those tails include claim/checkpoint acknowledgement or restore callbacks that
+can outlive timer execution. Final storage retirement is queued only after those
+callbacks finish, so callback-held storage admission can unwind before the final
+writer runs. Failed or cancelled preparation and time retirement retain this
+ordering and still report their failure. This uses the existing replay owner;
+it adds no reward engine or universal delivery guarantee.
 
 ## Native ServerData successor admission
 

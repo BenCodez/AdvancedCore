@@ -19,7 +19,9 @@ import org.bukkit.Bukkit;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.api.javascript.JavascriptEngineHandler;
+import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
+import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
@@ -30,6 +32,7 @@ import com.bencodez.advancedcore.data.ServerData;
 /** Bukkit services for the shared executor lifecycle; no duplicate owners are created. */
 public final class BukkitRuntimePlatform implements RuntimePlatform {
     private final AdvancedCorePlugin plugin;
+    private final RewardHandler rewardHandler;
     private volatile LongSupplier shutdownRemainingNanos;
     private final CompletableFuture<Void> persistenceWorkerTermination = new CompletableFuture<>();
     // The hook can be admitted later, after a retained time transition drains.
@@ -48,6 +51,8 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     private volatile CompletionStage<Void> permissionPersistence = CompletableFuture.completedFuture(null);
     private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
 	private CompletionStage<Void> startedUserStorageRetirement;
+	private volatile CompletionStage<Void> admittedUserStorageRetirement;
+	private volatile CompletionStage<Void> delayedRewardRetirement = CompletableFuture.completedFuture(null);
 	private CompletionStage<Void> preStorageShutdownHook;
 	private CompletableFuture<Void> storageRetirementPreparation = CompletableFuture.completedFuture(null);
 	private volatile CompletionStage<Void> timeChangeRetirement = CompletableFuture.completedFuture(null);
@@ -60,6 +65,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
     public BukkitRuntimePlatform(AdvancedCorePlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
+        rewardHandler = plugin.getRewardHandler();
         // Capture identities before consumer unload changes handler/manager fields.
         var owners = new IdentityHashMap<ScheduledExecutorService, Boolean>();
         addExecutor(owners, plugin.getTimer());
@@ -70,6 +76,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
         FullInventoryHandler inventory = plugin.getFullInventoryHandler();
         if (inventory != null) addExecutor(owners, inventory.getTimer());
         if (plugin.getPermissionHandler() != null) addExecutor(owners, plugin.getPermissionHandler().getTimer());
+        if (rewardHandler != null) addExecutor(owners, rewardHandler.getDelayedTimer());
         UserManager users = plugin.getLoadedUserManager();
         if (users != null && users.getDataManager() != null) addExecutor(owners, users.getDataManager().getTimer());
         // Keep the same non-creating snapshot for retirement that was used to
@@ -120,6 +127,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                         JavascriptEngineHandler.getInstance().clearCachedEngine();
                     }
                 }),
+				new Cleanup("delayed reward admission", this::closeDelayedRewardAdmission),
 				new Cleanup("time change admission", this::closeTimeChangeAdmission),
 				new Cleanup("user storage", this::closeUserStorageAfterTimeChangeRetirement),
                 new Cleanup("server data timestamp", () -> {
@@ -128,6 +136,9 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     }
 
 	@Override public CompletionStage<Void> beforeExecutorShutdownCompletion() { return userStorageRetirement; }
+	@Override public CompletionStage<Void> admittedStorageRetirementCompletion() {
+		return admittedUserStorageRetirement;
+	}
 	@Override public CompletionStage<Void> storageRetirementPreparationCompletion() {
 		synchronized (userStorageRetirementLock) {
 			return storageRetirementPreparation;
@@ -154,10 +165,10 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
     @Override public List<Cleanup> afterExecutorGrace() {
         return List.of(new Cleanup("reward handler", () -> {
-            if (plugin.getRewardHandler() != null) {
+            if (rewardHandler != null) {
                 LongSupplier budget = shutdownRemainingNanos;
-                if (budget == null) plugin.getRewardHandler().shutdown();
-                else plugin.getRewardHandler().shutdown(Math.min(TimeUnit.SECONDS.toNanos(10),
+                if (budget == null) rewardHandler.shutdown();
+                else rewardHandler.shutdown(Math.min(TimeUnit.SECONDS.toNanos(10),
                         Math.max(0L, budget.getAsLong())), TimeUnit.NANOSECONDS);
             }
         }));
@@ -227,6 +238,12 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
         } catch (Throwable failure) { timeChangeRetirement = CompletableFuture.failedFuture(failure); }
 	}
 
+	private void closeDelayedRewardAdmission() {
+		if (rewardHandler == null) return;
+		CompletionStage<Void> retirement = rewardHandler.beginShutdown();
+		delayedRewardRetirement = retirement == null ? CompletableFuture.completedFuture(null) : retirement;
+	}
+
 	private void closeUserStorageAfterTimeChangeRetirement() {
 		// Deferred platform unload may change configuration or manager references.
 		// Storage already admitted for this shutdown retains its own retirement identity.
@@ -237,11 +254,14 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 				timeRetirement.toCompletableFuture().join();
 				userStorageRetirement = ensureUserStorageRetirementStarted();
 			} catch (java.util.concurrent.CompletionException | java.util.concurrent.CancellationException failure) {
-				userStorageRetirement = CompletableFuture.failedFuture(failure);
+				userStorageRetirement = preservePreparationFailure(ensureUserStorageRetirementStarted(), failure);
 			}
 			return;
 		}
-		userStorageRetirement = timeRetirement.thenCompose(ignored -> ensureUserStorageRetirementStarted());
+		userStorageRetirement = timeRetirement.handle((ignored, failure) -> failure).thenCompose(failure -> {
+			CompletionStage<Void> retirement = ensureUserStorageRetirementStarted();
+			return failure == null ? retirement : preservePreparationFailure(retirement, failure);
+		});
 	}
 
 	private CompletionStage<Void> ensureUserStorageRetirementStarted() {
@@ -251,11 +271,17 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 				if (hook.toCompletableFuture().isDone()) {
 					try { hook.toCompletableFuture().join(); }
 					catch (java.util.concurrent.CompletionException | java.util.concurrent.CancellationException failure) {
-						startedUserStorageRetirement = retireAfterPreparationFailure(failure);
+						startedUserStorageRetirement = rewardHandler == null
+                                ? retireAfterPreparationFailure(failure) : deferUserStorageRetirement(failure);
+                        if (captureUserStorageAdmission().enabled()) admittedUserStorageRetirement = startedUserStorageRetirement;
                         return startedUserStorageRetirement;
 					}
-                    // Preserve the successful default hook's legacy retirement stage identity.
-                    startedUserStorageRetirement = closeUserStorageAfterSharedRetirement();
+                    // A delayed check may have returned after deferring itself to
+                    // the manager. Its worker barrier must precede the replay-tail
+                    // snapshot even when the consumer hook completed immediately.
+                    startedUserStorageRetirement = rewardHandler == null
+                            ? closeUserStorageAfterSharedRetirement() : deferUserStorageRetirement(null);
+                    if (captureUserStorageAdmission().enabled()) admittedUserStorageRetirement = startedUserStorageRetirement;
 				} else {
 					var preparation = new CompletableFuture<Void>();
 					storageRetirementPreparation = preparation;
@@ -278,29 +304,59 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     private CompletionStage<Void> deferUserStorageRetirement(Throwable preparationFailure) {
         UserStorageAdmission admission = captureUserStorageAdmission();
         if (!admission.enabled() || admission.users() == null) {
-            return preparationFailure == null ? closeUserStorageAfterSharedRetirement()
+            CompletionStage<Void> retirement = preparationFailure == null ? closeUserStorageAfterSharedRetirement()
                     : retireAfterPreparationFailure(preparationFailure);
+            if (admission.enabled()) admittedUserStorageRetirement = retirement;
+            return retirement;
         }
         var result = new CompletableFuture<Void>();
         try {
             Objects.requireNonNull(getUserStorageTimer(), "user storage timer").execute(() -> {
                 try {
-                    CompletionStage<Void> retirement = preparationFailure == null
-                            ? closeUserStorageAfterSharedRetirement()
-                            : retireAfterPreparationFailure(preparationFailure);
-                    retirement.whenComplete((ignored, failure) -> {
-                        if (failure == null) result.complete(null);
-                        else result.completeExceptionally(failure);
-                    });
+                    CompletionStage<Void> replay = AdvancedCoreUser.persistedReplayCompletion(plugin);
+                    if (replay.toCompletableFuture().isDone()) {
+                        replay.toCompletableFuture().join();
+                        completeDeferredUserStorageRetirement(result, preparationFailure);
+                    } else {
+                        // Queue after acknowledgement/restore finishes. The
+                        // completing callback may still hold shared read admission.
+                        replay.whenComplete((ignored, failure) -> {
+                            if (failure != null) {
+                                result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));
+                                return;
+                            }
+                            try {
+                                getUserStorageTimer().execute(() -> completeDeferredUserStorageRetirement(result,
+                                        preparationFailure));
+                            } catch (RuntimeException | Error admissionFailure) {
+                                result.completeExceptionally(preparationAndStorageFailure(preparationFailure,
+                                        admissionFailure));
+                            }
+                        });
+                    }
                 } catch (Throwable failure) {
                     result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));
                 }
             });
+            admittedUserStorageRetirement = result;
         } catch (RuntimeException | Error failure) {
             // Do not detach the shared runtime or pretend rejected work flushed storage.
             result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));
         }
         return result;
+    }
+
+    private void completeDeferredUserStorageRetirement(CompletableFuture<Void> result, Throwable preparationFailure) {
+        try {
+            CompletionStage<Void> retirement = preparationFailure == null
+                    ? closeUserStorageAfterSharedRetirement() : retireAfterPreparationFailure(preparationFailure);
+            retirement.whenComplete((ignored, failure) -> {
+                if (failure == null) result.complete(null);
+                else result.completeExceptionally(failure);
+            });
+        } catch (Throwable failure) {
+            result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));
+        }
     }
 
     private static Throwable preparationAndStorageFailure(Throwable preparationFailure, Throwable storageFailure) {
@@ -314,12 +370,19 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
     /** A failed consumer preparation still has accepted cache writes to retire. */
     private CompletionStage<Void> retireAfterPreparationFailure(Throwable preparationFailure) {
+        try { return preservePreparationFailure(closeUserStorageAfterSharedRetirement(), preparationFailure); }
+        catch (Throwable storageFailure) {
+            return CompletableFuture.failedFuture(preparationAndStorageFailure(preparationFailure, storageFailure));
+        }
+    }
+
+    private CompletionStage<Void> preservePreparationFailure(CompletionStage<Void> retirement, Throwable preparationFailure) {
         Throwable cause = preparationFailure instanceof java.util.concurrent.CompletionException
                 && preparationFailure.getCause() != null ? preparationFailure.getCause() : preparationFailure;
         var reported = new java.util.concurrent.CompletionException(cause);
         var result = new CompletableFuture<Void>();
         try {
-            closeUserStorageAfterSharedRetirement().whenComplete((ignored, storageFailure) -> {
+            retirement.whenComplete((ignored, storageFailure) -> {
                 if (storageFailure != null && storageFailure != cause) reported.addSuppressed(storageFailure);
                 result.completeExceptionally(reported);
             });
@@ -342,6 +405,11 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 			CompletableFuture<Void> inventory = inventoryPersistence.toCompletableFuture();
 			if (!inventory.isDone() || inventory.isCompletedExceptionally()) {
 				preStorageShutdownHook = CompletableFuture.allOf(inventory,
+						preStorageShutdownHook.toCompletableFuture());
+			}
+			CompletableFuture<Void> rewards = delayedRewardRetirement.toCompletableFuture();
+			if (!rewards.isDone() || rewards.isCompletedExceptionally()) {
+				preStorageShutdownHook = CompletableFuture.allOf(rewards,
 						preStorageShutdownHook.toCompletableFuture());
 			}
 			preStorageShutdownHook.whenComplete((ignored, failure) -> {
@@ -469,7 +537,14 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
             if (asynchronousOwnerClose.compareAndSet(null, completion)) break;
         }
         Thread worker = AdvancedCoreRuntime.daemonThreads("AdvancedCore-Storage-Owner-Close").newThread(() -> {
-            try { closeCurrentUserStorageOwner(admission); completion.complete(null); }
+            try {
+                // Without a manager there is no worker barrier to run the
+                // snapshot. This existing daemon owner-close worker can drain
+                // callbacks without waiting on the lifecycle caller.
+                AdvancedCoreUser.persistedReplayCompletion(plugin).toCompletableFuture().join();
+                closeCurrentUserStorageOwner(admission);
+                completion.complete(null);
+            }
             catch (Throwable failure) {
                 asynchronousOwnerClose.compareAndSet(completion, null);
                 completion.completeExceptionally(failure);

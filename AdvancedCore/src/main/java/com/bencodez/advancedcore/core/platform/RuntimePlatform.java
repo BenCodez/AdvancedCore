@@ -53,6 +53,14 @@ public interface RuntimePlatform {
 		return CompletableFuture.completedFuture(null);
 	}
 
+	/**
+	 * Actual accepted native-storage retirement, or {@code null} when no such task
+	 * has been admitted. An incomplete stage retains its daemon storage worker and
+	 * provider until it settles, even after the caller's deadline. A pending time
+	 * transition or consumer hook alone is not native-task admission.
+	 */
+	default CompletionStage<Void> admittedStorageRetirementCompletion() { return null; }
+
 	/** Watchdog grace capped by the disable deadline; pending preparation retains its durable owner. */
 	default long deferredShutdownTimeoutMillis() { return 5_000; }
 

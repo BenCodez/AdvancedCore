@@ -442,6 +442,25 @@ public class AdvancedCoreUser {
 	}
 
 	/**
+	 * Snapshot completion of already-admitted persisted replay, including its
+	 * queue acknowledgement or restore callback. The lifecycle calls this from
+	 * its manager-worker barrier after delayed-task admission and execution end,
+	 * so a check deferred to that worker has appended its tail before the snapshot.
+	 * This creates no new replay owner and does not admit or execute rewards.
+	 */
+	public static CompletionStage<Void> persistedReplayCompletion(AdvancedCorePlugin plugin) {
+		java.util.Objects.requireNonNull(plugin, "plugin");
+		synchronized (plugin) {
+			synchronized (REPLAY_CLAIMS_LOCK) {
+				HashMap<String, ReplayClaims> users = REPLAY_CLAIMS.get(plugin);
+				if (users == null || users.isEmpty()) return CompletableFuture.completedFuture(null);
+				return CompletableFuture.allOf(users.values().stream()
+						.map(claims -> claims.serialReplayTail).toArray(CompletableFuture[]::new));
+			}
+		}
+	}
+
+	/**
 	 * User data fetch mode for this user.
 	 * 
 	 * @return the user data fetch mode

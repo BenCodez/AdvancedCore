@@ -78,6 +78,7 @@ class TimeCheckerShutdownAdmissionTest {
     @Test void expiredLifecycleDeadlineReturnsBehindAnIndependentSaveAndRetainsStorage() throws Exception {
         try (Fixture fixture = new Fixture(directory)) {
             fixture.enableUserStorage();
+            fixture.data.blockTimestampPublication.set(true);
             fixture.startCalendarCheck();
             CompletableFuture<Void> unrelatedSave = fixture.startIndependentSave();
             fixture.allowValidationBehindSave();
@@ -87,6 +88,7 @@ class TimeCheckerShutdownAdmissionTest {
             AdvancedCoreRuntime runtime = new AdvancedCoreRuntime(platform,
                     () -> TimeUnit.SECONDS.toNanos(15));
 
+            fixture.expectFinalFilePersistence = true;
             fixture.caller.submit(() -> runtime.shutdown(0L)).get(2, TimeUnit.SECONDS);
 
             assertFalse(unrelatedSave.isDone(), "caller return is not an I/O acknowledgement");
@@ -112,6 +114,11 @@ class TimeCheckerShutdownAdmissionTest {
             verify(fixture.nativeOwner, times(1)).close();
             verify(fixture.backend, times(1)).close();
             assertEquals(0, fixture.events.get(), "late validation cannot dispatch after platform cleanup");
+            assertTrue(fixture.data.timestampPublicationEntered.await(5, TimeUnit.SECONDS));
+            assertFalse(fixture.finalFilePersistence.toCompletableFuture().isDone(),
+                    "storage retirement does not confirm final file publication");
+            fixture.data.releaseTimestampPublication.countDown();
+            fixture.awaitFinalFilePersistence();
             assertTrue(YamlConfiguration.loadConfiguration(fixture.data.getdFile())
                     .getBoolean("TimeTransitions.DAY.Pending"), "cancelled work remains recoverable");
         }
@@ -183,6 +190,8 @@ class TimeCheckerShutdownAdmissionTest {
         UserDataManager manager;
         MySQL nativeOwner;
         SqlUserBackend backend;
+        final CompletableFuture<Void> finalFilePersistence = new CompletableFuture<>();
+        boolean expectFinalFilePersistence;
 
         Fixture(File directory) {
             Server server = mock(Server.class);
@@ -194,6 +203,14 @@ class TimeCheckerShutdownAdmissionTest {
             when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
             when(plugin.isEnabled()).thenReturn(true);
             when(plugin.getOptions()).thenReturn(mock(AdvancedCoreConfigOptions.class));
+            doAnswer(call -> {
+                CompletionStage<Void> finalFilesStage = call.getArgument(0);
+                finalFilesStage.whenComplete((ignored, failure) -> {
+                    if (failure == null) finalFilePersistence.complete(null);
+                    else finalFilePersistence.completeExceptionally(failure);
+                });
+                return null;
+            }).when(plugin).onShutdownComplete(any());
             doAnswer(call -> {
                 Event event = call.getArgument(0);
                 assertTrue(event.isAsynchronous());
@@ -254,9 +271,14 @@ class TimeCheckerShutdownAdmissionTest {
             return caller.submit(() -> { return checker.beginShutdown(); }).get(2, TimeUnit.SECONDS);
         }
 
+        void awaitFinalFilePersistence() throws Exception {
+            if (expectFinalFilePersistence) finalFilePersistence.get(5, TimeUnit.SECONDS);
+        }
+
         @Override public void close() throws Exception {
             data.allowValidation.countDown();
             data.releaseCheckedSave.countDown();
+            data.releaseTimestampPublication.countDown();
             calendar.shutdownNow();
             persistence.shutdownNow();
             caller.shutdownNow();
@@ -265,6 +287,7 @@ class TimeCheckerShutdownAdmissionTest {
             assertTrue(calendar.awaitTermination(5, TimeUnit.SECONDS));
             assertTrue(persistence.awaitTermination(5, TimeUnit.SECONDS));
             assertTrue(caller.awaitTermination(5, TimeUnit.SECONDS));
+            awaitFinalFilePersistence();
         }
     }
 
@@ -274,8 +297,12 @@ class TimeCheckerShutdownAdmissionTest {
         final CountDownLatch validationAttempted = new CountDownLatch(1);
         final CountDownLatch checkedSaveEntered = new CountDownLatch(1);
         final CountDownLatch releaseCheckedSave = new CountDownLatch(1);
+        final CountDownLatch timestampPublicationEntered = new CountDownLatch(1);
+        final CountDownLatch releaseTimestampPublication = new CountDownLatch(1);
         final AtomicBoolean blockNextSave = new AtomicBoolean();
+        final AtomicBoolean blockTimestampPublication = new AtomicBoolean();
         final AtomicBoolean failValidation = new AtomicBoolean();
+        private final AtomicInteger finalMutations = new AtomicInteger();
         private final AtomicBoolean firstRead = new AtomicBoolean(true);
         private final AtomicReference<Thread> calendarThread;
 
@@ -299,6 +326,17 @@ class TimeCheckerShutdownAdmissionTest {
             validationAttempted.countDown();
             if (failValidation.compareAndSet(true, false)) throw new IllegalStateException("validation failure");
             return super.isPendingTimeChangeTransition(transition);
+        }
+
+        @Override public CompletionStage<Void> mutateFinalData(
+                java.util.function.Consumer<org.bukkit.configuration.file.FileConfiguration> mutation) {
+            // The platform submits inventory first, then timestamp. Gate the latter
+            // outside the YAML monitor so storage retirement can finish independently.
+            if (finalMutations.incrementAndGet() == 2 && blockTimestampPublication.get()) {
+                timestampPublicationEntered.countDown();
+                await(releaseTimestampPublication);
+            }
+            return super.mutateFinalData(mutation);
         }
 
         @Override protected synchronized void saveTimeChangeTransitionData() {

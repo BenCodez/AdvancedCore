@@ -8,8 +8,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executors;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.configuration.Configuration;
@@ -48,9 +49,13 @@ public class RewardHandler {
 
     AdvancedCorePlugin plugin;
 
+    private final CompletableFuture<Void> delayedTimerTermination = new CompletableFuture<>();
+    private final CompletionStage<Void> delayedTimerRetirement = delayedTimerTermination.minimalCompletionStage();
     @Getter
-    private ScheduledExecutorService delayedTimer = Executors.newSingleThreadScheduledExecutor(
-            com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("AdvancedCore-DelayedRewards"));
+    private ScheduledExecutorService delayedTimer = new ScheduledThreadPoolExecutor(1,
+            com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("AdvancedCore-DelayedRewards")) {
+        @Override protected void terminated() { delayedTimerTermination.complete(null); }
+    };
 
     public RewardHandler(AdvancedCorePlugin plugin) {
         this.plugin = plugin;
@@ -290,6 +295,17 @@ public class RewardHandler {
 
     public void shutdown() {
         shutdown(10, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Close delayed-task admission without blocking. Completion means the actual
+     * worker has exited, including an admitted task that ignored interruption.
+     * Persisted replay callbacks can outlive that worker; the storage lifecycle
+     * separately drains their existing per-user replay tails before retiring.
+     */
+    public CompletionStage<Void> beginShutdown() {
+        delayedTimer.shutdown();
+        return delayedTimerRetirement;
     }
 
     /** Lifecycle callers share their remaining disable budget; legacy shutdown keeps its ten-second grace. */

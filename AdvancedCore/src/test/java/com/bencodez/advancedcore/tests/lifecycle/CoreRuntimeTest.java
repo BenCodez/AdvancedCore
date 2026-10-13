@@ -89,6 +89,8 @@ class CoreRuntimeTest {
 
     private RuntimePlatform platform() {
         RuntimePlatform platform = mock(RuntimePlatform.class);
+        // This optional native-admission signal defaults to null on real platforms.
+        when(platform.admittedStorageRetirementCompletion()).thenReturn(null);
         when(platform.beforeExecutorShutdown()).thenReturn(List.of());
         when(platform.afterExecutorGrace()).thenReturn(List.of());
 		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of());

@@ -12,6 +12,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongSupplier;
+import java.util.function.BiConsumer;
 
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
@@ -191,29 +192,45 @@ public final class AdvancedCoreRuntime {
 		final ScheduledExecutorService storageTimer = timer;
 		AtomicBoolean finished = new AtomicBoolean();
 		AtomicBoolean terminalStorageCleanup = new AtomicBoolean();
+		AtomicBoolean retirementFailureReported = new AtomicBoolean();
 		if (holdTimeTimer) clean(List.of(new Cleanup("time change cancellation",
 				platform::beforeDeferredPlatformCleanup)));
 		// Thread-confined Bukkit cleanup must remain on the lifecycle thread. An
 		// active transition is first cancelled above and its lease still gates
 		// storage retirement through completion.
 		finishDeferredPlatformCleanup(grace, storageTimer, holdTimeTimer);
-		completion.whenComplete((ignored, failure) -> {
+		BiConsumer<Void, Throwable> retirementFinished = (ignored, failure) -> {
+			if (failure != null && retirementFailureReported.compareAndSet(false, true)) {
+				Throwable cause = failure instanceof CompletionException && failure.getCause() != null
+						? failure.getCause() : failure;
+				platform.cleanupFailed(component, cause);
+			}
 			if (!finished.compareAndSet(false, true)) {
 				if (failure != null) finishDeferredStorageTimer(storageTimer, true, true, terminalStorageCleanup);
 				return;
 			}
 			if (failure == null) shutdown(storageTimer);
 			else {
-				Throwable cause = failure instanceof CompletionException && failure.getCause() != null
-						? failure.getCause() : failure;
-				platform.cleanupFailed(component, cause);
 				shutdownNow(storageTimer);
 			}
 			if (holdTimeTimer) shutdownNow(grace.timeTimer());
 			finishDeferredStorageTimer(storageTimer, failure != null, failure != null, terminalStorageCleanup);
-		});
+		};
+		completion.whenComplete(retirementFinished);
 		long timeoutMillis = Math.max(1, platform.deferredShutdownTimeoutMillis());
 		Runnable forceRetirement = () -> {
+			if (finished.get()) return;
+			CompletionStage<Void> admitted = platform.admittedStorageRetirementCompletion();
+			if (admitted != null) {
+				platform.cleanupFailed(component, new TimeoutException(
+						"Deferred storage retirement exceeded " + timeoutMillis
+						+ " ms; retaining accepted retirement until completion"));
+				// The accepted barrier/final flush owns this daemon worker. A
+				// deadline or an interruption request cannot prove its completion,
+				// and shutting the worker down can discard a queued final task.
+				admitted.whenComplete(retirementFinished);
+				return;
+			}
 			if (!finished.compareAndSet(false, true)) return;
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
