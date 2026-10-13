@@ -60,6 +60,29 @@ class LiteralActionSnapshotBoundsTest {
     }
 
     @Test
+    void replayRegistrationReadsThePersistedSnapshotOnce() throws Exception {
+        var fixture = new Fixture();
+        var snapshot = new HashMap<String, String>();
+        for (int index = 0; index < 128; index++) {
+            String fingerprint = Reward.legacyActionFingerprint("literal-message:false:synthetic-line-" + index);
+            snapshot.put(fingerprint + "/0", fingerprint);
+        }
+        var encode = AdvancedCoreUser.AsyncActionCollection.class.getDeclaredMethod("encodeSnapshot", HashMap.class);
+        encode.setAccessible(true);
+        fixture.metadata.put(Reward.legacyActionReplayKey("synthetic-message-injector") + "_snapshot",
+                (String) encode.invoke(null, snapshot));
+        var collection = fixture.begin();
+        try {
+            for (int index = 0; index < 128; index++) fixture.add(collection, index);
+            assertEquals(1, fixture.metadata.snapshotReads.get(),
+                    "registration must not decode the whole persisted snapshot for every action");
+            assertEquals(0, fixture.effects.get());
+        } finally { fixture.user.restoreAsyncActionCollectionScope(collection); }
+        fixture.user.endAsyncActionCollection(collection).toCompletableFuture().join();
+        assertEquals(128, fixture.effects.get());
+    }
+
+    @Test
     void normalAndAdditiveCollectionsRetainCompletedActions() throws Exception {
         var fixture = new Fixture();
         var initial = fixture.begin();
@@ -91,10 +114,19 @@ class LiteralActionSnapshotBoundsTest {
         assertEquals(before, fixture.metadata);
     }
 
+    private static final class SnapshotReadMap extends HashMap<String, String> {
+        private static final long serialVersionUID = 1L;
+        final AtomicInteger snapshotReads = new AtomicInteger();
+        @Override public String get(Object key) {
+            if (key instanceof String name && name.endsWith("_snapshot")) snapshotReads.incrementAndGet();
+            return super.get(key);
+        }
+    }
+
     private static final class Fixture {
         final AtomicInteger effects = new AtomicInteger();
         final AtomicInteger checkpoints = new AtomicInteger();
-        final HashMap<String, String> metadata = new HashMap<>();
+        final SnapshotReadMap metadata = new SnapshotReadMap();
         final AdvancedCoreUser user;
         final Reward.ReplayState state;
         final Method add;

@@ -96,6 +96,7 @@ public class AdvancedCoreUser {
 		private final AdvancedCorePlugin plugin;
 		private boolean closed;
 		private IllegalArgumentException admissionFailure;
+		private HashMap<String, String> registrationSnapshot;
 
 		private AsyncActionCollection(AsyncActionCollection previous, AdvancedCoreUser owner, Reward.ReplayState replayState,
 				HashMap<String, String> placeholders, String injectionKey, AdvancedCorePlugin plugin) {
@@ -125,9 +126,15 @@ public class AdvancedCoreUser {
 			actions.add(new ReplayAction(identity, fingerprint, action,
 					!descriptor.startsWith("failure:")));
 			boolean previouslyReserved = false;
-			try { previouslyReserved = snapshot(readReplayValue(snapshotKey)).containsKey(identity); }
+			try { previouslyReserved = registrationSnapshot().containsKey(identity); }
 			catch (IllegalArgumentException failure) { throw new IllegalStateException("Malformed legacy action snapshot", failure); }
 			return new ReplayRegistration(identity, replayState, placeholders, plugin, previouslyReserved, checkpointKey);
+		}
+
+		/** Capture reservation membership once; final admission still validates current persisted state. */
+		private HashMap<String, String> registrationSnapshot() {
+			if (registrationSnapshot == null) registrationSnapshot = snapshot(readReplayValue(snapshotKey));
+			return registrationSnapshot;
 		}
 
 		/** Recover the configured choice of older literal random-message checkpoints. */
@@ -135,7 +142,7 @@ public class AdvancedCoreUser {
 			HashMap<String, String> reserved;
 			HashMap<String, Integer> occurrences;
 			synchronized (this) {
-				reserved = snapshot(readReplayValue(snapshotKey));
+				reserved = registrationSnapshot();
 				occurrences = new HashMap<>(actionOccurrences);
 			}
 			if (reserved.isEmpty()) return null;

@@ -81,14 +81,14 @@ public final class RewardDisplayPlaceholders {
 				text -> legacy.revealDisplayLineSeparators(text, false), Function.identity()));
 		java.util.ArrayList<net.md_5.bungee.api.chat.TextComponent> result = new java.util.ArrayList<>();
 		for (var line : prepared.splitLines()) {
+			line = line.protectFormattedActions(value -> renderIndexedExact(player, value, rendering));
 			String parsed;
 			if (legacy.hasDisplayValues()) {
-				line = line.protectFormattedActions(value -> renderIndexedExact(player, value, rendering));
 				// Color only visible text and hover; raw action attributes stay shielded.
 				parsed = renderInteractiveBounded(line.template(),
 						value -> MessageAPI.colorize(renderIndexedVisible(player, value, rendering)), Function.identity());
 			} else {
-				String text = rendering.protect(line.template(), false, true);
+				String text = rendering.protectAfterOrdinary(line.template(), false, true);
 				parsed = player == null ? PlaceholderUtils.parseText(text) : PlaceholderUtils.parseText(player, text);
 			}
 			var finalTemplate = line.withTemplate(parsed);
@@ -106,9 +106,8 @@ public final class RewardDisplayPlaceholders {
 		var prepared = preparation.prepared();
 		prepared = prepared.withTemplate(renderInteractiveBounded(prepared.template(),
 				text -> legacy.revealDisplayLineSeparators(text, true), Function.identity()));
-		prepared = prepared.withTemplate(legacy.hasDisplayValues() ? renderInteractiveBounded(prepared.template(),
-				value -> rendering.protect(value, false, false), value -> rendering.protect(value, true, false))
-				: rendering.protect(prepared.template(), false, false));
+		prepared = prepared.withTemplate(renderInteractiveBounded(prepared.template(),
+				value -> rendering.protectAfterOrdinary(value, false, false), value -> rendering.protect(value, true, false)));
 		if (triggeringPlayer != null) prepared = prepared.withTemplate(
 				PlaceholderUtils.replacePlaceHolders(triggeringPlayer, prepared.template()));
 		return new LiteralBroadcast(prepared, legacy);
@@ -209,7 +208,7 @@ public final class RewardDisplayPlaceholders {
 	}
 
 	private static String renderIndexedVisible(Player player, String source, LiteralMessageTemplate.LegacyBindings.Renderer values) {
-		String protectedValue = values.protect(source, false, true);
+		String protectedValue = values.protectAfterOrdinary(source, false, true);
 		String parsed = player == null ? PlaceholderUtils.parseText(protectedValue) : PlaceholderUtils.parseText(player, protectedValue);
 		return values.finish(parsed, false);
 	}

@@ -98,6 +98,9 @@ action snapshot, admission checks the existing 1 MiB replay-metadata budget for
 the snapshot, current replay state and eventual completion ledger together.
 Rejected admission publishes no new checkpoint and executes no collected prefix;
 existing durable progress remains intact.
+A collection decodes its existing reservation snapshot once for registration and
+random-choice recovery; final admission separately validates current persisted
+state. Large retries do not repeatedly decode the same snapshot for each action.
 
 On Folia, broadcast recipients use the supported native
 [entity scheduler retirement callback](https://jd.papermc.io/paper/1.20.6/io/papermc/paper/threadedregions/scheduler/EntityScheduler.html).

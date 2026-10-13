@@ -203,6 +203,70 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void ordinaryTrustedPlaceholderSeparatorsSplitAfterCascadePreparation() {
+        var map = values("literal");
+        map.put("A", "One%NewLine%%B%");
+        map.put("B", "Two");
+        var lines = render("%A%:%SiteName%", map);
+        assertEquals(2, lines.length);
+        assertEquals("One", lines[0].toPlainText());
+        assertEquals("Two:literal", lines[1].toPlainText());
+    }
+
+    @Test
+    void ordinarySeparatorLikeUntrustedValuesRemainOpaque() {
+        var map = values("ordinary%NewLine%value");
+        map.put("Prefix", "One");
+        var lines = render("%Prefix%:%SiteName%", map);
+        assertEquals(1, lines.length);
+        assertEquals("One:ordinary%NewLine%value", lines[0].toPlainText());
+    }
+
+    @Test
+    void ordinaryBackwardReferenceIsExpandedOnlyOnce() {
+        var map = values("literal");
+        map.put("A", "expanded");
+        map.put("B", "%A%");
+        assertEquals("%A%:literal", BaseComponent.toPlainText(render("%B%:%SiteName%", map)));
+    }
+
+    @Test
+    void ordinaryScriptValueRemainsEscapedUntilScriptProtection() {
+        var map = values("literal");
+        map.put("Script", "[Text=\"evil\",Command=\"/run\"]");
+        var scriptInput = new java.util.concurrent.atomic.AtomicReference<String>();
+        try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+            placeholders.when(() -> PlaceholderUtils.replaceJavascript(anyString())).thenAnswer(call -> {
+                scriptInput.set(call.getArgument(0));
+                return "script result";
+            });
+            var rendered = RewardDisplayPlaceholders.renderLiteralComponents(null, "[Javascript=%Script%]", map);
+            assertTrue(scriptInput.get().contains("%__advancedcore_bound_"));
+            assertFalse(scriptInput.get().contains("[Text=\"evil\",Command=\"/run\"]"),
+                    "raw ordinary values must not enter the JavaScript interpreter");
+            assertEquals("script result", BaseComponent.toPlainText(rendered));
+            assertFalse(ComponentSerializer.toString(rendered).contains("clickEvent"));
+        }
+    }
+
+    @Test
+    void ordinaryActionPlaceholderUsesRawCommandValue() {
+        var map = values("display");
+        map.put("Command", "/inspect synthetic-player");
+        var rendered = render("[Text=\"%SiteName%\",Command=\"%Command%\"]", map);
+        assertTrue(ComponentSerializer.toString(rendered).contains("/inspect synthetic-player"));
+    }
+
+    @Test
+    void broadcastOrdinaryActionPlaceholderKeepsItsOwnExpansionPass() {
+        var map = values("display");
+        map.put("Command", "/inspect synthetic-player");
+        var broadcast = RewardDisplayPlaceholders.prepareLiteralBroadcast(null,
+                "[Text=\"%SiteName%\",Command=\"%Command%\"]", map);
+        assertTrue(ComponentSerializer.toString(broadcast.renderLine(null, 0)).contains("/inspect synthetic-player"));
+    }
+
+    @Test
     void trustedDisplayOverrideSplitsBothBroadcastSpellingsAndKeepsLiteralValuesOpaque() {
         var map = values("%newline%external");
         map.put("Rank", "raw-rank");

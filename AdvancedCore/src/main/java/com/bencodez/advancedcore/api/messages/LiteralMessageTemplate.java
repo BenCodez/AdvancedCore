@@ -812,7 +812,16 @@ public final class LiteralMessageTemplate {
         /** Reveal only trusted display separators; fragments and authored script values stay opaque. */
         public String revealDisplayLineSeparators(String source, boolean broadcast) {
             MarkerMatcher markers = broadcast ? broadcastLineSeparators : playerLineSeparators;
-            return com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(source).transform(
+            // Ordinary legacy bindings are expanded by the old sendMessage path before
+            // its canonical separator split. Do the same preparation here so a trusted
+            // ordinary value containing %NewLine% participates in that split. The
+            // separator matcher still runs only over authored text; values introduced
+            // by display bindings remain opaque.
+            int[] remainingWork = { OrderedMarkers.MAX_SCAN_CHARACTERS };
+            String ordinaryExpanded = com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(source).transform(
+                    text -> ordinary.replace(text, remainingWork),
+                    Function.identity());
+            return com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(ordinaryExpanded).transform(
                     text -> markers.replace(text, MAX_RESULT), Function.identity());
         }
 
@@ -837,6 +846,9 @@ public final class LiteralMessageTemplate {
             public String protect(String source, boolean action, boolean evaluateJavascript) {
                 return values.protect(source, action, evaluateJavascript, remainingWork);
             }
+            public String protectAfterOrdinary(String source, boolean action, boolean evaluateJavascript) {
+                return values.protectAfterOrdinary(source, action, evaluateJavascript, remainingWork);
+            }
             public String finish(String source, boolean action) { return values.finish(source, action); }
         }
 
@@ -847,6 +859,19 @@ public final class LiteralMessageTemplate {
             int[] characters = { source.length() };
             String result = com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(source).transform(
                     value -> boundedLegacyReplacement(value, input -> text.replace(input, MAX_RESULT), input -> ordinary.replace(input, remainingWork), characters),
+                    value -> boundedLegacyReplacement(value, input -> text.replace(input, MAX_RESULT, script),
+                            input -> ordinary.original.replace(input, MAX_RESULT, ordinaryJavascript), characters));
+            if (result.length() > MAX_RESULT) throw new IllegalArgumentException("legacy text exceeds limits");
+            return result;
+        }
+
+        private String protectAfterOrdinary(String source, boolean action, boolean evaluateJavascript, int[] remainingWork) {
+            MarkerMatcher text = action ? exact : visible;
+            Map<String, String> script = evaluateJavascript ? (action ? exactJavascript : visibleJavascript)
+                    : (action ? exactBroadcastJavascript : visibleBroadcastJavascript);
+            int[] characters = { source.length() };
+            String result = com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(source).transform(
+                    value -> boundedLegacyReplacement(value, input -> text.replace(input, MAX_RESULT), Function.identity(), characters),
                     value -> boundedLegacyReplacement(value, input -> text.replace(input, MAX_RESULT, script),
                             input -> ordinary.original.replace(input, MAX_RESULT, ordinaryJavascript), characters));
             if (result.length() > MAX_RESULT) throw new IllegalArgumentException("legacy text exceeds limits");
