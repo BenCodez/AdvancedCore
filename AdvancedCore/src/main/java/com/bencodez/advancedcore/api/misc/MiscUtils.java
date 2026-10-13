@@ -19,6 +19,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
@@ -162,6 +163,106 @@ public class MiscUtils {
 			net.md_5.bungee.api.chat.TextComponent[] consoleLines) {
 		return broadcastPreparedComponentsAsync(renderer, consoleLines, deadline ->
 				CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(deadline));
+	}
+
+	/** Dispatches one already prepared literal line to the original recipient. */
+	public CompletionStage<List<UUID>> captureOnlinePlayerIdsAsync(AdvancedCorePlugin owner) {
+		return captureOnlinePlayerIdsAsync(owner,
+				deadline -> CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(deadline));
+	}
+
+	/** Testable/embedding form with an explicit bounded deadline scheduler. */
+	public CompletionStage<List<UUID>> captureOnlinePlayerIdsAsync(AdvancedCorePlugin owner,
+			Consumer<Runnable> timeoutScheduler) {
+		if (owner == null) return CompletableFuture.failedFuture(new IllegalArgumentException("plugin is required"));
+		CompletableFuture<List<UUID>> result = new CompletableFuture<>();
+		AtomicBoolean claimed = new AtomicBoolean();
+		try {
+			timeoutScheduler.accept(() -> {
+				if (claimed.compareAndSet(false, true)) result.completeExceptionally(
+						new TimeoutException("Timed out capturing literal broadcast audience"));
+			});
+			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
+				if (!claimed.compareAndSet(false, true)) return;
+				try {
+					if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled while capturing broadcast audience");
+					ArrayList<UUID> ids = new ArrayList<>();
+					for (Player player : Bukkit.getOnlinePlayers()) {
+						if (player != null && player.getUniqueId() != null) ids.add(player.getUniqueId());
+						if (ids.size() >= 8192) throw new IllegalArgumentException("Literal broadcast audience is too large");
+					}
+					result.complete(List.copyOf(ids));
+				} catch (Throwable failure) { result.completeExceptionally(failure); }
+			});
+		} catch (Throwable failure) { if (claimed.compareAndSet(false, true)) result.completeExceptionally(failure); }
+		return result;
+	}
+
+	public CompletionStage<Void> dispatchPreparedComponentLineAsync(AdvancedCorePlugin owner, UUID recipientId,
+			Function<Player, net.md_5.bungee.api.chat.TextComponent> renderer) {
+		if (owner == null || recipientId == null || renderer == null)
+			return CompletableFuture.failedFuture(new IllegalArgumentException("literal delivery arguments are required"));
+		CompletableFuture<Void> result = new CompletableFuture<>();
+		AtomicBoolean finished = new AtomicBoolean();
+		result.whenComplete((ignored, failure) -> { if (result.isCancelled()) finished.set(true); });
+		CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(() -> {
+			if (finished.compareAndSet(false, true)) result.completeExceptionally(
+					new TimeoutException("Timed out waiting for literal recipient delivery"));
+		});
+		try {
+			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
+				Player player = Bukkit.getPlayer(recipientId);
+				if (player == null) { if (finished.compareAndSet(false, true)) result.complete(null); return; }
+				AtomicBoolean claimed = new AtomicBoolean();
+				try {
+					runBroadcastRecipient(owner, player, () -> {
+						if (!claimed.compareAndSet(false, true) || finished.get()) return;
+						try {
+							if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled during literal delivery");
+							if (player.isOnline()) {
+								var line = renderer.apply(player);
+								if (finished.get() || !owner.isEnabled()) throw new IllegalStateException("Literal delivery is no longer active");
+								if (line != null) PlayerUtils.getServerHandle().sendMessage(player, line);
+							}
+							if (finished.compareAndSet(false, true)) result.complete(null);
+						} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+					}, () -> { if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true)) result.complete(null); });
+				} catch (Throwable failure) { if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+			});
+		} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+		return result;
+	}
+
+	/** Sends one prepared literal line on the global owner. */
+	public CompletionStage<Void> dispatchPreparedConsoleLineAsync(AdvancedCorePlugin owner,
+			net.md_5.bungee.api.chat.TextComponent line) {
+		return dispatchPreparedConsoleLineAsync(owner, () -> line);
+	}
+
+	/** Renders and sends one console line on the global owner. */
+	public CompletionStage<Void> dispatchPreparedConsoleLineAsync(AdvancedCorePlugin owner,
+			java.util.function.Supplier<net.md_5.bungee.api.chat.TextComponent> renderer) {
+		if (owner == null || renderer == null) return CompletableFuture.completedFuture(null);
+		CompletableFuture<Void> result = new CompletableFuture<>();
+		AtomicBoolean finished = new AtomicBoolean();
+		result.whenComplete((ignored, failure) -> { if (result.isCancelled()) finished.set(true); });
+		CompletableFuture.delayedExecutor(30L, TimeUnit.SECONDS).execute(() -> {
+			if (finished.compareAndSet(false, true)) result.completeExceptionally(
+					new TimeoutException("Timed out waiting for literal console delivery"));
+		});
+		try {
+			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
+				try {
+					if (finished.get()) return;
+					var line = renderer.get();
+					if (finished.get() || !owner.isEnabled()) throw new IllegalStateException("Plugin disabled during literal console delivery");
+					if (line != null) Bukkit.getConsoleSender().sendMessage(line.toLegacyText());
+					if (finished.compareAndSet(false, true)) result.complete(null);
+				}
+				catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+			});
+		} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+		return result;
 	}
 
 	private CompletionStage<Void> broadcastPreparedComponentsAsync(

@@ -112,33 +112,40 @@ public final class RewardDisplayPlaceholders {
 
 	/** Immutable protected template and indexes; retains no player, user, or caller-owned map reference. */
 	public static final class LiteralBroadcast {
-		private final LiteralMessageTemplate.Prepared prepared;
+		private final java.util.List<LiteralMessageTemplate.Prepared> lines;
 		private final LiteralMessageTemplate.LegacyBindings legacy;
 		private LiteralBroadcast(LiteralMessageTemplate.Prepared prepared, LiteralMessageTemplate.LegacyBindings legacy) {
-			this.prepared = prepared;
+			this.lines = prepared.splitLines();
 			this.legacy = legacy;
 		}
 		/** Recipient placeholders must run on that recipient's owner; console uses null on the global owner. */
 		public net.md_5.bungee.api.chat.TextComponent[] render(Player recipient) {
 			java.util.ArrayList<net.md_5.bungee.api.chat.TextComponent> result = new java.util.ArrayList<>();
-			for (var line : prepared.splitLines()) {
-				String text;
-				if (legacy.hasDisplayValues()) {
-					line = line.protectFormattedActions(value -> finishIndexedBroadcast(value, recipient, legacy, true));
-					text = renderInteractiveBounded(line.template(),
-							value -> MessageAPI.colorize(finishIndexedBroadcast(value, recipient, legacy, false)), Function.identity());
-				} else {
-					text = recipient == null ? line.template() : PlaceholderUtils.replacePlaceHolders(recipient, line.template());
-					text = MessageAPI.colorize(text);
-				}
-				var finalTemplate = line.withTemplate(text);
-				result.add(finalTemplate.finish(PlaceholderUtils.parseJson(finalTemplate.template())));
-			}
+			for (int index = 0; index < lineCount(); index++) result.add(renderLine(recipient, index));
 			return result.toArray(new net.md_5.bungee.api.chat.TextComponent[0]);
+		}
+
+		public int lineCount() { return lines.size(); }
+
+		public net.md_5.bungee.api.chat.TextComponent renderLine(Player recipient, int index) {
+			if (index < 0 || index >= lines.size()) throw new IllegalArgumentException("broadcast line index out of range");
+			var line = lines.get(index);
+			String text;
+			if (legacy.hasDisplayValues()) {
+				line = line.protectFormattedActions(value -> finishIndexedBroadcast(value, recipient, legacy, true));
+				text = renderInteractiveBounded(line.template(),
+						value -> MessageAPI.colorize(finishIndexedBroadcast(value, recipient, legacy, false)), Function.identity());
+			} else {
+				text = recipient == null ? line.template() : PlaceholderUtils.replacePlaceHolders(recipient, line.template());
+				text = MessageAPI.colorize(text);
+			}
+			var finalTemplate = line.withTemplate(text);
+			return finalTemplate.finish(PlaceholderUtils.parseJson(finalTemplate.template()));
 		}
 	}
 
 	private static LiteralPreparation prepareLiteral(String template, HashMap<String, String> placeholders) {
+		placeholders = Reward.copyWithoutReplayMetadata(placeholders);
 		Map<String, String> literals = literalValues(placeholders);
 		Map<String, String> actions = new HashMap<>();
 		if (placeholders != null) for (Map.Entry<String, String> entry : placeholders.entrySet()) {

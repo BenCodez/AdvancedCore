@@ -108,13 +108,21 @@ public class AdvancedCoreUser {
 		}
 
 		private synchronized boolean add(Supplier<CompletionStage<Void>> action, String descriptor) {
-			if (closed) return false;
+			return addRegistration(action, descriptor) != null;
+		}
+
+		private synchronized ReplayRegistration addRegistration(Supplier<CompletionStage<Void>> action, String descriptor) {
+			if (closed) return null;
 			String fingerprint = Reward.legacyActionFingerprint(descriptor);
 			int occurrence = actionOccurrences.getOrDefault(fingerprint, 0);
 			actionOccurrences.put(fingerprint, occurrence + 1);
-			actions.add(new ReplayAction(fingerprint + "/" + occurrence, fingerprint, action,
+			String identity = fingerprint + "/" + occurrence;
+			actions.add(new ReplayAction(identity, fingerprint, action,
 					!descriptor.startsWith("failure:")));
-			return true;
+			boolean previouslyReserved = false;
+			try { previouslyReserved = snapshot(readReplayValue(snapshotKey)).containsKey(identity); }
+			catch (IllegalArgumentException failure) { throw new IllegalStateException("Malformed legacy action snapshot", failure); }
+			return new ReplayRegistration(identity, replayState, placeholders, plugin, previouslyReserved, checkpointKey);
 		}
 
 		/** Recover the configured choice of older literal random-message checkpoints. */
@@ -301,6 +309,28 @@ public class AdvancedCoreUser {
 				this.durable = durable;
 			}
 		}
+
+		private static final class ReplayRegistration {
+			final String identity;
+			final Reward.ReplayState replayState;
+			final HashMap<String, String> placeholders;
+			final AdvancedCorePlugin plugin;
+			final boolean previouslyReserved;
+			final String replayScopeKey;
+
+			private ReplayRegistration(String identity, Reward.ReplayState replayState,
+					HashMap<String, String> placeholders, AdvancedCorePlugin plugin, boolean previouslyReserved,
+					String replayScopeKey) {
+				this.identity = identity;
+				this.replayState = replayState;
+				this.placeholders = placeholders;
+				this.plugin = plugin;
+				this.previouslyReserved = previouslyReserved;
+				this.replayScopeKey = replayScopeKey;
+			}
+
+			String nestedActiveKey() { return replayScopeKey + "/" + identity; }
+		}
 	}
 
 	/** Signals a replay-aware legacy action that was conclusively never started. */
@@ -429,6 +459,14 @@ public class AdvancedCoreUser {
 		// its established fire-and-forget scheduling semantics instead of being made a
 		// dependency of whichever injection completes next on this thread.
 		return false;
+	}
+
+	private AsyncActionCollection.ReplayRegistration collectLiteralBroadcastAction(
+			Supplier<CompletionStage<Void>> action, String descriptor) {
+		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
+		if (collection != null && collection.belongsTo(this))
+			return collection.addRegistration(action, descriptor);
+		return null;
 	}
 
 	private boolean hasOwnedAsyncActionCollection() {
@@ -2899,6 +2937,7 @@ public class AdvancedCoreUser {
 	private void sendLiteralDisplay(String template, HashMap<String, String> placeholders, boolean broadcast) {
 		validateLiteralDisplayBindings(placeholders);
 		HashMap<String, String> captured = placeholders == null ? new HashMap<>() : new HashMap<>(placeholders);
+		AtomicReference<AsyncActionCollection.ReplayRegistration> registration = new AtomicReference<>();
 		Supplier<CompletionStage<Void>> delivery = () -> {
 			AtomicBoolean formattingStarted = new AtomicBoolean();
 			return Reward.continueOnServerThread(plugin, this, () -> {
@@ -2909,8 +2948,36 @@ public class AdvancedCoreUser {
 				if (broadcast) {
 					var prepared = com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders
 							.prepareLiteralBroadcast(player, template, captured);
-					return com.bencodez.advancedcore.api.misc.MiscUtils.getInstance()
-							.broadcastPreparedComponentsAsync(prepared::render, prepared.render(null));
+					var misc = com.bencodez.advancedcore.api.misc.MiscUtils.getInstance();
+					var current = registration.get();
+					if (current == null) return misc.broadcastPreparedComponentsAsync(prepared::render, prepared.render(null));
+					String lane = "literal-broadcast:" + current.nestedActiveKey();
+					if (current.previouslyReserved && !Reward.hasReplayNestedRewardSnapshot(
+							current.placeholders, lane, current.replayState, current.nestedActiveKey()))
+						return CompletableFuture.failedFuture(new IllegalStateException(
+								"Legacy literal broadcast has no durable recipient progress; refusing ambiguous replay"));
+					if (Reward.hasReplayNestedRewardSnapshot(current.placeholders, lane,
+							current.replayState, current.nestedActiveKey()))
+						return Reward.replayNestedRewardSequence(current.plugin, current.placeholders,
+								lane, List.of(), current.replayState, current.nestedActiveKey(),
+								(entry, ignored) -> dispatchLiteralBroadcastEntry(misc, prepared, entry),
+								entry -> validLiteralBroadcastEntry(entry) && literalBroadcastEntryLine(entry) < prepared.lineCount(),
+								8192, 96, 1048576L);
+					return misc.captureOnlinePlayerIdsAsync(current.plugin).thenCompose(ids -> {
+						var plan = literalBroadcastPlan(prepared, ids);
+						return Reward.replayNestedRewardSequence(current.plugin, current.placeholders,
+								lane, plan, current.replayState, current.nestedActiveKey(),
+								(entry, ignored) -> dispatchLiteralBroadcastEntry(misc, prepared, entry),
+								entry -> validLiteralBroadcastEntry(entry) && literalBroadcastEntryLine(entry) < prepared.lineCount(),
+								8192, 96, 1048576L);
+					}).exceptionallyCompose(failure -> {
+						Throwable cause = AsyncActionCollection.unwrapCompletionFailure(failure);
+						if (!Reward.hasReplayNestedRewardSnapshot(current.placeholders, lane,
+								current.replayState, current.nestedActiveKey()))
+							return CompletableFuture.failedFuture(replayActionNotStarted(
+									"Literal broadcast recipient plan was not admitted", cause));
+						return CompletableFuture.failedFuture(cause);
+					});
 				}
 				sendLiteralRewardComponents(player, com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders
 						.renderLiteralComponents(player, template, captured));
@@ -2928,23 +2995,79 @@ public class AdvancedCoreUser {
 		// The configured template identifies the action. Replay metadata and live
 		// placeholder values change while its already-completed prefix is resumed.
 		String descriptor = literalMessageDescriptor(template, broadcast);
-		if (!collectAsyncAction(delivery, descriptor)) {
+		var collected = collectLiteralBroadcastAction(delivery, descriptor);
+		registration.set(collected);
+		if (collected == null) {
 			delivery.get().whenComplete((ignored, failure) -> {
 				if (failure != null) plugin.getLogger().warning("A literal reward message could not be delivered");
 			});
 		}
 	}
 
-	private static void validateLiteralDisplayBindings(HashMap<String, String> placeholders) {
-		if (placeholders != null) {
-			if (placeholders.size() > 8192) throw new IllegalArgumentException("literal message bindings exceed limits");
-			long characters = 0;
-			for (var entry : placeholders.entrySet()) {
-				characters += entry.getKey() == null ? 0 : entry.getKey().length();
-				characters += entry.getValue() == null ? 0 : entry.getValue().length();
-				if (characters > 1048576) throw new IllegalArgumentException("literal message bindings exceed limits");
+	private static List<String> literalBroadcastPlan(
+			com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders.LiteralBroadcast prepared,
+			List<UUID> audience) {
+		ArrayList<String> plan = new ArrayList<>();
+		int lines = prepared.lineCount();
+		if (lines > 4096) throw new IllegalArgumentException("Literal broadcast has too many lines");
+		HashSet<UUID> uniqueAudience = new HashSet<>();
+		for (UUID id : audience) {
+			if (id == null || !uniqueAudience.add(id)) throw new IllegalArgumentException("Literal broadcast audience is not unique");
+			for (int line = 0; line < lines; line++) {
+				if (plan.size() >= 8192) throw new IllegalArgumentException("Literal broadcast audience is too large");
+				plan.add("P|" + id + "|" + line);
 			}
 		}
+		for (int line = 0; line < lines; line++) {
+			if (plan.size() >= 8192) throw new IllegalArgumentException("Literal broadcast audience is too large");
+			plan.add("C|" + line);
+		}
+		return plan;
+	}
+
+	private static boolean validLiteralBroadcastEntry(String entry) {
+		if (entry == null || entry.length() > 96) return false;
+		String[] parts = entry.split("\\|", -1);
+		if ("C".equals(parts[0])) return parts.length == 2 && parseLiteralLineIndex(parts[1]) != null;
+		if (parts.length != 3) return false;
+		if (!"P".equals(parts[0])) return false;
+		try {
+			UUID id = UUID.fromString(parts[1]);
+			if (!id.toString().equalsIgnoreCase(parts[1])) return false;
+		} catch (IllegalArgumentException failure) { return false; }
+		return parseLiteralLineIndex(parts[2]) != null;
+	}
+
+	private static int literalBroadcastEntryLine(String entry) {
+		String[] parts = entry.split("\\|", -1);
+		return Integer.parseInt(parts["C".equals(parts[0]) ? 1 : 2]);
+	}
+
+	private static Integer parseLiteralLineIndex(String value) {
+		try {
+			int index = Integer.parseInt(value);
+			return index >= 0 && index < 8192 ? index : null;
+		} catch (NumberFormatException failure) { return null; }
+	}
+
+	private CompletionStage<Void> dispatchLiteralBroadcastEntry(
+			com.bencodez.advancedcore.api.misc.MiscUtils misc,
+			com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders.LiteralBroadcast prepared,
+			String entry) {
+		if (!validLiteralBroadcastEntry(entry)) return CompletableFuture.failedFuture(
+				new IllegalStateException("Malformed literal broadcast delivery plan"));
+		String[] parts = entry.split("\\|", -1);
+		Integer line = parseLiteralLineIndex("C".equals(parts[0]) ? parts[1] : parts[2]);
+		if (line == null || line >= prepared.lineCount()) return CompletableFuture.failedFuture(
+				new IllegalStateException("Literal broadcast line is no longer available"));
+		if ("C".equals(parts[0])) return misc.dispatchPreparedConsoleLineAsync(plugin,
+				() -> prepared.renderLine(null, line));
+		return misc.dispatchPreparedComponentLineAsync(plugin, UUID.fromString(parts[1]),
+				player -> prepared.renderLine(player, line));
+	}
+
+	private static void validateLiteralDisplayBindings(HashMap<String, String> placeholders) {
+		Reward.copyWithoutReplayMetadata(placeholders);
 	}
 
 	private void sendLiteralRewardComponents(Player expectedPlayer, BaseComponent... components) {

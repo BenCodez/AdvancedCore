@@ -65,6 +65,10 @@ already have run, this failure retains the existing replay identity; retrying
 the same action can deliver its uncompleted message. Replay identity uses the configured
 template rather than mutable checkpoint metadata or live placeholder values.
 
+Replay-aware literal broadcasts freeze the original audience as player UUIDs and console delivery steps. The existing reward journal checkpoints each successfully completed recipient line before advancing; retry and serialized recovery skip that completed prefix, even if the current audience changes. Each action occurrence has a separate lane, so two identical configured broadcasts remain distinct. The plan allows at most 8192 delivery steps and 4096 authored lines. Recipient lookup uses the global scheduler, and rendering and delivery use the recipient owner; console rendering uses the global owner. Each outstanding delivery has a 30-second deadline.
+
+Delivery and journal persistence are not one atomic transaction. A crash or failed checkpoint after a transport handoff can still leave an ambiguous step; this does not provide universal exactly-once messaging. Older pending literal broadcast reservations without recipient progress remain pending rather than blindly repeating the whole broadcast. Completed older actions remain completed. Disconnected or retired original recipients are skipped, and newly connected players do not join a replayed audience. No vote accounting or additional reward path is introduced.
+
 With literal metadata, `RandomMessage` records its first configured choice in
 existing replay-selection metadata before formatting. Retry and restart retain
 that choice, including recovery of older literal action reservations. Reordering
@@ -84,7 +88,7 @@ Literal values are limited to 8192 UTF-16 units; serialized UTF-8/Base64 metadat
 allows the corresponding worst-case byte expansion and rechecks the decoded limit.
 Their guarded legacy display
 representations may use up to 32768 characters. Public preparation admits at most 8192 entries in each binding map and
-1,048,576 combined key/value UTF-16 units before building marker indexes.
+1,048,576 combined key/value UTF-16 units before building marker indexes. Durable replay metadata has its own allowance of 8192 entries and 1,048,576 key/value UTF-16 units. Admitting a display does not count internal action checkpoints or saved random selections against the display allowance, and does not remove them from the durable reward owner. Both allowances are checked before copying or building indexes; excess in either lane is rejected.
 Literal keys retain their 128-character limit; raw action keys are bounded to
 1024 characters. Unreferenced bindings do not consume the 4096 active-binding
 limit. Template and action marker matching uses indexes rather than one

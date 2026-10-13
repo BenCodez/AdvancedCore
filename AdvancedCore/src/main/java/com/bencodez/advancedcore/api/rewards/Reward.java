@@ -710,9 +710,40 @@ public class Reward {
 			HashMap<String, String> placeholders, String lane, List<String> configuredRewards,
 			ReplayState replayState, String activeKey,
 			BiFunction<String, Integer, CompletionStage<Void>> dispatch) {
+		return replayNestedRewardSequence(plugin, placeholders, lane, configuredRewards, replayState, activeKey,
+				dispatch, null, Integer.MAX_VALUE, Integer.MAX_VALUE, Long.MAX_VALUE);
+	}
+
+	/**
+	 * Executes a nested sequence with a bounded, validated delivery plan. This is
+	 * the same replay/checkpoint engine as the ordinary nested sequence; the
+	 * validator is applied to both a newly created plan and a restored snapshot
+	 * before the first child is dispatched.
+	 */
+	public static CompletionStage<Void> replayNestedRewardSequence(AdvancedCorePlugin plugin,
+			HashMap<String, String> placeholders, String lane, List<String> configuredRewards,
+			ReplayState replayState, String activeKey,
+			BiFunction<String, Integer, CompletionStage<Void>> dispatch,
+			java.util.function.Predicate<String> entryValidator, int maxEntries, int maxEntryCharacters,
+			long maxTotalCharacters) {
+		List<String> admission = configuredRewards == null ? List.of() : configuredRewards;
+		java.util.HashSet<String> distinctAdmission = entryValidator == null ? null : new java.util.HashSet<>();
+		if (admission.size() > maxEntries) return CompletableFuture.failedFuture(
+				new IllegalArgumentException("Nested replay plan exceeds entry limit"));
+		long admissionCharacters = 0;
+		for (String entry : admission) {
+			if (distinctAdmission != null && !distinctAdmission.add(entry)) return CompletableFuture.failedFuture(
+					new IllegalArgumentException("Nested replay plan contains a duplicate entry"));
+			if (entry == null || entry.length() > maxEntryCharacters
+					|| (entryValidator != null && !entryValidator.test(entry)))
+				return CompletableFuture.failedFuture(new IllegalArgumentException("Nested replay plan contains an invalid entry"));
+			admissionCharacters += entry.length();
+			if (admissionCharacters > maxTotalCharacters) return CompletableFuture.failedFuture(
+					new IllegalArgumentException("Nested replay plan exceeds character limit"));
+		}
 		if (replayState == null || activeKey == null) {
 			CompletionStage<Void> sequence = CompletableFuture.completedFuture(null);
-			List<String> rewards = configuredRewards == null ? List.of() : configuredRewards;
+			List<String> rewards = admission;
 			for (int index = 0; index < rewards.size(); index++) {
 				String rewardName = rewards.get(index);
 				int rewardIndex = index;
@@ -722,8 +753,44 @@ public class Reward {
 		}
 		String stableLane = lane == null ? "nested" : lane;
 		String storageKey = replaySequenceKey(REPLAY_NESTED_LIST_PREFIX, activeKey, stableLane);
+		String snapshotKey = storageKey + "_snapshot";
+		if (entryValidator != null && replayMetadata(placeholders, replayState, snapshotKey) == null) {
+			// Admission observes the union, including state-only markers from nested injectors.
+			// Caller placeholders have the same precedence as replayMetadata().
+			HashMap<String, String> projected = new HashMap<>();
+			replayState.mergeReplayMetadataInto(projected);
+			mergeReplayMetadata(projected, placeholders);
+			projected.put(snapshotKey, encodeCommandSnapshot(admission));
+			projected.put(storageKey, Integer.toString(maxEntries));
+			try {
+				copyWithoutReplayMetadata(projected);
+				long characters = 0;
+				for (Entry<String, String> entry : projected.entrySet())
+					characters += entry.getKey().length() + (entry.getValue() == null ? 0L : entry.getValue().length());
+				// Leave room for the outer action's completion marker after this plan finishes.
+				if (characters > 1048576L - 4096L) throw new IllegalArgumentException("Nested replay metadata exceeds limits");
+			} catch (IllegalArgumentException failure) {
+				return CompletableFuture.failedFuture(failure);
+			}
+		}
 		return replayNestedRewardSnapshot(plugin, placeholders, stableLane, configuredRewards, replayState, activeKey)
 				.thenCompose(rewards -> {
+					java.util.HashSet<String> distinctRestored = entryValidator == null ? null : new java.util.HashSet<>();
+					if (rewards.size() > maxEntries) return CompletableFuture.failedFuture(
+							new IllegalArgumentException("Nested replay plan exceeds entry limit"));
+					long totalCharacters = 0;
+					for (String reward : rewards) {
+						if (distinctRestored != null && !distinctRestored.add(reward)) return CompletableFuture.failedFuture(
+								new IllegalStateException("Nested replay plan contains a duplicate entry"));
+						if (reward == null || reward.length() > maxEntryCharacters
+								|| (entryValidator != null && !entryValidator.test(reward))) {
+							return CompletableFuture.failedFuture(new IllegalStateException(
+									"Nested replay plan contains an invalid entry"));
+						}
+						totalCharacters += reward.length();
+						if (totalCharacters > maxTotalCharacters) return CompletableFuture.failedFuture(
+								new IllegalArgumentException("Nested replay plan exceeds character limit"));
+					}
 					String storedProgress = replayMetadata(placeholders, replayState, storageKey);
 					int completed;
 					try {
@@ -751,6 +818,15 @@ public class Reward {
 					}
 					return sequence;
 				});
+	}
+
+	private static long replayPlaceholderCharacterCount(HashMap<String, String> placeholders) {
+		if (placeholders == null) return 0L;
+		long total = 0;
+		for (Entry<String, String> entry : placeholders.entrySet()) if (isReplayMetadataKey(entry.getKey()))
+			total += (entry.getKey() == null ? 0 : entry.getKey().length())
+					+ (entry.getValue() == null ? 0 : entry.getValue().length());
+		return total;
 	}
 
 	/**
@@ -966,6 +1042,30 @@ public class Reward {
 		}
 	}
 
+	/** Copies display/action bindings while independently bounding durable replay metadata. */
+	public static HashMap<String, String> copyWithoutReplayMetadata(HashMap<String, String> source) {
+		if (source == null) return new HashMap<>();
+		if (source.size() > 16384) throw new IllegalArgumentException("Reward binding map exceeds limits");
+		int displayEntries = 0, replayEntries = 0;
+		long displayCharacters = 0, replayCharacters = 0;
+		for (Entry<String, String> entry : source.entrySet()) {
+			long characters = (entry.getKey() == null ? 0L : entry.getKey().length())
+					+ (entry.getValue() == null ? 0L : entry.getValue().length());
+			if (isReplayMetadataKey(entry.getKey())) {
+				replayCharacters += characters;
+				if (++replayEntries > 8192 || replayCharacters > 1048576)
+					throw new IllegalArgumentException("Reward replay metadata exceeds limits");
+			} else {
+				displayCharacters += characters;
+				if (++displayEntries > 8192 || displayCharacters > 1048576)
+					throw new IllegalArgumentException("Reward display bindings exceed limits");
+			}
+		}
+		HashMap<String, String> result = new HashMap<>(source);
+		result.keySet().removeIf(Reward::isReplayMetadataKey);
+		return result;
+	}
+
 	/** Copies only durable replay markers; ordinary reward placeholders stay isolated. */
 	public static void mergeReplayMetadata(HashMap<String, String> target, Map<String, String> source) {
 		if (target == null || source == null) return;
@@ -1103,6 +1203,13 @@ public class Reward {
 			Reward.mergeReplayMetadata(target, replayMetadata);
 		}
 		public synchronized String replayMetadata(String key) { return replayMetadata.get(key); }
+		private synchronized long replayMetadataCharacterCount() {
+			long total = 0;
+			for (Entry<String, String> entry : replayMetadata.entrySet())
+				total += (entry.getKey() == null ? 0 : entry.getKey().length())
+						+ (entry.getValue() == null ? 0 : entry.getValue().length());
+			return total;
+		}
 		private synchronized boolean hasPersistedCheckpoint() {
 			return legacyCheckpoint || !completed.isEmpty() || !registryFingerprints.isEmpty();
 		}

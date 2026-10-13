@@ -35,6 +35,36 @@ public class LiteralBroadcastSchedulingTest {
         boolean execute(org.bukkit.plugin.Plugin plugin, Runnable action, Runnable retired, long delay);
     }
 
+    @Test void audienceCaptureDeadlineFencesLateGlobalCallback() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var capture = fixture.misc.captureOnlinePlayerIdsAsync(fixture.plugin, fixture.deadline::set);
+            fixture.deadline.get().run();
+            assertThrows(CompletionException.class, capture.toCompletableFuture()::join);
+            fixture.global.get(0).run();
+            fixture.bukkit.verify(Bukkit::getOnlinePlayers, never());
+        }
+    }
+
+    @Test void audienceCaptureClaimsDuplicateGlobalCallbacksOnce() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var capture = fixture.misc.captureOnlinePlayerIdsAsync(fixture.plugin, fixture.deadline::set);
+            fixture.global.get(0).run();
+            fixture.global.get(0).run();
+            assertEquals(List.of(fixture.first.getUniqueId(), fixture.second.getUniqueId()),
+                    capture.toCompletableFuture().join());
+        }
+    }
+
+    @Test void disabledPluginRejectsAudienceCaptureBeforeInspectingPlayers() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            when(fixture.plugin.isEnabled()).thenReturn(false);
+            var capture = fixture.misc.captureOnlinePlayerIdsAsync(fixture.plugin, fixture.deadline::set);
+            fixture.global.get(0).run();
+            assertThrows(CompletionException.class, capture.toCompletableFuture()::join);
+            fixture.bukkit.verify(Bukkit::getOnlinePlayers, never());
+        }
+    }
+
     @Test void foliaRetirementSettlesWithoutWaitingForTheDispatchDeadline() throws Exception {
         try (Fixture fixture = new Fixture()) {
             var nativeScheduler = fixture.nativeSchedulers();
@@ -303,6 +333,8 @@ public class LiteralBroadcastSchedulingTest {
             when(plugin.getLogger()).thenReturn(mock(Logger.class));
             when(plugin.getBukkitScheduler()).thenReturn(scheduler);
             when(first.isOnline()).thenReturn(true); when(second.isOnline()).thenReturn(true);
+            when(first.getUniqueId()).thenReturn(java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"));
+            when(second.getUniqueId()).thenReturn(java.util.UUID.fromString("00000000-0000-0000-0000-000000000002"));
             doAnswer(call -> {
                 Runnable task = call.getArgument(1);
                 global.add(() -> {globalOwner.set(true); try {task.run();} finally {globalOwner.set(false);}});
