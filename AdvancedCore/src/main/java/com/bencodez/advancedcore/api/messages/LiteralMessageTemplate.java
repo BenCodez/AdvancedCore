@@ -900,8 +900,17 @@ public final class LiteralMessageTemplate {
             return template;
         }
 
-        /** Split authored message separators while labels are still opaque. */
+        /** Player messages recognize only the canonical authored separator. Labels remain opaque. */
         public List<Prepared> splitLines() {
+            List<Prepared> lines = new ArrayList<>();
+            for (String line : template.split(java.util.regex.Pattern.quote("%NewLine%"))) {
+                lines.add(new Prepared(line, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity));
+            }
+            return List.copyOf(lines);
+        }
+
+        /** Broadcast helpers additionally recognize the established lowercase spelling. */
+        public List<Prepared> splitBroadcastLines() {
             List<Prepared> lines = new ArrayList<>();
             // Preserve both spellings accepted by the established broadcast helpers.
             for (String upperLine : template.split(java.util.regex.Pattern.quote("%newline%"))) {

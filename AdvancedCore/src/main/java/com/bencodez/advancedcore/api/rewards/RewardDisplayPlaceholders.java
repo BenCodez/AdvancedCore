@@ -115,7 +115,7 @@ public final class RewardDisplayPlaceholders {
 		private final java.util.List<LiteralMessageTemplate.Prepared> lines;
 		private final LiteralMessageTemplate.LegacyBindings legacy;
 		private LiteralBroadcast(LiteralMessageTemplate.Prepared prepared, LiteralMessageTemplate.LegacyBindings legacy) {
-			this.lines = prepared.splitLines();
+			this.lines = prepared.splitBroadcastLines();
 			this.legacy = legacy;
 		}
 		/** Recipient placeholders must run on that recipient's owner; console uses null on the global owner. */

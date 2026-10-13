@@ -171,11 +171,22 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
-    void authoredLineBreaksAcceptEstablishedLowercaseSpelling() {
+    void playerLineBreaksKeepLowercaseAndUppercaseTokensLiteral() {
         var lines = render("First:%SiteName%%newline%Second:%SiteName%", values("literal"));
-        assertEquals(2, lines.length);
-        assertEquals("First:literal", lines[0].toPlainText());
-        assertEquals("Second:literal", lines[1].toPlainText());
+        assertEquals(1, lines.length);
+        assertEquals("First:literal%newline%Second:literal", lines[0].toPlainText());
+        assertEquals("First:literal%NEWLINE%Second:literal", BaseComponent.toPlainText(
+                render("First:%SiteName%%NEWLINE%Second:%SiteName%", values("literal"))));
+    }
+
+    @Test
+    void broadcastLineBreaksAcceptBothEstablishedSpellingsAndKeepLiteralValuesOpaque() {
+        var message = RewardDisplayPlaceholders.prepareLiteralBroadcast(null,
+                "First:%SiteName%%newline%Second:%SiteName%%NewLine%Third", values("%newline%"));
+        assertEquals(3, message.lineCount());
+        assertEquals("First:%newline%", message.renderLine(null, 0).toPlainText());
+        assertEquals("Second:%newline%", message.renderLine(null, 1).toPlainText());
+        assertEquals("Third", message.renderLine(null, 2).toPlainText());
     }
 
     @Test

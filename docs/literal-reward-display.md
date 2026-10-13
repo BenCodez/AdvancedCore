@@ -76,8 +76,9 @@ the player disconnects before an outstanding line. Older pending player-message
 reservations without line progress remain pending rather than repeating an
 ambiguous prefix. Completed older actions remain completed. The same 4096-line
 bound applies; transport delivery and checkpoint publication are still not atomic.
-Both established authored separators, `%NewLine%` and `%newline%`, are supported;
-separator-like text inside a literal value stays literal.
+Player messages retain the exact `%NewLine%` separator. Broadcasts also accept
+the established `%newline%` spelling. Other casing remains available to normal
+placeholder processing; separator-like text inside a literal value stays literal.
 
 With literal metadata, `RandomMessage` records its first configured choice in
 existing replay-selection metadata before formatting. Retry and restart retain
