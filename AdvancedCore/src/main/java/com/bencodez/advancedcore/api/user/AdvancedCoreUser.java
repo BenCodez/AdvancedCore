@@ -2977,6 +2977,22 @@ public class AdvancedCoreUser {
 		Supplier<CompletionStage<Void>> delivery = () -> {
 			AtomicBoolean formattingStarted = new AtomicBoolean();
 			return Reward.continueOnServerThread(plugin, this, () -> {
+				var existingReplay = registration.get();
+				String completedLane = (broadcast ? "literal-broadcast:" : "literal-player:")
+						+ (existingReplay == null ? "" : existingReplay.nestedActiveKey());
+				if (existingReplay != null && Reward.hasCompletedNestedRewardSequence(existingReplay.placeholders,
+						completedLane, existingReplay.replayState, existingReplay.nestedActiveKey())) {
+					formattingStarted.set(true); // Delivery completed on an earlier attempt; never release its reservation.
+					return Reward.replayNestedRewardSequence(existingReplay.plugin, existingReplay.placeholders,
+							completedLane, List.of(), existingReplay.replayState, existingReplay.nestedActiveKey(),
+							(entry, ignored) -> CompletableFuture.failedFuture(
+									new IllegalStateException("Completed literal message plan has unfinished work")),
+							entry -> validLiteralBroadcastEntry(entry) && ("C".equals(entry)
+									|| literalBroadcastEntryLine(entry) < 4096)
+									&& (broadcast || (entry.startsWith("P|")
+											&& entry.split("\\|", -1)[1].equalsIgnoreCase(getUUID()))),
+							8192, 96, 1048576L);
+				}
 				Player player = getPlayer();
 				if (!broadcast && (player == null || !player.isOnline())) return CompletableFuture.failedFuture(
 						replayActionNotStarted("Player unavailable before literal message delivery"));

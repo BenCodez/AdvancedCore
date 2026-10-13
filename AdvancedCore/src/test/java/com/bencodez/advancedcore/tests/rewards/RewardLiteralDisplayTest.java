@@ -861,6 +861,84 @@ class RewardLiteralDisplayTest {
         }
     }
 
+    @Test void completedPlayerPlanSkipsThrowingProviderAfterOuterCheckpointFailure() {
+        assertCompletedPlayerPlanResumes(true, false);
+    }
+
+    @Test void completedPlayerPlanSkipsShortenedProviderAfterOuterCheckpointFailure() {
+        assertCompletedPlayerPlanResumes(false, false);
+    }
+
+    @Test void completedPlayerPlanCanFinishItsCheckpointAfterDisconnect() {
+        assertCompletedPlayerPlanResumes(false, true);
+    }
+
+    private void assertCompletedPlayerPlanResumes(boolean throwing, boolean offline) {
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            var changed = new java.util.concurrent.atomic.AtomicBoolean();
+            var renderCount = new java.util.concurrent.atomic.AtomicInteger();
+            fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                    .thenAnswer(call -> {
+                        renderCount.incrementAndGet();
+                        if (changed.get() && throwing) throw new IllegalStateException("synthetic provider failure");
+                        return com.bencodez.simpleapi.messages.MessageAPI.colorize(call.<String>getArgument(1)
+                                .replace("%dynamic%", changed.get() ? "One" : "One%NewLine%Two"));
+                    });
+            var map = values("Original");
+            String key = Reward.legacyActionReplayKey("synthetic-message-injector");
+            var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
+            options.setAsyncReplayCheckpointConsumer(checkpoint -> {
+                String ledger = checkpoint.getPlaceholders().get(key);
+                if (ledger != null && ledger.startsWith("v2:") && ledger.length() > 3)
+                    throw new IllegalStateException("synthetic parent checkpoint rejection");
+                fixture.randomCheckpoint.set(new HashMap<>(checkpoint.getPlaceholders()));
+            });
+            var collection = fixture.user.beginAsyncActionCollection(Reward.replayStateFor(options), map,
+                    "synthetic-message-injector");
+            fixture.user.sendLiteralDisplayMessage("%dynamic%:%SiteName%", map);
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.user.endAsyncActionCollection(collection).toCompletableFuture().join());
+            assertEquals(List.of("One", "Two:Original"), fixture.sent);
+            var restored = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+            changed.set(true);
+            if (offline) when(fixture.player.isOnline()).thenReturn(false);
+            fixture.dispatch("%dynamic%:%SiteName%", restored).join();
+            assertEquals(1, renderCount.get(), "completed line progress must be consulted before live rendering");
+            assertEquals(List.of("One", "Two:Original"), fixture.sent);
+        }
+    }
+
+    @Test void completedBroadcastPlanSkipsSourceProviderAfterOuterCheckpointFailure() {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of());
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            var changed = new java.util.concurrent.atomic.AtomicBoolean();
+            var renderCount = new java.util.concurrent.atomic.AtomicInteger();
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> {
+                        renderCount.incrementAndGet();
+                        if (changed.get()) throw new IllegalStateException("synthetic source provider failure");
+                        return call.getArgument(1);
+                    });
+            String key = Reward.legacyActionReplayKey("synthetic-broadcast-injector");
+            fixture.broadcastCheckpointObserver = checkpoint -> {
+                String ledger = checkpoint.getPlaceholders().get(key);
+                if (ledger != null && ledger.startsWith("v2:") && ledger.length() > 3)
+                    throw new IllegalStateException("synthetic parent checkpoint rejection");
+            };
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatchBroadcast("Site:%SiteName%", values("Original")).join());
+            var restored = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+            fixture.broadcastCheckpointObserver = checkpoint -> { };
+            changed.set(true);
+            fixture.dispatchBroadcast("Site:%SiteName%", restored).join();
+            assertEquals(1, renderCount.get());
+            verify(console, times(1)).sendMessage("Site:Original");
+            bukkit.verify(org.bukkit.Bukkit::getOnlinePlayers, times(1));
+        }
+    }
+
     @Test
     void playerMultilineRetryResumesAfterDeliveredPrefix() {
         HashMap<String, String> persisted;
