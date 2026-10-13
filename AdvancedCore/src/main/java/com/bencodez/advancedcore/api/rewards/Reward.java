@@ -940,8 +940,12 @@ public class Reward {
 
 	/** Returns whether every child in a frozen nested-reward lane is complete. */
 	public static boolean hasCompletedNestedRewardSequence(HashMap<String, String> placeholders, String lane) {
-		ReplayState replayState = currentReplayState();
-		String activeKey = currentReplayKey();
+		return hasCompletedNestedRewardSequence(placeholders, lane, currentReplayState(), currentReplayKey());
+	}
+
+	/** Consult explicit captured replay ownership when asynchronous continuations have no thread-local lane. */
+	public static boolean hasCompletedNestedRewardSequence(HashMap<String, String> placeholders, String lane,
+			ReplayState replayState, String activeKey) {
 		if (replayState == null || activeKey == null) return false;
 		String storageKey = replaySequenceKey(REPLAY_NESTED_LIST_PREFIX, activeKey,
 				lane == null ? "nested" : lane);

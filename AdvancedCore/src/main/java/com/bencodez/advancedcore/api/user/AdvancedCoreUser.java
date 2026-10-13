@@ -3108,6 +3108,12 @@ public class AdvancedCoreUser {
 		} catch (NumberFormatException failure) { return null; }
 	}
 
+	private static boolean validLiteralBroadcastFragment(String fragment) {
+		if (fragment == null || !fragment.startsWith("F|")) return false;
+		Integer index = parseLiteralLineIndex(fragment.substring(2));
+		return index != null && index < 4096 && fragment.equals("F|" + index);
+	}
+
 	private CompletionStage<Void> dispatchLiteralBroadcastEntry(
 			com.bencodez.advancedcore.api.misc.MiscUtils misc,
 			com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders.LiteralBroadcast prepared,
@@ -3132,6 +3138,14 @@ public class AdvancedCoreUser {
 					new IllegalStateException("Literal broadcast fragment progress is unavailable"));
 			UUID recipient = UUID.fromString(parts[1]);
 			String lane = "literal-broadcast-fragments:" + current.nestedActiveKey() + ":" + entry;
+			if (Reward.hasCompletedNestedRewardSequence(current.placeholders, lane,
+					current.replayState, current.nestedActiveKey()))
+				// Validate the frozen plan with the same engine, without consulting live provider output.
+				return Reward.replayNestedRewardSequence(current.plugin, current.placeholders, lane, List.of(),
+						current.replayState, current.nestedActiveKey(),
+						(fragment, ignored) -> CompletableFuture.failedFuture(
+								new IllegalStateException("Completed literal fragment plan has unfinished work")),
+						AdvancedCoreUser::validLiteralBroadcastFragment, 4096, 16, 1048576L);
 			return misc.capturePreparedRecipientAsync(plugin, recipient,
 					player -> prepared.renderRecipientLineFragments(player, line)).thenCompose(rendered -> {
 				if (rendered.player() == null) return CompletableFuture.completedFuture(null);
@@ -3147,9 +3161,8 @@ public class AdvancedCoreUser {
 								return fragments[index];
 							});
 						}, fragment -> {
-							if (fragment == null || !fragment.startsWith("F|")) return false;
-							Integer index = parseLiteralLineIndex(fragment.substring(2));
-							return index != null && index < fragments.length && fragment.equals("F|" + index);
+							return validLiteralBroadcastFragment(fragment)
+									&& Integer.parseInt(fragment.substring(2)) < fragments.length;
 						}, 4096, 16, 1048576L);
 			});
 		}

@@ -63,6 +63,7 @@ class LiteralDeadlineCancellationTest {
                     misc.dispatchPreparedConsoleLineAsync(owner, () -> null).toCompletableFuture().join();
                     misc.dispatchPreparedConsoleMessageAsync(owner, () -> null).toCompletableFuture().join();
                     misc.captureOnlinePlayerIdsAsync(owner).toCompletableFuture().join();
+                    misc.capturePreparedRecipientAsync(owner, UUID.randomUUID(), player -> null).toCompletableFuture().join();
                     misc.broadcastPreparedComponentsAsync(player -> null, null).toCompletableFuture().join();
                     misc.broadcastPreparedMessageAsync(player -> null, () -> null).toCompletableFuture().join();
                 }

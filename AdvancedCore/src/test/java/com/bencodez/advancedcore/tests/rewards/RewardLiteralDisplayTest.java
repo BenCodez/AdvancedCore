@@ -1277,6 +1277,88 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void completedRecipientFragmentsSkipFailingRendererAfterOuterCheckpointFailure() {
+        assertCompletedRecipientFragmentsResume(true, false);
+    }
+
+    @Test
+    void completedRecipientFragmentsSkipShortenedRendererAfterOuterCheckpointFailure() {
+        assertCompletedRecipientFragmentsResume(false, false);
+    }
+
+    @Test
+    void completedRecipientFragmentsRejectMalformedPersistedPlan() {
+        assertCompletedRecipientFragmentsResume(false, true);
+    }
+
+    private void assertCompletedRecipientFragmentsResume(boolean rendererThrows, boolean corruptPlan) {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            Player recipient = mock(Player.class);
+            UUID recipientId = UUID.randomUUID();
+            when(recipient.getUniqueId()).thenReturn(recipientId);
+            when(recipient.isOnline()).thenReturn(true);
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of(recipient));
+            bukkit.when(() -> org.bukkit.Bukkit.getPlayer(recipientId)).thenReturn(recipient);
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            var changed = new java.util.concurrent.atomic.AtomicBoolean();
+            var recipientRenderCount = new java.util.concurrent.atomic.AtomicInteger();
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> {
+                        String value = call.getArgument(1);
+                        if (call.getArgument(0) != recipient) return value;
+                        recipientRenderCount.incrementAndGet();
+                        if (changed.get() && rendererThrows) throw new IllegalStateException("synthetic provider failure");
+                        return value.replace("%recipient_multiline%", changed.get() ? "One" : "One%NewLine%Two");
+                    });
+            var sent = new ArrayList<String>();
+            doAnswer(call -> { sent.add(call.<BaseComponent>getArgument(1).toPlainText()); return null; })
+                    .when(fixture.transport).sendMessage(eq(recipient), any(BaseComponent.class));
+            String encodedRecipient = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
+                    ("R|" + recipientId + "|0").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            fixture.broadcastCheckpointObserver = checkpoint -> {
+                var metadata = checkpoint.getPlaceholders();
+                for (var entry : metadata.entrySet()) {
+                    if (entry.getKey().endsWith("_snapshot") && entry.getValue().startsWith("v1:" + encodedRecipient)
+                            && "1".equals(metadata.get(entry.getKey().substring(0, entry.getKey().length() - 9))))
+                        throw new IllegalStateException("synthetic outer recipient checkpoint failure");
+                }
+            };
+            String template = "%recipient_multiline%:%SiteName%";
+            var failure = assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatchBroadcast(template, values("Original")).join());
+            assertTrue(failure.getMessage().contains("synthetic outer recipient checkpoint failure"));
+            assertEquals(List.of("One", "Two:Original"), sent);
+            var restored = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+            String encodedFirst = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
+                    "F|0".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            var fragmentSnapshot = restored.entrySet().stream()
+                    .filter(entry -> entry.getKey().endsWith("_snapshot") && entry.getValue().startsWith("v1:" + encodedFirst))
+                    .findFirst().orElseThrow();
+            assertEquals("2", restored.get(fragmentSnapshot.getKey().substring(0, fragmentSnapshot.getKey().length() - 9)),
+                    "the last successful checkpoint confirms every fragment but not its enclosing recipient");
+            if (corruptPlan) {
+                String invalid = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
+                        "F|00".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                restored.put(fragmentSnapshot.getKey(), fragmentSnapshot.getValue().replace(encodedFirst, invalid));
+            }
+            fixture.broadcastCheckpointObserver = checkpoint -> { };
+            changed.set(true);
+            if (corruptPlan) {
+                assertThrows(java.util.concurrent.CompletionException.class,
+                        () -> fixture.dispatchBroadcast(template, restored).join());
+                verifyNoInteractions(console);
+            } else {
+                fixture.dispatchBroadcast(template, restored).join();
+                verify(console, times(1)).sendMessage(anyString());
+                assertEquals(1, recipientRenderCount.get(), "completed fragments must not invoke the recipient provider again");
+            }
+            assertEquals(List.of("One", "Two:Original"), sent, "completed fragment delivery is never repeated");
+            bukkit.verify(org.bukkit.Bukkit::getOnlinePlayers, times(1));
+        }
+    }
+
+    @Test
     void actualLiteralBroadcastResumesOriginalRecipientLinesAfterSerializedRetry() {
         try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
             Player second = mock(Player.class);
