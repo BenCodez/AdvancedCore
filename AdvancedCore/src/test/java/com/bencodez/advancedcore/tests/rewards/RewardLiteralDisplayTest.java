@@ -1199,6 +1199,84 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void recipientGeneratedBroadcastSeparatorsSplitAfterVisibleEvaluation() {
+        Player recipient = mock(Player.class);
+        var map = values("literal%NewLine%external");
+        map.put("Rank", "raw-rank"); RewardDisplayPlaceholders.put(map, "Rank", "&aRank");
+        for (String separator : List.of("%NewLine%", "%newline%")) {
+            try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+                placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(eq(recipient), anyString())).thenAnswer(call ->
+                        ((String) call.getArgument(1)).replace("%recipient_multiline%", "One" + separator + "Two"));
+                var rendered = RewardDisplayPlaceholders.prepareLiteralBroadcast(null,
+                        "%Rank% %recipient_multiline%:%SiteName%", map).render(recipient);
+                assertEquals(2, rendered.length, separator);
+                assertEquals("Rank One", rendered[0].toPlainText());
+                assertEquals("Two:literal%NewLine%external", rendered[1].toPlainText());
+            }
+        }
+    }
+
+    @Test
+    void recipientGeneratedBroadcastActionSeparatorsRemainExact() {
+        Player recipient = mock(Player.class);
+        var map = values("literal%NewLine%external");
+        map.put("Rank", "raw-rank"); RewardDisplayPlaceholders.put(map, "Rank", "&aRank");
+        for (String attribute : List.of("Command", "Url", "Suggest_Command")) {
+            try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+                placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(eq(recipient), anyString())).thenAnswer(call ->
+                        ((String) call.getArgument(1)).replace("%recipient_multiline%", "One%NewLine%Two%newline%Three"));
+                var rendered = RewardDisplayPlaceholders.prepareLiteralBroadcast(null,
+                        "%Rank% [Text=\"%SiteName%\"," + attribute + "=\"%recipient_multiline%\"]", map).render(recipient);
+                assertEquals(1, rendered.length, attribute);
+                assertEquals("Rank literal%NewLine%external", rendered[0].toPlainText());
+                assertTrue(ComponentSerializer.toString(rendered).contains("One%NewLine%Two%newline%Three"));
+            }
+        }
+    }
+
+    @Test
+    void actualRecipientGeneratedBroadcastLinesResumeAfterSerializedPartialDelivery() {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            Player second = mock(Player.class);
+            UUID firstId = UUID.randomUUID(), secondId = UUID.randomUUID();
+            when(fixture.player.getUniqueId()).thenReturn(firstId);
+            when(second.getUniqueId()).thenReturn(secondId);
+            when(second.isOnline()).thenReturn(true);
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of(fixture.player, second));
+            bukkit.when(() -> org.bukkit.Bukkit.getPlayer(firstId)).thenReturn(fixture.player);
+            bukkit.when(() -> org.bukkit.Bukkit.getPlayer(secondId)).thenReturn(second);
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> {
+                        String value = call.getArgument(1);
+                        return call.getArgument(0) == second ? value.replace("%recipient_multiline%", "One%NewLine%Two") : value;
+                    });
+            var successful = new ArrayList<String>();
+            var fail = new java.util.concurrent.atomic.AtomicBoolean(true);
+            doAnswer(call -> {
+                Player recipient = call.getArgument(0);
+                String text = call.<BaseComponent>getArgument(1).toPlainText();
+                if (recipient == second && text.equals("Two:Original") && fail.getAndSet(false))
+                    throw new IllegalStateException("synthetic transport rejection");
+                successful.add((recipient == fixture.player ? "first:" : "second:") + text);
+                return null;
+            }).when(fixture.transport).sendMessage(any(Player.class), any(BaseComponent.class));
+            String template = "%recipient_multiline%:%SiteName%";
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatchBroadcast(template, values("Original")).join());
+            assertEquals(List.of("first:%recipient_multiline%:Original", "second:One"), successful);
+            var restored = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(java.util.Collections.nCopies(8193, second));
+            fixture.dispatchBroadcast(template, restored).join();
+            assertEquals(List.of("first:%recipient_multiline%:Original", "second:One", "second:Two:Original"), successful,
+                    "serialized retry must not resend a recipient-generated delivered prefix");
+            verify(console, times(1)).sendMessage(anyString());
+            bukkit.verify(org.bukkit.Bukkit::getOnlinePlayers, times(1));
+        }
+    }
+
+    @Test
     void actualLiteralBroadcastResumesOriginalRecipientLinesAfterSerializedRetry() {
         try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
             Player second = mock(Player.class);

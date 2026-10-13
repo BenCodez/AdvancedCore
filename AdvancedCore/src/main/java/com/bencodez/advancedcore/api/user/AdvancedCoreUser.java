@@ -2996,7 +2996,7 @@ public class AdvancedCoreUser {
 							current.replayState, current.nestedActiveKey()))
 						return Reward.replayNestedRewardSequence(current.plugin, current.placeholders,
 								lane, List.of(), current.replayState, current.nestedActiveKey(),
-								(entry, ignored) -> dispatchLiteralBroadcastEntry(misc, prepared, entry),
+								(entry, ignored) -> dispatchLiteralBroadcastEntry(misc, prepared, entry, current),
 								entry -> validLiteralBroadcastEntry(entry) && ("C".equals(entry)
 									|| literalBroadcastEntryLine(entry) < prepared.lineCount()),
 								8192, 96, 1048576L);
@@ -3004,7 +3004,7 @@ public class AdvancedCoreUser {
 						var plan = literalBroadcastPlan(prepared, ids);
 						return Reward.replayNestedRewardSequence(current.plugin, current.placeholders,
 								lane, plan, current.replayState, current.nestedActiveKey(),
-								(entry, ignored) -> dispatchLiteralBroadcastEntry(misc, prepared, entry),
+								(entry, ignored) -> dispatchLiteralBroadcastEntry(misc, prepared, entry, current),
 								entry -> validLiteralBroadcastEntry(entry) && ("C".equals(entry)
 									|| literalBroadcastEntryLine(entry) < prepared.lineCount()),
 								8192, 96, 1048576L);
@@ -3037,7 +3037,8 @@ public class AdvancedCoreUser {
 				return Reward.replayNestedRewardSequence(current.plugin, current.placeholders, lane, plan,
 						current.replayState, current.nestedActiveKey(),
 						(entry, ignored) -> dispatchLiteralPlayerEntry(player, rendered, entry),
-						entry -> validLiteralBroadcastEntry(entry) && literalBroadcastEntryLine(entry) < rendered.length,
+						entry -> validLiteralBroadcastEntry(entry) && entry.startsWith("P|")
+							&& literalBroadcastEntryLine(entry) < rendered.length,
 						8192, 96, 1048576L);
 			}).handle((ignored, failure) -> {
 				if (failure != null) {
@@ -3072,7 +3073,7 @@ public class AdvancedCoreUser {
 			if (id == null || !uniqueAudience.add(id)) throw new IllegalArgumentException("Literal broadcast audience is not unique");
 			for (int line = 0; line < lines; line++) {
 				if (plan.size() >= 8192) throw new IllegalArgumentException("Literal broadcast audience is too large");
-				plan.add("P|" + id + "|" + line);
+				plan.add("R|" + id + "|" + line);
 			}
 		}
 		if (plan.size() >= 8192) throw new IllegalArgumentException("Literal broadcast audience is too large");
@@ -3086,7 +3087,7 @@ public class AdvancedCoreUser {
 		if ("C".equals(parts[0])) return (parts.length == 1)
 				|| (parts.length == 2 && parseLiteralLineIndex(parts[1]) != null);
 		if (parts.length != 3) return false;
-		if (!"P".equals(parts[0])) return false;
+		if (!"P".equals(parts[0]) && !"R".equals(parts[0])) return false;
 		try {
 			UUID id = UUID.fromString(parts[1]);
 			if (!id.toString().equalsIgnoreCase(parts[1])) return false;
@@ -3111,6 +3112,13 @@ public class AdvancedCoreUser {
 			com.bencodez.advancedcore.api.misc.MiscUtils misc,
 			com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders.LiteralBroadcast prepared,
 			String entry) {
+		return dispatchLiteralBroadcastEntry(misc, prepared, entry, null);
+	}
+
+	private CompletionStage<Void> dispatchLiteralBroadcastEntry(
+			com.bencodez.advancedcore.api.misc.MiscUtils misc,
+			com.bencodez.advancedcore.api.rewards.RewardDisplayPlaceholders.LiteralBroadcast prepared,
+			String entry, AsyncActionCollection.ReplayRegistration current) {
 		if (!validLiteralBroadcastEntry(entry)) return CompletableFuture.failedFuture(
 				new IllegalStateException("Malformed literal broadcast delivery plan"));
 		String[] parts = entry.split("\\|", -1);
@@ -3119,6 +3127,32 @@ public class AdvancedCoreUser {
 		Integer line = parseLiteralLineIndex("C".equals(parts[0]) ? parts[1] : parts[2]);
 		if (line == null || line >= prepared.lineCount()) return CompletableFuture.failedFuture(
 				new IllegalStateException("Literal broadcast line is no longer available"));
+		if ("R".equals(parts[0])) {
+			if (current == null) return CompletableFuture.failedFuture(
+					new IllegalStateException("Literal broadcast fragment progress is unavailable"));
+			UUID recipient = UUID.fromString(parts[1]);
+			String lane = "literal-broadcast-fragments:" + current.nestedActiveKey() + ":" + entry;
+			return misc.capturePreparedRecipientAsync(plugin, recipient,
+					player -> prepared.renderRecipientLineFragments(player, line)).thenCompose(rendered -> {
+				if (rendered.player() == null) return CompletableFuture.completedFuture(null);
+				var fragments = rendered.components();
+				List<String> plan = new ArrayList<>();
+				for (int index = 0; index < fragments.length; index++) plan.add("F|" + index);
+				return Reward.replayNestedRewardSequence(current.plugin, current.placeholders, lane, plan,
+						current.replayState, current.nestedActiveKey(),
+						(fragment, ignored) -> {
+							int index = Integer.parseInt(fragment.substring(2));
+							return misc.dispatchPreparedComponentLineAsync(plugin, recipient, player -> {
+								if (player != rendered.player()) throw new IllegalStateException("Literal broadcast recipient changed");
+								return fragments[index];
+							});
+						}, fragment -> {
+							if (fragment == null || !fragment.startsWith("F|")) return false;
+							Integer index = parseLiteralLineIndex(fragment.substring(2));
+							return index != null && index < fragments.length && fragment.equals("F|" + index);
+						}, 4096, 16, 1048576L);
+			});
+		}
 		if ("C".equals(parts[0])) return misc.dispatchPreparedConsoleLineAsync(plugin,
 				() -> prepared.renderLine(null, line));
 		return misc.dispatchPreparedComponentLineAsync(plugin, UUID.fromString(parts[1]),

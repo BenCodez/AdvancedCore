@@ -435,6 +435,49 @@ public class LiteralBroadcastSchedulingTest {
         }
     }
 
+    @Test void recipientCaptureUsesItsOwnerBeforeReturningComponentsAndDoesNotSend() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var id = fixture.first.getUniqueId();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(fixture.first);
+            var capture = fixture.misc.capturePreparedRecipientAsync(fixture.plugin, id, fixture.renderer);
+            assertFalse(capture.toCompletableFuture().isDone());
+            fixture.global.get(0).run(); fixture.global.get(0).run();
+            assertTrue(fixture.rendered.isEmpty());
+            fixture.owners.get(0).run(); fixture.owners.get(0).run();
+            var prepared = capture.toCompletableFuture().join();
+            assertSame(fixture.first, prepared.player());
+            assertEquals(List.of(fixture.first), fixture.rendered);
+            assertEquals("R&D &aLiteral", prepared.components()[0].toPlainText());
+            var returned = prepared.components(); returned[0] = null;
+            assertNotNull(prepared.components()[0], "component-array ownership must not escape");
+            verifyNoInteractions(fixture.transport);
+        }
+    }
+
+    @Test void cancelledRecipientCaptureFencesQueuedCallbacks() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var capture = fixture.misc.capturePreparedRecipientAsync(fixture.plugin,
+                    fixture.first.getUniqueId(), fixture.renderer).toCompletableFuture();
+            capture.cancel(false);
+            fixture.global.get(0).run();
+            assertTrue(fixture.rendered.isEmpty()); assertTrue(fixture.owners.isEmpty());
+            assertTrue(capture.isCancelled()); verifyNoInteractions(fixture.transport);
+        }
+    }
+
+    @Test void disabledRecipientCaptureDoesNotInvokeIntegrationRendering() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var id = fixture.first.getUniqueId();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(fixture.first);
+            var capture = fixture.misc.capturePreparedRecipientAsync(fixture.plugin, id, fixture.renderer).toCompletableFuture();
+            fixture.global.get(0).run();
+            when(fixture.plugin.isEnabled()).thenReturn(false);
+            fixture.owners.get(0).run();
+            assertThrows(CompletionException.class, capture::join);
+            assertTrue(fixture.rendered.isEmpty()); verifyNoInteractions(fixture.transport);
+        }
+    }
+
     private static final class Fixture implements AutoCloseable {
         final AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         final BukkitScheduler scheduler = mock(BukkitScheduler.class);

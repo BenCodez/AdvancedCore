@@ -210,6 +210,54 @@ public class MiscUtils {
 		return result;
 	}
 
+	/** Captures recipient-owned rendering before its durable per-fragment delivery plan is admitted. */
+	public CompletionStage<PreparedRecipient> capturePreparedRecipientAsync(AdvancedCorePlugin owner, UUID recipientId,
+			Function<Player, net.md_5.bungee.api.chat.TextComponent[]> renderer) {
+		if (owner == null || recipientId == null || renderer == null)
+			return CompletableFuture.failedFuture(new IllegalArgumentException("literal rendering arguments are required"));
+		CompletableFuture<PreparedRecipient> result = new CompletableFuture<>();
+		AtomicBoolean finished = new AtomicBoolean();
+		AtomicBoolean globalClaim = new AtomicBoolean();
+		armLiteralDeadline(result, finished);
+		try {
+			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
+				if (!globalClaim.compareAndSet(false, true) || finished.get()) return;
+				try {
+					if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before recipient rendering");
+					Player player = Bukkit.getPlayer(recipientId);
+					if (player == null) { if (finished.compareAndSet(false, true)) result.complete(PreparedRecipient.absent()); return; }
+					AtomicBoolean claimed = new AtomicBoolean();
+					runBroadcastRecipient(owner, player, () -> {
+						if (!claimed.compareAndSet(false, true) || finished.get()) return;
+						try {
+							if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before recipient rendering");
+							if (!player.isOnline()) { if (finished.compareAndSet(false, true)) result.complete(PreparedRecipient.absent()); return; }
+							var rendered = new PreparedRecipient(player, renderer.apply(player));
+							if (finished.get() || !owner.isEnabled() || !player.isOnline() || Bukkit.getPlayer(recipientId) != player)
+								throw new IllegalStateException("Literal recipient rendering is no longer active");
+							if (finished.compareAndSet(false, true)) result.complete(rendered);
+						} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+					}, () -> {
+						if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true))
+							CompletableFuture.runAsync(() -> result.complete(PreparedRecipient.absent()));
+					});
+				} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+			});
+		} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
+		return result;
+	}
+
+	/** Ephemeral owner identity and bounded final components; never persisted in the replay journal. */
+	public record PreparedRecipient(Player player, net.md_5.bungee.api.chat.TextComponent[] components) {
+		public PreparedRecipient {
+			if (components == null || components.length > 4096)
+				throw new IllegalArgumentException("Literal recipient components exceed limits");
+			components = components.clone();
+		}
+		@Override public net.md_5.bungee.api.chat.TextComponent[] components() { return components.clone(); }
+		private static PreparedRecipient absent() { return new PreparedRecipient(null, new net.md_5.bungee.api.chat.TextComponent[0]); }
+	}
+
 	public CompletionStage<Void> dispatchPreparedComponentLineAsync(AdvancedCorePlugin owner, UUID recipientId,
 			Function<Player, net.md_5.bungee.api.chat.TextComponent> renderer) {
 		if (owner == null || recipientId == null || renderer == null)

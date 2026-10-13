@@ -127,7 +127,12 @@ public final class RewardDisplayPlaceholders {
 		/** Recipient placeholders must run on that recipient's owner; console uses null on the global owner. */
 		public net.md_5.bungee.api.chat.TextComponent[] render(Player recipient) {
 			java.util.ArrayList<net.md_5.bungee.api.chat.TextComponent> result = new java.util.ArrayList<>();
-			for (int index = 0; index < lineCount(); index++) result.add(renderLine(recipient, index));
+			for (int index = 0; index < lineCount(); index++) {
+				for (var fragment : renderRecipientLineFragments(recipient, index)) {
+					if (result.size() >= 4096) throw new IllegalArgumentException("Literal broadcast has too many rendered lines");
+					result.add(fragment);
+				}
+			}
 			return result.toArray(new net.md_5.bungee.api.chat.TextComponent[0]);
 		}
 
@@ -141,6 +146,24 @@ public final class RewardDisplayPlaceholders {
 		}
 
 		public net.md_5.bungee.api.chat.TextComponent renderLine(Player recipient, int index) {
+			var line = renderProtectedLine(recipient, index);
+			return line.finish(PlaceholderUtils.parseJson(line.template()));
+		}
+
+		/** Expand recipient placeholders before splitting; exact actions and literal values stay protected. */
+		public net.md_5.bungee.api.chat.TextComponent[] renderRecipientLineFragments(Player recipient, int index) {
+			var preparedLine = renderProtectedLine(recipient, index);
+			var fragments = preparedLine.splitBroadcastLines();
+			if (fragments.size() > 4096) throw new IllegalArgumentException("Literal broadcast has too many rendered lines");
+			var result = new net.md_5.bungee.api.chat.TextComponent[fragments.size()];
+			for (int fragment = 0; fragment < result.length; fragment++) {
+				var line = fragments.get(fragment);
+				result[fragment] = line.finish(PlaceholderUtils.parseJson(line.template()));
+			}
+			return result;
+		}
+
+		private LiteralMessageTemplate.Prepared renderProtectedLine(Player recipient, int index) {
 			if (index < 0 || index >= lines.size()) throw new IllegalArgumentException("broadcast line index out of range");
 			var line = lines.get(index);
 			String text;
@@ -152,8 +175,7 @@ public final class RewardDisplayPlaceholders {
 				text = recipient == null ? line.template() : PlaceholderUtils.replacePlaceHolders(recipient, line.template());
 				text = MessageAPI.colorize(text);
 			}
-			var finalTemplate = line.withTemplate(text);
-			return finalTemplate.finish(PlaceholderUtils.parseJson(finalTemplate.template()));
+			return line.withTemplate(text);
 		}
 	}
 
