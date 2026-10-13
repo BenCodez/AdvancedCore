@@ -205,6 +205,80 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void visibleJavascriptSeparatorsSplitAfterEvaluationWithMixedDisplayBindings() {
+        for (boolean mixed : List.of(false, true)) {
+            var map = values("%NewLine%literal");
+            if (mixed) { map.put("Rank", "raw-rank"); RewardDisplayPlaceholders.put(map, "Rank", "&aAdmin"); }
+            String prefix = mixed ? "%Rank% " : "";
+            try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+                placeholders.when(() -> PlaceholderUtils.replaceJavascript(anyString())).thenAnswer(call ->
+                        ((String) call.getArgument(0)).replace("[Javascript=synthetic_multiline]", "One%NewLine%Two"));
+                var rendered = RewardDisplayPlaceholders.renderLiteralComponents(null,
+                        prefix + "[Javascript=synthetic_multiline]:%SiteName%", map);
+                assertEquals(2, rendered.length, "visible script results retain the canonical player separator");
+                assertEquals((mixed ? "Admin " : "") + "One", rendered[0].toPlainText());
+                assertEquals("Two:%NewLine%literal", rendered[1].toPlainText());
+            }
+        }
+    }
+
+    @Test
+    void visiblePlaceholderSeparatorsSplitAfterEvaluationWithMixedDisplayBindings() {
+        Player player = mock(Player.class);
+        for (boolean mixed : List.of(false, true)) {
+            var map = values("%NewLine%literal");
+            if (mixed) { map.put("Rank", "raw-rank"); RewardDisplayPlaceholders.put(map, "Rank", "&aAdmin"); }
+            String prefix = mixed ? "%Rank% " : "";
+            try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+                placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(eq(player), anyString())).thenAnswer(call ->
+                        ((String) call.getArgument(1)).replace("%synthetic_multiline%", "One%NewLine%Two"));
+                placeholders.when(() -> PlaceholderUtils.replaceJavascript(eq(player), anyString()))
+                        .thenAnswer(call -> call.getArgument(1));
+                var rendered = RewardDisplayPlaceholders.renderLiteralComponents(player,
+                        prefix + "%synthetic_multiline%:%SiteName%", map);
+                assertEquals(2, rendered.length, "visible provider results retain the canonical player separator");
+                assertEquals((mixed ? "Admin " : "") + "One", rendered[0].toPlainText());
+                assertEquals("Two:%NewLine%literal", rendered[1].toPlainText());
+            }
+        }
+    }
+
+    @Test
+    void postEvaluationSeparatorsInExactActionsStayOpaque() {
+        Player player = mock(Player.class);
+        var map = values("%NewLine%literal");
+        map.put("Rank", "raw-rank"); RewardDisplayPlaceholders.put(map, "Rank", "&aAdmin");
+        for (String attribute : List.of("Command", "Url", "Suggest_Command")) {
+            try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+                placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(eq(player), anyString())).thenAnswer(call ->
+                        ((String) call.getArgument(1)).replace("%synthetic_multiline%", "One%NewLine%Two"));
+                placeholders.when(() -> PlaceholderUtils.replaceJavascript(eq(player), anyString()))
+                        .thenAnswer(call -> call.getArgument(1));
+                var rendered = RewardDisplayPlaceholders.renderLiteralComponents(player,
+                        "%Rank% [Text=\"%SiteName%\"," + attribute + "=\"%synthetic_multiline%\"]", map);
+                assertEquals(1, rendered.length, attribute);
+                assertEquals("Admin %NewLine%literal", rendered[0].toPlainText());
+                assertTrue(ComponentSerializer.toString(rendered).contains("One%NewLine%Two"), attribute);
+                assertFalse(ComponentSerializer.toString(rendered).contains("VCORELITERAL"), attribute);
+            }
+        }
+    }
+
+    @Test
+    void generatedLowercaseSeparatorRetainsPlayerCompatibility() {
+        var map = values("literal");
+        map.put("Rank", "raw-rank"); RewardDisplayPlaceholders.put(map, "Rank", "Admin");
+        try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+            placeholders.when(() -> PlaceholderUtils.replaceJavascript(anyString())).thenAnswer(call ->
+                    ((String) call.getArgument(0)).replace("[Javascript=synthetic_multiline]", "One%newline%Two"));
+            var rendered = RewardDisplayPlaceholders.renderLiteralComponents(null,
+                    "%Rank% [Javascript=synthetic_multiline]:%SiteName%", map);
+            assertEquals(1, rendered.length);
+            assertEquals("Admin One%newline%Two:literal", rendered[0].toPlainText());
+        }
+    }
+
+    @Test
     void ordinaryTrustedPlaceholderSeparatorsSplitAfterCascadePreparation() {
         var map = values("literal");
         map.put("A", "One%NewLine%%B%");

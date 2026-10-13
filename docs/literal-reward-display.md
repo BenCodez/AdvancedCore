@@ -149,3 +149,7 @@ Minecraft client or Folia verification.
 Replay selections and action checkpoints remain internal durable metadata, outside the display-binding index. Their encoded size does not reduce the documented random-message template limit. Ordered ordinary substitution also retains markers formed by adjacent text after an empty or delimiter-free replacement.
 Trusted formatted templates may expand to the existing 262144-character result budget, while authored input remains limited to 65536 UTF-16 units. This accommodates opaque token expansion without unbounded rendered text.
 Ordered expansion charges pending buffers before descending as well as completed cached text, within the same combined character budget. Ordinary bindings retain the historical fresh-map iteration order independently of unused metadata.
+
+Player message rendering completes visible PlaceholderAPI and configured JavaScript evaluation before splitting canonical `%NewLine%` separators. Trusted display overrides keep multiline behavior; exact command/URL/suggestion attributes and explicit literal values remain protected through the split. Player messages continue treating the broadcast-only lowercase `%newline%` spelling as text.
+
+Queued console render suppliers check plugin availability before invoking integration-dependent rendering and again afterward. The same fence applies if broadcast recipient scheduling disables the plugin before console rendering begins. A retired callback fails its completion instead of executing the renderer.

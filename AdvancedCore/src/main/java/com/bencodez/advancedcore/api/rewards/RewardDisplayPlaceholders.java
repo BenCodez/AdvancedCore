@@ -79,20 +79,21 @@ public final class RewardDisplayPlaceholders {
 		var rendering = legacy.renderer();
 		prepared = prepared.withTemplate(renderInteractiveBounded(prepared.template(),
 				text -> legacy.revealDisplayLineSeparators(text, false), Function.identity()));
+		prepared = prepared.protectFormattedActions(value -> renderIndexedExact(player, value, rendering));
+		String parsed;
+		if (legacy.hasDisplayValues()) {
+			// Evaluate visible provider/script output before splitting, as the legacy
+			// prepared-message path does. Exact attributes and literal values remain opaque.
+			parsed = renderInteractiveBounded(prepared.template(),
+					value -> MessageAPI.colorize(renderIndexedVisible(player, value, rendering)), Function.identity());
+		} else {
+			String text = rendering.protectAfterOrdinary(prepared.template(), false, true);
+			parsed = player == null ? PlaceholderUtils.parseText(text) : PlaceholderUtils.parseText(player, text);
+		}
+		prepared = prepared.withTemplate(parsed);
 		java.util.ArrayList<net.md_5.bungee.api.chat.TextComponent> result = new java.util.ArrayList<>();
 		for (var line : prepared.splitLines()) {
-			line = line.protectFormattedActions(value -> renderIndexedExact(player, value, rendering));
-			String parsed;
-			if (legacy.hasDisplayValues()) {
-				// Color only visible text and hover; raw action attributes stay shielded.
-				parsed = renderInteractiveBounded(line.template(),
-						value -> MessageAPI.colorize(renderIndexedVisible(player, value, rendering)), Function.identity());
-			} else {
-				String text = rendering.protectAfterOrdinary(line.template(), false, true);
-				parsed = player == null ? PlaceholderUtils.parseText(text) : PlaceholderUtils.parseText(player, text);
-			}
-			var finalTemplate = line.withTemplate(parsed);
-			result.add(finalTemplate.finish(PlaceholderUtils.parseJson(finalTemplate.template())));
+			result.add(line.finish(PlaceholderUtils.parseJson(line.template())));
 		}
 		return result.toArray(new net.md_5.bungee.api.chat.TextComponent[0]);
 	}

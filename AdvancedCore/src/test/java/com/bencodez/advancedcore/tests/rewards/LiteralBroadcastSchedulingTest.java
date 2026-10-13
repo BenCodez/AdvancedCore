@@ -64,6 +64,92 @@ public class LiteralBroadcastSchedulingTest {
         }
     }
 
+    @Test void disabledQueuedConsoleLineFailsBeforeRenderingOrConsoleLookup() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var rendered = new AtomicBoolean();
+            var completion = fixture.misc.dispatchPreparedConsoleLineAsync(fixture.plugin, () -> {
+                rendered.set(true);
+                return new TextComponent("Original");
+            }).toCompletableFuture();
+            assertFalse(completion.isDone());
+            assertEquals(1, fixture.global.size());
+            when(fixture.plugin.isEnabled()).thenReturn(false);
+            fixture.global.get(0).run();
+            assertInstanceOf(IllegalStateException.class,
+                    assertThrows(CompletionException.class, completion::join).getCause());
+            assertFalse(rendered.get());
+            fixture.bukkit.verify(Bukkit::getConsoleSender, never());
+            verifyNoInteractions(fixture.console, fixture.transport);
+        }
+    }
+
+    @Test void enabledConsoleLineRendersOnGlobalOwnerAndDeliversOnce() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var rendered = new ArrayList<TextComponent>();
+            TextComponent line = new TextComponent("R&D &aLiteral");
+            var completion = fixture.misc.dispatchPreparedConsoleLineAsync(fixture.plugin, () -> {
+                assertTrue(fixture.globalOwner.get());
+                rendered.add(line);
+                return line;
+            }).toCompletableFuture();
+            assertFalse(completion.isDone());
+            assertTrue(rendered.isEmpty());
+            verifyNoInteractions(fixture.console);
+            fixture.global.get(0).run();
+            fixture.global.get(0).run();
+            completion.join();
+            assertEquals(List.of(line), rendered);
+            verify(fixture.console).sendMessage(line.toLegacyText());
+            verifyNoMoreInteractions(fixture.console);
+        }
+    }
+
+    @Test void disableDuringConsoleLineRenderingFailsBeforeConsoleLookup() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var rendered = new AtomicBoolean();
+            var completion = fixture.misc.dispatchPreparedConsoleLineAsync(fixture.plugin, () -> {
+                assertTrue(fixture.globalOwner.get());
+                rendered.set(true);
+                when(fixture.plugin.isEnabled()).thenReturn(false);
+                return new TextComponent("Late");
+            }).toCompletableFuture();
+            fixture.global.get(0).run();
+            assertInstanceOf(IllegalStateException.class,
+                    assertThrows(CompletionException.class, completion::join).getCause());
+            assertTrue(rendered.get());
+            fixture.bukkit.verify(Bukkit::getConsoleSender, never());
+            verifyNoInteractions(fixture.console, fixture.transport);
+        }
+    }
+
+    @Test void disableDuringRecipientAdmissionFencesBroadcastConsoleRenderer() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var rendered = new AtomicBoolean();
+            doAnswer(call -> {
+                Runnable task = call.getArgument(1);
+                Player player = call.getArgument(2);
+                fixture.owners.add(() -> {
+                    fixture.currentOwner.set(player);
+                    try { task.run(); } finally { fixture.currentOwner.set(null); }
+                });
+                when(fixture.plugin.isEnabled()).thenReturn(false);
+                return null;
+            }).when(fixture.scheduler).executeOrScheduleSync(eq(fixture.plugin), any(Runnable.class), any(Player.class));
+            var completion = fixture.misc.broadcastPreparedMessageAsync(fixture.renderer, () -> {
+                rendered.set(true);
+                return "Late";
+            }).toCompletableFuture();
+            fixture.global.get(0).run();
+            assertInstanceOf(IllegalStateException.class,
+                    assertThrows(CompletionException.class, completion::join).getCause());
+            assertFalse(rendered.get());
+            fixture.owners.forEach(Runnable::run);
+            assertTrue(fixture.rendered.isEmpty());
+            fixture.bukkit.verify(Bukkit::getConsoleSender, never());
+            verifyNoInteractions(fixture.console, fixture.transport);
+        }
+    }
+
     @Test void audienceCaptureDeadlineFencesLateGlobalCallback() throws Exception {
         try (Fixture fixture = new Fixture()) {
             var capture = fixture.misc.captureOnlinePlayerIdsAsync(fixture.plugin, fixture.deadline::set);

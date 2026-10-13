@@ -286,6 +286,7 @@ public class MiscUtils {
 			owner.getBukkitScheduler().executeOrScheduleSync(owner, () -> {
 				try {
 					if (finished.get()) return;
+					if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before literal console delivery");
 					var line = renderer.get();
 					if (finished.get() || !owner.isEnabled()) throw new IllegalStateException("Plugin disabled during literal console delivery");
 					if (line != null) Bukkit.getConsoleSender().sendMessage(line.toLegacyText());
@@ -349,6 +350,7 @@ public class MiscUtils {
 						} catch (Throwable failure) { delivery.fail(failure); delivery.settle(); }
 					}
 					if (consoleMessage != null && !delivery.closed.get()) {
+						if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled before broadcast console rendering");
 						String message = consoleMessage.get();
 						if (!owner.isEnabled()) throw new IllegalStateException("Plugin disabled while rendering broadcast");
 						if (!delivery.closed.get() && message != null && !message.isEmpty())
