@@ -165,7 +165,7 @@ public final class RewardDisplayPlaceholders {
 				actions.put(entry.getKey(), entry.getValue() == null ? "" : entry.getValue());
 		}
 		var legacy = indexedLegacyValues(legacyPlaceholders(placeholders, literals.keySet()));
-		var prepared = LiteralMessageTemplate.prepare(template, literals, actions, legacy);
+		var prepared = LiteralMessageTemplate.prepareRewardDisplay(template, literals, actions, legacy);
 		return new LiteralPreparation(prepared, legacy.bind(prepared));
 	}
 

@@ -53,6 +53,17 @@ public final class LiteralMessageTemplate {
     /** Internal reward consumer: include legacy data in admission and collision checks before allocating any token. */
     public static Prepared prepare(String template, Map<String, String> literalValues, Map<String, String> actionValues,
             LegacyValues legacyValues) {
+        return prepare(template, literalValues, actionValues, legacyValues, false);
+    }
+
+    /** Reward consumer: admit placeholders introduced by trusted visible templates, expanding them once. */
+    public static Prepared prepareRewardDisplay(String template, Map<String, String> literalValues,
+            Map<String, String> actionValues, LegacyValues legacyValues) {
+        return prepare(template, literalValues, actionValues, legacyValues, true);
+    }
+
+    private static Prepared prepare(String template, Map<String, String> literalValues, Map<String, String> actionValues,
+            LegacyValues legacyValues, boolean ordinaryVisibleExpanded) {
         String source = template == null ? "" : template;
         if (source.length() > MAX_TEMPLATE) {
             throw new IllegalArgumentException("template is too large");
@@ -60,6 +71,10 @@ public final class LiteralMessageTemplate {
         int bindingCharacters = validateBindings(literalValues, actionValues);
         if (legacyValues != null && legacyValues.characters > MAX_BINDING_CHARACTERS - bindingCharacters)
             throw new IllegalArgumentException("literal bindings exceed character limits");
+        // Expand trusted visible templates before discovering their literal/display
+        // references. Exact attributes and authored script interiors retain their
+        // own later expansion; ordinary values are not evaluated twice.
+        if (ordinaryVisibleExpanded && legacyValues != null) source = legacyValues.expandVisibleOrdinary(source);
         TokenIndex tokenIndex = new TokenIndex(Set.of());
         tokenIndex.addCorpus(source);
         for (Map<String, String> bindings : java.util.Arrays.asList(literalValues, actionValues)) {
@@ -150,7 +165,7 @@ public final class LiteralMessageTemplate {
         protectedScripts.append(source, cursor, source.length());
         String protectedActions = protectExactAttributes(protectedScripts.toString(), values, exact, tokens, actionTokens,
                 tokenIndex);
-        return Prepared.create(replacementMarkers.replace(protectedActions), tokens, actionTokens, tokenIndex, 0, bindingCharacters, legacyValues == null ? null : legacyValues.admissionIdentity);
+        return Prepared.create(replacementMarkers.replace(protectedActions), tokens, actionTokens, tokenIndex, 0, bindingCharacters, legacyValues == null ? null : legacyValues.admissionIdentity, ordinaryVisibleExpanded);
     }
 
     /** Shield raw legacy display overrides only in administrator-authored click attributes. */
@@ -189,16 +204,21 @@ public final class LiteralMessageTemplate {
 
     /** Visit only administrator-authored attributes, before any inserted value is parsed. */
     private static String mapExactAttributes(String source, Function<String, String> mapper) {
+        return mapMessageRegions(source, Function.identity(), mapper);
+    }
+
+    /** Keep exact click values separate while transforming visible/hover regions. */
+    private static String mapMessageRegions(String source, Function<String, String> visible, Function<String, String> exact) {
         StringBuilder result = new StringBuilder(source.length());
         int cursor = 0;
         while (cursor < source.length()) {
             int componentStart = indexOfIgnoreCase(source, "[Text=\"", cursor);
             int scriptStart = indexOfIgnoreCase(source, "[Javascript=", cursor);
-            // Text-looking strings inside a script are program text, not authored message attributes.
             if (scriptStart >= 0 && (componentStart < 0 || scriptStart < componentStart)) {
                 int scriptEnd = source.indexOf(']', scriptStart);
                 if (scriptEnd < 0) break;
-                result.append(source, cursor, scriptEnd + 1);
+                appendMapped(result, visible, source.substring(cursor, scriptStart));
+                appendBounded(result, source, scriptStart, scriptEnd + 1);
                 cursor = scriptEnd + 1;
                 continue;
             }
@@ -207,23 +227,29 @@ public final class LiteralMessageTemplate {
             if (componentEnd < 0) break;
             componentEnd += 2;
             int attributesStart = source.indexOf("\",", componentStart);
-            result.append(source, cursor, componentStart);
+            appendMapped(result, visible, source.substring(cursor, componentStart));
             if (attributesStart < 0 || attributesStart >= componentEnd) {
-                result.append(source, componentStart, componentEnd);
+                appendMapped(result, visible, source.substring(componentStart, componentEnd));
             } else {
                 Matcher attributes = EXACT_ATTRIBUTE.matcher(source);
                 attributes.region(attributesStart + 2, componentEnd);
                 int attributeCursor = componentStart;
                 while (attributes.find()) {
-                    result.append(source, attributeCursor, attributes.start(2));
-                    result.append(mapper.apply(attributes.group(2)));
+                    appendMapped(result, visible, source.substring(attributeCursor, attributes.start(2)));
+                    appendMapped(result, exact, attributes.group(2));
                     attributeCursor = attributes.end(2);
                 }
-                result.append(source, attributeCursor, componentEnd);
+                appendMapped(result, visible, source.substring(attributeCursor, componentEnd));
             }
             cursor = componentEnd;
         }
-        return result.append(source, cursor, source.length()).toString();
+        appendMapped(result, visible, source.substring(cursor));
+        return result.toString();
+    }
+
+    private static void appendMapped(StringBuilder result, Function<String, String> mapper, String source) {
+        String mapped = mapper.apply(source);
+        appendBounded(result, mapped, 0, mapped.length());
     }
 
     private static String newToken(TokenIndex index) {
@@ -674,6 +700,15 @@ public final class LiteralMessageTemplate {
             return Collections.unmodifiableMap(result);
         }
 
+        private String expandVisibleOrdinary(String source) {
+            OrderedMarkers index = new OrderedMarkers(ordinary, source);
+            int[] remainingWork = { OrderedMarkers.MAX_SCAN_CHARACTERS };
+            return mapMessageRegions(source,
+                    text -> com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(text).transform(
+                            value -> index.replace(value, remainingWork), Function.identity()),
+                    Function.identity());
+        }
+
         private void addCorpus(TokenIndex index) {
             for (String token : forbiddenTokens) index.reserve(token);
         }
@@ -703,12 +738,13 @@ public final class LiteralMessageTemplate {
                 if (exact.containsKey(key)) exactTokens.put(token, exact.get(key));
             }
             return new LegacyBindings(this, replacements, visibleTokens, exactTokens, prepared.template, index,
-                    prepared.tokens.size());
+                    prepared.tokens.size(), prepared.ordinaryVisibleExpanded);
         }
     }
 
     /** Immutable source/recipient indexes used only by the mixed literal reward rendering lane. */
     public static final class LegacyBindings {
+        private final boolean ordinaryVisibleExpanded;
         private final MarkerMatcher visible;
         private final MarkerMatcher exact;
         private final Map<String, String> visibleJavascript;
@@ -725,7 +761,8 @@ public final class LiteralMessageTemplate {
 
         private LegacyBindings(LegacyValues values, Map<String, String> replacements,
                 Map<String, String> visibleTokens, Map<String, String> exactTokens, String source, TokenIndex index,
-                int literalTokenCount) {
+                int literalTokenCount, boolean ordinaryVisibleExpanded) {
+            this.ordinaryVisibleExpanded = ordinaryVisibleExpanded;
             Map<String, String> visibleMarkers = new LinkedHashMap<>();
             Map<String, String> exactMarkers = new LinkedHashMap<>();
             Map<String, String> visibleScripts = new LinkedHashMap<>();
@@ -812,16 +849,17 @@ public final class LiteralMessageTemplate {
         /** Reveal only trusted display separators; fragments and authored script values stay opaque. */
         public String revealDisplayLineSeparators(String source, boolean broadcast) {
             MarkerMatcher markers = broadcast ? broadcastLineSeparators : playerLineSeparators;
-            // Ordinary legacy bindings are expanded by the old sendMessage path before
-            // its canonical separator split. Do the same preparation here so a trusted
-            // ordinary value containing %NewLine% participates in that split. The
-            // separator matcher still runs only over authored text; values introduced
-            // by display bindings remain opaque.
-            int[] remainingWork = { OrderedMarkers.MAX_SCAN_CHARACTERS };
-            String ordinaryExpanded = com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(source).transform(
-                    text -> ordinary.replace(text, remainingWork),
-                    Function.identity());
-            return com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(ordinaryExpanded).transform(
+            // Ordinary visible templates were expanded before binding admission.
+            // Re-scope introduced components and protect raw action markers before
+            // revealing display separators; inserted literal data stays opaque.
+            String visibleSource = source;
+            if (!ordinaryVisibleExpanded) {
+                int[] remainingWork = { OrderedMarkers.MAX_SCAN_CHARACTERS };
+                visibleSource = com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(source).transform(
+                        text -> ordinary.replace(text, remainingWork), Function.identity());
+            }
+            String protectedActions = mapExactAttributes(visibleSource, value -> exact.replace(value, MAX_RESULT));
+            return com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(protectedActions).transform(
                     text -> markers.replace(text, MAX_RESULT), Function.identity());
         }
 
@@ -952,10 +990,12 @@ public final class LiteralMessageTemplate {
         private final int formattedActionCharacters;
         private final int bindingCharacters;
         private final Object legacyAdmissionIdentity;
+        private final boolean ordinaryVisibleExpanded;
 
         /** All maps passed here are immutable and can be shared by lines and recipients. */
         private Prepared(String template, Map<String, String> tokens, Map<String, String> actionTokens,
-                TokenIndex tokenIndex, int formattedActionCharacters, int bindingCharacters, Object legacyAdmissionIdentity) {
+                TokenIndex tokenIndex, int formattedActionCharacters, int bindingCharacters, Object legacyAdmissionIdentity,
+                boolean ordinaryVisibleExpanded) {
             tokenIndex.addCorpus(template);
             ProtectedBoundaries protectedText = protectSectionTokenBoundaries(template, tokens, actionTokens, tokenIndex);
             this.template = protectedText.template();
@@ -965,14 +1005,16 @@ public final class LiteralMessageTemplate {
             this.formattedActionCharacters = formattedActionCharacters;
             this.bindingCharacters = bindingCharacters;
             this.legacyAdmissionIdentity = legacyAdmissionIdentity;
+            this.ordinaryVisibleExpanded = ordinaryVisibleExpanded;
         }
 
         /** Publish newly owned maps; no mutable index or map survives into Prepared. */
         private static Prepared create(String template, Map<String, String> tokens, Map<String, String> actions,
-                TokenIndex tokenIndex, int formattedActionCharacters, int bindingCharacters, Object legacyAdmissionIdentity) {
+                TokenIndex tokenIndex, int formattedActionCharacters, int bindingCharacters, Object legacyAdmissionIdentity,
+                boolean ordinaryVisibleExpanded) {
             tokens.forEach(actions::putIfAbsent);
             return new Prepared(template, Collections.unmodifiableMap(tokens), Collections.unmodifiableMap(actions),
-                    tokenIndex, formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity);
+                    tokenIndex, formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity, ordinaryVisibleExpanded);
         }
 
         public String template() {
@@ -983,7 +1025,7 @@ public final class LiteralMessageTemplate {
         public List<Prepared> splitLines() {
             List<Prepared> lines = new ArrayList<>();
             for (String line : template.split(java.util.regex.Pattern.quote("%NewLine%"))) {
-                lines.add(new Prepared(line, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity));
+                lines.add(new Prepared(line, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity, ordinaryVisibleExpanded));
             }
             return List.copyOf(lines);
         }
@@ -994,7 +1036,7 @@ public final class LiteralMessageTemplate {
             // Preserve both spellings accepted by the established broadcast helpers.
             for (String upperLine : template.split(java.util.regex.Pattern.quote("%newline%"))) {
                 for (String line : upperLine.split(java.util.regex.Pattern.quote("%NewLine%"))) {
-                    lines.add(new Prepared(line, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity));
+                    lines.add(new Prepared(line, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity, ordinaryVisibleExpanded));
                 }
             }
             return List.copyOf(lines);
@@ -1005,7 +1047,7 @@ public final class LiteralMessageTemplate {
             if (formattedTemplate == null || formattedTemplate.length() > MAX_RESULT) {
                 throw new IllegalArgumentException("formatted template is invalid");
             }
-            return new Prepared(formattedTemplate, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity);
+            return new Prepared(formattedTemplate, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity, ordinaryVisibleExpanded);
         }
 
         /** Render authored action values once, then keep their exact output out of the component parser. */
@@ -1037,7 +1079,7 @@ public final class LiteralMessageTemplate {
                 return token;
             });
             if (!formatted.changed) return this;
-            return create(protectedTemplate, formatted.bindings, formatted.actions, tokenIndex, formatted.characters, bindingCharacters, legacyAdmissionIdentity);
+            return create(protectedTemplate, formatted.bindings, formatted.actions, tokenIndex, formatted.characters, bindingCharacters, legacyAdmissionIdentity, ordinaryVisibleExpanded);
         }
 
         public TextComponent finish(TextComponent parsedComponent) {

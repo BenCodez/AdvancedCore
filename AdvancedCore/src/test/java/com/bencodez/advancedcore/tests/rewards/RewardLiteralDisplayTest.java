@@ -28,7 +28,9 @@ import com.bencodez.simpleapi.serverhandle.IServerHandle;
 import com.bencodez.simpleapi.array.ArrayUtils;
 
 import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.chat.hover.content.Text;
 import net.md_5.bungee.chat.ComponentSerializer;
 
 class RewardLiteralDisplayTest {
@@ -294,6 +296,165 @@ class RewardLiteralDisplayTest {
             assertTrue(ComponentSerializer.toString(last).contains("/inspect raw%NewLine%identity"));
             assertFalse(ComponentSerializer.toString(last).contains("VCORELITERAL"));
         }
+    }
+
+    @Test
+    void referencedDisplaySeparatorsDoNotSplitIntroducedCommandActions() {
+        assertReferencedDisplaySeparators("Command", ClickEvent.Action.RUN_COMMAND);
+    }
+
+    @Test
+    void referencedDisplaySeparatorsDoNotSplitIntroducedUrlActions() {
+        assertReferencedDisplaySeparators("Url", ClickEvent.Action.OPEN_URL);
+    }
+
+    @Test
+    void referencedDisplaySeparatorsDoNotSplitIntroducedSuggestionActions() {
+        assertReferencedDisplaySeparators("Suggest_Command", ClickEvent.Action.SUGGEST_COMMAND);
+    }
+
+    private void assertReferencedDisplaySeparators(String attribute, ClickEvent.Action action) {
+        var map = values("Unrelated");
+        map.put("Legacy", "raw-value");
+        RewardDisplayPlaceholders.put(map, "Legacy", "One%NewLine%Two");
+        map.put("Card", "[Text=\"Run\"," + attribute + "=\"%Legacy%\"]");
+        String template = "%Legacy%%NewLine%%Card%:%SiteName%";
+        var player = render(template, map);
+        assertEquals(List.of("One", "Two", "Run:Unrelated"), java.util.Arrays.stream(player).map(component -> component.toPlainText()).toList());
+        assertSingleExactAction(player, action, "raw-value");
+        try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+            placeholders.when(() -> PlaceholderUtils.replaceJavascript(anyString())).thenAnswer(call -> call.getArgument(0));
+            var broadcast = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, template, map).render(null);
+            assertEquals(List.of("One", "Two", "Run:Unrelated"), java.util.Arrays.stream(broadcast).map(component -> component.toPlainText()).toList());
+            assertSingleExactAction(broadcast, action, "raw-value");
+        }
+    }
+
+    @Test
+    void ordinaryIntroducedLiteralBindingsRetainVisibleAndExactActionLanes() {
+        var map = values("R&D &aLiteral%NewLine%external");
+        map.put("Card", "[Text=\"%SiteName%\",Command=\"%SiteName%\"]");
+        var player = render("%Card%", map);
+        assertEquals(1, player.length);
+        assertEquals("R&D &aLiteral%NewLine%external", BaseComponent.toPlainText(player));
+        assertSingleExactAction(player, ClickEvent.Action.RUN_COMMAND, "raw-site");
+        try (var placeholders = mockStatic(PlaceholderUtils.class, CALLS_REAL_METHODS)) {
+            placeholders.when(() -> PlaceholderUtils.replaceJavascript(anyString())).thenAnswer(call -> call.getArgument(0));
+            var broadcast = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, "%Card%", map).render(null);
+            assertEquals(1, broadcast.length);
+            assertEquals("R&D &aLiteral%NewLine%external", BaseComponent.toPlainText(broadcast));
+            assertSingleExactAction(broadcast, ClickEvent.Action.RUN_COMMAND, "raw-site");
+        }
+    }
+
+    @Test
+    void ordinaryIntroducedCommandKeepsDisplaySeparatorsOutOfTheRawAction() {
+        assertOrdinaryIntroducedAction("Command", ClickEvent.Action.RUN_COMMAND, false);
+    }
+
+    @Test
+    void ordinaryIntroducedUrlKeepsDisplaySeparatorsOutOfTheRawAction() {
+        assertOrdinaryIntroducedAction("Url", ClickEvent.Action.OPEN_URL, false);
+    }
+
+    @Test
+    void ordinaryIntroducedSuggestionKeepsDisplaySeparatorsOutOfTheRawAction() {
+        assertOrdinaryIntroducedAction("Suggest_Command", ClickEvent.Action.SUGGEST_COMMAND, false);
+    }
+
+    @Test
+    void broadcastOrdinaryIntroducedCommandKeepsDisplaySeparatorsOutOfTheRawAction() {
+        assertOrdinaryIntroducedAction("Command", ClickEvent.Action.RUN_COMMAND, true);
+    }
+
+    @Test
+    void broadcastOrdinaryIntroducedUrlKeepsDisplaySeparatorsOutOfTheRawAction() {
+        assertOrdinaryIntroducedAction("Url", ClickEvent.Action.OPEN_URL, true);
+    }
+
+    @Test
+    void broadcastOrdinaryIntroducedSuggestionKeepsDisplaySeparatorsOutOfTheRawAction() {
+        assertOrdinaryIntroducedAction("Suggest_Command", ClickEvent.Action.SUGGEST_COMMAND, true);
+    }
+
+    private void assertOrdinaryIntroducedAction(String attribute, ClickEvent.Action action, boolean broadcast) {
+        var map = values("Unrelated");
+        map.put("Legacy", "raw-value");
+        RewardDisplayPlaceholders.put(map, "Legacy", "One%NewLine%Two");
+        map.put("Card", "[Text=\"Run\"," + attribute + "=\"%Legacy%\"]");
+        TextComponent[] rendered;
+        if (broadcast) {
+            var prepared = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, "%Card%:%SiteName%", map);
+            assertEquals(1, prepared.lineCount(), attribute);
+            rendered = prepared.render(null);
+        } else {
+            rendered = render("%Card%:%SiteName%", map);
+        }
+        assertEquals(1, rendered.length, attribute);
+        assertEquals("Run:Unrelated", BaseComponent.toPlainText(rendered), attribute);
+        assertSingleExactAction(rendered, action, "raw-value");
+    }
+
+    @Test
+    void directAttributesKeepRawSeparatorsAndExternalLiteralSeparatorsInert() {
+        String literal = "%NewLine%/%newline%/%NEWLINE%";
+        String raw = "raw%NewLine%/%newline%/%NEWLINE%identity";
+        for (var attribute : java.util.Map.of("Command", ClickEvent.Action.RUN_COMMAND,
+                "Url", ClickEvent.Action.OPEN_URL, "Suggest_Command", ClickEvent.Action.SUGGEST_COMMAND).entrySet()) {
+            var map = values(literal);
+            map.put("Legacy", raw);
+            RewardDisplayPlaceholders.put(map, "Legacy", "One%NewLine%Two%newline%Three");
+            String template = "[Text=\"Run\"," + attribute.getKey() + "=\"%Legacy%\",Hover=\"%SiteName%\"]:%SiteName%";
+            var broadcast = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, template, map);
+            assertEquals(1, broadcast.lineCount(), attribute.getKey());
+            for (var rendered : List.of(render(template, map), broadcast.render(null))) {
+                assertEquals(1, rendered.length, attribute.getKey());
+                assertEquals("Run:" + literal, BaseComponent.toPlainText(rendered), attribute.getKey());
+                BaseComponent clickable = assertSingleExactAction(rendered, attribute.getValue(), raw);
+                Text hover = assertInstanceOf(Text.class, clickable.getHoverEvent().getContents().get(0));
+                BaseComponent[] hoverComponents = assertInstanceOf(BaseComponent[].class, hover.getValue());
+                assertEquals(literal, BaseComponent.toPlainText(hoverComponents));
+            }
+        }
+    }
+
+    @Test
+    void ordinaryIntroducedVisibleAndHoverDisplayStillUseTheirDisplayValues() {
+        var map = values("%NewLine%external");
+        map.put("Legacy", "raw-value");
+        RewardDisplayPlaceholders.put(map, "Legacy", "&aShown");
+        map.put("Card", "[Text=\"%Legacy%\",Command=\"%Legacy%\",Hover=\"%Legacy%\"]");
+        String template = "%Card%:%SiteName%";
+        var broadcast = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, template, map);
+        assertEquals(1, broadcast.lineCount());
+        for (var rendered : List.of(render(template, map), broadcast.render(null))) {
+            assertEquals(1, rendered.length);
+            assertEquals("Shown:%NewLine%external", BaseComponent.toPlainText(rendered));
+            assertTrue(BaseComponent.toLegacyText(rendered).contains("§aShown"));
+            BaseComponent clickable = assertSingleExactAction(rendered, ClickEvent.Action.RUN_COMMAND, "raw-value");
+            Text hover = assertInstanceOf(Text.class, clickable.getHoverEvent().getContents().get(0));
+            BaseComponent[] hoverComponents = assertInstanceOf(BaseComponent[].class, hover.getValue());
+            assertEquals("Shown", BaseComponent.toPlainText(hoverComponents));
+            assertTrue(BaseComponent.toLegacyText(hoverComponents).contains("§aShown"));
+        }
+    }
+
+    private BaseComponent assertSingleExactAction(BaseComponent[] rendered, ClickEvent.Action action, String raw) {
+        ArrayList<BaseComponent> pending = new ArrayList<>(List.of(rendered));
+        ArrayList<BaseComponent> clickable = new ArrayList<>();
+        for (int index = 0; index < pending.size(); index++) {
+            BaseComponent component = pending.get(index);
+            if (component.getClickEvent() != null) clickable.add(component);
+            if (component.getExtra() != null) pending.addAll(component.getExtra());
+        }
+        assertEquals(1, clickable.size());
+        BaseComponent component = clickable.get(0);
+        assertEquals(action, component.getClickEvent().getAction());
+        assertEquals(raw, component.getClickEvent().getValue());
+        String json = ComponentSerializer.toString(rendered);
+        for (String marker : List.of("VCORELITERAL", "ACLITERAL", "%__advancedcore_bound_", "\u2060", "\uE000", "\uE001"))
+            assertFalse(json.contains(marker), json);
+        return component;
     }
 
     @Test

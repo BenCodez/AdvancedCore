@@ -37,6 +37,8 @@ Spacing comes from the trusted template. No padding or invisible separator is
 added by the literal renderer. A literal section sign uses `(section)` because
 Minecraft's legacy text handling interprets section-sign color sequences.
 Authored `%NewLine%` separators split before restoring external values.
+Trusted ordinary visible templates expand once before binding admission so introduced rich components retain separate visible and exact action lanes. Command, URL and suggestion values are shielded before display separators are revealed; a display name's multiline value never supplies the raw action value.
+
 Trusted legacy display overrides retain their established line separators. Only
 those separators are exposed before splitting; their text fragments remain
 protected through provider/script evaluation. Raw command and URL values keep
