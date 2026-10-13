@@ -1,11 +1,18 @@
 package com.bencodez.advancedcore.bukkit.runtime;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import org.bukkit.Bukkit;
 
@@ -17,10 +24,28 @@ import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
+import com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime;
+import com.bencodez.advancedcore.data.ServerData;
 
 /** Bukkit services for the shared executor lifecycle; no duplicate owners are created. */
 public final class BukkitRuntimePlatform implements RuntimePlatform {
     private final AdvancedCorePlugin plugin;
+    private volatile LongSupplier shutdownRemainingNanos;
+    private final CompletableFuture<Void> persistenceWorkerTermination = new CompletableFuture<>();
+    // The hook can be admitted later, after a retained time transition drains.
+    private final CompletableFuture<Void> consumerPreparationCompletion = new CompletableFuture<>();
+    private final CompletableFuture<Void> unloadHookCompletion = new CompletableFuture<>();
+    private final CompletableFuture<Void> shutdownHookCompletion = new CompletableFuture<>();
+    private final List<ScheduledExecutorService> nativeExecutorOwners;
+    // Exactly three existing final saves, in order, with no server-thread I/O.
+    private final ThreadPoolExecutor persistenceWorker = new ThreadPoolExecutor(1, 1, 0L,
+            TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(3),
+            AdvancedCoreRuntime.daemonThreads("AdvancedCore-Shutdown-Persistence")) {
+        @Override protected void terminated() { persistenceWorkerTermination.complete(null); }
+    };
+    private volatile CompletionStage<Void> inventoryPersistence = CompletableFuture.completedFuture(null);
+    private volatile CompletionStage<Void> timestampPersistence = CompletableFuture.completedFuture(null);
+    private volatile CompletionStage<Void> permissionPersistence = CompletableFuture.completedFuture(null);
     private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
 	private CompletionStage<Void> startedUserStorageRetirement;
 	private CompletionStage<Void> preStorageShutdownHook;
@@ -30,9 +55,40 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     private record UserStorageAdmission(boolean enabled, UserManager users, UserDataManager manager) { }
     private volatile UserStorageAdmission userStorageAdmission;
     private final AtomicBoolean userStorageOwnerClosed = new AtomicBoolean();
+    private final java.util.concurrent.atomic.AtomicReference<CompletableFuture<Void>> asynchronousOwnerClose =
+            new java.util.concurrent.atomic.AtomicReference<>();
 
     public BukkitRuntimePlatform(AdvancedCorePlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
+        // Capture identities before consumer unload changes handler/manager fields.
+        var owners = new IdentityHashMap<ScheduledExecutorService, Boolean>();
+        addExecutor(owners, plugin.getTimer());
+        addExecutor(owners, plugin.getLoginTimer());
+        addExecutor(owners, plugin.getInventoryTimer());
+        TimeChecker checker = plugin.getTimeChecker();
+        if (checker != null) addExecutor(owners, checker.getTimer());
+        FullInventoryHandler inventory = plugin.getFullInventoryHandler();
+        if (inventory != null) addExecutor(owners, inventory.getTimer());
+        if (plugin.getPermissionHandler() != null) addExecutor(owners, plugin.getPermissionHandler().getTimer());
+        UserManager users = plugin.getLoadedUserManager();
+        if (users != null && users.getDataManager() != null) addExecutor(owners, users.getDataManager().getTimer());
+        // Keep the same non-creating snapshot for retirement that was used to
+        // discover the native executor owners.  Shutdown may clear the plugin's
+        // manager reference before the storage cleanup action runs; looking it
+        // up again would both lose the original owner and invoke a lifecycle
+        // callback twice.
+        userStorageAdmission = new UserStorageAdmission(plugin.isLoadUserData(), users,
+                users == null ? null : users.getDataManager());
+        nativeExecutorOwners = List.copyOf(owners.keySet());
+    }
+
+    private static void addExecutor(IdentityHashMap<ScheduledExecutorService, Boolean> owners,
+            ScheduledExecutorService executor) {
+        if (executor != null) owners.put(executor, Boolean.TRUE);
+    }
+
+    @Override public void beginShutdown(LongSupplier remainingNanos) {
+        shutdownRemainingNanos = Objects.requireNonNull(remainingNanos, "remainingNanos");
     }
 
     @Override public ScheduledExecutorService getTimer() { return plugin.getTimer(); }
@@ -52,8 +108,11 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     @Override public List<Cleanup> beforeExecutorShutdown() {
         return List.of(
                 new Cleanup("full inventory handler", () -> {
-                    FullInventoryHandler handler = plugin.getFullInventoryHandler();
-                    if (handler != null) handler.shutdown();
+                    inventoryPersistence = finalPersistence("full inventory snapshot", () -> {
+                        FullInventoryHandler handler = plugin.getFullInventoryHandler();
+                        return handler == null ? CompletableFuture.completedFuture(null)
+                                : Objects.requireNonNull(handler.shutdownAsync(persistenceWorker), "inventory persistence");
+                    });
                 }),
                 new Cleanup("Javascript engine", () -> {
                     if (plugin.getOptions() != null && plugin.getOptions().isJavascriptEngineEnabled()) {
@@ -64,7 +123,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 				new Cleanup("time change admission", this::closeTimeChangeAdmission),
 				new Cleanup("user storage", this::closeUserStorageAfterTimeChangeRetirement),
                 new Cleanup("server data timestamp", () -> {
-                    if (plugin.getServerDataFile() != null) plugin.getServerDataFile().setLastUpdated();
+                    timestampPersistence = finalPersistence("server data timestamp", this::submitTimestampPersistence);
                 }));
     }
 
@@ -95,7 +154,12 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
     @Override public List<Cleanup> afterExecutorGrace() {
         return List.of(new Cleanup("reward handler", () -> {
-            if (plugin.getRewardHandler() != null) plugin.getRewardHandler().shutdown();
+            if (plugin.getRewardHandler() != null) {
+                LongSupplier budget = shutdownRemainingNanos;
+                if (budget == null) plugin.getRewardHandler().shutdown();
+                else plugin.getRewardHandler().shutdown(Math.min(TimeUnit.SECONDS.toNanos(10),
+                        Math.max(0L, budget.getAsLong())), TimeUnit.NANOSECONDS);
+            }
         }));
     }
 
@@ -104,14 +168,22 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 			CompletionStage<Void> retirement = userStorageRetirement;
 			if (retirement != null && (!retirement.toCompletableFuture().isDone()
 					|| retirement.toCompletableFuture().isCompletedExceptionally())) {
-				closeCurrentUserStorageOwner(captureUserStorageAdmission());
+				observePersistence("terminal user storage owner", closeUserStorageOwnerAsync(captureUserStorageAdmission()));
 			}
 		}));
 	}
 
     @Override public List<Cleanup> afterExecutorShutdown() {
         return List.of(
-                new Cleanup("plugin unload hook", plugin::onUnLoad),
+                new Cleanup("plugin unload hook", () -> {
+                    try {
+                        plugin.onUnLoad();
+                        unloadHookCompletion.complete(null);
+                    } catch (Throwable failure) {
+                        unloadHookCompletion.completeExceptionally(failure);
+                        throw failure;
+                    }
+                }),
                 new Cleanup("skull cache", () -> {
                     if (plugin.getSkullCacheHandler() != null) plugin.getSkullCacheHandler().close();
                 }),
@@ -119,12 +191,26 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                     if (plugin.getHologramHandler() != null) plugin.getHologramHandler().onShutDown();
                 }),
                 new Cleanup("permission handler", () -> {
-                    if (plugin.getPermissionHandler() != null) plugin.getPermissionHandler().shutDown();
+                    permissionPersistence = finalPersistence("timed permission snapshot", () ->
+                            plugin.getPermissionHandler() == null ? CompletableFuture.completedFuture(null)
+                                    : Objects.requireNonNull(plugin.getPermissionHandler().shutDownAsync(persistenceWorker),
+                                            "permission persistence"));
                 }),
                 new Cleanup("dialog service", () -> {
                     if (plugin.getDialogService() != null) plugin.getDialogService().unregister();
                 }),
-                new Cleanup("plugin shutdown completion hook", plugin::onShutdownComplete));
+                new Cleanup("shutdown persistence worker", this::finishPersistenceSubmission),
+                new Cleanup("plugin shutdown completion hook", () -> {
+                    try {
+                        plugin.onShutdownComplete(finalFilePersistence());
+                        shutdownHookCompletion.complete(null);
+                    } catch (Throwable failure) {
+                        shutdownHookCompletion.completeExceptionally(failure);
+                        throw failure;
+                    } finally {
+                        releaseNativeOwnership();
+                    }
+                }));
     }
 
     @Override public void info(String message) { plugin.getLogger().info(message); }
@@ -134,8 +220,11 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     }
 
 	private void closeTimeChangeAdmission() {
-		TimeChecker checker = plugin.getTimeChecker();
-		timeChangeRetirement = checker == null ? CompletableFuture.completedFuture(null) : checker.beginShutdown();
+		try {
+			TimeChecker checker = plugin.getTimeChecker();
+			timeChangeRetirement = checker == null ? CompletableFuture.completedFuture(null)
+                    : Objects.requireNonNull(checker.beginShutdown(), "time retirement");
+        } catch (Throwable failure) { timeChangeRetirement = CompletableFuture.failedFuture(failure); }
 	}
 
 	private void closeUserStorageAfterTimeChangeRetirement() {
@@ -147,7 +236,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 			try {
 				timeRetirement.toCompletableFuture().join();
 				userStorageRetirement = ensureUserStorageRetirementStarted();
-			} catch (java.util.concurrent.CompletionException failure) {
+			} catch (java.util.concurrent.CompletionException | java.util.concurrent.CancellationException failure) {
 				userStorageRetirement = CompletableFuture.failedFuture(failure);
 			}
 			return;
@@ -250,9 +339,107 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 			} catch (Throwable failure) {
 				preStorageShutdownHook = CompletableFuture.failedFuture(failure);
 			}
+			CompletableFuture<Void> inventory = inventoryPersistence.toCompletableFuture();
+			if (!inventory.isDone() || inventory.isCompletedExceptionally()) {
+				preStorageShutdownHook = CompletableFuture.allOf(inventory,
+						preStorageShutdownHook.toCompletableFuture());
+			}
+			preStorageShutdownHook.whenComplete((ignored, failure) -> {
+				if (failure == null) consumerPreparationCompletion.complete(null);
+				else consumerPreparationCompletion.completeExceptionally(failure);
+			});
 			return preStorageShutdownHook;
 		}
 	}
+
+    private CompletionStage<Void> observePersistence(String component, CompletionStage<Void> completion) {
+        completion.whenComplete((ignored, failure) -> {
+            if (failure != null) cleanupFailed(component, failure);
+        });
+        return completion;
+    }
+
+    private CompletionStage<Void> finalPersistence(String component, Supplier<CompletionStage<Void>> submission) {
+        CompletionStage<Void> completion;
+        try { completion = submission.get(); }
+        catch (Throwable failure) { completion = CompletableFuture.failedFuture(failure); }
+        return observePersistence(component, completion);
+    }
+
+    private CompletionStage<Void> submitTimestampPersistence() {
+        ServerData owner = plugin.getServerDataFile();
+        if (owner == null) return CompletableFuture.completedFuture(null);
+        long lastUpdated = System.currentTimeMillis();
+        var completion = new CompletableFuture<Void>();
+        try {
+            persistenceWorker.execute(() -> {
+                try {
+                    owner.mutateFinalData(data -> data.set("LastUpdated", lastUpdated))
+                            .whenComplete((ignored, failure) -> {
+                                if (failure == null) completion.complete(null);
+                                else completion.completeExceptionally(failure);
+                            });
+                } catch (Throwable failure) { completion.completeExceptionally(failure); }
+            });
+        } catch (Throwable failure) { completion.completeExceptionally(failure); }
+        return completion;
+    }
+
+    private void releaseNativeOwnership() {
+        if (!plugin.hasServerDataOwnership()) return;
+        CompletableFuture<Void> settled = CompletableFuture.allOf(finalFilePersistence(), consumerPreparationCompletion,
+                userStorageRetirement.toCompletableFuture(), persistenceWorkerTermination, unloadHookCompletion,
+                shutdownHookCompletion);
+        // A cancelled/failed publication or preparation can settle while another
+        // writer is still active. It cannot prove drain, even after eventual timer
+        // termination; retain the opaque admission token until JVM restart.
+        plugin.releaseServerDataOwnershipAfter(settled.thenCompose(ignored -> nativeExecutorTermination()));
+    }
+
+    private CompletionStage<Void> nativeExecutorTermination() {
+        List<ScheduledExecutorService> pending = new ArrayList<>();
+        for (ScheduledExecutorService owner : nativeExecutorOwners) {
+            if (!owner.isTerminated()) pending.add(owner);
+        }
+        if (pending.isEmpty()) return CompletableFuture.completedFuture(null);
+        var completion = new CompletableFuture<Void>();
+        // Cancellation and lifecycle-drain acknowledgements are not executor
+        // termination. This daemon waits outside the server thread and never
+        // refreshes the caller's shared 15-second wait budget.
+        Thread waiter = AdvancedCoreRuntime.daemonThreads("AdvancedCore-ServerData-Drain").newThread(() -> {
+            try {
+                for (ScheduledExecutorService owner : pending) {
+                    while (!owner.isTerminated()) owner.awaitTermination(1, TimeUnit.SECONDS);
+                }
+                completion.complete(null);
+            } catch (Throwable failure) {
+                if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
+                completion.completeExceptionally(failure);
+            }
+        });
+        try { waiter.start(); }
+        catch (Throwable failure) { completion.completeExceptionally(failure); }
+        return completion;
+    }
+
+    private CompletableFuture<Void> finalFilePersistence() {
+        return CompletableFuture.allOf(inventoryPersistence.toCompletableFuture(),
+                timestampPersistence.toCompletableFuture(), permissionPersistence.toCompletableFuture());
+    }
+
+    private void finishPersistenceSubmission() {
+        // Do not discard accepted snapshots on timeout or close the native owner
+        // while inventory delivery can still advance its durable replay receipt.
+        persistenceWorker.shutdown();
+        CompletableFuture<Void> completion = finalFilePersistence();
+        if (completion.isDone()) return;
+        LongSupplier budget = shutdownRemainingNanos;
+        long remaining = budget == null ? TimeUnit.SECONDS.toNanos(15) : Math.max(0L, budget.getAsLong());
+        CompletableFuture.delayedExecutor(remaining, TimeUnit.NANOSECONDS).execute(() -> {
+            if (!completion.isDone()) cleanupFailed("shutdown persistence", new java.util.concurrent.TimeoutException(
+                    "Shutdown persistence is still pending after the shared 15-second deadline"));
+        });
+    }
 
 	private CompletionStage<Void> closeUserStorageAfterSharedRetirement() {
         UserStorageAdmission admission = captureUserStorageAdmission();
@@ -264,16 +451,37 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 		// the owner observed before that wait leaks the installed MySQL provider.
 		Runnable closeMysql = () -> closeCurrentUserStorageOwner(admission);
         if (admission.users() == null) {
-            closeMysql.run();
-			return CompletableFuture.completedFuture(null);
+			return closeUserStorageOwnerAsync(admission);
         }
 		CompletionStage<Void> retirement = admission.manager().closeSharedRuntimeAsyncCompletion(closeMysql);
         if (retirement == null) {
-            closeMysql.run();
-			return CompletableFuture.completedFuture(null);
+			return closeUserStorageOwnerAsync(admission);
 		}
 		return retirement;
 	}
+
+    /** A provider close can itself block in JDBC even when no manager worker remains. */
+    private CompletionStage<Void> closeUserStorageOwnerAsync(UserStorageAdmission admission) {
+        CompletableFuture<Void> completion = new CompletableFuture<>();
+        while (true) {
+            CompletableFuture<Void> active = asynchronousOwnerClose.get();
+            if (active != null) return active;
+            if (asynchronousOwnerClose.compareAndSet(null, completion)) break;
+        }
+        Thread worker = AdvancedCoreRuntime.daemonThreads("AdvancedCore-Storage-Owner-Close").newThread(() -> {
+            try { closeCurrentUserStorageOwner(admission); completion.complete(null); }
+            catch (Throwable failure) {
+                asynchronousOwnerClose.compareAndSet(completion, null);
+                completion.completeExceptionally(failure);
+            }
+        });
+        try { worker.start(); }
+        catch (Throwable failure) {
+            asynchronousOwnerClose.compareAndSet(completion, null);
+            completion.completeExceptionally(failure);
+        }
+        return completion;
+    }
 
     private UserStorageAdmission captureUserStorageAdmission() {
         synchronized (userStorageRetirementLock) {

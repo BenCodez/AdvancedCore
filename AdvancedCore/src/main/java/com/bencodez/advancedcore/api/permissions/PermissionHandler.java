@@ -5,6 +5,9 @@ import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
@@ -14,6 +17,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.permissions.PermissionAttachment;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.simpleapi.time.ParsedDuration;
 
 import lombok.Getter;
@@ -49,8 +53,11 @@ public class PermissionHandler {
 	private final ConcurrentHashMap<UUID, PlayerPermissionHandler> permsToAdd = new ConcurrentHashMap<>();
 
 	@Getter
-	private final ScheduledExecutorService timer = Executors.newScheduledThreadPool(1);
+	private final ScheduledExecutorService timer = Executors.newScheduledThreadPool(1,
+			com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("AdvancedCore-Permissions"));
 	private final AtomicBoolean acceptingExpirations = new AtomicBoolean(true);
+	private final java.util.concurrent.atomic.AtomicReference<CompletableFuture<Void>> shutdownPersistence =
+			new java.util.concurrent.atomic.AtomicReference<>();
 	private final Object[] stateLocks = new Object[64];
 
 	public PermissionHandler(AdvancedCorePlugin plugin) {
@@ -385,6 +392,47 @@ public class PermissionHandler {
 		saveTimedPerms(perms);
 		saveTimedPerms(permsToAdd);
 		plugin.getServerDataFile().saveData();
+	}
+
+	/** Fence callbacks now; the guarded shutdown worker snapshots only stored permission state. */
+	public CompletionStage<Void> shutDownAsync(Executor persistenceExecutor) {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		if (!shutdownPersistence.compareAndSet(null, completion)) return shutdownPersistence.get();
+		acceptingExpirations.set(false);
+		timer.shutdownNow();
+		ServerData serverData = plugin.getServerDataFile();
+		try {
+			persistenceExecutor.execute(() -> {
+				try {
+					// Snapshot handler monitors before the shared YAML monitor: expiration
+					// callbacks are fenced, and no Bukkit attachment is touched here.
+					java.util.Map<String, ArrayList<String>> snapshot = new java.util.HashMap<>();
+					collectTimedPerms(perms, snapshot);
+					collectTimedPerms(permsToAdd, snapshot);
+					serverData.mutateFinalData(data -> snapshot.forEach(data::set))
+							.whenComplete((ignored, failure) -> {
+								if (failure == null) completion.complete(null);
+								else completion.completeExceptionally(failure);
+							});
+				} catch (Throwable failure) {
+					completion.completeExceptionally(failure);
+				}
+			});
+		} catch (Throwable failure) {
+			completion.completeExceptionally(failure);
+		}
+		return completion;
+	}
+
+	private void collectTimedPerms(ConcurrentHashMap<UUID, PlayerPermissionHandler> map,
+			java.util.Map<String, ArrayList<String>> snapshot) {
+		for (PlayerPermissionHandler handle : map.values()) {
+			java.util.Map<String, Long> timed = handle.timedPermissionSnapshot();
+			if (timed.isEmpty()) continue;
+			ArrayList<String> values = new ArrayList<>();
+			timed.forEach((permission, expires) -> values.add(permission + "%line%" + expires));
+			snapshot.put("TimedPermissions." + handle.getUuid(), values);
+		}
 	}
 
 	private void saveTimedPerms(ConcurrentHashMap<UUID, PlayerPermissionHandler> map) {

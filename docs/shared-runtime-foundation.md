@@ -19,16 +19,65 @@ parallel runtime with different caches or a second set of background tasks.
 - General, login and inventory work retain separate single-thread executors.
 - BukkitScheduler/Folia behavior is unchanged; game/entity/region scheduling is
   not redirected to these background executors.
-- JavaScript cleanup, MySQL closing and server timestamp happen before executor
-  shutdown, as before. This extraction does not redesign database flushing.
-- Executor grace periods remain 2/2/2/1 seconds, followed by reward shutdown,
+- JavaScript cleanup still happens before executor shutdown. Native providers
+  close only after their storage worker and admitted preparation settle.
+- Executor grace periods remain at most 2/2/2/1 seconds, followed by reward shutdown,
   forced executor shutdown and the existing unload/cache/inventory/integration
   cleanup order. The time-checker timer is captured at the same point.
 - Individual component failures retain the warning/debug callback behavior and
   do not skip later components. Interrupted waits restore the interrupt flag.
-- Lifecycle calls remain serialized by the owning platform. Hook execution is
-  synchronous; the executor grace periods are not a global bound on all cleanup
-  callbacks. No stronger transactional or idempotency guarantee is claimed.
+- Lifecycle calls remain serialized by the owning platform. Consumer hooks and
+  game/integration cleanup retain their lifecycle-thread execution.
+
+## Shared shutdown deadline
+
+All owned shutdown waits share one monotonic 15-second deadline captured at entry
+into `AdvancedCorePlugin.onDisable()`. Pre-storage preparation, executor grace,
+delayed rewards, forced-worker grace, and deferred watchdogs consume the same
+remaining budget; a late preparation completion cannot start another grace
+period. The public `RewardHandler.shutdown()` keeps its ten-second maximum for
+standalone callers, while lifecycle shutdown supplies only its remaining budget.
+
+Final inventory, server timestamp, and timed-permission mutations are admitted in
+order on one bounded daemon persistence worker. `ServerData.mutateFinalData`
+returns the actual file owner's publication stage. Final mutations are staged in
+a private YAML candidate and become live only after confirmed publication.
+Native ServerData forces that candidate on the shutdown worker; an ordered
+adapter serializes under its own YAML monitor and confirms its existing publisher.
+Later unrelated saves cannot publish a failed final overflow mutation. Ordered
+snapshots carry only successfully published final changes forward and preserve
+newer explicit edits, including an edit that writes the same previous value.
+No caller waits for publication while holding the YAML owner's monitor. Legacy
+void `saveData` overrides retain their callback but cannot claim confirmed
+publication without overriding the additive completion contract; they report an
+unsupported confirmation. An I/O failure remains a failed stage. Inventory persistence gates user-storage
+retirement and cannot acknowledge reserved replay overflow before its actual
+save succeeds. The public synchronous handler shutdown methods remain available.
+The shutdown-completion hook follows submission of final file saves; it is not a
+durability acknowledgement. Its additive `onShutdownComplete(finalFilesStage)`
+overload receives completion of all final file publications and invokes the
+existing zero-argument hook on the same lifecycle thread by default. A consumer
+retains its file owner until both pre-storage preparation and final-file stages
+settle, including failure, then closes that owner. Worker termination must not be
+part of either stage, which would create a completion/termination cycle.
+
+Owned background executors and shutdown continuations use daemon threads so an
+interrupt-ignoring JDBC call or filesystem operation cannot retain the JVM. A
+timeout is reported while the actual stage stays pending. The native storage
+owner remains open until its executing storage worker ends; accepted final file
+saves are not discarded to meet the deadline. Preparation that settles after
+the deadline still admits its final checkpoint and retains the daemon worker
+until that retirement actually settles, without renewing any caller wait.
+Consequently, durable completion
+can outlive plugin disable, and a JVM exit before that completion can lose the
+unfinished work. A timeout never means that persistence succeeded.
+
+The 15-second limit bounds AdvancedCore's waits. Synchronous consumer methods
+(`onBeforeStorageShutdown`, `onUnLoad`, `onShutdownComplete`) and third-party
+Bukkit/integration cleanup must return promptly: Java cannot safely preempt them
+on the lifecycle thread. AdvancedCore introduces no server-wide shutdown hook or
+thread scan, and cannot guarantee a total server-stop time when another plugin
+or one of these callbacks blocks.
 
 Consumer `onBeforeStorageShutdown()` stages settle before shared user storage
 retirement begins. A thrown exception, exceptional completion, or cancellation
@@ -36,6 +85,48 @@ still starts shared-cache retirement and waits for that retirement to settle.
 The preparation failure remains the reported cause; a storage failure is retained
 as a suppressed failure. Successful default hooks preserve the existing retirement
 stage identity. A failing hook does not bypass accepted user-data flushing.
+
+## Native ServerData successor admission
+
+Enable acquires native `ServerData.yml` admission before `onPreLoad()` and the
+native load hook. Calling `loadHook()` directly acquires the same admission before
+constructing the file owner. A successor using the same normalized absolute
+platform data path fails immediately while its predecessor owns admission; it
+does not wait for the predecessor or canonicalize/read the filesystem on that
+admission path. Retrying enable after successful predecessor retirement is safe.
+Repeated disable calls cannot submit new final writes after admission is released,
+and a completed shutdown allows the same instance to acquire a fresh generation
+where its existing consumer lifecycle supports re-enable.
+
+Shaded copies share a bounded JVM Properties namespace with at most 256 opaque
+String tokens. No plugin, classloader, future or callback is stored there. Each
+owner releases from the exact Properties object into which it acquired its token.
+The key uses a digest of the lexically normalized platform path, without file
+contents. Installed plugins must preserve the JVM Properties ownership entries
+and use the same platform data path; alias paths through symlinks and replacing
+the JVM Properties map are not an interprocess or filesystem-lock protocol.
+Separate JVMs are outside this admission guarantee.
+
+Successful release requires confirmed final inventory/timestamp/permission
+publication, consumer preparation, user-storage retirement, persistence-worker
+termination and successful return from the unload/completion hooks. It also
+requires actual termination of the native executor identities captured before unload can replace
+their fields. A daemon continuation observes that termination without extending
+the caller's 15-second budget or blocking the server thread. Partial startup with
+no admitted native writer releases after successful cleanup and retirement of
+its created executors.
+
+An exceptional or cancelled preparation/publication stage is different from an
+owner-drain acknowledgement: it can settle while older admitted native writes
+still run. Existing adapters cannot prove complete drain after that outcome, so
+the opaque token is conservatively retained until JVM restart, even if another
+final save subsequently succeeds or the observed executors later exit. The
+successor continues to fail closed. A pending successful save or preparation may
+release when it genuinely completes; a timeout warning alone is not failure or
+permission to discard the token. No manual token removal is a supported recovery
+path while the JVM may still contain predecessor writers. Completion-stage
+adapters must include all earlier admitted writes in their successful publication
+boundary and may not report mere task submission as completed publication.
 
 ## What this does not port yet
 

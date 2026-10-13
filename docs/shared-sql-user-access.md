@@ -106,3 +106,10 @@ has stopped. Shared-cache retirement still runs asynchronously on this worker.
 All other threads retain the existing Bukkit and Folia tick-thread checks;
 matching a worker name or disabling a plugin does not bypass them. This needs no
 configuration or data migration and does not change the public retirement API.
+
+Shutdown uses one 15-second monotonic budget from plugin-disable entry, including
+the deferred-storage watchdog and forced-worker waits. A driver that ignores an
+interrupt keeps its retirement stage pending and its native provider owned until
+the actual worker exits. Owned workers are daemon threads; deadline expiry never
+reports an unfinished flush as successful. See the shared runtime foundation
+contract for final-file persistence and synchronous consumer-hook limitations.

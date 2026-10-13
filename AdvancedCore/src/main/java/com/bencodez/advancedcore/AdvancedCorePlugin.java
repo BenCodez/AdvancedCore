@@ -92,6 +92,48 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private static AdvancedCorePlugin javaPlugin;
 
+	private com.bencodez.advancedcore.lifecycle.ServerDataOwnership serverDataOwnership;
+	private boolean advancedCoreShutdownStarted;
+	private boolean advancedCoreEnableStarted;
+	private boolean serverDataStartupRejected;
+
+	/** Native file admission also covers consumer hooks that read ServerData early. */
+	private synchronized void acquireServerDataOwnership() {
+		if (serverDataOwnership != null && !serverDataOwnership.isReleased()) {
+			if (!advancedCoreShutdownStarted) return;
+			throw new IllegalStateException("Previous ServerData shutdown has not finished");
+		}
+		try {
+			serverDataOwnership = com.bencodez.advancedcore.lifecycle.ServerDataOwnership.acquire(
+					new File(getDataFolder(), "ServerData.yml").toPath());
+			advancedCoreShutdownStarted = false;
+			advancedCoreEnableStarted = false;
+			serverDataStartupRejected = false;
+		} catch (RuntimeException | Error failure) {
+			serverDataStartupRejected = true;
+			throw failure;
+		}
+	}
+
+	/** Internal lifecycle fence, independent of consumer shutdown-hook overrides. */
+	public final synchronized boolean hasServerDataOwnership() {
+		return serverDataOwnership != null && !serverDataOwnership.isReleased();
+	}
+
+	/** Internal lifecycle fence, independent of consumer shutdown-hook overrides. */
+	public final void releaseServerDataOwnershipAfter(CompletionStage<Void> completion) {
+		com.bencodez.advancedcore.lifecycle.ServerDataOwnership ownership;
+		synchronized (this) { ownership = serverDataOwnership; }
+		if (ownership != null) ownership.releaseAfter(completion);
+	}
+
+	private void cleanUpFailedStartup(Throwable failure) {
+		try { onDisable(); }
+		catch (Throwable cleanupFailure) {
+			if (cleanupFailure != failure) failure.addSuppressed(cleanupFailure);
+		}
+	}
+
 	/**
 	 * Gets the singleton instance of this plugin.
 	 * 
@@ -843,6 +885,15 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Load AdvancedCore hook
 	 */
 	public void loadHook() {
+		acquireServerDataOwnership();
+		try { loadCoreHook(); }
+		catch (RuntimeException | Error failure) {
+			cleanUpFailedStartup(failure);
+			throw failure;
+		}
+	}
+
+	private void loadCoreHook() {
 		serverDataFile = new ServerData(this);
 
 		hologramHandler = new HologramHandler(this);
@@ -1344,8 +1395,13 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
-		new com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle(this).shutdown();
-		javaPlugin = null;
+		long startedNanos = System.nanoTime();
+		synchronized (this) {
+			if (advancedCoreShutdownStarted || serverDataStartupRejected) return;
+			advancedCoreShutdownStarted = true;
+		}
+		try { new com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle(this).shutdown(startedNanos); }
+		finally { if (javaPlugin == this) javaPlugin = null; }
 	}
 
 	/**
@@ -1364,15 +1420,39 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	/**
-	 * Called after platform cleanup, including the final permission-data save.
-	 * Deferred storage retirement may still be running; implementations must
+	 * Called after platform cleanup and submission of the final permission-data save.
+	 * Deferred storage retirement and final file saves may still be running; implementations must
 	 * retain any owner needed by their pre-storage stage until that stage settles.
 	 * The default is a no-op so existing subclasses retain their lifecycle.
 	 */
 	public void onShutdownComplete() { }
 
+	/**
+	 * Called on the established lifecycle thread after final file work is admitted.
+	 * The stage settles only when all final file owners confirm publication (or fail).
+	 * Consumers must retain required owners until both their preparation and this
+	 * stage settle, and must not synchronously wait or include owner termination in it.
+	 * Existing zero-argument hooks keep their thread and invocation timing.
+	 */
+	public void onShutdownComplete(CompletionStage<Void> finalFilesStage) {
+		onShutdownComplete();
+	}
+
 	@Override
 	public void onEnable() {
+		synchronized (this) {
+			acquireServerDataOwnership();
+			if (advancedCoreEnableStarted) throw new IllegalStateException("AdvancedCore is already enabled");
+			advancedCoreEnableStarted = true;
+		}
+		try { enableCore(); }
+		catch (RuntimeException | Error failure) {
+			cleanUpFailedStartup(failure);
+			throw failure;
+		}
+	}
+
+	private void enableCore() {
 		javaPlugin = this;
 		com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle.RuntimeExecutors runtimeExecutors = com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle
 				.createRuntimeExecutors(this);

@@ -63,6 +63,68 @@ class ServerDataTimeTransitionTest {
 	}
 
 	@Test
+	void checkedShutdownSnapshotPersistsAndPropagatesActualReplacementFailure() throws Exception {
+		TestServerData data = serverData();
+		data.setup();
+		data.getData().set("TimedPermissions.example", java.util.List.of("example.use%line%1234"));
+		data.saveDataChecked();
+		assertEquals(java.util.List.of("example.use%line%1234"),
+				YamlConfiguration.loadConfiguration(data.getdFile()).getStringList("TimedPermissions.example"));
+		File target = data.getdFile();
+		assertTrue(target.delete());
+		assertTrue(target.mkdir());
+		Files.writeString(target.toPath().resolve("blocks-replacement"), "occupied");
+		assertThrows(UncheckedIOException.class, data::saveDataChecked);
+	}
+
+	@Test
+	void finalMutationUsesNativeCheckedPublicationAndReportsFailure() throws Exception {
+		TestServerData data = serverData();
+		data.setup();
+		data.mutateFinalData(yaml -> yaml.set("LastUpdated", 1234L)).toCompletableFuture().join();
+		assertEquals(1234L, YamlConfiguration.loadConfiguration(data.getdFile()).getLong("LastUpdated"));
+		File target = data.getdFile();
+		assertTrue(target.delete()); assertTrue(target.mkdir());
+		Files.writeString(target.toPath().resolve("blocks-replacement"), "occupied");
+		var failure = assertThrows(java.util.concurrent.CompletionException.class,
+				() -> data.mutateFinalData(yaml -> yaml.set("LastUpdated", 5678L)).toCompletableFuture().join());
+		assertTrue(failure.getCause() instanceof UncheckedIOException);
+		assertEquals(1234L, data.getData().getLong("LastUpdated"));
+	}
+
+	@Test
+	void legacyVoidSaveOwnerIsInvokedWithoutClaimingConfirmedPublication() {
+		var owner = new LegacySaveOwner(plugin()); owner.setup();
+		var failure = assertThrows(java.util.concurrent.CompletionException.class,
+				() -> owner.mutateFinalData(yaml -> yaml.set("LastUpdated", 1234L)).toCompletableFuture().join());
+		assertTrue(failure.getCause() instanceof UnsupportedOperationException);
+		assertEquals(1, owner.saves);
+		assertFalse(owner.getData().contains("LastUpdated"), "an unconfirmed legacy save cannot expose the final mutation");
+	}
+
+	@Test
+	void failedFinalMutationCannotLeakPartialChangesIntoTheNextWholeFileSave() {
+		TestServerData data = serverData(); data.setup();
+		data.getData().set("FullInventory.previous.Time", 123L);
+		assertThrows(java.util.concurrent.CompletionException.class, () -> data.mutateFinalData(yaml -> {
+			yaml.set("FullInventory", null);
+			yaml.set("FullInventory.unacknowledged.Time", 456L);
+			throw new IllegalStateException("mutation failed after editing its candidate");
+		}).toCompletableFuture().join());
+		data.mutateFinalData(yaml -> yaml.set("LastUpdated", 789L)).toCompletableFuture().join();
+		var restarted = YamlConfiguration.loadConfiguration(data.getdFile());
+		assertEquals(123L, restarted.getLong("FullInventory.previous.Time"));
+		assertFalse(restarted.contains("FullInventory.unacknowledged"));
+		assertEquals(789L, restarted.getLong("LastUpdated"));
+	}
+
+	private static final class LegacySaveOwner extends ServerData {
+		private int saves;
+		private LegacySaveOwner(AdvancedCorePlugin plugin) { super(plugin); }
+		@Override public void saveData() { saves++; }
+	}
+
+	@Test
 	void atomicServerDataSavePropagatesReplacementFailure() throws Exception {
 		TestServerData data = serverData();
 		data.setup();

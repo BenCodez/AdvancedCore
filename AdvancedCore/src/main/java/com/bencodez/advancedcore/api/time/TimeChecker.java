@@ -278,7 +278,8 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			return;
 		}
 		timerLoaded = true;
-		timer = Executors.newSingleThreadScheduledExecutor();
+		timer = Executors.newSingleThreadScheduledExecutor(
+				com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("AdvancedCore-Time"));
 		if (plugin.getServerDataFile().getLastUpdated() > 0
 				&& System.currentTimeMillis() - plugin.getServerDataFile().getLastUpdated() > TimeUnit.DAYS.toMillis(4)) {
 			plugin.getServerDataFile().setIgnoreTime(true);
@@ -469,16 +470,29 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				if (manualReservation) releaseManualTransition();
 				return;
 			}
-			if (durable != null && !plugin.getServerDataFile().isPendingTimeChangeTransition(durable.persisted)) {
-				plugin.debug("Ignoring stale time change transition " + durable.persisted.id());
-				return;
-			}
 			CompletableFuture<Void> drain = new CompletableFuture<>();
 			active = new ActiveTransition(type, durable == null ? null : durable.transition,
 					durable == null ? null : durable.persisted, drain, Thread.currentThread(), manualReservation);
 			activeTransition = active;
 			noActiveTransition = drain;
 			activeProcessing = true;
+		}
+		if (durable != null) {
+			// Reserve the drain before entering ServerData's monitor. A checked save
+			// can hold that monitor for arbitrary filesystem I/O, while shutdown must
+			// still acquire transitionLock to close admission and fence event dispatch.
+			boolean validated = false;
+			try {
+				if (!plugin.getServerDataFile().isPendingTimeChangeTransition(durable.persisted)) {
+					plugin.debug("Ignoring stale time change transition " + durable.persisted.id());
+					return;
+				}
+				validated = true;
+			} finally {
+				// No event or lease has been published yet. Stale/failed validation
+				// releases this reservation without completing or rewriting its record.
+				if (!validated) retireTransition(active);
+			}
 		}
 		dispatchTransition(active, type, fake, preDate, postDate);
 	}

@@ -49,7 +49,8 @@ public class RewardHandler {
     AdvancedCorePlugin plugin;
 
     @Getter
-    private ScheduledExecutorService delayedTimer = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService delayedTimer = Executors.newSingleThreadScheduledExecutor(
+            com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("AdvancedCore-DelayedRewards"));
 
     public RewardHandler(AdvancedCorePlugin plugin) {
         this.plugin = plugin;
@@ -288,13 +289,20 @@ public class RewardHandler {
     }
 
     public void shutdown() {
+        shutdown(10, TimeUnit.SECONDS);
+    }
+
+    /** Lifecycle callers share their remaining disable budget; legacy shutdown keeps its ten-second grace. */
+    public void shutdown(long timeout, TimeUnit unit) {
+        java.util.Objects.requireNonNull(unit, "unit");
         delayedTimer.shutdown();
         try {
-            delayedTimer.awaitTermination(10, TimeUnit.SECONDS);
+            if (timeout > 0) delayedTimer.awaitTermination(timeout, unit);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Thread.currentThread().interrupt();
+        } finally {
+            delayedTimer.shutdownNow();
         }
-        delayedTimer.shutdownNow();
     }
 
     public void sortInjectedRequirements() {

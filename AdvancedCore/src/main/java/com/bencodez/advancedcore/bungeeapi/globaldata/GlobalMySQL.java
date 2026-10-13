@@ -106,18 +106,28 @@ public abstract class GlobalMySQL {
 			}
 		};
 
-		if (!mysql.connect(config)) {
-			warning("Failed to connect to database (type=" + config.getDbType() + ")");
+		if (!mysql.connect(config, false)) {
+			IllegalStateException failure = new IllegalStateException("Failed to initialize global SQL connection pool",
+					mysql.getLastConnectFailure());
+			try { mysql.disconnect(); }
+			catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
+			throw failure;
 		}
 
 		// MySQL has a "USE db" command; Postgres does NOT.
 		if (config.getDbType() != DbType.POSTGRESQL) {
-			try {
-				new Query(mysql, "USE " + quoteIdent(config.getDbType(), config.getDatabase()) + ";").executeUpdate();
-			} catch (SQLException e) {
-				logSevere("Failed to send use database query: " + config.getDatabase() + " Error: " + e.getMessage()
-						+ ", DB might still work");
-				debugEx(e);
+			try (Connection connection = mysql.getConnectionManager().getConnectionChecked();
+					PreparedStatement statement = connection.prepareStatement(
+							"USE " + quoteIdent(config.getDbType(), config.getDatabase()) + ";")) {
+				statement.executeUpdate();
+			} catch (SQLException | RuntimeException | Error failure) {
+				try { mysql.disconnect(); }
+				catch (RuntimeException | Error cleanupFailure) {
+					if (cleanupFailure != failure) failure.addSuppressed(cleanupFailure);
+				}
+				if (failure instanceof RuntimeException runtime) throw runtime;
+				if (failure instanceof Error error) throw error;
+				throw new IllegalStateException("Failed to initialize global SQL database selection", failure);
 			}
 		}
 

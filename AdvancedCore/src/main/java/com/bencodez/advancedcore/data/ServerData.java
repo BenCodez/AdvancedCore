@@ -27,6 +27,9 @@ import com.bencodez.simpleapi.file.YMLFile;
  * The Class ServerData.
  */
 public class ServerData extends YMLFile {
+	// Selected only while the checked publisher owns this monitor. Unconfirmed
+	// final mutations must never become input to a following whole-file save.
+	private org.bukkit.configuration.file.FileConfiguration finalDataSnapshot;
 	/**
 	 * Durable state for one locally detected time transition. The identifier is
 	 * deliberately stable while a transition is pending so consumers can store
@@ -38,6 +41,11 @@ public class ServerData extends YMLFile {
 
 	public ServerData(AdvancedCorePlugin plugin) {
 		super(plugin, new File(plugin.getDataFolder(), "ServerData.yml"));
+	}
+
+	@Override
+	public synchronized void saveData() {
+		super.saveData();
 	}
 
 	@Override
@@ -59,7 +67,7 @@ public class ServerData extends YMLFile {
 		try {
 			Files.createDirectories(parent);
 			temporary = Files.createTempFile(parent, target.getFileName().toString() + ".", ".tmp");
-			getData().save(temporary.toFile());
+			(finalDataSnapshot == null ? getData() : finalDataSnapshot).save(temporary.toFile());
 			try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) {
 				channel.force(true);
 			}
@@ -77,6 +85,83 @@ public class ServerData extends YMLFile {
 				}
 			}
 		}
+	}
+
+	/** Shutdown persistence must report I/O failure rather than acknowledge a failed save. */
+	public synchronized void saveDataChecked() {
+		saveTimeChangeTransitionData();
+	}
+
+	/**
+	 * Stages a final YAML mutation on the shutdown persistence caller and confirms
+	 * publication by this file's actual owner. Adapters with another persistence
+	 * owner must override this method and return that owner's publication stage.
+	 * No caller may wait for the stage while holding a YAML owner's monitor.
+	 * Legacy saveData overrides are still invoked, but their void return cannot
+	 * prove durable publication and therefore produces an exceptional stage.
+	 */
+	public java.util.concurrent.CompletionStage<Void> mutateFinalData(
+			java.util.function.Consumer<org.bukkit.configuration.file.FileConfiguration> mutation) {
+		try {
+			synchronized (this) {
+				java.util.Objects.requireNonNull(mutation, "mutation");
+				Class<?> saveOwner = getClass().getMethod("saveData").getDeclaringClass();
+				if (saveOwner != YMLFile.class && saveOwner != ServerData.class) {
+					// Preserve the legacy callback, but do not expose a mutation whose
+					// publication this owner cannot confirm.
+					saveData();
+					return java.util.concurrent.CompletableFuture.failedFuture(new UnsupportedOperationException(
+							"Legacy ServerData owner does not confirm final publication"));
+				}
+				var live = getData();
+				var candidate = new org.bukkit.configuration.file.YamlConfiguration();
+				var before = new java.util.LinkedHashMap<String, Object>();
+				for (String path : live.getKeys(false)) {
+					before.put(path, finalValue(live.get(path)));
+					setFinalValue(candidate, path, before.get(path));
+				}
+				mutation.accept(candidate);
+				finalDataSnapshot = candidate;
+				try { saveDataChecked(); }
+				finally { finalDataSnapshot = null; }
+				// Publication succeeded; retain the existing live YAML identity.
+				var paths = new java.util.HashSet<>(before.keySet());
+				paths.addAll(candidate.getKeys(false));
+				for (String path : paths) {
+					Object next = finalValue(candidate.get(path));
+					if (!java.util.Objects.equals(before.get(path), next)
+						&& java.util.Objects.equals(before.get(path), finalValue(live.get(path))))
+						setFinalValue(live, path, next);
+				}
+			}
+			return java.util.concurrent.CompletableFuture.completedFuture(null);
+		} catch (Throwable failure) {
+			return java.util.concurrent.CompletableFuture.failedFuture(failure);
+		}
+	}
+
+	private static Object finalValue(Object value) {
+		if (value instanceof org.bukkit.configuration.ConfigurationSection section) {
+			var copy = new java.util.LinkedHashMap<String, Object>();
+			for (String key : section.getKeys(false)) copy.put(key, finalValue(section.get(key)));
+			return copy;
+		}
+		if (value instanceof java.util.Map<?, ?> map) {
+			var copy = new java.util.LinkedHashMap<Object, Object>();
+			map.forEach((key, child) -> copy.put(key, finalValue(child)));
+			return copy;
+		}
+		if (value instanceof java.util.List<?> list) return list.stream().map(ServerData::finalValue).collect(
+				java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+		return value;
+	}
+
+	private static void setFinalValue(org.bukkit.configuration.ConfigurationSection target, String path, Object value) {
+		target.set(path, null);
+		if (value instanceof java.util.Map<?, ?> map) {
+			var section = target.createSection(path);
+			map.forEach((key, child) -> setFinalValue(section, key.toString(), child));
+		} else if (value != null) target.set(path, value);
 	}
 
 	protected void moveAtomically(Path source, Path target) throws IOException {
@@ -236,19 +321,63 @@ public class ServerData extends YMLFile {
 	public void onFileCreation() {
 	}
 
+	private void withNativePublicationOrdering(Runnable operation) {
+		try {
+			Class<?> owner = getClass().getMethod("saveData").getDeclaringClass();
+			if (owner == ServerData.class || owner == YMLFile.class) {
+				synchronized (this) { operation.run(); }
+			} else {
+				// Existing adapters retain their own nonblocking mutation/publication model.
+				operation.run();
+			}
+		} catch (NoSuchMethodException impossible) {
+			throw new IllegalStateException("ServerData publisher unavailable", impossible);
+		}
+	}
+
+	private void mutateOrdinaryData(java.util.function.Consumer<org.bukkit.configuration.file.FileConfiguration> mutation) {
+		withNativePublicationOrdering(() -> { mutation.accept(getData()); saveData(); });
+	}
+
+	/** Reload must not replace the live YAML identity during checked native publication. */
+	@Override
+	public void reloadData() {
+		withNativePublicationOrdering(super::reloadData);
+	}
+
+	/** Bulk updates share native publication ordering and retain their no-save semantics. */
+	@Override
+	public void setData(org.bukkit.configuration.file.FileConfiguration data) {
+		withNativePublicationOrdering(() -> super.setData(data));
+	}
+
+	/**
+	 * Keeps the inherited SimpleAPI mutators inside the native publication
+	 * monitor. Their default implementations mutate the live configuration
+	 * before entering {@link #saveData()}, which allows a final publication to
+	 * observe and later overwrite an uncommitted ordinary change.
+	 */
+	@Override
+	public void setValue(String path, Object value) {
+		mutateOrdinaryData(data -> data.set(path, value));
+	}
+
+	/** See {@link #setValue(String, Object)} for the publication ordering rule. */
+	@Override
+	public void createSection(String path) {
+		mutateOrdinaryData(data -> data.createSection(path));
+	}
+
 	public void setData(String path, Object value) {
-		getData().set(path, value);
-		saveData();
+		mutateOrdinaryData(data -> data.set(path, value));
 	}
 
 	public void setIgnoreTime(boolean value) {
-		getData().set("IgnoreTime", value);
-		saveData();
+		mutateOrdinaryData(data -> data.set("IgnoreTime", value));
 	}
 
 	public void setLastUpdated() {
-		getData().set("LastUpdated", System.currentTimeMillis());
-		saveData();
+		mutateOrdinaryData(data -> data.set("LastUpdated", System.currentTimeMillis()));
 	}
 
 	/**
@@ -257,8 +386,7 @@ public class ServerData extends YMLFile {
 	 * @param plugin the new plugin version
 	 */
 	public void setPluginVersion(Plugin plugin) {
-		getData().set("PluginVersions." + plugin.getName(), plugin.getDescription().getVersion());
-		saveData();
+		mutateOrdinaryData(data -> data.set("PluginVersions." + plugin.getName(), plugin.getDescription().getVersion()));
 	}
 
 	/**
@@ -267,8 +395,7 @@ public class ServerData extends YMLFile {
 	 * @param day the new prev day
 	 */
 	public void setPrevDay(int day) {
-		getData().set("PrevDay", day);
-		saveData();
+		mutateOrdinaryData(data -> data.set("PrevDay", day));
 	}
 
 	/**
@@ -277,8 +404,7 @@ public class ServerData extends YMLFile {
 	 * @param month the new prev month
 	 */
 	public void setPrevMonth(String month) {
-		getData().set("Month", month);
-		saveData();
+		mutateOrdinaryData(data -> data.set("Month", month));
 	}
 
 	/**
@@ -287,8 +413,7 @@ public class ServerData extends YMLFile {
 	 * @param week the new prev week day
 	 */
 	public void setPrevWeekDay(int week) {
-		getData().set("PrevWeek", week);
-		saveData();
+		mutateOrdinaryData(data -> data.set("PrevWeek", week));
 	}
 
 	/**

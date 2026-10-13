@@ -5,9 +5,13 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.LongSupplier;
 
 /** Supplies existing executor owners and platform cleanup without exposing game APIs. */
 public interface RuntimePlatform {
+    /** One shared monotonic remaining-time budget, measured from entry into disable. */
+    default void beginShutdown(LongSupplier remainingNanos) { }
+
     record Cleanup(String name, Runnable action) {
         public Cleanup {
             Objects.requireNonNull(name, "name");
@@ -49,7 +53,7 @@ public interface RuntimePlatform {
 		return CompletableFuture.completedFuture(null);
 	}
 
-	/** Maximum grace for admitted retirement; pending consumer preparation retains its owner. */
+	/** Watchdog grace capped by the disable deadline; pending preparation retains its durable owner. */
 	default long deferredShutdownTimeoutMillis() { return 5_000; }
 
 	/**
