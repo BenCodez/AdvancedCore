@@ -226,7 +226,13 @@ public class MiscUtils {
 							}
 							if (finished.compareAndSet(false, true)) result.complete(null);
 						} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
-					}, () -> { if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true)) result.complete(null); });
+				}, () -> {
+					if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true)) {
+						// Native retirement callbacks run inside critical entity-removal code.
+						// Keep completion continuations off that callback stack.
+						CompletableFuture.runAsync(() -> result.complete(null));
+					}
+				});
 				} catch (Throwable failure) { if (claimed.compareAndSet(false, true) && finished.compareAndSet(false, true)) result.completeExceptionally(failure); }
 			});
 		} catch (Throwable failure) { if (finished.compareAndSet(false, true)) result.completeExceptionally(failure); }

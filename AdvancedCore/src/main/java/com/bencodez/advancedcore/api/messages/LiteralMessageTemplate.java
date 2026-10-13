@@ -903,7 +903,7 @@ public final class LiteralMessageTemplate {
         /** Split authored message separators while labels are still opaque. */
         public List<Prepared> splitLines() {
             List<Prepared> lines = new ArrayList<>();
-            for (String line : template.split("(?i)" + java.util.regex.Pattern.quote("%NewLine%"))) {
+            for (String line : template.split(java.util.regex.Pattern.quote("%NewLine%"))) {
                 lines.add(new Prepared(line, tokens, actionTokens, new TokenIndex(forbiddenTokens), formattedActionCharacters, bindingCharacters, legacyAdmissionIdentity));
             }
             return List.copyOf(lines);

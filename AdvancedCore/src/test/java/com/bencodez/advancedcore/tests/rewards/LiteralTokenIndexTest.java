@@ -323,6 +323,13 @@ class LiteralTokenIndexTest {
     }
 
     @Test
+    void lineSplittingOnlyRecognizesTheCanonicalNewLineTokenCase() {
+        var prepared = LiteralMessageTemplate.prepare("first%NewLine%second%newline%third", Map.of(), Map.of());
+        assertEquals(List.of("first", "second%newline%third"),
+                prepared.splitLines().stream().map(LiteralMessageTemplate.Prepared::template).toList());
+    }
+
+    @Test
     void recipientActionIndexesAndSectionGuardsCannotMutateTheirSharedPrepared() throws Exception {
         var prepared = LiteralMessageTemplate.prepare("[Text=\"%Site%\",Command=\"source\"]",
                 Map.of("Site", "display"), Map.of("Site", "raw"));

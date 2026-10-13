@@ -683,6 +683,32 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void unrelatedLegacySnapshotDoesNotBlockNewRandomMessageAdmission() {
+        HashMap<String, String> persisted;
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                    .thenAnswer(call -> {
+                        when(fixture.player.isOnline()).thenReturn(false);
+                        return com.bencodez.simpleapi.messages.MessageAPI.colorize(call.getArgument(1));
+                    });
+            var map = values("Original");
+            var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
+            options.setAsyncReplayCheckpointConsumer(checkpoint -> fixture.randomCheckpoint.set(
+                    new HashMap<>(checkpoint.getPlaceholders())));
+            var collection = fixture.user.beginAsyncActionCollection(Reward.replayStateFor(options), map,
+                    "synthetic-unrelated-injector");
+            fixture.user.sendLiteralDisplayMessage("Unrelated:%SiteName%", map);
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.user.endAsyncActionCollection(collection).toCompletableFuture().join());
+            persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+        }
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            fixture.dispatchRandom(new ArrayList<>(List.of("New:%SiteName%")), persisted).join();
+            assertEquals(List.of("New:Original"), fixture.sent);
+        }
+    }
+
+    @Test
     void storedRandomSelectionCannotBecomeAnUnconfiguredTrustedTemplate() {
         try (ReplayFixture fixture = new ReplayFixture()) {
             var map = values("Original");

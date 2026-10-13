@@ -126,15 +126,24 @@ public class AdvancedCoreUser {
 		}
 
 		/** Recover the configured choice of older literal random-message checkpoints. */
-		private synchronized String reservedLiteralMessage(List<String> templates) {
-			HashMap<String, String> reserved = snapshot(readReplayValue(snapshotKey));
+		private String reservedLiteralMessage(List<String> templates) {
+			HashMap<String, String> reserved;
+			HashMap<String, Integer> occurrences;
+			synchronized (this) {
+				reserved = snapshot(readReplayValue(snapshotKey));
+				occurrences = new HashMap<>(actionOccurrences);
+			}
 			if (reserved.isEmpty()) return null;
 			for (String template : templates) {
 				String fingerprint = Reward.legacyActionFingerprint(literalMessageDescriptor(template, false));
-				int occurrence = actionOccurrences.getOrDefault(fingerprint, 0);
+				int occurrence = occurrences.getOrDefault(fingerprint, 0);
 				if (fingerprint.equals(reserved.get(fingerprint + "/" + occurrence))) return template;
 			}
-			throw new IllegalStateException("The queued random message is no longer configured");
+			// A legacy snapshot may belong entirely to another action.  It is not
+			// evidence that this newly admitted random action had a removed choice;
+			// the replay-selection metadata check below remains authoritative when a
+			// prior random choice was actually persisted.
+			return null;
 		}
 
 		private boolean belongsTo(AdvancedCoreUser user) {

@@ -80,6 +80,21 @@ public class LiteralBroadcastSchedulingTest {
         }
     }
 
+    @Test void retiredRecipientCompletionContinuationRunsOutsideNativeRetirementCallback() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var nativeScheduler = fixture.nativeSchedulers();
+            var insideRetirement = new AtomicBoolean();
+            var completion = fixture.withControlledDeadline(fixture.renderer);
+            completion.whenComplete((ignored, failure) -> assertFalse(insideRetirement.get()));
+            fixture.global.get(0).run();
+            insideRetirement.set(true);
+            nativeScheduler.retired.get(0).run();
+            insideRetirement.set(false);
+            fixture.owners.get(1).run();
+            completion.toCompletableFuture().get(2, java.util.concurrent.TimeUnit.SECONDS);
+        }
+    }
+
     @Test void alreadyRetiredFoliaEntityIsSkippedAndOtherRecipientStillCompletes() throws Exception {
         try (Fixture fixture = new Fixture()) {
             fixture.nativeSchedulers();
