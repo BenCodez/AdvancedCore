@@ -37,6 +37,10 @@ Spacing comes from the trusted template. No padding or invisible separator is
 added by the literal renderer. A literal section sign uses `(section)` because
 Minecraft's legacy text handling interprets section-sign color sequences.
 Authored `%NewLine%` separators split before restoring external values.
+Trusted legacy display overrides retain their established line separators. Only
+those separators are exposed before splitting; their text fragments remain
+protected through provider/script evaluation. Raw command and URL values keep
+their exact contents, including separator-like text.
 Both existing `%SiteName%` and `{SiteName}` placeholder forms are supported,
 including case variants and authored hover or click attributes. Existing display
 overrides keep their interactive-syntax protection when mixed with literal ones.
@@ -88,6 +92,12 @@ pending rather than interpreting arbitrary stored text or delivering a new choic
 Restore the original choice before retrying. This opt-in lane permits up to 4096
 choices, 65536 UTF-16 units per template and 1048576 combined template units.
 The ordinary non-literal `RandomMessage` path keeps its existing behavior.
+
+Collected actions are bounded to 8192 registrations. Before reserving a new
+action snapshot, admission checks the existing 1 MiB replay-metadata budget for
+the snapshot, current replay state and eventual completion ledger together.
+Rejected admission publishes no new checkpoint and executes no collected prefix;
+existing durable progress remains intact.
 
 On Folia, broadcast recipients use the supported native
 [entity scheduler retirement callback](https://jd.papermc.io/paper/1.20.6/io/papermc/paper/threadedregions/scheduler/EntityScheduler.html).

@@ -77,6 +77,8 @@ public final class RewardDisplayPlaceholders {
 		var prepared = preparation.prepared();
 		var legacy = preparation.legacy();
 		var rendering = legacy.renderer();
+		prepared = prepared.withTemplate(renderInteractiveBounded(prepared.template(),
+				text -> legacy.revealDisplayLineSeparators(text, false), Function.identity()));
 		java.util.ArrayList<net.md_5.bungee.api.chat.TextComponent> result = new java.util.ArrayList<>();
 		for (var line : prepared.splitLines()) {
 			String parsed;
@@ -102,6 +104,8 @@ public final class RewardDisplayPlaceholders {
 		var legacy = preparation.legacy();
 		var rendering = legacy.renderer();
 		var prepared = preparation.prepared();
+		prepared = prepared.withTemplate(renderInteractiveBounded(prepared.template(),
+				text -> legacy.revealDisplayLineSeparators(text, true), Function.identity()));
 		prepared = prepared.withTemplate(legacy.hasDisplayValues() ? renderInteractiveBounded(prepared.template(),
 				value -> rendering.protect(value, false, false), value -> rendering.protect(value, true, false))
 				: rendering.protect(prepared.template(), false, false));

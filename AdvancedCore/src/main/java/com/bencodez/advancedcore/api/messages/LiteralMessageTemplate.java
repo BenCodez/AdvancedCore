@@ -702,7 +702,8 @@ public final class LiteralMessageTemplate {
                 if (visible.containsKey(key)) visibleTokens.put(token, visible.get(key));
                 if (exact.containsKey(key)) exactTokens.put(token, exact.get(key));
             }
-            return new LegacyBindings(this, replacements, visibleTokens, exactTokens, prepared.template);
+            return new LegacyBindings(this, replacements, visibleTokens, exactTokens, prepared.template, index,
+                    prepared.tokens.size());
         }
     }
 
@@ -719,9 +720,12 @@ public final class LiteralMessageTemplate {
         private final Map<String, String> visibleTokens;
         private final Map<String, String> exactTokens;
         private final boolean hasDisplayValues;
+        private final MarkerMatcher playerLineSeparators;
+        private final MarkerMatcher broadcastLineSeparators;
 
         private LegacyBindings(LegacyValues values, Map<String, String> replacements,
-                Map<String, String> visibleTokens, Map<String, String> exactTokens, String source) {
+                Map<String, String> visibleTokens, Map<String, String> exactTokens, String source, TokenIndex index,
+                int literalTokenCount) {
             Map<String, String> visibleMarkers = new LinkedHashMap<>();
             Map<String, String> exactMarkers = new LinkedHashMap<>();
             Map<String, String> visibleScripts = new LinkedHashMap<>();
@@ -757,9 +761,59 @@ public final class LiteralMessageTemplate {
             ordinaryJavascript = Collections.unmodifiableMap(ordinaryScripts);
             Map<String, String> inertTokens = new LinkedHashMap<>();
             visibleTokens.forEach((token, value) -> inertTokens.put(token, neutralizeLegacyInteractiveSyntax(value)));
+            Map<String, String> playerLines = new LinkedHashMap<>();
+            Map<String, String> broadcastLines = new LinkedHashMap<>();
+            Map<String, String> fragmentTokens = new HashMap<>();
+            replacements.forEach((key, token) -> {
+                String value = inertTokens.get(token);
+                if (value == null) return;
+                if (value.contains("%NewLine%")) playerLines.put(key, protectLineFragments(value, false,
+                        index, inertTokens, fragmentTokens, literalTokenCount));
+                if (value.contains("%newline%")) broadcastLines.put(key, protectLineFragments(value, true,
+                        index, inertTokens, fragmentTokens, literalTokenCount));
+                else if (playerLines.containsKey(key)) broadcastLines.put(key, playerLines.get(key));
+            });
+            playerLineSeparators = new MarkerMatcher(playerLines);
+            broadcastLineSeparators = new MarkerMatcher(broadcastLines);
             this.visibleTokens = Collections.unmodifiableMap(inertTokens);
             this.exactTokens = Collections.unmodifiableMap(new LinkedHashMap<>(exactTokens));
             hasDisplayValues = !values.visible.isEmpty();
+        }
+
+        private static String protectLineFragments(String value, boolean broadcast, TokenIndex index,
+                Map<String, String> tokens, Map<String, String> fragments, int literalTokenCount) {
+            Matcher separators = Pattern.compile(broadcast ? "%NewLine%|%newline%" : "%NewLine%").matcher(value);
+            StringBuilder result = new StringBuilder();
+            int start = 0;
+            while (separators.find()) {
+                appendProtectedFragment(result, value.substring(start, separators.start()), index, tokens, fragments,
+                        literalTokenCount);
+                appendBounded(result, value, separators.start(), separators.end());
+                start = separators.end();
+            }
+            appendProtectedFragment(result, value.substring(start), index, tokens, fragments, literalTokenCount);
+            return result.toString();
+        }
+
+        private static void appendProtectedFragment(StringBuilder result, String value, TokenIndex index,
+                Map<String, String> tokens, Map<String, String> fragments, int literalTokenCount) {
+            if (value.isEmpty()) return;
+            String marker = fragments.get(value);
+            if (marker == null) {
+                if (tokens.size() + literalTokenCount >= MAX_VALUES)
+                    throw new IllegalArgumentException("too many display line fragments");
+                marker = newToken(index);
+                fragments.put(value, marker);
+                tokens.put(marker, value);
+            }
+            appendBounded(result, marker, 0, marker.length());
+        }
+
+        /** Reveal only trusted display separators; fragments and authored script values stay opaque. */
+        public String revealDisplayLineSeparators(String source, boolean broadcast) {
+            MarkerMatcher markers = broadcast ? broadcastLineSeparators : playerLineSeparators;
+            return com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate.parse(source).transform(
+                    text -> markers.replace(text, MAX_RESULT), Function.identity());
         }
 
         public boolean hasDisplayValues() {

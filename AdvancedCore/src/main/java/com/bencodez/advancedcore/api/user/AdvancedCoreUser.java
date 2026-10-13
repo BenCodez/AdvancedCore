@@ -95,6 +95,7 @@ public class AdvancedCoreUser {
 		private final String snapshotKey;
 		private final AdvancedCorePlugin plugin;
 		private boolean closed;
+		private IllegalArgumentException admissionFailure;
 
 		private AsyncActionCollection(AsyncActionCollection previous, AdvancedCoreUser owner, Reward.ReplayState replayState,
 				HashMap<String, String> placeholders, String injectionKey, AdvancedCorePlugin plugin) {
@@ -113,6 +114,10 @@ public class AdvancedCoreUser {
 
 		private synchronized ReplayRegistration addRegistration(Supplier<CompletionStage<Void>> action, String descriptor) {
 			if (closed) return null;
+			if (actions.size() >= 8192) {
+				admissionFailure = new IllegalArgumentException("Legacy action collection exceeds limits");
+				throw admissionFailure;
+			}
 			String fingerprint = Reward.legacyActionFingerprint(descriptor);
 			int occurrence = actionOccurrences.getOrDefault(fingerprint, 0);
 			actionOccurrences.put(fingerprint, occurrence + 1);
@@ -152,6 +157,7 @@ public class AdvancedCoreUser {
 
 		private synchronized CompletionStage<Void> closeAndAwait() {
 			closed = true;
+			if (admissionFailure != null) return CompletableFuture.failedFuture(admissionFailure);
 			HashMap<String, String> currentSnapshot = new HashMap<>();
 			for (ReplayAction action : actions) {
 				if (action.durable) currentSnapshot.put(action.identity, action.fingerprint);
@@ -188,9 +194,23 @@ public class AdvancedCoreUser {
 				persistedSnapshot.putAll(currentSnapshot);
 				snapshotChanged = true;
 			}
+			String encodedSnapshot = encodeSnapshot(persistedSnapshot);
+			if (!persistedSnapshot.isEmpty()) {
+				// Project the complete next replay metadata state, including the eventual
+				// completion ledger, before publishing any identity or checkpoint.
+				HashMap<String, String> projected = new HashMap<>();
+				if (replayState != null) replayState.mergeReplayMetadataInto(projected);
+				Reward.mergeReplayMetadata(projected, placeholders);
+				projected.put(snapshotKey, encodedSnapshot);
+				HashSet<String> projectedCompleted = new HashSet<>(completed);
+				for (ReplayAction action : actions) if (action.durable) projectedCompleted.add(action.identity);
+				projected.put(checkpointKey, encodeCompleted(projectedCompleted));
+				try { Reward.copyWithoutReplayMetadata(projected); }
+				catch (IllegalArgumentException failure) { return CompletableFuture.failedFuture(failure); }
+			}
 			CompletionStage<Void> result = CompletableFuture.completedFuture(null);
 			if (snapshotChanged) {
-				recordReplayValue(snapshotKey, encodeSnapshot(persistedSnapshot));
+				recordReplayValue(snapshotKey, encodedSnapshot);
 				result = checkpoint();
 			}
 			HashMap<String, String> snapshotLedger = persistedSnapshot;

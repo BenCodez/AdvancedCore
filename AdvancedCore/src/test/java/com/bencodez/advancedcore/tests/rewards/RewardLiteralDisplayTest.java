@@ -190,6 +190,49 @@ class RewardLiteralDisplayTest {
     }
 
     @Test
+    void trustedDisplayOverrideSplitsPlayerLinesBeforeLiteralRestoration() {
+        var map = values("%NewLine%external");
+        map.put("Rank", "raw-rank");
+        RewardDisplayPlaceholders.put(map, "Rank", "&aOne%NewLine%&bTwo");
+        var lines = render("%Rank%:%SiteName%", map);
+        assertEquals(2, lines.length);
+        assertEquals("One", lines[0].toPlainText());
+        assertEquals("Two:%NewLine%external", lines[1].toPlainText());
+        assertTrue(lines[0].toLegacyText().contains("§a"));
+        assertTrue(lines[1].toLegacyText().contains("§b"));
+    }
+
+    @Test
+    void trustedDisplayOverrideSplitsBothBroadcastSpellingsAndKeepsLiteralValuesOpaque() {
+        var map = values("%newline%external");
+        map.put("Rank", "raw-rank");
+        RewardDisplayPlaceholders.put(map, "Rank", "One%newline%Two%NewLine%Three");
+        var message = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, "%Rank%:%SiteName%", map);
+        assertEquals(3, message.lineCount());
+        assertEquals("One", message.renderLine(null, 0).toPlainText());
+        assertEquals("Two", message.renderLine(null, 1).toPlainText());
+        assertEquals("Three:%newline%external", message.renderLine(null, 2).toPlainText());
+        assertEquals("One%newline%Two", render("%Rank%", map)[0].toPlainText());
+    }
+
+    @Test
+    void trustedDisplaySeparatorsNeverSplitExactClickActionValues() {
+        var map = values("%NewLine%external");
+        map.put("Rank", "raw%NewLine%identity");
+        RewardDisplayPlaceholders.put(map, "Rank", "One%NewLine%Two");
+        String template = "%Rank% [Text=\"%SiteName%\",Command=\"/inspect %Rank%\"]";
+        var playerLines = render(template, map);
+        var broadcast = RewardDisplayPlaceholders.prepareLiteralBroadcast(null, template, map);
+        assertEquals(2, playerLines.length);
+        assertEquals(2, broadcast.lineCount());
+        for (var last : List.of(playerLines[1], broadcast.renderLine(null, 1))) {
+            assertEquals("Two %NewLine%external", last.toPlainText());
+            assertTrue(ComponentSerializer.toString(last).contains("/inspect raw%NewLine%identity"));
+            assertFalse(ComponentSerializer.toString(last).contains("VCORELITERAL"));
+        }
+    }
+
+    @Test
     void broadcastCapturesSourceOnceAndEvaluatesEachRecipientWithoutRestoringEarly() {
         Player source = mock(Player.class);
         Player recipient = mock(Player.class);
