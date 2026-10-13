@@ -1159,6 +1159,15 @@ public final class LiteralMessageTemplate {
         }
     }
 
+    /** Validate terminal replay components without interpreting or rewriting their text. */
+    public static void validateRestoredComponents(BaseComponent... components) {
+        if (components == null || components.length > MAX_COMPONENTS)
+            throw new IllegalArgumentException("literal component batch exceeds limits");
+        int[] counts = new int[] { 0, 0 };
+        for (BaseComponent component : components)
+            validateTree(component, 0, counts, new IdentityHashMap<>());
+    }
+
     @SuppressWarnings("deprecation")
     private static void validateTree(BaseComponent component, int depth, int[] count,
             IdentityHashMap<BaseComponent, Boolean> path) {

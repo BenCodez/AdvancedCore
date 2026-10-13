@@ -886,6 +886,27 @@ public class Reward {
 		return prefix + digest(activeKey.length() + ":" + activeKey + lane.length() + ":" + lane);
 	}
 
+	/** Read-only capacity projection for plans owned by this replay engine. */
+	public record ReplayMetadataSize(long characters, int entries) { }
+
+	public static ReplayMetadataSize replayMetadataSize(HashMap<String, String> placeholders, ReplayState state) {
+		HashMap<String, String> metadata = new HashMap<>();
+		if (state != null) state.mergeReplayMetadataInto(metadata);
+		mergeReplayMetadata(metadata, placeholders);
+		copyWithoutReplayMetadata(metadata);
+		long characters = 0;
+		for (Entry<String, String> entry : metadata.entrySet())
+			characters += entry.getKey().length() + (entry.getValue() == null ? 0L : entry.getValue().length());
+		return new ReplayMetadataSize(characters, metadata.size());
+	}
+
+	/** Includes snapshot keys and the largest progress value used by a bounded 8192-step plan. */
+	public static ReplayMetadataSize nestedRewardPlanMetadataSize(String activeKey, String lane, List<String> plan) {
+		String key = replaySequenceKey(REPLAY_NESTED_LIST_PREFIX, activeKey, lane);
+		return new ReplayMetadataSize(2L * key.length() + "_snapshot".length()
+				+ encodeCommandSnapshot(plan).length() + "8192".length(), 2);
+	}
+
 	/** Returns whether the active replay already froze this logical command lane. */
 	public static boolean hasReplayCommandSnapshot(HashMap<String, String> placeholders, String lane) {
 		ReplayState replayState = currentReplayState();

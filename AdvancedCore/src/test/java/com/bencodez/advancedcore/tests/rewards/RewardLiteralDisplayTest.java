@@ -992,6 +992,65 @@ class RewardLiteralDisplayTest {
         }
     }
 
+    @Test void partialPlayerPlanKeepsFrozenPayloadWhenProviderGrowsAfterRestart() {
+        assertPartialPlayerPlanKeepsFrozenPayload("Extra%NewLine%One%NewLine%Two:", false);
+    }
+
+    @Test void partialPlayerPlanKeepsFrozenPayloadWhenProviderShrinksAfterRestart() {
+        assertPartialPlayerPlanKeepsFrozenPayload("One", false);
+    }
+
+    @Test void partialPlayerPlanKeepsFrozenPayloadWhenProviderThrowsAfterRestart() {
+        assertPartialPlayerPlanKeepsFrozenPayload(null, true);
+    }
+
+    private void assertPartialPlayerPlanKeepsFrozenPayload(String changedOutput, boolean throwing) {
+        String template = "%dynamic%[Text=\"%SiteName%\",Command=\"inspect %SiteName%\"]";
+        HashMap<String, String> persisted;
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                    .thenAnswer(call -> com.bencodez.simpleapi.messages.MessageAPI.colorize(call.<String>getArgument(1)
+                            .replace("%dynamic%", "One%NewLine%Two:")));
+            doAnswer(call -> {
+                var component = call.<BaseComponent>getArgument(1);
+                if (component.toPlainText().equals("Two:Original"))
+                    throw new IllegalStateException("synthetic second-line transport rejection");
+                fixture.sent.add(component.toPlainText());
+                return null;
+            }).when(fixture.transport).sendMessage(eq(fixture.player), any(BaseComponent.class));
+            var map = values("Original");
+            var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
+            options.setAsyncReplayCheckpointConsumer(checkpoint ->
+                    fixture.randomCheckpoint.set(new HashMap<>(checkpoint.getPlaceholders())));
+            var collection = fixture.user.beginAsyncActionCollection(Reward.replayStateFor(options), map,
+                    "synthetic-message-injector");
+            fixture.user.sendLiteralDisplayMessage(template, map);
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.user.endAsyncActionCollection(collection).toCompletableFuture().join());
+            assertEquals(List.of("One"), fixture.sent, "only the first rendered line committed");
+            persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+        }
+        try (ReplayFixture restarted = new ReplayFixture()) {
+            var renderCount = new java.util.concurrent.atomic.AtomicInteger();
+            restarted.placeholders.when(() -> PlaceholderUtils.parseText(eq(restarted.player), anyString()))
+                    .thenAnswer(call -> {
+                        renderCount.incrementAndGet();
+                        if (throwing) throw new IllegalStateException("synthetic provider failure after restart");
+                        return com.bencodez.simpleapi.messages.MessageAPI.colorize(call.<String>getArgument(1)
+                                .replace("%dynamic%", changedOutput));
+                    });
+            var components = new ArrayList<BaseComponent>();
+            doAnswer(call -> { components.add(call.getArgument(1)); return null; })
+                    .when(restarted.transport).sendMessage(eq(restarted.player), any(BaseComponent.class));
+            restarted.dispatch(template, persisted).join();
+            assertEquals(List.of("Two:Original"), components.stream().map(component -> component.toPlainText()).toList(),
+                    "restart must deliver the original unfinished component, not a new provider list position");
+            assertSingleExactAction(components.toArray(BaseComponent[]::new), ClickEvent.Action.RUN_COMMAND,
+                    "inspect raw-site");
+            assertEquals(0, renderCount.get(), "frozen recovery must bypass live placeholder providers");
+        }
+    }
+
     @Test
     void offlineOrReplacedPlayerAfterFormattingCannotReceiveOrCompleteTheReward() {
         for (boolean replaced : List.of(false, true)) {
@@ -1359,6 +1418,80 @@ class RewardLiteralDisplayTest {
         assertCompletedRecipientFragmentsResume(true, false);
     }
 
+    @Test void partialRecipientPlanKeepsFrozenPayloadWhenProviderGrowsAfterRestart() {
+        assertPartialRecipientPlanKeepsFrozenPayload("Extra%NewLine%One%NewLine%Two:", false);
+    }
+
+    @Test void partialRecipientPlanKeepsFrozenPayloadWhenProviderShrinksAfterRestart() {
+        assertPartialRecipientPlanKeepsFrozenPayload("One", false);
+    }
+
+    @Test void partialRecipientPlanKeepsFrozenPayloadWhenProviderThrowsAfterRestart() {
+        assertPartialRecipientPlanKeepsFrozenPayload(null, true);
+    }
+
+    private void assertPartialRecipientPlanKeepsFrozenPayload(String changedOutput, boolean throwing) {
+        String template = "%recipient_dynamic%[Text=\"%SiteName%\",Command=\"inspect %SiteName%\"]";
+        UUID recipientId = UUID.randomUUID();
+        HashMap<String, String> persisted;
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            Player recipient = mock(Player.class);
+            when(recipient.getUniqueId()).thenReturn(recipientId);
+            when(recipient.isOnline()).thenReturn(true);
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of(recipient));
+            bukkit.when(() -> org.bukkit.Bukkit.getPlayer(recipientId)).thenReturn(recipient);
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> {
+                        String value = call.getArgument(1);
+                        return call.getArgument(0) == recipient
+                                ? value.replace("%recipient_dynamic%", "One%NewLine%Two:") : value;
+                    });
+            var sent = new ArrayList<String>();
+            doAnswer(call -> {
+                var component = call.<BaseComponent>getArgument(1);
+                if (component.toPlainText().equals("Two:Original"))
+                    throw new IllegalStateException("synthetic recipient transport rejection");
+                sent.add(component.toPlainText());
+                return null;
+            }).when(fixture.transport).sendMessage(eq(recipient), any(BaseComponent.class));
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatchBroadcast(template, values("Original")).join());
+            assertEquals(List.of("One"), sent, "only the recipient's first fragment committed");
+            verifyNoInteractions(console);
+            persisted = ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+        }
+        try (ReplayFixture restarted = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            Player recipient = mock(Player.class);
+            when(recipient.getUniqueId()).thenReturn(recipientId);
+            when(recipient.isOnline()).thenReturn(true);
+            bukkit.when(() -> org.bukkit.Bukkit.getPlayer(recipientId)).thenReturn(recipient);
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            var renderCount = new java.util.concurrent.atomic.AtomicInteger();
+            restarted.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> {
+                        String value = call.getArgument(1);
+                        if (call.getArgument(0) != recipient) return value;
+                        renderCount.incrementAndGet();
+                        if (throwing) throw new IllegalStateException("synthetic recipient provider failure after restart");
+                        return value.replace("%recipient_dynamic%", changedOutput);
+                    });
+            var components = new ArrayList<BaseComponent>();
+            doAnswer(call -> { components.add(call.getArgument(1)); return null; })
+                    .when(restarted.transport).sendMessage(eq(recipient), any(BaseComponent.class));
+            restarted.dispatchBroadcast(template, persisted).join();
+            assertEquals(List.of("Two:Original"), components.stream().map(component -> component.toPlainText()).toList(),
+                    "restart must finish the originally rendered recipient payload");
+            assertSingleExactAction(components.toArray(BaseComponent[]::new), ClickEvent.Action.RUN_COMMAND,
+                    "inspect raw-site");
+            assertEquals(0, renderCount.get(), "frozen recipient fragments must bypass live providers");
+            verify(console, times(1)).sendMessage(anyString());
+            bukkit.verify(org.bukkit.Bukkit::getOnlinePlayers, never());
+        }
+    }
+
     @Test
     void completedRecipientFragmentsSkipShortenedRendererAfterOuterCheckpointFailure() {
         assertCompletedRecipientFragmentsResume(false, false);
@@ -1392,12 +1525,13 @@ class RewardLiteralDisplayTest {
             var sent = new ArrayList<String>();
             doAnswer(call -> { sent.add(call.<BaseComponent>getArgument(1).toPlainText()); return null; })
                     .when(fixture.transport).sendMessage(eq(recipient), any(BaseComponent.class));
-            String encodedRecipient = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
-                    ("R|" + recipientId + "|0").getBytes(java.nio.charset.StandardCharsets.UTF_8));
             fixture.broadcastCheckpointObserver = checkpoint -> {
                 var metadata = checkpoint.getPlaceholders();
                 for (var entry : metadata.entrySet()) {
-                    if (entry.getKey().endsWith("_snapshot") && entry.getValue().startsWith("v1:" + encodedRecipient)
+                    if (entry.getKey().startsWith("__advancedcore_replay_nested_list_")
+                            && entry.getKey().endsWith("_snapshot") && entry.getValue().startsWith("v1:")
+                            && decodeLiteralSnapshot(entry.getValue()).stream()
+                                    .anyMatch(step -> step.startsWith("R2|" + recipientId + "|0|"))
                             && "1".equals(metadata.get(entry.getKey().substring(0, entry.getKey().length() - 9))))
                         throw new IllegalStateException("synthetic outer recipient checkpoint failure");
                 }
@@ -1603,6 +1737,322 @@ class RewardLiteralDisplayTest {
             fixture.dispatchBroadcast("Same:%SiteName%", map, "SecondInjector").join();
             assertEquals(List.of("Same:Original", "Same:Original"), fixture.sent);
         }
+    }
+
+    @Test
+    void frozenPlayerPayloadKeepsSerializedExternalTextOpaque() {
+        String external = "%player_name% &a [Javascript=unexpected()] {\"text\":\"extra\"} | 界";
+        var persisted = capturePlayerPayload(false, external);
+        try (ReplayFixture restarted = new ReplayFixture()) {
+            restarted.placeholders.when(() -> PlaceholderUtils.parseText(eq(restarted.player), anyString()))
+                    .thenThrow(new IllegalStateException("provider must not run during frozen recovery"));
+            restarted.placeholders.when(() -> PlaceholderUtils.replaceJavascript(anyString()))
+                    .thenThrow(new IllegalStateException("script must not run during frozen recovery"));
+            restarted.dispatch("%dynamic%:%SiteName%", persisted).join();
+            assertEquals(List.of("Two:" + external), restarted.sent);
+        }
+    }
+
+    @Test
+    void pendingNumericPlayerPlanFailsClosedWithoutReleasingItsReservation() {
+        var persisted = capturePlayerPayload(false, "Original");
+        var snapshot = playerPayloadSnapshot(persisted);
+        var numeric = decodeLiteralSnapshot(snapshot.getValue()).stream().map(entry -> {
+            String[] parts = entry.split("\\|", 4);
+            return "P|" + parts[1] + "|" + parts[2];
+        }).toList();
+        persisted.put(snapshot.getKey(), encodeLiteralSnapshot(numeric));
+        String reservationKey = Reward.legacyActionReplayKey("synthetic-message-injector") + "_snapshot";
+        String reservation = persisted.get(reservationKey);
+        try (ReplayFixture restarted = new ReplayFixture()) {
+            var providers = new java.util.concurrent.atomic.AtomicInteger();
+            restarted.placeholders.when(() -> PlaceholderUtils.parseText(eq(restarted.player), anyString()))
+                    .thenAnswer(call -> { providers.incrementAndGet(); throw new IllegalStateException("unexpected provider"); });
+            for (int retry = 0; retry < 2; retry++) {
+                var failure = assertThrows(RuntimeException.class,
+                        () -> restarted.dispatch("%dynamic%:%SiteName%", persisted).join());
+                assertFalse(AdvancedCoreUser.isReplayActionNotStarted(failure));
+                assertEquals(reservation, persisted.get(reservationKey));
+                assertEquals(encodeLiteralSnapshot(numeric), persisted.get(snapshot.getKey()));
+            }
+            assertTrue(restarted.sent.isEmpty());
+            assertEquals(0, providers.get());
+        }
+    }
+
+    @Test
+    void completedNumericPlayerPlanCanFinishOuterCheckpointWithoutRendering() {
+        var persisted = capturePlayerPayload(true, "Original");
+        var snapshot = playerPayloadSnapshot(persisted);
+        persisted.put(snapshot.getKey(), encodeLiteralSnapshot(decodeLiteralSnapshot(snapshot.getValue()).stream()
+                .map(entry -> { String[] parts = entry.split("\\|", 4); return "P|" + parts[1] + "|" + parts[2]; })
+                .toList()));
+        try (ReplayFixture restarted = new ReplayFixture()) {
+            when(restarted.player.isOnline()).thenReturn(false);
+            restarted.placeholders.when(() -> PlaceholderUtils.parseText(eq(restarted.player), anyString()))
+                    .thenThrow(new IllegalStateException("completed legacy plan must not render"));
+            restarted.dispatch("%dynamic%:%SiteName%", persisted).join();
+            assertTrue(restarted.sent.isEmpty());
+        }
+    }
+
+    @Test
+    void frozenPlayerPlanRejectsMalformedTerminalJsonBeforeAnyDelivery() {
+        var original = capturePlayerPayload(false, "Original");
+        var snapshot = playerPayloadSnapshot(original);
+        var entries = decodeLiteralSnapshot(snapshot.getValue());
+        String[] second = entries.get(1).split("\\|", 4);
+        var malformed = List.of("{\"text\":\"Two\",\"text\":\"changed\"}",
+                "{\"text\":\"Two\"} {\"text\":\"extra\"}", "{text:\"Two\"}",
+                "{\"text\":\"bad\\q\"}",
+                "{\"text\":\"" + "x".repeat(262145) + "\"}",
+                "{\"text\":\"\",\"extra\":[" + String.join(",", java.util.Collections.nCopies(4096,
+                        "{\"text\":\"\"}")) + "]}",
+                "{\"text\":\"\",\"extra\":[".repeat(194) + "{\"text\":\"\"}" + "]}".repeat(194));
+        for (String json : malformed) {
+            var persisted = ArrayUtils.fromString(ArrayUtils.makeString(original));
+            persisted.put(snapshot.getKey(), encodeLiteralSnapshot(List.of(entries.get(0),
+                    "P2|" + second[1] + "|1|" + json)));
+            persisted.put(snapshot.getKey().substring(0, snapshot.getKey().length() - 9), "0");
+            try (ReplayFixture restarted = new ReplayFixture()) {
+                restarted.placeholders.when(() -> PlaceholderUtils.parseText(eq(restarted.player), anyString()))
+                        .thenThrow(new IllegalStateException("malformed recovery must not invoke providers"));
+                assertThrows(RuntimeException.class,
+                        () -> restarted.dispatch("%dynamic%:%SiteName%", persisted).join());
+                assertTrue(restarted.sent.isEmpty(), "validate every frozen component before sending a prefix");
+            }
+        }
+    }
+
+    @Test
+    void completedFrozenPlayerPlanStillRejectsCorruptPayload() {
+        var persisted = capturePlayerPayload(true, "Original");
+        var snapshot = playerPayloadSnapshot(persisted);
+        var entries = new ArrayList<>(decodeLiteralSnapshot(snapshot.getValue()));
+        String[] parts = entries.get(1).split("\\|", 4);
+        entries.set(1, "P2|" + parts[1] + "|1|{\"text\":\"Two\",\"text\":\"changed\"}");
+        persisted.put(snapshot.getKey(), encodeLiteralSnapshot(entries));
+        try (ReplayFixture restarted = new ReplayFixture()) {
+            assertThrows(RuntimeException.class,
+                    () -> restarted.dispatch("%dynamic%:%SiteName%", persisted).join());
+            assertTrue(restarted.sent.isEmpty());
+        }
+    }
+
+    @Test
+    void playerPayloadAdmissionPersistenceFailurePreventsFirstSideEffect() {
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            var map = values("Original");
+            var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
+            options.setAsyncReplayCheckpointConsumer(checkpoint -> {
+                if (checkpoint.getPlaceholders().entrySet().stream().anyMatch(entry ->
+                        entry.getKey().startsWith("__advancedcore_replay_nested_list_")
+                            && entry.getKey().endsWith("_snapshot") && entry.getValue().startsWith("v1:")
+                        && decodeLiteralSnapshot(entry.getValue()).stream().anyMatch(step -> step.startsWith("P2|"))))
+                    throw new IllegalStateException("synthetic payload persistence failure");
+                fixture.randomCheckpoint.set(new HashMap<>(checkpoint.getPlaceholders()));
+            });
+            var collection = fixture.user.beginAsyncActionCollection(Reward.replayStateFor(options), map,
+                    "synthetic-message-injector");
+            fixture.user.sendLiteralDisplayMessage("One:%SiteName%%NewLine%Two:%SiteName%", map);
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.user.endAsyncActionCollection(collection).toCompletableFuture().join());
+            assertTrue(fixture.sent.isEmpty());
+            assertTrue(fixture.randomCheckpoint.get().containsKey(
+                    Reward.legacyActionReplayKey("synthetic-message-injector") + "_snapshot"));
+        }
+    }
+
+    private HashMap<String, String> capturePlayerPayload(boolean completed, String literal) {
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                    .thenAnswer(call -> com.bencodez.simpleapi.messages.MessageAPI.colorize(call.<String>getArgument(1)
+                            .replace("%dynamic%", "One%NewLine%Two")));
+            if (!completed) doAnswer(call -> {
+                String visible = call.<BaseComponent>getArgument(1).toPlainText();
+                if (visible.startsWith("Two:")) throw new IllegalStateException("synthetic transport rejection");
+                fixture.sent.add(visible);
+                return null;
+            }).when(fixture.transport).sendMessage(eq(fixture.player), any(BaseComponent.class));
+            String outer = Reward.legacyActionReplayKey("synthetic-message-injector");
+            var options = new com.bencodez.advancedcore.api.rewards.RewardOptions();
+            options.setAsyncReplayCheckpointConsumer(checkpoint -> {
+                String progress = checkpoint.getPlaceholders().get(outer);
+                if (completed && progress != null && progress.startsWith("v2:") && progress.length() > 3)
+                    throw new IllegalStateException("synthetic outer checkpoint failure");
+                fixture.randomCheckpoint.set(new HashMap<>(checkpoint.getPlaceholders()));
+            });
+            var map = values(literal);
+            var collection = fixture.user.beginAsyncActionCollection(Reward.replayStateFor(options), map,
+                    "synthetic-message-injector");
+            fixture.user.sendLiteralDisplayMessage("%dynamic%:%SiteName%", map);
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.user.endAsyncActionCollection(collection).toCompletableFuture().join());
+            assertEquals(completed ? List.of("One", "Two:" + literal) : List.of("One"), fixture.sent);
+            return ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+        }
+    }
+
+    @Test
+    void partialBroadcastFreezesSourceOutputAndConsoleAcrossRestart() {
+        var persisted = captureBroadcastPayload(false);
+        try (ReplayFixture restarted = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            UUID id = restarted.player.getUniqueId();
+            bukkit.when(() -> org.bukkit.Bukkit.getPlayer(id)).thenReturn(restarted.player);
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            restarted.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenThrow(new IllegalStateException("source and recipient providers changed after restart"));
+            restarted.dispatchBroadcast("%source_dynamic%:%SiteName%", persisted).join();
+            assertEquals(List.of("Two:Original"), restarted.sent);
+            var message = org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(console, times(1)).sendMessage(message.capture());
+            assertEquals("One%NewLine%Two:Original", net.md_5.bungee.api.ChatColor.stripColor(message.getValue()));
+            bukkit.verify(org.bukkit.Bukkit::getOnlinePlayers, never());
+        }
+    }
+
+    @Test
+    void pendingNumericRecipientFragmentsRetainTheirDurableReservation() {
+        var persisted = captureBroadcastPayload(false);
+        var snapshot = broadcastPayloadSnapshot(persisted);
+        var numeric = decodeLiteralSnapshot(snapshot.getValue()).stream().map(entry -> {
+            if (entry.startsWith("C2|")) return "C";
+            String[] parts = entry.split("\\|", 4);
+            return "R|" + parts[1] + "|" + parts[2];
+        }).toList();
+        persisted.put(snapshot.getKey(), encodeLiteralSnapshot(numeric));
+        String reservationKey = Reward.legacyActionReplayKey("synthetic-broadcast-injector") + "_snapshot";
+        String reservation = persisted.get(reservationKey);
+        try (ReplayFixture restarted = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            var providers = new java.util.concurrent.atomic.AtomicInteger();
+            restarted.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> { providers.incrementAndGet(); throw new IllegalStateException("unexpected provider"); });
+            for (int retry = 0; retry < 2; retry++) {
+                var failure = assertThrows(RuntimeException.class,
+                        () -> restarted.dispatchBroadcast("%source_dynamic%:%SiteName%", persisted).join());
+                assertFalse(AdvancedCoreUser.isReplayActionNotStarted(failure));
+                assertEquals(reservation, persisted.get(reservationKey));
+                assertEquals(encodeLiteralSnapshot(numeric), persisted.get(snapshot.getKey()));
+            }
+            assertTrue(restarted.sent.isEmpty());
+            assertEquals(0, providers.get());
+            verifyNoInteractions(console);
+        }
+    }
+
+    @Test
+    void completedNumericBroadcastPlanCanFinishItsCheckpointWithoutRendering() {
+        var persisted = captureBroadcastPayload(true);
+        var snapshot = broadcastPayloadSnapshot(persisted);
+        persisted.put(snapshot.getKey(), encodeLiteralSnapshot(decodeLiteralSnapshot(snapshot.getValue()).stream()
+                .map(entry -> { if (entry.startsWith("C2|")) return "C";
+                    String[] parts = entry.split("\\|", 4); return "R|" + parts[1] + "|" + parts[2]; })
+                .toList()));
+        try (ReplayFixture restarted = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            restarted.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenThrow(new IllegalStateException("completed legacy broadcast must not render"));
+            restarted.dispatchBroadcast("%source_dynamic%:%SiteName%", persisted).join();
+            assertTrue(restarted.sent.isEmpty());
+            bukkit.verify(org.bukkit.Bukkit::getOnlinePlayers, never());
+            bukkit.verify(org.bukkit.Bukkit::getConsoleSender, never());
+        }
+    }
+
+    @Test
+    void broadcastPayloadPersistenceFailurePreventsRecipientAndConsoleSideEffects() {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            UUID id = fixture.player.getUniqueId();
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of(fixture.player));
+            bukkit.when(() -> org.bukkit.Bukkit.getPlayer(id)).thenReturn(fixture.player);
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> call.getArgument(1));
+            fixture.broadcastCheckpointObserver = checkpoint -> {
+                if (checkpoint.getPlaceholders().entrySet().stream().anyMatch(entry ->
+                        entry.getKey().startsWith("__advancedcore_replay_nested_list_")
+                            && entry.getKey().endsWith("_snapshot") && entry.getValue().startsWith("v1:")
+                        && decodeLiteralSnapshot(entry.getValue()).stream().anyMatch(step -> step.startsWith("R2|"))))
+                    throw new IllegalStateException("synthetic outer payload persistence failure");
+            };
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatchBroadcast("Site:%SiteName%", values("Original")).join());
+            assertTrue(fixture.sent.isEmpty());
+            verifyNoInteractions(console);
+        }
+    }
+
+    @Test
+    void saturatedReplayMetadataRejectsRenderedPlayerPayloadBeforeSending() {
+        try (ReplayFixture fixture = new ReplayFixture()) {
+            var map = values("Original");
+            String fillKey = "__advancedcore_replay_selection_unrelated_capacity";
+            String filler = "s".repeat(1020000);
+            map.put(fillKey, filler);
+            fixture.placeholders.when(() -> PlaceholderUtils.parseText(eq(fixture.player), anyString()))
+                    .thenAnswer(call -> call.<String>getArgument(1).replace("%dynamic%", "x".repeat(50000)));
+            assertThrows(RuntimeException.class, () -> fixture.dispatch("%dynamic%:%SiteName%", map).join());
+            assertTrue(fixture.sent.isEmpty());
+            assertEquals(filler, map.get(fillKey), "capacity failure must retain unrelated durable evidence");
+        }
+    }
+
+    private HashMap<String, String> captureBroadcastPayload(boolean completed) {
+        try (ReplayFixture fixture = new ReplayFixture(); var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            UUID id = fixture.player.getUniqueId();
+            bukkit.when(org.bukkit.Bukkit::getOnlinePlayers).thenReturn(List.of(fixture.player));
+            bukkit.when(() -> org.bukkit.Bukkit.getPlayer(id)).thenReturn(fixture.player);
+            var console = mock(org.bukkit.command.ConsoleCommandSender.class);
+            bukkit.when(org.bukkit.Bukkit::getConsoleSender).thenReturn(console);
+            fixture.placeholders.when(() -> PlaceholderUtils.replacePlaceHolders(any(Player.class), anyString()))
+                    .thenAnswer(call -> call.<String>getArgument(1).replace("%source_dynamic%", "One%NewLine%Two"));
+            if (!completed) doAnswer(call -> {
+                String visible = call.<BaseComponent>getArgument(1).toPlainText();
+                if (visible.equals("Two:Original")) throw new IllegalStateException("synthetic transport rejection");
+                fixture.sent.add(visible);
+                return null;
+            }).when(fixture.transport).sendMessage(eq(fixture.player), any(BaseComponent.class));
+            String outer = Reward.legacyActionReplayKey("synthetic-broadcast-injector");
+            fixture.broadcastCheckpointObserver = checkpoint -> {
+                String progress = checkpoint.getPlaceholders().get(outer);
+                if (completed && progress != null && progress.startsWith("v2:") && progress.length() > 3)
+                    throw new IllegalStateException("synthetic outer checkpoint failure");
+            };
+            assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> fixture.dispatchBroadcast("%source_dynamic%:%SiteName%", values("Original")).join());
+            assertEquals(completed ? List.of("One", "Two:Original") : List.of("One"), fixture.sent);
+            return ArrayUtils.fromString(ArrayUtils.makeString(fixture.randomCheckpoint.get()));
+        }
+    }
+
+    private static java.util.Map.Entry<String, String> broadcastPayloadSnapshot(HashMap<String, String> metadata) {
+        return metadata.entrySet().stream().filter(entry -> entry.getKey().startsWith("__advancedcore_replay_nested_list_")
+                && entry.getKey().endsWith("_snapshot") && entry.getValue().startsWith("v1:")
+                && decodeLiteralSnapshot(entry.getValue()).stream().anyMatch(step -> step.startsWith("R2|")))
+                .findFirst().orElseThrow();
+    }
+
+    private static java.util.Map.Entry<String, String> playerPayloadSnapshot(HashMap<String, String> metadata) {
+        return metadata.entrySet().stream().filter(entry -> entry.getKey().startsWith("__advancedcore_replay_nested_list_")
+                && entry.getKey().endsWith("_snapshot") && entry.getValue().startsWith("v1:")
+                && decodeLiteralSnapshot(entry.getValue()).stream().anyMatch(step -> step.startsWith("P2|")))
+                .findFirst().orElseThrow();
+    }
+
+    private static List<String> decodeLiteralSnapshot(String snapshot) {
+        if (!snapshot.startsWith("v1:")) throw new IllegalArgumentException("Unexpected test snapshot");
+        if (snapshot.length() == 3) return List.of();
+        return java.util.Arrays.stream(snapshot.substring(3).split("\\.", -1)).map(encoded ->
+                new String(java.util.Base64.getUrlDecoder().decode(encoded), java.nio.charset.StandardCharsets.UTF_8)).toList();
+    }
+
+    private static String encodeLiteralSnapshot(List<String> entries) {
+        return "v1:" + entries.stream().map(entry -> java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(entry.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .collect(java.util.stream.Collectors.joining("."));
     }
 
     private static final class ReplayFixture implements AutoCloseable {
