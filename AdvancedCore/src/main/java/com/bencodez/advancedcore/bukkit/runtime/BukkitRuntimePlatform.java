@@ -310,6 +310,14 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
             return retirement;
         }
         var result = new CompletableFuture<Void>();
+        // Publish the admission before handing the task to the worker.  The
+        // lifecycle watchdog can run re-entrantly from an executor's execute
+        // implementation (and can otherwise race the return from execute).
+        // Reserving the completion first ensures it retains the worker and
+        // native owner even while the task is being accepted.  If acceptance
+        // is rejected, the same stage is completed exceptionally below, so a
+        // rejection cannot masquerade as a successful retirement.
+        admittedUserStorageRetirement = result;
         try {
             Objects.requireNonNull(getUserStorageTimer(), "user storage timer").execute(() -> {
                 try {
@@ -338,7 +346,6 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                     result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));
                 }
             });
-            admittedUserStorageRetirement = result;
         } catch (RuntimeException | Error failure) {
             // Do not detach the shared runtime or pretend rejected work flushed storage.
             result.completeExceptionally(preparationAndStorageFailure(preparationFailure, failure));

@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,6 +35,8 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.time.TimeChecker;
+import com.bencodez.advancedcore.api.user.UserManager;
+import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
 import com.bencodez.advancedcore.bukkit.runtime.BukkitRuntimePlatform;
 import com.bencodez.advancedcore.command.CommandLoader;
 import com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime;
@@ -377,6 +380,55 @@ class NativeServerDataAdmissionTest {
             assertTrue(predecessor.plugin.hasServerDataOwnership());
             assertThrows(IllegalStateException.class, fixture(predecessor.plugin.getDataFolder().toPath()).plugin::onEnable);
         }
+    }
+
+    @Test void storageRetirementAdmissionIsVisibleBeforeWorkerAcceptReturns() throws Exception {
+        Fixture fixture = fixture();
+        UserManager users = mock(UserManager.class);
+        UserDataManager manager = mock(UserDataManager.class);
+        ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+        when(fixture.plugin.isLoadUserData()).thenReturn(true);
+        when(fixture.plugin.getLoadedUserManager()).thenReturn(users);
+        when(users.getDataManager()).thenReturn(manager);
+        when(manager.getTimer()).thenReturn(worker);
+        BukkitRuntimePlatform platform = new BukkitRuntimePlatform(fixture.plugin);
+        AtomicReference<CompletionStage<Void>> observed = new AtomicReference<>();
+        doAnswer(invocation -> {
+            observed.set(platform.admittedStorageRetirementCompletion());
+            return null;
+        }).when(worker).execute(any(Runnable.class));
+
+        CompletionStage<Void> returned = invokeDeferredRetirement(platform);
+
+        assertSame(returned, observed.get(),
+                "the watchdog-visible admission must be reserved before execute returns");
+        assertSame(returned, platform.admittedStorageRetirementCompletion());
+    }
+
+    @Test void rejectedStorageRetirementAdmissionRemainsFailedAndObservable() throws Exception {
+        Fixture fixture = fixture();
+        UserManager users = mock(UserManager.class);
+        UserDataManager manager = mock(UserDataManager.class);
+        ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+        when(fixture.plugin.isLoadUserData()).thenReturn(true);
+        when(fixture.plugin.getLoadedUserManager()).thenReturn(users);
+        when(users.getDataManager()).thenReturn(manager);
+        when(manager.getTimer()).thenReturn(worker);
+        doThrow(new RejectedExecutionException("retirement worker stopped")).when(worker).execute(any(Runnable.class));
+        BukkitRuntimePlatform platform = new BukkitRuntimePlatform(fixture.plugin);
+
+        CompletionStage<Void> returned = invokeDeferredRetirement(platform);
+
+        assertSame(returned, platform.admittedStorageRetirementCompletion());
+        assertTrue(returned.toCompletableFuture().isCompletedExceptionally(),
+                "worker rejection must not leave an apparently pending successful admission");
+    }
+
+    private static CompletionStage<Void> invokeDeferredRetirement(BukkitRuntimePlatform platform)
+            throws Exception {
+        var method = BukkitRuntimePlatform.class.getDeclaredMethod("deferUserStorageRetirement", Throwable.class);
+        method.setAccessible(true);
+        return (CompletionStage<Void>) method.invoke(platform, new Object[] { null });
     }
 
     private Fixture fixture() { return fixture(directory); }
