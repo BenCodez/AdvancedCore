@@ -175,6 +175,45 @@ class NativeServerDataAdmissionTest {
         assertEquals(6, workers.size(), "reenable keeps the established fresh shared executor creation");
     }
 
+	@Test void shutdownAdmissionDoesNotWaitForConsumerReplayMonitor() throws Exception {
+		Fixture fixture = fixture();
+		CountDownLatch monitorHeld = new CountDownLatch(1);
+		CountDownLatch releaseMonitor = new CountDownLatch(1);
+		Thread holder = new Thread(() -> {
+			synchronized (fixture.plugin) {
+				monitorHeld.countDown();
+				try {
+					assertTrue(releaseMonitor.await(4, TimeUnit.SECONDS));
+				} catch (InterruptedException interrupted) {
+					Thread.currentThread().interrupt();
+				}
+			}
+		}, "replay-monitor-holder");
+		holder.start();
+		assertTrue(monitorHeld.await(1, TimeUnit.SECONDS));
+		Thread watchdog = new Thread(() -> {
+			try {
+				Thread.sleep(2_000);
+			} catch (InterruptedException interrupted) {
+				Thread.currentThread().interrupt();
+			} finally {
+				releaseMonitor.countDown();
+			}
+		}, "shutdown-admission-watchdog");
+		watchdog.start();
+		try {
+			fixture.plugin.onDisable();
+			assertEquals(1, releaseMonitor.getCount(),
+					"shutdown admission must not wait for a replay/checkpoint monitor");
+		} finally {
+			releaseMonitor.countDown();
+			watchdog.interrupt();
+			watchdog.join(2_000);
+			holder.join(2_000);
+		}
+		assertFalse(holder.isAlive(), "monitor holder must be released after the test");
+	}
+
     @Test void admittedPreparationRetainsAdmissionUntilItsActualSuccess() throws Exception {
         Fixture predecessor = fixture();
         var preparation = new CompletableFuture<Void>();
@@ -344,6 +383,7 @@ class NativeServerDataAdmissionTest {
 
     private Fixture fixture(Path dataDirectory) {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        initializeLifecycleLock(plugin);
         Server server = mock(Server.class);
         when(plugin.getDataFolder()).thenReturn(dataDirectory.toFile());
         when(plugin.getName()).thenReturn("native-admission-fixture");
@@ -374,6 +414,16 @@ class NativeServerDataAdmissionTest {
             return null;
         }).when(plugin).releaseServerDataOwnershipAfter(any(CompletionStage.class));
         return new Fixture(plugin, finalFiles, releaseFence);
+    }
+
+    private static void initializeLifecycleLock(AdvancedCorePlugin plugin) {
+        try {
+            var lock = AdvancedCorePlugin.class.getDeclaredField("lifecycleLock");
+            lock.setAccessible(true);
+            lock.set(plugin, new Object());
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Unable to initialize lifecycle test fixture", failure);
+        }
     }
 
     private record Fixture(AdvancedCorePlugin plugin, AtomicReference<CompletionStage<Void>> finalFiles,

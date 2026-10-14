@@ -92,38 +92,44 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private static AdvancedCorePlugin javaPlugin;
 
+	/** Lifecycle admission is independent from consumer replay/checkpoint synchronization. */
+	private final Object lifecycleLock = new Object();
 	private com.bencodez.advancedcore.lifecycle.ServerDataOwnership serverDataOwnership;
 	private boolean advancedCoreShutdownStarted;
 	private boolean advancedCoreEnableStarted;
 	private boolean serverDataStartupRejected;
 
 	/** Native file admission also covers consumer hooks that read ServerData early. */
-	private synchronized void acquireServerDataOwnership() {
-		if (serverDataOwnership != null && !serverDataOwnership.isReleased()) {
-			if (!advancedCoreShutdownStarted) return;
-			throw new IllegalStateException("Previous ServerData shutdown has not finished");
-		}
-		try {
-			serverDataOwnership = com.bencodez.advancedcore.lifecycle.ServerDataOwnership.acquire(
-					new File(getDataFolder(), "ServerData.yml").toPath());
-			advancedCoreShutdownStarted = false;
-			advancedCoreEnableStarted = false;
-			serverDataStartupRejected = false;
-		} catch (RuntimeException | Error failure) {
-			serverDataStartupRejected = true;
-			throw failure;
+	private void acquireServerDataOwnership() {
+		synchronized (lifecycleLock) {
+			if (serverDataOwnership != null && !serverDataOwnership.isReleased()) {
+				if (!advancedCoreShutdownStarted) return;
+				throw new IllegalStateException("Previous ServerData shutdown has not finished");
+			}
+			try {
+				serverDataOwnership = com.bencodez.advancedcore.lifecycle.ServerDataOwnership.acquire(
+						new File(getDataFolder(), "ServerData.yml").toPath());
+				advancedCoreShutdownStarted = false;
+				advancedCoreEnableStarted = false;
+				serverDataStartupRejected = false;
+			} catch (RuntimeException | Error failure) {
+				serverDataStartupRejected = true;
+				throw failure;
+			}
 		}
 	}
 
 	/** Internal lifecycle fence, independent of consumer shutdown-hook overrides. */
-	public final synchronized boolean hasServerDataOwnership() {
-		return serverDataOwnership != null && !serverDataOwnership.isReleased();
+	public final boolean hasServerDataOwnership() {
+		synchronized (lifecycleLock) {
+			return serverDataOwnership != null && !serverDataOwnership.isReleased();
+		}
 	}
 
 	/** Internal lifecycle fence, independent of consumer shutdown-hook overrides. */
 	public final void releaseServerDataOwnershipAfter(CompletionStage<Void> completion) {
 		com.bencodez.advancedcore.lifecycle.ServerDataOwnership ownership;
-		synchronized (this) { ownership = serverDataOwnership; }
+		synchronized (lifecycleLock) { ownership = serverDataOwnership; }
 		if (ownership != null) ownership.releaseAfter(completion);
 	}
 
@@ -1396,7 +1402,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	@Override
 	public void onDisable() {
 		long startedNanos = System.nanoTime();
-		synchronized (this) {
+		synchronized (lifecycleLock) {
 			if (advancedCoreShutdownStarted || serverDataStartupRejected) return;
 			advancedCoreShutdownStarted = true;
 		}
@@ -1440,7 +1446,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
-		synchronized (this) {
+		synchronized (lifecycleLock) {
 			acquireServerDataOwnership();
 			if (advancedCoreEnableStarted) throw new IllegalStateException("AdvancedCore is already enabled");
 			advancedCoreEnableStarted = true;
