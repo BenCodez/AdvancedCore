@@ -10,4 +10,13 @@ import java.util.UUID;
 @FunctionalInterface
 public interface PlayerPresenceLookup {
     PlayerPresence check(UUID identity) throws Exception;
+
+    /**
+     * Additionally certify absence of unmapped offline history for an online identity.
+     * Older providers retain positive evidence but cannot certify the wider scope.
+     */
+    default PlayerPresence checkOnlineHistory(UUID identity) throws Exception {
+        PlayerPresence evidence = check(identity);
+        return evidence == PlayerPresence.NEVER_JOINED ? PlayerPresence.UNKNOWN : evidence;
+    }
 }

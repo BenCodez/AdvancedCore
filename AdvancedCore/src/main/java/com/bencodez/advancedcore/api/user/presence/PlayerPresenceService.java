@@ -44,6 +44,12 @@ public final class PlayerPresenceService implements AutoCloseable {
 
     /** Check up to eight verified current/historical UUIDs for the same identity. */
     public CompletionStage<PlayerPresence> checkIdentitiesAsync(Collection<UUID> identities) {
+        return checkIdentitiesAsync(identities, false);
+    }
+
+    /** Require retained offline-history scope proof when current names cannot enumerate old migrations. */
+    public CompletionStage<PlayerPresence> checkIdentitiesAsync(Collection<UUID> identities,
+            boolean requireCompleteOnlineHistory) {
         LinkedHashSet<UUID> distinct = new LinkedHashSet<>();
         if (identities == null) return CompletableFuture.completedStage(PlayerPresence.UNKNOWN);
         try {
@@ -85,26 +91,30 @@ public final class PlayerPresenceService implements AutoCloseable {
             finish(aggregate, unknown ? PlayerPresence.UNKNOWN : PlayerPresence.NEVER_JOINED);
         });
         int index = 0;
-        for (UUID identity : distinct) submit(identity, results.get(index++));
+        for (UUID identity : distinct) submit(identity, results.get(index++), requireCompleteOnlineHistory);
         return aggregate.minimalCompletionStage();
     }
 
     private void submit(UUID identity, CompletableFuture<PlayerPresence> result) {
+        submit(identity, result, false);
+    }
+
+    private void submit(UUID identity, CompletableFuture<PlayerPresence> result, boolean completeOnlineHistory) {
         try {
-            worker.execute(() -> completeLookup(identity, result));
+            worker.execute(() -> completeLookup(identity, result, completeOnlineHistory));
         } catch (RuntimeException rejected) {
             finish(result, PlayerPresence.UNKNOWN);
         }
     }
 
-    private void completeLookup(UUID identity, CompletableFuture<PlayerPresence> result) {
+    private void completeLookup(UUID identity, CompletableFuture<PlayerPresence> result, boolean completeOnlineHistory) {
         synchronized (admission) {
             // Queued retired work never touches the provider or replacement state.
             if (closed || !pending.containsKey(result)) return;
         }
         PlayerPresence evidence;
         try {
-            evidence = lookup.check(identity);
+            evidence = completeOnlineHistory ? lookup.checkOnlineHistory(identity) : lookup.check(identity);
             if (evidence == null) evidence = PlayerPresence.UNKNOWN;
         } catch (Exception failed) {
             if (failed instanceof InterruptedException) Thread.currentThread().interrupt();

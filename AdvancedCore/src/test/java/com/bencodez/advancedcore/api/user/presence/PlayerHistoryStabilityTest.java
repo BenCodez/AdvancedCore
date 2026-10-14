@@ -19,13 +19,17 @@ class PlayerHistoryStabilityTest {
     @TempDir Path directory;
 
     private byte[] history() throws Exception {
+        return history(USER);
+    }
+
+    private byte[] history(UUID recordIdentity) throws Exception {
         var nbt = new ByteArrayOutputStream();
         try (var out = new DataOutputStream(nbt)) {
             out.writeByte(10); out.writeUTF("");
             out.writeByte(3); out.writeUTF("DataVersion"); out.writeInt(1);
             out.writeByte(11); out.writeUTF("UUID"); out.writeInt(4);
-            out.writeInt((int) (USER.getMostSignificantBits() >>> 32)); out.writeInt((int) USER.getMostSignificantBits());
-            out.writeInt((int) (USER.getLeastSignificantBits() >>> 32)); out.writeInt((int) USER.getLeastSignificantBits());
+            out.writeInt((int) (recordIdentity.getMostSignificantBits() >>> 32)); out.writeInt((int) recordIdentity.getMostSignificantBits());
+            out.writeInt((int) (recordIdentity.getLeastSignificantBits() >>> 32)); out.writeInt((int) recordIdentity.getLeastSignificantBits());
             out.writeByte(10); out.writeUTF("bukkit");
             out.writeByte(8); out.writeUTF("lastKnownName"); out.writeUTF("Synthetic\r\n歴史"); out.writeByte(0);
             out.writeByte(0);
@@ -53,6 +57,137 @@ class PlayerHistoryStabilityTest {
             public long size() { return source.size(); }
             public Object fileKey() { return key; }
         };
+    }
+
+    @Test void legacyUuidAbsenceAlsoRescansKeyedScopesWithCollidingTimes() throws Exception {
+        BasicFileAttributes attrs = actual(directory);
+        BasicFileAttributes fixed = metadata(attrs, new Object(), attrs.creationTime());
+        try (var lookup = new BukkitPlayerPresenceLookup(directory,
+                path -> path.equals(directory) ? fixed : actual(path))) {
+            assertEquals(PlayerPresence.NEVER_JOINED, lookup.check(USER));
+            Files.createTempFile(directory, USER + "-", ".dat");
+            assertEquals(PlayerPresence.UNKNOWN, lookup.check(USER));
+        }
+    }
+
+    @Test void cachedRecoveryForOneUuidCannotCertifyAnotherUuidAbsentWithCollidingTimes() throws Exception {
+        BasicFileAttributes attrs = actual(directory);
+        BasicFileAttributes fixed = metadata(attrs, new Object(), attrs.creationTime());
+        UUID other = UUID.fromString("b3f2bd99-5325-4a51-a642-12674e147381");
+        Files.createTempFile(directory, USER + "-", ".dat");
+        try (var lookup = new BukkitPlayerPresenceLookup(directory,
+                path -> path.equals(directory) ? fixed : actual(path))) {
+            assertEquals(PlayerPresence.UNKNOWN, lookup.check(USER));
+            Files.createTempFile(directory, other + "-", ".dat");
+            assertEquals(PlayerPresence.UNKNOWN, lookup.check(other));
+        }
+    }
+
+    @Test void keyedScopeWithCollidingDirectoryTimesMustDiscoverNewOfflineHistory() throws Exception {
+        BasicFileAttributes attrs = actual(directory);
+        BasicFileAttributes fixed = metadata(attrs, new Object(), attrs.creationTime());
+        try (var lookup = new BukkitPlayerPresenceLookup(directory,
+                path -> path.equals(directory) ? fixed : actual(path))) {
+            assertEquals(PlayerPresence.NEVER_JOINED, lookup.checkOnlineHistory(USER));
+            UUID former = UUID.nameUUIDFromBytes("OfflinePlayer:FormerSynthetic".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            Files.write(directory.resolve(former + ".dat"), history(former));
+            assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER));
+        }
+    }
+
+    @Test void versionFourWithNonOnlineVariantRecordCannotCertifyOnlineAbsence() throws Exception {
+        UUID legacy = UUID.fromString("00000000-0000-4000-0000-000000000001");
+        assertEquals(4, legacy.version()); assertNotEquals(2, legacy.variant());
+        Files.write(directory.resolve(legacy + ".dat"), history(legacy));
+        try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+            assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER));
+        }
+    }
+
+    @Test void versionFourNonOnlineVariantJoinCannotCertifyOnlineAbsenceBeforeSave() {
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        org.mockito.Mockito.when(player.getUniqueId()).thenReturn(UUID.fromString("00000000-0000-4000-0000-000000000001"));
+        var event = org.mockito.Mockito.mock(org.bukkit.event.player.PlayerJoinEvent.class);
+        org.mockito.Mockito.when(event.getPlayer()).thenReturn(player);
+        try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+            lookup.onJoin(event);
+            assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER));
+        }
+    }
+
+    @Test void unsupportedOnlineAliasRetainsPositiveButCannotCertifyAbsentHistory() throws Exception {
+        UUID legacy = UUID.fromString("00000000-0000-4000-0000-000000000001");
+        try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+            assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(legacy));
+            Files.write(directory.resolve(legacy + ".dat"), history(legacy));
+            assertEquals(PlayerPresence.JOINED, lookup.checkOnlineHistory(legacy));
+        }
+    }
+
+    @Test void completeOnlineOnlyScopeCanProveAbsenceWithoutChangingLegacyApi() throws Exception {
+        UUID anotherOnline = UUID.fromString("b3f2bd99-5325-4a51-a642-12674e147381");
+        Files.write(directory.resolve(anotherOnline + ".dat"), history(anotherOnline));
+        try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+            assertEquals(PlayerPresence.NEVER_JOINED, lookup.checkOnlineHistory(USER));
+            assertEquals(PlayerPresence.NEVER_JOINED, lookup.check(USER));
+        }
+    }
+
+    @Test void formerOfflineNameBlocksOnlineNegativeWithoutGuessingOwnership() throws Exception {
+        UUID former = UUID.nameUUIDFromBytes("OfflinePlayer:FormerSynthetic".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        byte[] retained = history(former); Path record = Files.write(directory.resolve(former + ".dat"), retained);
+        try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+            assertEquals(PlayerPresence.NEVER_JOINED, lookup.check(USER));
+            assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER));
+            assertArrayEquals(retained, Files.readAllBytes(record));
+            Files.write(directory.resolve(USER + ".dat"), history());
+            assertEquals(PlayerPresence.JOINED, lookup.checkOnlineHistory(USER));
+        }
+    }
+
+    @Test void unmappedCorruptBackupAndInterruptedOfflineSavesBlockOnlineNegatives() throws Exception {
+        UUID former = UUID.nameUUIDFromBytes("OfflinePlayer:FormerSynthetic".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        for (String suffix : new String[] { ".dat_old", ".dat.offline-read", "-temporary.dat", "_corrupted_1.dat_old" }) {
+            Path retained = Files.write(directory.resolve(former + suffix), new byte[] {0});
+            try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+                assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER), suffix);
+                assertArrayEquals(new byte[] {0}, Files.readAllBytes(retained));
+            } finally { Files.delete(retained); }
+        }
+    }
+
+    @Test void nonOnlineUuidAndCaseInsensitiveRecoveryScopeCannotBecomeOnlineAbsence() throws Exception {
+        UUID legacy = new UUID(0, 1);
+        Path retained = Files.write(directory.resolve(legacy.toString().toUpperCase(java.util.Locale.ROOT) + "-SAVE.DAT"), new byte[] {0});
+        try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+            assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER));
+            assertEquals(PlayerPresence.UNKNOWN, lookup.check(legacy));
+            assertArrayEquals(new byte[] {0}, Files.readAllBytes(retained));
+        }
+    }
+
+    @Test void keylessScopeWithUnchangedTimesRescansNewOfflineRecords() throws Exception {
+        BasicFileAttributes fixed = withoutKey(actual(directory));
+        try (var lookup = new BukkitPlayerPresenceLookup(directory,
+                path -> path.equals(directory) ? fixed : withoutKey(actual(path)))) {
+            assertEquals(PlayerPresence.NEVER_JOINED, lookup.checkOnlineHistory(USER));
+            UUID former = UUID.nameUUIDFromBytes("OfflinePlayer:FormerSynthetic".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            Files.write(directory.resolve(former + ".dat"), history(former));
+            assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER));
+            lookup.close(); assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER));
+        }
+    }
+
+    @Test void observedNonOnlineJoinPreventsUnmappedAbsenceBeforeFirstSave() {
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        org.mockito.Mockito.when(player.getUniqueId()).thenReturn(new UUID(0, 1));
+        var event = org.mockito.Mockito.mock(org.bukkit.event.player.PlayerJoinEvent.class);
+        org.mockito.Mockito.when(event.getPlayer()).thenReturn(player);
+        try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+            lookup.onJoin(event);
+            assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER));
+            assertEquals(PlayerPresence.JOINED, lookup.checkOnlineHistory(player.getUniqueId()));
+        }
     }
 
     @Test void completeKeylessRecordCanSupplyPositiveHistoryWithoutMutation() throws Exception {

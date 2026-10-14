@@ -1369,6 +1369,16 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 				: service.checkIdentitiesAsync(identities);
 	}
 
+	/** Also require proof that no unmapped offline identity can retain earlier history. */
+	public java.util.concurrent.CompletionStage<com.bencodez.advancedcore.api.user.presence.PlayerPresence>
+			checkPlayerPresenceIdentitiesAsync(java.util.Collection<java.util.UUID> identities, boolean completeOnlineHistory) {
+		var service = playerPresenceService;
+		return service == null
+				? java.util.concurrent.CompletableFuture.completedStage(
+						com.bencodez.advancedcore.api.user.presence.PlayerPresence.UNKNOWN)
+				: service.checkIdentitiesAsync(identities, completeOnlineHistory);
+	}
+
 	@Override
 	public void onDisable() {
 		var presence = playerPresenceService;

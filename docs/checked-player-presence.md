@@ -32,7 +32,8 @@ Input is bounded to 1 MiB compressed, 8 MiB expanded, depth 64 and 100,000 struc
 unknown. Negative evidence requires a readable unchanged directory with no record or recovery file for that UUID.
 Native interrupted-save files (`UUID-random.dat`) and corruption backups prevent negative answers even when no
 canonical record survives; their contents are never read as positive proof or changed. A worker-owned directory
-index is shared across negative checks and refreshed when the directory identity or modification time changes.
+index preserves retained recovery evidence across checks. Every absent result requires a fresh bounded
+enumeration: directory identity and timestamps alone cannot certify unchanged entries.
 Scanning is bounded to 1,000,000 entries and 65,536 recovery identities; incomplete, failed or unstable scans
 remain unknown. Closing the lookup clears the index without waiting for an in-flight scan.
 File keys strengthen stability checks when the provider supplies them. Providers without file keys use
@@ -42,6 +43,18 @@ candidate read can prevent negative evidence but cannot erase a readable valid s
 is rechecked before using an absence index. A missing directory, symbolic link, failed scope read or changed
 scope remains unknown. No raw history or paths are
 returned or logged.
+
+The additive `checkPlayerPresenceIdentitiesAsync(identities, true)` operation also checks whether the
+actual history scope contains unmapped offline/non-online UUID records or observed joins. Current-name
+cache mappings cannot enumerate all former offline names. Such retained evidence prevents a negative
+online-family result unless a checked alias already supplies positive history. A stable readable scope
+containing only online UUID records can still supply `NEVER_JOINED`; malformed offline records and
+interrupted/corruption backups keep the result unknown. This uses the same bounded worker-owned index
+and admission limits, with fresh bounded enumeration before each wider negative result because directory
+timestamps cannot certify unchanged contents. Online UUIDs require version 4 and variant 2; unsupported
+aliases retain positives but cannot certify wider absence. No profile lookup or history mutation is used. Existing UUID-only methods retain
+their behavior. Providers that implement only the original lookup method preserve positives but
+cannot certify the wider negative scope.
 
 A generation-owned join listener and initial UUID-only online snapshot supply positive evidence for players whose
 first history file has not yet been saved. The requesting/worker threads never inspect player entity state.

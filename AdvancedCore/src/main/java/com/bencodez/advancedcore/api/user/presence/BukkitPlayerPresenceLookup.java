@@ -26,8 +26,8 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
     private static final int MAX_DIRECTORY_ENTRIES = 1_000_000;
     private static final int MAX_RECOVERY_IDENTITIES = 65536;
     private record ScopeIdentity(Object fileKey, FileTime created) { }
-    private record RecoveryIndex(ScopeIdentity scope, FileTime modified, Set<UUID> identities) { }
-    private static final RecoveryIndex RETIRED = new RecoveryIndex(null, null, Set.of());
+    private record RecoveryIndex(ScopeIdentity scope, FileTime modified, Set<UUID> identities, boolean offlineHistory) { }
+    private static final RecoveryIndex RETIRED = new RecoveryIndex(null, null, Set.of(), true);
     private final AtomicReference<RecoveryIndex> recoveryIndex = new AtomicReference<>();
     private final Object recoveryScan = new Object();
     @FunctionalInterface interface AttributeReader {
@@ -37,6 +37,7 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
     private final Path historyDirectory;
     private final HashSet<UUID> joined = new HashSet<>();
     private boolean negativeUnavailable;
+    private boolean observedOfflineHistory;
     private boolean closed;
 
     /** The caller must supply the actual server-owned playerdata directory. */
@@ -97,6 +98,7 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
     private void observeJoined(UUID identity) {
         synchronized (joined) {
             if (closed) return;
+            if (identity != null && !isOnlineIdentity(identity)) observedOfflineHistory = true;
             if (identity == null || (!joined.contains(identity) && joined.size() >= 65536))
                 negativeUnavailable = true;
             else joined.add(identity);
@@ -112,6 +114,15 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
 
     @Override
     public PlayerPresence check(UUID identity) {
+        return check(identity, false);
+    }
+
+    @Override
+    public PlayerPresence checkOnlineHistory(UUID identity) {
+        return check(identity, true);
+    }
+
+    private PlayerPresence check(UUID identity, boolean completeOnlineHistory) {
         if (identity == null) return PlayerPresence.UNKNOWN;
         PlayerPresence live = liveEvidence(identity);
         if (live != null) return live;
@@ -154,7 +165,7 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
             }
             // Native saves use UUID-random.dat; their existence prevents absence
             // proof even if a crash left no canonical record. Never load or alter them.
-            boolean recovery = !valid && !present && !failed && hasRecovery(identity, before);
+            boolean recovery = !valid && !present && !failed && hasRecovery(identity, before, completeOnlineHistory);
             BasicFileAttributes after = attributes(historyDirectory);
             if (!unlinkedScope() || !after.isDirectory() || after.isOther() || !scope.equals(identity(after)))
                 return PlayerPresence.UNKNOWN;
@@ -163,6 +174,7 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
             if (valid) return PlayerPresence.JOINED;
             synchronized (joined) {
                 if (closed || negativeUnavailable || present || failed || recovery
+                        || (completeOnlineHistory && (observedOfflineHistory || !isSupportedOnlineAlias(identity)))
                         || !before.lastModifiedTime().equals(after.lastModifiedTime())) return PlayerPresence.UNKNOWN;
                 return joined.contains(identity) ? PlayerPresence.JOINED : PlayerPresence.NEVER_JOINED;
             }
@@ -171,7 +183,7 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
         }
     }
 
-    private boolean hasRecovery(UUID identity, BasicFileAttributes scope) throws IOException {
+    private boolean hasRecovery(UUID identity, BasicFileAttributes scope, boolean completeOnlineHistory) throws IOException {
         // Even a cached absence index needs currently readable directory scope.
         try (var ignored = Files.newDirectoryStream(historyDirectory)) { }
         synchronized (recoveryScan) {
@@ -179,28 +191,34 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
             if (scopeIdentity == null) return true;
             RecoveryIndex cached = recoveryIndex.get();
             if (cached == RETIRED) return true;
-            // Timestamps alone cannot certify that cached entries describe the
-            // current keyless directory; replacement or coarse times may collide.
+            // Cached retained evidence can preserve uncertainty. Cached absence
+            // cannot certify current entries even with a key: times may collide.
             if (scopeIdentity.fileKey() != null && cached != null && cached.scope().equals(scopeIdentity)
-                    && cached.modified().equals(scope.lastModifiedTime()))
-                return cached.identities().contains(identity);
+                    && cached.modified().equals(scope.lastModifiedTime())
+                    && (cached.identities().contains(identity) || (completeOnlineHistory && cached.offlineHistory())))
+                return true;
             HashSet<UUID> identities = new HashSet<>();
+            boolean offlineHistory = false;
             int examined = 0;
             try (var entries = Files.newDirectoryStream(historyDirectory)) {
                 for (Path entry : entries) {
                     if (++examined > MAX_DIRECTORY_ENTRIES) return true;
                     String name = entry.getFileName().toString();
-                    if (name.length() <= 40) continue;
-                    String suffix = name.substring(36);
+                    if (name.length() < 40) continue;
+                    String suffix = name.substring(36).toLowerCase(java.util.Locale.ROOT);
                     boolean temporary = suffix.startsWith("-") && suffix.endsWith(".dat")
                             && suffix.length() > 5;
                     boolean corrupted = suffix.startsWith("_corrupted_")
                             && (suffix.endsWith(".dat") || suffix.endsWith(".dat_old"));
-                    if (!temporary && !corrupted) continue;
                     UUID record;
                     try { record = UUID.fromString(name.substring(0, 36)); }
                     catch (IllegalArgumentException unrelated) { continue; }
-                    if (!record.toString().equals(name.substring(0, 36))) continue;
+                    if (!record.toString().equalsIgnoreCase(name.substring(0, 36))) continue;
+                    // Native offline UUIDs can retain history under an earlier name.
+                    // Their ownership cannot be inferred from the current name cache.
+                    if (!isOnlineIdentity(record) && (suffix.startsWith(".dat") || temporary || corrupted))
+                        offlineHistory = true;
+                    if (!temporary && !corrupted) continue;
                     identities.add(record);
                     if (identities.size() > MAX_RECOVERY_IDENTITIES) return true;
                 }
@@ -208,10 +226,10 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
             BasicFileAttributes after = attributes(historyDirectory);
             if (!unlinkedScope() || !after.isDirectory() || after.isOther() || !scopeIdentity.equals(identity(after))
                     || !scope.lastModifiedTime().equals(after.lastModifiedTime())) return true;
-            RecoveryIndex scanned = new RecoveryIndex(scopeIdentity, scope.lastModifiedTime(), Set.copyOf(identities));
+            RecoveryIndex scanned = new RecoveryIndex(scopeIdentity, scope.lastModifiedTime(), Set.copyOf(identities), offlineHistory);
             // close never waits for the scan and a retired scan cannot repopulate it.
             if (!recoveryIndex.compareAndSet(cached, scanned)) return true;
-            return identities.contains(identity);
+            return identities.contains(identity) || (completeOnlineHistory && offlineHistory);
         }
     }
 
@@ -222,6 +240,14 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
         // cannot support the fallback scope check; retained results stay unknown.
         if (key == null && (created == null || created.equals(FileTime.fromMillis(0)))) return null;
         return new ScopeIdentity(key, created);
+    }
+
+    private static boolean isOnlineIdentity(UUID identity) {
+        return identity.version() == 4 && identity.variant() == 2;
+    }
+
+    private static boolean isSupportedOnlineAlias(UUID identity) {
+        return identity.variant() == 2 && (identity.version() == 3 || identity.version() == 4);
     }
 
     private boolean unlinkedScope() {
