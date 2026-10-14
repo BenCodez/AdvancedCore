@@ -865,7 +865,7 @@ public class TimeCheckerTest {
 
 		assertNotNull(observed.get());
 		assertEquals("DAY:2025-01-02", observed.get().getId());
-		verify(serverDataFile, Mockito.never()).beginTimeChangeTransition(any(), anyString(), anyString());
+		verify(serverDataFile).beginTimeChangeTransition(TimeType.DAY, transition.periodKey(), transition.markerValue());
 		verify(serverDataFile).completeTimeChangeTransition(transition);
 	}
 

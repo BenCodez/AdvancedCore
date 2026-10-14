@@ -385,7 +385,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			TimeChangeTransitionState pending = plugin.getServerDataFile().getPendingTimeChangeTransition(type);
 			if (pending != null) {
 				plugin.getLogger().info("Recovering pending " + type + " time change " + pending.id());
-				startDetectedTransition(type, pending);
+				startDetectedTransition(type, pending, true);
 				return;
 			}
 		}
@@ -417,12 +417,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		LocalDateTime current = getTime();
 		TimeChangeTransitionState persisted = plugin.getServerDataFile().beginTimeChangeTransition(type,
 				periodKey(type, current), markerValue(type, current));
-		startDetectedTransition(type, persisted);
+		startDetectedTransition(type, persisted, false);
 	}
 
-	private void startDetectedTransition(TimeType type, TimeChangeTransitionState persisted) {
+	private void startDetectedTransition(TimeType type, TimeChangeTransitionState persisted, boolean recovered) {
 		TimeChangeTransition transition = new TimeChangeTransition(this, persisted.id(), persisted.periodKey(), type);
-		startTransition(type, false, true, true, new DurableTransition(transition, persisted));
+		startTransition(type, false, true, true, new DurableTransition(transition, persisted, recovered));
 	}
 
 	private void startTransition(TimeType type, boolean fake, boolean preDate, boolean postDate, DurableTransition durable) {
@@ -483,9 +483,20 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			// still acquire transitionLock to close admission and fence event dispatch.
 			boolean validated = false;
 			try {
-				if (!plugin.getServerDataFile().isPendingTimeChangeTransition(durable.persisted)) {
+				var serverData = plugin.getServerDataFile();
+				if (!serverData.isPendingTimeChangeTransition(durable.persisted)) {
 					plugin.debug("Ignoring stale time change transition " + durable.persisted.id());
 					return;
+				}
+				if (durable.recovered) {
+					// The read is observational. Settle publication on the existing
+					// checked owner only after reserving the shutdown drain. Recheck
+					// under that owner's monitor so reload cannot revive a stale slot.
+					synchronized (serverData) {
+						if (!serverData.isPendingTimeChangeTransition(durable.persisted)) return;
+						serverData.beginTimeChangeTransition(type, durable.persisted.periodKey(),
+								durable.persisted.markerValue());
+					}
 				}
 				validated = true;
 			} finally {
@@ -721,10 +732,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	private static final class DurableTransition {
 		private final TimeChangeTransition transition;
 		private final TimeChangeTransitionState persisted;
+		private final boolean recovered;
 
-		private DurableTransition(TimeChangeTransition transition, TimeChangeTransitionState persisted) {
+		private DurableTransition(TimeChangeTransition transition, TimeChangeTransitionState persisted, boolean recovered) {
 			this.transition = transition;
 			this.persisted = persisted;
+			this.recovered = recovered;
 		}
 	}
 
