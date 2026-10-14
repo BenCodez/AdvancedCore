@@ -35,7 +35,12 @@ canonical record survives; their contents are never read as positive proof or ch
 index is shared across negative checks and refreshed when the directory identity or modification time changes.
 Scanning is bounded to 1,000,000 entries and 65,536 recovery identities; incomplete, failed or unstable scans
 remain unknown. Closing the lookup clears the index without waiting for an in-flight scan.
-A missing directory, symbolic link, failed read or changed scope remains unknown. No raw history or paths are
+File keys strengthen stability checks when the provider supplies them. Providers without file keys use
+unchanged creation timestamps, modification times and record sizes; unavailable creation metadata remains
+unknown. A stable valid record provides positive evidence without inspecting later siblings. A failed
+candidate read can prevent negative evidence but cannot erase a readable valid sibling. Directory readability
+is rechecked before using an absence index. A missing directory, symbolic link, failed scope read or changed
+scope remains unknown. No raw history or paths are
 returned or logged.
 
 A generation-owned join listener and initial UUID-only online snapshot supply positive evidence for players whose

@@ -25,10 +25,15 @@ import org.bukkit.event.player.PlayerJoinEvent;
 public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, Listener, AutoCloseable {
     private static final int MAX_DIRECTORY_ENTRIES = 1_000_000;
     private static final int MAX_RECOVERY_IDENTITIES = 65536;
-    private record RecoveryIndex(Object fileKey, FileTime modified, Set<UUID> identities) { }
+    private record ScopeIdentity(Object fileKey, FileTime created) { }
+    private record RecoveryIndex(ScopeIdentity scope, FileTime modified, Set<UUID> identities) { }
     private static final RecoveryIndex RETIRED = new RecoveryIndex(null, null, Set.of());
     private final AtomicReference<RecoveryIndex> recoveryIndex = new AtomicReference<>();
     private final Object recoveryScan = new Object();
+    @FunctionalInterface interface AttributeReader {
+        BasicFileAttributes read(Path path) throws IOException;
+    }
+    private final AttributeReader attributeReader;
     private final Path historyDirectory;
     private final HashSet<UUID> joined = new HashSet<>();
     private boolean negativeUnavailable;
@@ -36,6 +41,11 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
 
     /** The caller must supply the actual server-owned playerdata directory. */
     public BukkitPlayerPresenceLookup(Path historyDirectory) {
+        this(historyDirectory, path -> Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS));
+    }
+
+    BukkitPlayerPresenceLookup(Path historyDirectory, AttributeReader attributeReader) {
+        this.attributeReader = java.util.Objects.requireNonNull(attributeReader);
         Path candidate = historyDirectory == null ? null : historyDirectory.toAbsolutePath();
         if (candidate != null) for (Path part : candidate) {
             if (part.toString().equals("..")) { candidate = null; break; }
@@ -109,16 +119,17 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
         try {
             if (!unlinkedScope()) return PlayerPresence.UNKNOWN;
             BasicFileAttributes before = attributes(historyDirectory);
-            if (!before.isDirectory() || before.fileKey() == null) return PlayerPresence.UNKNOWN;
-            try (var ignored = Files.newDirectoryStream(historyDirectory)) { }
-            boolean present = false, valid = false;
+            ScopeIdentity scope = identity(before);
+            if (!before.isDirectory() || before.isOther() || scope == null) return PlayerPresence.UNKNOWN;
+            boolean present = false, valid = false, failed = false;
             for (String suffix : new String[] { ".dat", ".dat_old", ".dat_new", ".dat.tmp",
                     ".dat.offline-read", ".dat_old.offline-read" }) {
                 Path file = historyDirectory.resolve(identity + suffix);
                 try {
                     BasicFileAttributes record = attributes(file);
                     present = true;
-                    if (!record.isRegularFile() || record.fileKey() == null
+                    ScopeIdentity recordIdentity = identity(record);
+                    if (!record.isRegularFile() || record.isOther() || recordIdentity == null
                             || record.size() > PlayerHistoryFormat.MAX_COMPRESSED) continue;
                     byte[] bytes;
                     try (var input = FileChannel.open(file, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS)) {
@@ -128,25 +139,30 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
                         bytes = java.util.Arrays.copyOf(buffer.array(), buffer.position());
                     }
                     BasicFileAttributes after = attributes(file);
-                    if (!record.fileKey().equals(after.fileKey()) || record.size() != after.size()
+                    if (!recordIdentity.equals(identity(after)) || !after.isRegularFile() || after.isOther()
+                            || record.size() != after.size()
                             || !record.lastModifiedTime().equals(after.lastModifiedTime())) continue;
-                    try { valid |= PlayerHistoryFormat.valid(bytes); }
-                    catch (IOException invalid) { /* Malformed history stays unknown, never absent. */ }
+                    try {
+                        if (PlayerHistoryFormat.valid(bytes)) { valid = true; break; }
+                    } catch (IOException invalid) { /* Malformed history stays unknown, never absent. */ }
                 } catch (NoSuchFileException absent) {
                     // Only a confirmed missing-file result can support a negative.
+                } catch (IOException unavailable) {
+                    failed = true;
+                    // A sibling may still establish positive retained history.
                 }
             }
             // Native saves use UUID-random.dat; their existence prevents absence
             // proof even if a crash left no canonical record. Never load or alter them.
-            boolean recovery = !valid && !present && hasRecovery(identity, before);
+            boolean recovery = !valid && !present && !failed && hasRecovery(identity, before);
             BasicFileAttributes after = attributes(historyDirectory);
-            if (!unlinkedScope() || !after.isDirectory() || !before.fileKey().equals(after.fileKey()))
+            if (!unlinkedScope() || !after.isDirectory() || after.isOther() || !scope.equals(identity(after)))
                 return PlayerPresence.UNKNOWN;
             live = liveEvidence(identity);
             if (live != null) return live;
             if (valid) return PlayerPresence.JOINED;
             synchronized (joined) {
-                if (closed || negativeUnavailable || present || recovery
+                if (closed || negativeUnavailable || present || failed || recovery
                         || !before.lastModifiedTime().equals(after.lastModifiedTime())) return PlayerPresence.UNKNOWN;
                 return joined.contains(identity) ? PlayerPresence.JOINED : PlayerPresence.NEVER_JOINED;
             }
@@ -156,10 +172,16 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
     }
 
     private boolean hasRecovery(UUID identity, BasicFileAttributes scope) throws IOException {
+        // Even a cached absence index needs currently readable directory scope.
+        try (var ignored = Files.newDirectoryStream(historyDirectory)) { }
         synchronized (recoveryScan) {
+            ScopeIdentity scopeIdentity = identity(scope);
+            if (scopeIdentity == null) return true;
             RecoveryIndex cached = recoveryIndex.get();
             if (cached == RETIRED) return true;
-            if (cached != null && cached.fileKey().equals(scope.fileKey())
+            // Timestamps alone cannot certify that cached entries describe the
+            // current keyless directory; replacement or coarse times may collide.
+            if (scopeIdentity.fileKey() != null && cached != null && cached.scope().equals(scopeIdentity)
                     && cached.modified().equals(scope.lastModifiedTime()))
                 return cached.identities().contains(identity);
             HashSet<UUID> identities = new HashSet<>();
@@ -184,13 +206,22 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
                 }
             }
             BasicFileAttributes after = attributes(historyDirectory);
-            if (!unlinkedScope() || !after.isDirectory() || !scope.fileKey().equals(after.fileKey())
+            if (!unlinkedScope() || !after.isDirectory() || after.isOther() || !scopeIdentity.equals(identity(after))
                     || !scope.lastModifiedTime().equals(after.lastModifiedTime())) return true;
-            RecoveryIndex scanned = new RecoveryIndex(scope.fileKey(), scope.lastModifiedTime(), Set.copyOf(identities));
+            RecoveryIndex scanned = new RecoveryIndex(scopeIdentity, scope.lastModifiedTime(), Set.copyOf(identities));
             // close never waits for the scan and a retired scan cannot repopulate it.
             if (!recoveryIndex.compareAndSet(cached, scanned)) return true;
             return identities.contains(identity);
         }
+    }
+
+    private static ScopeIdentity identity(BasicFileAttributes attributes) {
+        Object key = attributes.fileKey();
+        FileTime created = attributes.creationTime();
+        // Some providers (including Windows) omit keys. An unavailable birth time
+        // cannot support the fallback scope check; retained results stay unknown.
+        if (key == null && (created == null || created.equals(FileTime.fromMillis(0)))) return null;
+        return new ScopeIdentity(key, created);
     }
 
     private boolean unlinkedScope() {
@@ -199,8 +230,8 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
         return true;
     }
 
-    private static BasicFileAttributes attributes(Path path) throws IOException {
-        return Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+    private BasicFileAttributes attributes(Path path) throws IOException {
+        return attributeReader.read(path);
     }
 
     @Override public void close() {
