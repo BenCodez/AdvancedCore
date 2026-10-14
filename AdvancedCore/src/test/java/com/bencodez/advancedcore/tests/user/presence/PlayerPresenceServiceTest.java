@@ -217,4 +217,67 @@ class PlayerPresenceServiceTest {
         while (!worker.isEmpty()) worker.remove().run();
     }
 
+    @Test void aliasFamilyRejectsWithoutQueueingPartialReadsWhenCapacityIsInsufficient() {
+        var worker = new ArrayDeque<Runnable>();
+        try (var service = new PlayerPresenceService(worker::add, id -> PlayerPresence.NEVER_JOINED)) {
+            for (int index = 0; index < 126; index++) service.checkAsync(USER);
+            var result = service.checkIdentitiesAsync(java.util.List.of(USER, new UUID(0, 2)));
+            assertTrue(result.toCompletableFuture().isDone(), "Insufficient capacity rejects the complete request immediately");
+            assertEquals(PlayerPresence.UNKNOWN, value(result));
+            assertEquals(126, worker.size(), "No partial alias work is admitted");
+        }
+    }
+
+    @Test void aliasFamilyReservesEveryChildBeforeReentrantWorkerAdmission() {
+        var worker = new ArrayDeque<Runnable>();
+        var service = new PlayerPresenceService[1];
+        var arm = new java.util.concurrent.atomic.AtomicBoolean();
+        var competing = new java.util.concurrent.atomic.AtomicReference<CompletionStage<PlayerPresence>>();
+        service[0] = new PlayerPresenceService(task -> {
+            if (arm.compareAndSet(true, false)) competing.set(service[0].checkAsync(new UUID(0, 3)));
+            worker.add(task);
+        }, id -> PlayerPresence.NEVER_JOINED);
+        try (var current = service[0]) {
+            for (int index = 0; index < 125; index++) current.checkAsync(USER);
+            arm.set(true);
+            var result = current.checkIdentitiesAsync(java.util.List.of(USER, new UUID(0, 2)));
+            assertNotNull(competing.get());
+            assertTrue(competing.get().toCompletableFuture().isDone());
+            assertEquals(PlayerPresence.UNKNOWN, value(competing.get()));
+            assertEquals(127, worker.size());
+            while (!worker.isEmpty()) worker.remove().run();
+            assertEquals(PlayerPresence.NEVER_JOINED, value(result));
+        }
+    }
+
+    @Test void rejectedAliasSubmissionSettlesFamilyAndReleasesEveryReservation() {
+        var worker = new ArrayDeque<Runnable>(); var submissions = new AtomicInteger();
+        try (var service = new PlayerPresenceService(task -> {
+            if (submissions.incrementAndGet() == 1) throw new RejectedExecutionException();
+            worker.add(task);
+        }, id -> PlayerPresence.NEVER_JOINED)) {
+            var family = service.checkIdentitiesAsync(java.util.List.of(USER, new UUID(0, 2)));
+            assertFalse(family.toCompletableFuture().isDone());
+            assertEquals(1, worker.size()); worker.remove().run();
+            assertEquals(PlayerPresence.UNKNOWN, value(family));
+            for (int index = 0; index < 128; index++)
+                assertFalse(service.checkAsync(USER).toCompletableFuture().isDone());
+            assertEquals(128, worker.size());
+            assertEquals(PlayerPresence.UNKNOWN, value(service.checkAsync(USER)));
+        }
+    }
+
+    @Test void retirementDuringFirstAliasSubmissionCancelsEveryReservedChild() {
+        var worker = new ArrayDeque<Runnable>(); var reads = new AtomicInteger();
+        var holder = new PlayerPresenceService[1];
+        holder[0] = new PlayerPresenceService(task -> {
+            holder[0].close(); worker.add(task);
+        }, id -> { reads.incrementAndGet(); return PlayerPresence.JOINED; });
+        var family = holder[0].checkIdentitiesAsync(java.util.List.of(USER, new UUID(0, 2)));
+        assertEquals(PlayerPresence.UNKNOWN, value(family));
+        while (!worker.isEmpty()) worker.remove().run();
+        assertEquals(0, reads.get());
+        assertEquals(PlayerPresence.UNKNOWN, value(holder[0].checkAsync(USER)));
+    }
+
 }

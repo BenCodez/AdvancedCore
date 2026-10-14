@@ -38,11 +38,7 @@ public final class PlayerPresenceService implements AutoCloseable {
                 return CompletableFuture.completedStage(PlayerPresence.UNKNOWN);
             pending.put(result, Boolean.TRUE);
         }
-        try {
-            worker.execute(() -> completeLookup(identity, result));
-        } catch (RuntimeException rejected) {
-            finish(result, PlayerPresence.UNKNOWN);
-        }
+        submit(identity, result);
         return result.minimalCompletionStage();
     }
 
@@ -63,14 +59,19 @@ public final class PlayerPresenceService implements AutoCloseable {
         }
         if (distinct.isEmpty()) return CompletableFuture.completedStage(PlayerPresence.UNKNOWN);
         CompletableFuture<PlayerPresence> aggregate = new CompletableFuture<>();
+        var results = new ArrayList<CompletableFuture<PlayerPresence>>(distinct.size());
         synchronized (admission) {
-            if (closed || pending.size() >= MAX_PENDING)
+            if (closed || MAX_PENDING - pending.size() < 1 + distinct.size())
                 return CompletableFuture.completedStage(PlayerPresence.UNKNOWN);
-            // The public aggregate owns admission until every alias has settled.
-            // A completed child cannot outlive retirement of this request.
+            // Reserve the aggregate and every child before scheduling any lookup.
+            // Concurrent requests cannot turn an admitted family into partial work.
             pending.put(aggregate, Boolean.TRUE);
+            for (UUID ignored : distinct) {
+                var child = new CompletableFuture<PlayerPresence>();
+                pending.put(child, Boolean.TRUE);
+                results.add(child);
+            }
         }
-        var results = distinct.stream().map(this::checkAsync).map(CompletionStage::toCompletableFuture).toList();
         CompletableFuture.allOf(results.toArray(CompletableFuture[]::new)).thenRun(() -> {
             boolean unknown = false;
             for (var result : results) {
@@ -83,7 +84,17 @@ public final class PlayerPresenceService implements AutoCloseable {
             }
             finish(aggregate, unknown ? PlayerPresence.UNKNOWN : PlayerPresence.NEVER_JOINED);
         });
+        int index = 0;
+        for (UUID identity : distinct) submit(identity, results.get(index++));
         return aggregate.minimalCompletionStage();
+    }
+
+    private void submit(UUID identity, CompletableFuture<PlayerPresence> result) {
+        try {
+            worker.execute(() -> completeLookup(identity, result));
+        } catch (RuntimeException rejected) {
+            finish(result, PlayerPresence.UNKNOWN);
+        }
     }
 
     private void completeLookup(UUID identity, CompletableFuture<PlayerPresence> result) {

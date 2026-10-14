@@ -14,7 +14,9 @@ unresolved part of a migration, rather than silently omitting it: this makes the
 any read is queued. Duplicate UUIDs are read only once.
 
 The requesting thread performs no history, filesystem or UUID lookup. The existing AdvancedCore storage executor
-owns the read, with at most 128 admitted requests per service. Missing identity, saturation, executor rejection,
+owns the read, with at most 128 admitted entries per service. An alias request atomically reserves one entry
+for its public aggregate plus one for each distinct child. Insufficient capacity rejects the complete request
+as unknown without scheduling partial alias reads. Missing identity, saturation, executor rejection,
 provider failure and retired requests return `UNKNOWN`. Completions may run on a worker, requesting or retiring
 thread: use an asynchronous continuation or the correct platform scheduler for client work. Never attach
 blocking storage or player effects directly. A result is an inspection snapshot, not permission to mutate a
