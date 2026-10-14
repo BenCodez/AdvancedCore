@@ -46,12 +46,20 @@ class AdvancedCorePlayerPresenceTest {
     }
 
     private Server levelServer(Path level) throws Exception {
+        return levelServer(level, false);
+    }
+
+    private Server levelServer(Path level, boolean savingDisabled) throws Exception {
+        var config = new org.bukkit.configuration.file.YamlConfiguration();
+        config.set("players.disable-saving", savingDisabled);
+        var spigot = mock(Server.Spigot.class); when(spigot.getConfig()).thenReturn(config);
         return (Server) new ByteBuddy().subclass(Object.class).implement(Server.class)
                 .name("org.bukkit.craftbukkit.CraftServer")
                 .method(net.bytebuddy.matcher.ElementMatchers.any()).intercept(StubMethod.INSTANCE)
                 .defineMethod("getLevelDirectory", Path.class, java.lang.reflect.Modifier.PUBLIC)
                 .intercept(FixedValue.value(level))
                 .method(named("getOnlinePlayers")).intercept(FixedValue.value(java.util.List.of()))
+                .method(named("spigot")).intercept(FixedValue.value(spigot))
                 .make().load(getClass().getClassLoader(), ClassLoadingStrategy.Default.WRAPPER)
                 .getLoaded().getDeclaredConstructor().newInstance();
     }
@@ -99,6 +107,33 @@ class AdvancedCorePlayerPresenceTest {
         assertEquals(PlayerPresence.UNKNOWN, registered.get().check(USER));
         verify(worker).execute(any(Runnable.class)); verifyNoMoreInteractions(worker);
         try (var files = Files.list(history)) { assertEquals(0, files.count()); }
+    }
+
+    @Test void actualEnableWithPlayerSavingDisabledKeepsAbsentHistoryUnknownAndLiveJoinsPositive() throws Exception {
+        Path level = Files.createDirectory(temporary.resolve("saving-disabled"));
+        Path history = Files.createDirectory(level.resolve("playerdata"));
+        Server server = levelServer(level, true);
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+        doReturn(server).when(plugin).getServer();
+        var worker = mock(java.util.concurrent.ScheduledExecutorService.class); var tasks = new ArrayDeque<Runnable>();
+        doAnswer(call -> { tasks.add(call.getArgument(0)); return null; }).when(worker).execute(any(Runnable.class));
+        var executors = mock(AdvancedCoreLifecycle.RuntimeExecutors.class); when(executors.getTimer()).thenReturn(worker);
+        var registered = new java.util.concurrent.atomic.AtomicReference<BukkitPlayerPresenceLookup>();
+        doAnswer(call -> { registered.set(call.getArgument(0)); return null; })
+                .when(plugin).registerEvents(any(BukkitPlayerPresenceLookup.class));
+        doThrow(new IllegalStateException("stop after presence initialization")).when(plugin).onPreLoad();
+        try (var runtime = mockStatic(AdvancedCoreLifecycle.class)) {
+            runtime.when(() -> AdvancedCoreLifecycle.createRuntimeExecutors(plugin)).thenReturn(executors);
+            assertThrows(IllegalStateException.class, plugin::onEnable);
+        }
+        var result = plugin.checkPlayerPresenceAsync(USER); tasks.remove().run();
+        assertEquals(PlayerPresence.UNKNOWN, value(result), "No saved record cannot prove absence when saving is disabled");
+        var player = mock(org.bukkit.entity.Player.class); when(player.getUniqueId()).thenReturn(USER);
+        registered.get().onJoin(new org.bukkit.event.player.PlayerJoinEvent(player, null));
+        result = plugin.checkPlayerPresenceAsync(USER); tasks.remove().run();
+        assertEquals(PlayerPresence.JOINED, value(result));
+        try (var files = Files.list(history)) { assertEquals(0, files.count()); }
+        try (var lifecycle = mockConstruction(AdvancedCoreLifecycle.class)) { plugin.onDisable(); }
     }
 
     private static void attach(AdvancedCorePlugin plugin, PlayerPresenceService service) throws Exception {

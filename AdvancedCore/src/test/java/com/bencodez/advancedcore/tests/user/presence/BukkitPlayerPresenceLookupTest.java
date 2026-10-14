@@ -308,4 +308,47 @@ class BukkitPlayerPresenceLookupTest {
         assertEquals(PlayerPresence.UNKNOWN, lookup.check(new UUID(0, 65537)));
         assertEquals(PlayerPresence.UNKNOWN, lookup.check(USER));
     }
+    @Test void savingPolicyDefaultsTypesAndFailuresOnlyRestrictNegativeEvidence() throws Exception {
+        for (Object disabled : new Object[] {null, false, true, "false", 0}) {
+            var config = new org.bukkit.configuration.file.YamlConfiguration(); config.set("players.disable-saving", disabled);
+            var server = mock(Server.class); var spigot = mock(Server.Spigot.class);
+            when(server.spigot()).thenReturn(spigot); when(spigot.getConfig()).thenReturn(config);
+            try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+                lookup.capturePlayerSaving(server);
+                PlayerPresence expected = disabled == null || Boolean.FALSE.equals(disabled)
+                        ? PlayerPresence.NEVER_JOINED : PlayerPresence.UNKNOWN;
+                assertEquals(expected, lookup.check(USER)); assertEquals(expected, lookup.checkOnlineHistory(USER));
+            }
+        }
+        for (Server server : new Server[] {null, mock(Server.class), failingSavingServer()}) {
+            try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+                lookup.capturePlayerSaving(server);
+                assertEquals(PlayerPresence.UNKNOWN, lookup.check(USER));
+                assertEquals(PlayerPresence.UNKNOWN, lookup.checkOnlineHistory(USER));
+            }
+        }
+    }
+
+    private Server failingSavingServer() {
+        var server = mock(Server.class); var spigot = mock(Server.Spigot.class);
+        when(server.spigot()).thenReturn(spigot);
+        when(spigot.getConfig()).thenThrow(new UnsupportedOperationException("synthetic unavailable"));
+        return server;
+    }
+
+    @Test void disabledOrUnknownSavingPreservesRetainedPositivesAndCannotReenableNegatives() throws Exception {
+        byte[] record = gzip(completeHistory()); Path file = Files.write(directory.resolve(USER + ".dat"), record);
+        var server = mock(Server.class); var spigot = mock(Server.Spigot.class);
+        var config = new org.bukkit.configuration.file.YamlConfiguration(); config.set("players.disable-saving", true);
+        when(server.spigot()).thenReturn(spigot); when(spigot.getConfig()).thenReturn(config);
+        try (var lookup = new BukkitPlayerPresenceLookup(directory)) {
+            lookup.capturePlayerSaving(server);
+            assertEquals(PlayerPresence.JOINED, lookup.check(USER));
+            assertEquals(PlayerPresence.JOINED, lookup.checkOnlineHistory(USER));
+            config.set("players.disable-saving", false); lookup.capturePlayerSaving(server);
+            assertEquals(PlayerPresence.UNKNOWN, lookup.check(new UUID(0, 2)));
+            assertArrayEquals(record, Files.readAllBytes(file));
+        }
+    }
+
 }

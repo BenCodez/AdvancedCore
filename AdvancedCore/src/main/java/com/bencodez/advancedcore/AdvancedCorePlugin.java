@@ -1416,6 +1416,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		var presenceDirectory = com.bencodez.advancedcore.api.user.presence.BukkitPlayerPresenceLookup
 				.capturePrimaryHistoryDirectory(presenceServer);
 		var presenceLookup = new com.bencodez.advancedcore.api.user.presence.BukkitPlayerPresenceLookup(presenceDirectory);
+		presenceLookup.capturePlayerSaving(presenceServer);
 		playerPresenceLookup = presenceLookup;
 		registerEvents(presenceLookup);
 		presenceLookup.captureJoinedPlayers(presenceServer);

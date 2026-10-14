@@ -73,6 +73,22 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
         }
     }
 
+    /** Capture in-memory platform saving policy on the owner before publishing the service. */
+    public void capturePlayerSaving(Server server) {
+        boolean unavailable = true;
+        try {
+            var config = server == null || server.spigot() == null ? null : server.spigot().getConfig();
+            if (config != null) {
+                Object disabled = config.get("players.disable-saving");
+                // An absent key uses the platform's false default; malformed metadata is uncertain.
+                unavailable = disabled != null && !Boolean.FALSE.equals(disabled);
+            }
+        } catch (RuntimeException | LinkageError unsupported) {
+            // Unsupported/unreadable policy cannot establish that absent files imply absent history.
+        }
+        if (unavailable) synchronized (joined) { negativeUnavailable = true; }
+    }
+
     /** Capture UUID-only online metadata on the platform owner after registering this listener. */
     public void captureJoinedPlayers(Server server) {
         try {

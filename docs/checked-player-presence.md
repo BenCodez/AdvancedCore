@@ -22,7 +22,10 @@ thread: use an asynchronous continuation or the correct platform scheduler for c
 blocking storage or player effects directly. A result is an inspection snapshot, not permission to mutate a
 player or proof that a later menu/configuration generation is still current.
 
-The runtime captures server-wide player-storage directory metadata during enable on the platform owner.
+The runtime captures server-wide player-storage directory metadata and in-memory player-saving policy during
+enable on the platform owner. Disabled, malformed or unavailable saving policy disables negative answers
+for that generation while retained records and observed joins can still establish positives. The absent
+`players.disable-saving` key follows the platform false default. Workers never load platform configuration.
 Recognized CraftBukkit implementations provide either the level-directory API or the player's storage-directory
 metadata; a world/dimension folder is never assumed to own player data. Unsupported layouts remain `UNKNOWN`.
 The worker reads UUID-named history directly without calling the server's offline-player loader, profile lookup,
