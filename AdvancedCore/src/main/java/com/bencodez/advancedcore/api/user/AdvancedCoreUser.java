@@ -527,6 +527,7 @@ public class AdvancedCoreUser {
 		private final HashMap<String, Integer> offline = new HashMap<>();
 		private final HashSet<String> timed = new HashSet<>();
 		private CompletableFuture<Void> serialReplayTail = CompletableFuture.completedFuture(null);
+		private final CompletableFuture<Void> settled = new CompletableFuture<>();
 	}
 
 	/**
@@ -1289,6 +1290,23 @@ public class AdvancedCoreUser {
 		}
 	}
 
+	/**
+	 * Completion of currently owned local replay work, including claim release.
+	 * Does not read storage, await a thread or include claims acquired after this
+	 * ownership generation retires. Callers must revalidate their own session.
+	 */
+	public CompletionStage<Void> pendingRewardReplayCompletion() {
+		synchronized (plugin) {
+			synchronized (REPLAY_CLAIMS_LOCK) {
+				HashMap<String, ReplayClaims> users = REPLAY_CLAIMS.get(plugin);
+				ReplayClaims claims = users == null ? null : users.get(getUUID());
+				return claims == null || (claims.offline.isEmpty() && claims.timed.isEmpty()
+						&& claims.serialReplayTail.isDone()) ? CompletableFuture.completedFuture(null)
+						: claims.settled.minimalCompletionStage();
+			}
+		}
+	}
+
 	private void checkOfflineRewards(ReplayPlayerState capturedState) {
 		if (!plugin.getOptions().isProcessRewards()) {
 			plugin.debug("Processing rewards is disabled");
@@ -1598,6 +1616,7 @@ public class AdvancedCoreUser {
 				if (byUser == null || byUser.get(getUUID()) != claims) return;
 				byUser.remove(getUUID());
 				if (byUser.isEmpty()) REPLAY_CLAIMS.remove(plugin);
+				claims.settled.complete(null);
 			}
 		}
 	}

@@ -33,6 +33,7 @@ import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.injected.RewardInject;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.user.PersistedQueueReference;
 import com.bencodez.advancedcore.api.user.UserData;
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
@@ -646,6 +647,52 @@ class RewardGamemodeTimedTest {
         authenticatedLoginScenario(false);
     }
 
+    @Test void acceptedLoginRechecksTimedWorkAfterEarlierJoinReplayReleasesItsClaim() throws Exception {
+        replayClaimLoginScenario(false);
+    }
+
+    @Test void quitWhileWaitingForClaimReleaseRequiresAnotherAcceptedLogin() throws Exception {
+        replayClaimLoginScenario(true);
+    }
+
+    private void replayClaimLoginScenario(boolean quitBeforeRelease) throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            fixture.mode.set(GameMode.SURVIVAL);
+            Reward due = fixture.reward("Due", true);
+            fixture.user.addTimedReward(due, new HashMap<>(), System.currentTimeMillis() - 10_000);
+            RewardEligibilityListener listener = new RewardEligibilityListener(fixture.plugin);
+            fixture.onOwner(() -> listener.onNativeJoin(new org.bukkit.event.player.PlayerJoinEvent(fixture.player, "")));
+            fixture.holdReplayCompletion.set(true);
+            fixture.user.checkDelayedTimedRewards();
+            fixture.drainQueuedWork();
+            assertNotNull(fixture.capturedReplayFailure.get(), "the real pending-login gate must defer delivery");
+            assertTrue(Reward.isPlayerEligibilityDeferred(fixture.capturedReplayFailure.get()));
+            assertTrue(fixture.user.hasPendingRewardReplay(), "the original replay owns the occurrence until completion is delivered");
+
+            fixture.queueWorkers.set(true);
+            listener.onLogin(new AdvancedCoreLoginEvent(fixture.user, fixture.user.getUUID(), fixture.player));
+            listener.onLogin(new AdvancedCoreLoginEvent(fixture.user, fixture.user.getUUID(), fixture.player));
+            fixture.drainQueuedWork();
+            verify(fixture.player, never()).giveExp(anyInt());
+            if (quitBeforeRelease) fixture.onOwner(() -> listener.onQuit(new PlayerQuitEvent(fixture.player, "")));
+            fixture.holdReplayCompletion.set(false);
+            fixture.heldReplayCompletion.completeExceptionally(fixture.capturedReplayFailure.get());
+            fixture.drainQueuedWork();
+            if (quitBeforeRelease) {
+                verify(fixture.player, never()).giveExp(anyInt());
+                assertEquals(0, fixture.prefix.get());
+                assertEquals(1, fixture.user.getTimedRewards().size());
+                listener.onLogin(new AdvancedCoreLoginEvent(fixture.user, fixture.user.getUUID(), fixture.player));
+                fixture.drainQueuedWork();
+            }
+
+            verify(fixture.player).giveExp(3);
+            assertEquals(1, fixture.prefix.get());
+            assertTrue(fixture.user.getTimedRewards().isEmpty());
+            assertFalse(fixture.user.hasPendingRewardReplay());
+        }
+    }
+
     @Test void staleAsyncLoginCannotWakeUnauthenticatedReplacementSession() throws Exception {
         authenticatedLoginScenario(true);
     }
@@ -1070,6 +1117,9 @@ class RewardGamemodeTimedTest {
         final java.util.concurrent.atomic.AtomicBoolean queueWorkers = new java.util.concurrent.atomic.AtomicBoolean();
         final ThreadLocal<Boolean> playerOwner = ThreadLocal.withInitial(() -> false);
         final List<Long> scheduledMillis = new ArrayList<>();
+        final java.util.concurrent.atomic.AtomicBoolean holdReplayCompletion = new java.util.concurrent.atomic.AtomicBoolean();
+        final java.util.concurrent.CompletableFuture<Void> heldReplayCompletion = new java.util.concurrent.CompletableFuture<>();
+        final AtomicReference<Throwable> capturedReplayFailure = new AtomicReference<>();
         final AtomicReference<Runnable> fallbackSweep = new AtomicReference<>();
         final ScheduledExecutorService delayed = mock(ScheduledExecutorService.class);
         final org.mockito.MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
@@ -1140,6 +1190,13 @@ class RewardGamemodeTimedTest {
             PlayerManager.getInstance().setPlugin(plugin);
             handler = new RewardHandler(plugin) {
                 @Override public ScheduledExecutorService getDelayedTimer() { return delayed; }
+                @Override public java.util.concurrent.CompletionStage<Void> givePersistedQueueRewardAsync(
+                        AdvancedCoreUser target, PersistedQueueReference reference, RewardOptions options) {
+                    var actual = super.givePersistedQueueRewardAsync(target, reference, options);
+                    if (!holdReplayCompletion.get()) return actual;
+                    actual.whenComplete((ignored, failure) -> capturedReplayFailure.set(failure));
+                    return heldReplayCompletion;
+                }
                 @Override public RewardEligibility getRewardEligibility() {
                     return customEligibility == null ? super.getRewardEligibility() : customEligibility;
                 }

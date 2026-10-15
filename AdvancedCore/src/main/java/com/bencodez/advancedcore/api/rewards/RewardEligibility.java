@@ -320,10 +320,12 @@ public final class RewardEligibility {
             CompletableFuture<Void> result) {
         boolean awaitingLogin;
         boolean needsBinding;
+        boolean awaitReplaySettlement;
         synchronized (this) {
             if (closed || findPending(user.getUUID()) != captured || captured.running != result) return;
             awaitingLogin = captured.awaitingLogin;
             needsBinding = captured.player == null;
+            awaitReplaySettlement = captured.awaitReplaySettlement;
         }
         if (awaitingLogin) {
             // Overflow admissions are temporary execution gates. They may retire
@@ -343,6 +345,22 @@ public final class RewardEligibility {
         final boolean claimedBeforeCheck;
         final CompletionStage<Void> check;
         try {
+            if (awaitReplaySettlement && user.hasPendingRewardReplay()) {
+                // One waiter per bounded Pending entry. Wait for claim release,
+                // not just reward outcome: the latter can precede restoration.
+                user.pendingRewardReplayCompletion().whenComplete((ignored, failure) -> {
+                    if (failure != null) {
+                        finishSignal(user, captured, revision, result, false, failure);
+                        return;
+                    }
+                    try {
+                        plugin.getTimer().execute(() -> runSignalCheck(user, captured, revision, result));
+                    } catch (Throwable rejected) {
+                        finishSignal(user, captured, revision, result, false, rejected);
+                    }
+                });
+                return;
+            }
             claimedBeforeCheck = user.hasPendingRewardReplay();
             user.checkDelayedTimedRewards();
             check = user.checkOfflineRewardsAsync();
@@ -472,6 +490,7 @@ public final class RewardEligibility {
                     current.user = user;
                     current.player = player;
                     current.awaitingLogin = false;
+                    current.awaitReplaySettlement = true;
                     current.revision++;
                 }
             }
@@ -537,6 +556,7 @@ public final class RewardEligibility {
         private Player player;
         private long revision;
         private boolean awaitingLogin;
+        private boolean awaitReplaySettlement;
         private CompletableFuture<Void> running;
         private long fallbackDelayNanos = INITIAL_FALLBACK_NANOS;
         private long nextSweepNanos;
