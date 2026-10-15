@@ -121,3 +121,13 @@ A freshly deferred hint never authenticates a player. Without this plugin's acce
 receipt it waits for the normal accepted-login signal before either offline or timed queue
 replay. A native pending-login receipt also denies configured gamemode actions, even when
 the current mode otherwise matches. Existing queue payloads and replay identities are retained.
+
+Asynchronous reward requirements keep online `Permission` and `VaultGroup` checks
+on the resolved player's owning scheduler. Offline permission and group providers
+remain on the reward worker, including `VaultGroup` when `GiveOffline` is enabled.
+Permission negation, default permission names and requirement enablement keep their
+existing meanings. The synchronous requirement API retains its caller-owned threading
+contract. Custom requirements may override `onRequirementRequestAsync` to compose
+native reads through `evaluatePlayerRequirement` with provider work through
+`evaluateAsyncRequirement`; the default delegates to the existing synchronous callback.
+These phase helpers await the result and do not create another reward occurrence.

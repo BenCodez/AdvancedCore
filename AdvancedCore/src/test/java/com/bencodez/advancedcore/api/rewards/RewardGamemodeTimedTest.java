@@ -37,6 +37,7 @@ import com.bencodez.advancedcore.api.user.UserData;
 import com.bencodez.advancedcore.api.user.UserDataFetchMode;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.misc.PlayerManager;
 import com.bencodez.advancedcore.listeners.AdvancedCoreLoginEvent;
 import com.bencodez.advancedcore.listeners.RewardEligibilityListener;
 
@@ -151,6 +152,266 @@ class RewardGamemodeTimedTest {
             assertEquals(1, engines.constructed().size());
             verify(engines.constructed().getFirst()).getBooleanValue("true");
         }
+    }
+
+    @Test void builtInPermissionRequirementReadsOnlinePlayerOnOwnerForGiveAndEligibility() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var scheduler = fixture.plugin.getBukkitScheduler();
+            doAnswer(call -> {
+                boolean previous = fixture.playerOwner.get();
+                fixture.playerOwner.set(false);
+                try { call.getArgument(1, Runnable.class).run(); }
+                finally { fixture.playerOwner.set(previous); }
+                return null;
+            }).when(scheduler).runTaskAsynchronously(eq(fixture.plugin), any(Runnable.class));
+            when(fixture.player.hasPermission("rewards.due")).thenAnswer(call -> {
+                assertTrue(fixture.playerOwner.get(), "online permission checks require the owning scheduler");
+                return true;
+            });
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementPermission
+                    .register(fixture.handler, fixture.plugin);
+            Reward reward = fixture.permissionReward("rewards.due");
+
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            assertTrue(reward.canGiveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture().join());
+            verify(fixture.player, times(2)).hasPermission("rewards.due");
+        }
+    }
+
+    @Test void builtInPermissionRequirementHonorsDeniedAndNegatedOnlinePermissionOnOwner() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var scheduler = fixture.plugin.getBukkitScheduler();
+            doAnswer(call -> {
+                boolean previous = fixture.playerOwner.get();
+                fixture.playerOwner.set(false);
+                try { call.getArgument(1, Runnable.class).run(); }
+                finally { fixture.playerOwner.set(previous); }
+                return null;
+            }).when(scheduler).runTaskAsynchronously(eq(fixture.plugin), any(Runnable.class));
+            when(fixture.player.hasPermission(anyString())).thenAnswer(call -> {
+                assertTrue(fixture.playerOwner.get(), "online permission checks require the owning scheduler");
+                return false;
+            });
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementPermission
+                    .register(fixture.handler, fixture.plugin);
+            Reward denied = fixture.permissionReward("rewards.denied");
+            assertFalse(denied.canGiveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture().join());
+            Reward negated = fixture.permissionReward("!rewards.denied");
+            assertTrue(negated.canGiveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture().join());
+            verify(fixture.player, times(2)).hasPermission("rewards.denied");
+        }
+    }
+
+    @Test void onlineVaultGroupRunsOnOwnerForGiveAndEligibility() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            useWorkerContext(fixture);
+            var permissions = installVault(fixture);
+            AtomicReference<Boolean> owner = new AtomicReference<>();
+            when(permissions.getPrimaryGroup(fixture.player)).thenAnswer(call -> {
+                owner.set(fixture.playerOwner.get());
+                return "member";
+            });
+            Reward reward = fixture.reward("Due", true);
+            reward.getConfig().getConfigData().set("VaultGroup", "member");
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions().setGiveOffline(false)).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            assertEquals(Boolean.TRUE, owner.get());
+            assertTrue(reward.canGiveRewardAsync(fixture.user, new RewardOptions().setGiveOffline(false)).toCompletableFuture().get(2, TimeUnit.SECONDS));
+            verify(permissions, times(2)).getPrimaryGroup(fixture.player);
+            verify(permissions, never()).getPrimaryGroup(isNull(), any(org.bukkit.OfflinePlayer.class));
+        }
+    }
+
+    @Test void giveOfflineVaultGroupStaysOnWorkerEvenWithAConnectedPlayer() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            useWorkerContext(fixture);
+            var permissions = installVault(fixture);
+            var offline = mock(org.bukkit.OfflinePlayer.class);
+            doReturn(offline).when(fixture.user).getOfflinePlayer();
+            AtomicReference<Boolean> owner = new AtomicReference<>();
+            when(permissions.getPrimaryGroup(null, offline)).thenAnswer(call -> {
+                owner.set(fixture.playerOwner.get());
+                return "member";
+            });
+            Reward reward = fixture.reward("Due", true);
+            reward.getConfig().getConfigData().set("VaultGroup", "member");
+            RewardOptions options = new RewardOptions().setGiveOffline(true);
+            assertTrue(reward.canGiveRewardAsync(fixture.user, options).toCompletableFuture().get(2, TimeUnit.SECONDS));
+            assertEquals(Boolean.FALSE, owner.get());
+            verify(permissions, never()).getPrimaryGroup(fixture.player);
+        }
+    }
+
+    @Test void offlinePermissionProviderStaysOnWorkerAndPreservesNegation() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            useWorkerContext(fixture);
+            var permissions = installVault(fixture);
+            when(fixture.plugin.getOptions().isUseVaultPermissions()).thenReturn(true);
+            when(permissions.isEnabled()).thenReturn(true);
+            doReturn(null).when(fixture.user).getPlayer();
+            doReturn(false).when(fixture.user).isOnline();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(fixture.id)).thenReturn(null);
+            var world = mock(org.bukkit.World.class);
+            when(world.getName()).thenReturn("synthetic-world");
+            fixture.bukkit.when(Bukkit::getWorlds).thenReturn(List.of(world));
+            var offline = mock(org.bukkit.OfflinePlayer.class);
+            fixture.bukkit.when(() -> Bukkit.getOfflinePlayer(fixture.id)).thenReturn(offline);
+            AtomicReference<Boolean> owner = new AtomicReference<>();
+            when(permissions.playerHas(eq("synthetic-world"), eq(offline), anyString())).thenAnswer(call -> {
+                owner.set(fixture.playerOwner.get());
+                return false;
+            });
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementPermission.register(fixture.handler, fixture.plugin);
+            assertFalse(fixture.permissionReward("rewards.offline").canGiveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture().get(2, TimeUnit.SECONDS));
+            assertTrue(fixture.permissionReward("!rewards.offline").canGiveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture().get(2, TimeUnit.SECONDS));
+            assertEquals(Boolean.FALSE, owner.get());
+            verify(permissions, times(2)).playerHas("synthetic-world", offline, "rewards.offline");
+        }
+    }
+
+    @Test void offlinePermissionLookupDoesNotReenterNativePlayerAfterReconnect() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var api = mock(net.luckperms.api.LuckPerms.class, RETURNS_DEEP_STUBS);
+            var stored = mock(net.luckperms.api.model.user.User.class, RETURNS_DEEP_STUBS);
+            when(api.getUserManager().getUser(fixture.id)).thenReturn(stored);
+            when(stored.getCachedData().getPermissionData(api.getContextManager().getStaticQueryOptions())
+                    .checkPermission("rewards.offline")).thenReturn(net.luckperms.api.util.Tristate.TRUE);
+            var services = mock(org.bukkit.plugin.ServicesManager.class);
+            @SuppressWarnings("unchecked")
+            org.bukkit.plugin.RegisteredServiceProvider<net.luckperms.api.LuckPerms> registration =
+                    mock(org.bukkit.plugin.RegisteredServiceProvider.class);
+            when(registration.getProvider()).thenReturn(api);
+            when(services.getRegistration(net.luckperms.api.LuckPerms.class)).thenReturn(registration);
+            fixture.bukkit.when(Bukkit::getServicesManager).thenReturn(services);
+            var hook = new com.bencodez.advancedcore.api.permissions.LuckPermsHandle();
+            hook.load(fixture.plugin);
+            when(fixture.plugin.getLuckPermsHandle()).thenReturn(hook);
+            doReturn(null).when(fixture.user).getPlayer();
+            AtomicReference<Player> reconnected = new AtomicReference<>();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(fixture.id)).thenAnswer(call -> reconnected.get());
+            fixture.bukkit.when(Bukkit::getWorlds).thenReturn(List.of());
+            when(fixture.player.hasPermission("rewards.offline")).thenReturn(true);
+            AtomicInteger dispatches = new AtomicInteger();
+            var scheduler = fixture.plugin.getBukkitScheduler();
+            doAnswer(call -> {
+                if (dispatches.incrementAndGet() == 2) reconnected.set(fixture.player);
+                boolean previous = fixture.playerOwner.get();
+                fixture.playerOwner.set(false);
+                try { call.getArgument(1, Runnable.class).run(); }
+                finally { fixture.playerOwner.set(previous); }
+                return null;
+            }).when(scheduler).runTaskAsynchronously(eq(fixture.plugin), any(Runnable.class));
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementPermission.register(fixture.handler, fixture.plugin);
+            assertTrue(fixture.permissionReward("rewards.offline").canGiveRewardAsync(fixture.user, new RewardOptions())
+                    .toCompletableFuture().get(2, TimeUnit.SECONDS));
+            assertSame(fixture.player, reconnected.get(), "reconnect occurs before the provider worker");
+            verify(fixture.player, never()).hasPermission(anyString());
+            verify(stored.getCachedData().getPermissionData(api.getContextManager().getStaticQueryOptions()))
+                    .checkPermission("rewards.offline");
+        }
+    }
+
+    @Test void synchronousOfflinePermissionRetainsItsPrimaryThreadGuard() {
+        try (Fixture fixture = new Fixture()) {
+            var api = mock(net.luckperms.api.LuckPerms.class, RETURNS_DEEP_STUBS);
+            var services = mock(org.bukkit.plugin.ServicesManager.class);
+            @SuppressWarnings("unchecked")
+            org.bukkit.plugin.RegisteredServiceProvider<net.luckperms.api.LuckPerms> registration =
+                    mock(org.bukkit.plugin.RegisteredServiceProvider.class);
+            when(registration.getProvider()).thenReturn(api);
+            when(services.getRegistration(net.luckperms.api.LuckPerms.class)).thenReturn(registration);
+            fixture.bukkit.when(Bukkit::getServicesManager).thenReturn(services);
+            var hook = new com.bencodez.advancedcore.api.permissions.LuckPermsHandle();
+            hook.load(fixture.plugin);
+            when(fixture.plugin.getLuckPermsHandle()).thenReturn(hook);
+            fixture.bukkit.when(() -> Bukkit.getPlayer(fixture.id)).thenReturn(null);
+            fixture.bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+            fixture.bukkit.when(Bukkit::getWorlds).thenReturn(List.of());
+            when(api.getUserManager().getUser(fixture.id)).thenReturn(null);
+            when(api.getUserManager().loadUser(fixture.id)).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+            assertFalse(PlayerManager.getInstance().hasServerPermission(fixture.id, "TimedPlayer", "rewards.offline"));
+            verify(api.getUserManager(), never()).loadUser(any(UUID.class));
+        }
+    }
+
+    @Test void giveOfflineVaultGroupDoesNotDependOnRetiringPlayerScheduler() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            useWorkerContext(fixture);
+            var permissions = installVault(fixture);
+            var offline = mock(org.bukkit.OfflinePlayer.class);
+            doReturn(offline).when(fixture.user).getOfflinePlayer();
+            when(permissions.getPrimaryGroup(null, offline)).thenReturn("member");
+            var scheduler = fixture.plugin.getBukkitScheduler();
+            // SimpleAPI omits the entity callback after the captured session retires.
+            doAnswer(call -> null).when(scheduler).executeOrScheduleSync(eq(fixture.plugin), any(Runnable.class), any(Player.class));
+            Reward reward = fixture.reward("Due", false);
+            reward.getConfig().getConfigData().set("VaultGroup", "member");
+            clearInvocations(scheduler); // Exclude fixture login setup, retain all evaluated dispatches.
+            assertTrue(reward.canGiveRewardAsync(fixture.user, new RewardOptions().setGiveOffline(true))
+                    .toCompletableFuture().get(2, TimeUnit.SECONDS));
+            verify(permissions).getPrimaryGroup(null, offline);
+            verify(scheduler, never()).executeOrScheduleSync(eq(fixture.plugin), any(Runnable.class), any(Player.class));
+        }
+    }
+
+    @Test void negativePermissionDoesNotAuthorizeADisconnectedNativeSession() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            useWorkerContext(fixture);
+            when(fixture.player.isOnline()).thenReturn(false);
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementPermission.register(fixture.handler, fixture.plugin);
+            assertFalse(fixture.permissionReward("!rewards.denied").canGiveRewardAsync(fixture.user, new RewardOptions())
+                    .toCompletableFuture().get(2, TimeUnit.SECONDS));
+            verify(fixture.player, never()).hasPermission(anyString());
+        }
+    }
+
+    @Test void defaultPermissionAndDisabledRequirementKeepExistingSemantics() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            useWorkerContext(fixture);
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementPermission.register(fixture.handler, fixture.plugin);
+            when(fixture.player.hasPermission("AdvancedCore.Reward.Due")).thenReturn(true);
+            assertTrue(fixture.permissionReward("").canGiveRewardAsync(fixture.user, new RewardOptions())
+                    .toCompletableFuture().get(2, TimeUnit.SECONDS));
+            Reward disabled = fixture.permissionReward("rewards.disabled");
+            disabled.getConfig().getConfigData().set("RequirePermission", false);
+            assertTrue(disabled.canGiveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture().get(2, TimeUnit.SECONDS));
+            verify(fixture.player, never()).hasPermission("rewards.disabled");
+        }
+    }
+
+    private static void useWorkerContext(Fixture fixture) {
+        var scheduler = fixture.plugin.getBukkitScheduler();
+        doAnswer(call -> {
+            boolean previous = fixture.playerOwner.get();
+            fixture.playerOwner.set(false);
+            try { call.getArgument(1, Runnable.class).run(); }
+            finally { fixture.playerOwner.set(previous); }
+            return null;
+        }).when(scheduler).runTaskAsynchronously(eq(fixture.plugin), any(Runnable.class));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static net.milkbowl.vault.permission.Permission installVault(Fixture fixture) {
+        var permissions = mock(net.milkbowl.vault.permission.Permission.class);
+        when(permissions.getGroups()).thenReturn(new String[] { "member" });
+        var server = mock(org.bukkit.Server.class, RETURNS_DEEP_STUBS);
+        when(fixture.plugin.getServer()).thenReturn(server);
+        when(server.getPluginManager().getPlugin("Vault")).thenReturn(mock(org.bukkit.plugin.Plugin.class));
+        org.bukkit.plugin.RegisteredServiceProvider<net.milkbowl.vault.permission.Permission> registration =
+                mock(org.bukkit.plugin.RegisteredServiceProvider.class);
+        when(registration.getProvider()).thenReturn(permissions);
+        when(server.getServicesManager().getRegistration(net.milkbowl.vault.permission.Permission.class)).thenReturn(registration);
+        when(fixture.plugin.isLoadVault()).thenReturn(true);
+        var scheduler = fixture.plugin.getBukkitScheduler();
+        doAnswer(call -> { fixture.onOwner(call.getArgument(1)); return null; })
+                .when(scheduler).runTaskLater(eq(fixture.plugin), any(Runnable.class), eq(5L));
+        var vault = new com.bencodez.advancedcore.VaultHandler();
+        when(fixture.plugin.getVaultHandler()).thenReturn(vault);
+        vault.loadVault(fixture.plugin);
+        return permissions;
     }
 
     @Test void modeChangeDuringWorkerRequirementsKeepsTheTimedEligibilitySignal() {
@@ -755,6 +1016,7 @@ class RewardGamemodeTimedTest {
         final AtomicReference<Runnable> fallbackSweep = new AtomicReference<>();
         final ScheduledExecutorService delayed = mock(ScheduledExecutorService.class);
         final org.mockito.MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
+        final AdvancedCorePlugin previousPlayerManagerPlugin = PlayerManager.getInstance().getPlugin();
         final RewardHandler handler;
         final AdvancedCoreUser user;
         RewardEligibility customEligibility;
@@ -817,6 +1079,7 @@ class RewardGamemodeTimedTest {
             bukkit.when(Bukkit::getPluginManager).thenReturn(mock(org.bukkit.plugin.PluginManager.class));
             bukkit.when(() -> Bukkit.getPlayer(id)).thenReturn(player);
             AdvancedCorePlugin.setInstance(plugin);
+            PlayerManager.getInstance().setPlugin(plugin);
             handler = new RewardHandler(plugin) {
                 @Override public ScheduledExecutorService getDelayedTimer() { return delayed; }
                 @Override public RewardEligibility getRewardEligibility() {
@@ -868,6 +1131,13 @@ class RewardGamemodeTimedTest {
             return reward;
         }
 
+        Reward permissionReward(String permission) {
+            Reward reward = reward("Due", true);
+            reward.getConfig().getConfigData().set("RequirePermission", true);
+            reward.getConfig().getConfigData().set("Permission", permission);
+            return reward;
+        }
+
         ArrayList<String> stored(String path) { return persisted.getOrDefault(path, new ArrayList<>()); }
         String onlyTimedKey() {
             assertEquals(1, user.getTimedRewards().size());
@@ -896,6 +1166,7 @@ class RewardGamemodeTimedTest {
             assertFalse(user.hasPendingRewardReplay(), "queued replay must release its claims after completion");
         }
         @Override public void close() {
+            PlayerManager.getInstance().setPlugin(previousPlayerManagerPlugin);
             handler.getRewardEligibility().close();
             delayed.shutdownNow();
             AdvancedCorePlugin.setInstance(null);

@@ -177,8 +177,8 @@ public class Reward {
 			if (!plugin.isEnabled()) return CompletableFuture.failedFuture(
 					new IllegalStateException("Plugin disabled before reward requirement evaluation"));
 			inject.prepareAsyncRequest(this, getConfig().getConfigData(), options);
-			Supplier<CompletionStage<Boolean>> check = () -> CompletableFuture.completedFuture(
-					inject.onRequirementRequest(this, user, getConfig().getConfigData(), options));
+			Supplier<CompletionStage<Boolean>> check = () ->
+					inject.onRequirementRequestAsync(this, user, getConfig().getConfigData(), options);
 			return inject.requiresPlayerThread() ? requestOnServerThread(user, check) : check.get();
 		});
 	}
@@ -1823,6 +1823,21 @@ public class Reward {
 
 	private record LiveRewardDecision(boolean canGive, boolean allowOffline, boolean vanished, boolean liveOffline,
 			boolean terminalDenied, boolean playerEligibilityDenied) { }
+
+	/** Resolve the live session globally, then evaluate native requirement state on its owner. */
+	public <T> CompletionStage<T> evaluatePlayerRequirement(AdvancedCoreUser user,
+			Function<Player, CompletionStage<T>> request) {
+		return requestOnServerThread(plugin, user, request, getServerThreadDispatchTimeoutMillis(), null);
+	}
+
+	/** Await potentially blocking requirement-provider work on the existing reward worker. */
+	public <T> CompletionStage<T> evaluateAsyncRequirement(Supplier<T> request) {
+		return continueOffServerThread(() -> {
+			if (!plugin.isEnabled()) return CompletableFuture.failedFuture(
+					new IllegalStateException("Plugin disabled before reward requirement evaluation"));
+			return CompletableFuture.completedFuture(request.get());
+		});
+	}
 
 	private <T> CompletionStage<T> continueOffServerThread(Supplier<CompletionStage<T>> request) {
 		CompletableFuture<CompletionStage<T>> handoff = new CompletableFuture<>();

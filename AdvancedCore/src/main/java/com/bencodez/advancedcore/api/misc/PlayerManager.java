@@ -280,6 +280,19 @@ public class PlayerManager {
 		return false;
 	}
 
+    /** Offline provider phase; callers must capture the world name on the server scheduler. */
+    public boolean hasOfflineServerPermission(UUID playerUUID, String world, String perm) {
+        if (playerUUID == null) return false;
+        if (plugin.getLuckPermsHandle() != null && plugin.getLuckPermsHandle().luckpermsApiLoaded()) {
+            if (plugin.getLuckPermsHandle().hasOfflinePermission(playerUUID, perm)) return true;
+        }
+        if (plugin.getOptions().isUseVaultPermissions() && plugin.getVaultHandler() != null
+                && plugin.getVaultHandler().getPerms() != null && plugin.getVaultHandler().getPerms().isEnabled()) {
+            return plugin.getVaultHandler().getPerms().playerHas(world, Bukkit.getOfflinePlayer(playerUUID), perm);
+        }
+        return false;
+    }
+
 	/** @deprecated Use {@link #isValidUserAsync(String, boolean, Consumer, Consumer)} for persisted identity. */
 	@Deprecated
 	public boolean isValidUser(String name) {
