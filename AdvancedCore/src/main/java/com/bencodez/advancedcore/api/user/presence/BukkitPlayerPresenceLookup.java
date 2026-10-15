@@ -229,8 +229,9 @@ public final class BukkitPlayerPresenceLookup implements BatchPlayerPresenceLook
                     && cached.modified().equals(scope.lastModifiedTime())
                     && (cached.identities().contains(identity) || (completeOnlineHistory && cached.offlineHistory())))
                 return true;
-            RecoverySnapshot scanned = scanRecovery(scope, Set.of());
-            return scanned == null || scanned.index().identities().contains(identity)
+            RecoverySnapshot scanned = scanRecovery(scope, Set.of(identity));
+            return scanned == null || scanned.retainedCandidates().contains(identity)
+                    || scanned.index().identities().contains(identity)
                     || (completeOnlineHistory && scanned.index().offlineHistory());
         }
     }

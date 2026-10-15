@@ -80,6 +80,39 @@ class PlayerPresenceBatchScanTest {
             assertEquals(2, opens.get()); assertTrue(Files.exists(recovery));
         }
     }
+    @Test void directQuerySeesCanonicalRecordAppearingDuringRecoveryEnumeration() throws Exception {
+        assertDirectRecoveryCandidates(false);
+    }
+    @Test void directOnlineHistorySeesCanonicalRecordAppearingDuringRecoveryEnumeration() throws Exception {
+        assertDirectRecoveryCandidates(true);
+    }
+    private void assertDirectRecoveryCandidates(boolean complete) throws Exception {
+        for (String suffix : java.util.List.of(".dat", ".dat_old", ".dat_new", ".dat.tmp",
+                ".dat.offline-read", ".dat_old.offline-read", ".DAT")) {
+            BasicFileAttributes fixed = fixedDirectory();
+            Path retained = directory.resolve(FIRST + suffix);
+            try (var lookup = new BukkitPlayerPresenceLookup(directory,
+                    path -> path.equals(directory) ? fixed : attributes(path), path -> {
+                        Files.write(retained, new byte[] {0}); return Files.newDirectoryStream(path);
+                    })) {
+                assertEquals(PlayerPresence.UNKNOWN,
+                        complete ? lookup.checkOnlineHistory(FIRST) : lookup.check(FIRST), suffix);
+                assertArrayEquals(new byte[] {0}, Files.readAllBytes(retained));
+            } finally { Files.deleteIfExists(retained); }
+        }
+    }
+    @Test void unrelatedCanonicalRecordDoesNotInvalidateDirectAbsence() throws Exception {
+        BasicFileAttributes fixed = fixedDirectory();
+        try (var lookup = new BukkitPlayerPresenceLookup(directory,
+                path -> path.equals(directory) ? fixed : attributes(path), path -> {
+                    Files.write(directory.resolve(SECOND + ".dat"), new byte[] {0});
+                    return Files.newDirectoryStream(path);
+                })) {
+            assertEquals(PlayerPresence.NEVER_JOINED, lookup.check(FIRST));
+            assertEquals(PlayerPresence.NEVER_JOINED, lookup.checkOnlineHistory(FIRST));
+        }
+    }
+
     @Test void canonicalRecordAppearingAfterPointChecksCannotBecomeNegative() throws Exception {
         BasicFileAttributes fixed = fixedDirectory(); var worker = new ArrayDeque<Runnable>();
         Path retained = directory.resolve(FIRST + ".dat");
