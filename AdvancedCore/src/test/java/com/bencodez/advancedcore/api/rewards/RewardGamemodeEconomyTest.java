@@ -180,6 +180,8 @@ class RewardGamemodeEconomyTest {
         when(player.getUniqueId()).thenReturn(id);
         AtomicReference<Player> currentPlayer = new AtomicReference<>(forcedOffline ? null : player);
         when(player.isOnline()).thenAnswer(call -> currentPlayer.get() == player);
+        when(player.getMetadata("AdvancedCoreRewardEligibilityLogin")).thenReturn(
+                List.of(new org.bukkit.metadata.FixedMetadataValue(plugin, Boolean.TRUE)));
         AtomicReference<GameMode> mode = new AtomicReference<>(GameMode.SURVIVAL);
         when(player.getGameMode()).thenAnswer(call -> {
             assertTrue(playerOwner.get(), "gamemode must only be read on the player owner scheduler");

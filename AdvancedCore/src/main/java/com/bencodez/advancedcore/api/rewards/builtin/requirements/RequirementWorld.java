@@ -26,6 +26,17 @@ public final class RequirementWorld {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRequirements().add(new RequirementInjectStringList("Worlds", new ArrayList<>()) {
             @Override
+            public boolean requiresPlayerThread() { return true; }
+
+            @Override
+            public void prepareAsyncRequest(Reward reward, ConfigurationSection data, RewardOptions options) {
+                if (!data.getStringList("Worlds").isEmpty()
+                        || (options.isUseDefaultWorlds() && !plugin.getOptions().getDefaultRewardWorlds().isEmpty())) {
+                    reward.checkRewardFile();
+                }
+            }
+
+            @Override
             public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> worlds,
                     RewardOptions rewardOptions) {
                 if (worlds.isEmpty()) {
@@ -38,7 +49,6 @@ public final class RequirementWorld {
                         debug("No player");
                         return false;
                     }
-                    reward.checkRewardFile();
                     String world = player.getWorld().getName();
                     if (plugin.getOptions().getDefaultRewardWorlds().contains(world)) {
                         debug("Player in default whitelisted world: " + world);
@@ -54,7 +64,6 @@ public final class RequirementWorld {
                     debug("No player");
                     return false;
                 }
-                reward.checkRewardFile();
                 String world = player.getWorld().getName();
                 if (worlds.contains(world)) {
                     debug("Player in whitelisted world: " + world);
@@ -78,6 +87,17 @@ public final class RequirementWorld {
 
         handler.getInjectedRequirements().add(new RequirementInjectStringList("BlackListedWorlds", new ArrayList<>()) {
             @Override
+            public boolean requiresPlayerThread() { return true; }
+
+            @Override
+            public void prepareAsyncRequest(Reward reward, ConfigurationSection data, RewardOptions options) {
+                if (!data.getStringList("BlackListedWorlds").isEmpty()
+                        || (options.isUseDefaultWorlds() && !plugin.getOptions().getDefaultRewardBlackListedWorlds().isEmpty())) {
+                    reward.checkRewardFile();
+                }
+            }
+
+            @Override
             public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, ArrayList<String> worlds,
                     RewardOptions rewardOptions) {
                 if (worlds.isEmpty()) {
@@ -91,7 +111,6 @@ public final class RequirementWorld {
                         debug("No player");
                         return false;
                     }
-                    reward.checkRewardFile();
                     String world = player.getWorld().getName();
                     if (plugin.getOptions().getDefaultRewardBlackListedWorlds().contains(world)) {
                         user.setCheckWorld(true);
@@ -107,7 +126,6 @@ public final class RequirementWorld {
                     debug("No player");
                     return false;
                 }
-                reward.checkRewardFile();
                 String world = player.getWorld().getName();
                 if (worlds.contains(world)) {
                     user.setCheckWorld(true);

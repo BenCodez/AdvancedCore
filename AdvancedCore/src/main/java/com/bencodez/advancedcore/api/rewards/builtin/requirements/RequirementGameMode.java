@@ -27,6 +27,9 @@ public final class RequirementGameMode {
         }.addPath("BlackListedGameModes");
         handler.getInjectedRequirements().add(new RequirementInject("GameModes") {
             @Override
+            public boolean requiresPlayerThread() { return true; }
+
+            @Override
             public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
                     RewardOptions options) {
                 return reward.checkPlayerEligibility(user, options);

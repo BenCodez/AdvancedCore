@@ -104,3 +104,20 @@ Immediate retirement and retirement after scheduling use the same action claim;
 a stale callback cannot later execute that retained attempt. Scheduler rejection,
 unknown timeouts, shutdown and already-committed inventory overflow retain their
 existing failure and ownership behavior. Ordinary Spigot scheduling is unchanged.
+
+## Requirement execution context
+
+Async reward delivery and `canGiveRewardAsync` retain ordered requirement evaluation.
+Scripts, custom requirements and preprocessing placeholder providers run on the reward
+worker. Only native world, location and gamemode predicates request the player's owner;
+world-requirement file preparation happens on the worker before that handoff. Custom
+`RequirementInject` implementations may override `requiresPlayerThread()` for a short,
+nonblocking native predicate and `prepareAsyncRequest(...)` for its worker preparation.
+The synchronous `canGiveReward` method retains its existing caller-owned execution contract;
+callers that need scheduling should use the asynchronous method. This does not make arbitrary
+Bukkit calls inside administrator scripts safe on a worker.
+
+A freshly deferred hint never authenticates a player. Without this plugin's accepted-login
+receipt it waits for the normal accepted-login signal before either offline or timed queue
+replay. A native pending-login receipt also denies configured gamemode actions, even when
+the current mode otherwise matches. Existing queue payloads and replay identities are retained.

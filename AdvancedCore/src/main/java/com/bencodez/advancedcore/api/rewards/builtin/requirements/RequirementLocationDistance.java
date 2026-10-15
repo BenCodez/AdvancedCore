@@ -28,6 +28,9 @@ public final class RequirementLocationDistance {
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRequirements().add(new RequirementInjectConfigurationSection("LocationDistance") {
             @Override
+            public boolean requiresPlayerThread() { return true; }
+
+            @Override
             public boolean onRequirementsRequested(Reward reward, AdvancedCoreUser user, ConfigurationSection section,
                     RewardOptions rewardOptions) {
                 if (!user.isOnline()) {

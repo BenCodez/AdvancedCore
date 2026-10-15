@@ -43,6 +43,181 @@ import com.bencodez.advancedcore.listeners.RewardEligibilityListener;
 class RewardGamemodeTimedTest {
     @TempDir File directory;
 
+    @Test void customRequirementsAndPreprocessingStayOffThePlayerOwner() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var scheduler = fixture.plugin.getBukkitScheduler();
+            doAnswer(call -> {
+                boolean previous = fixture.playerOwner.get();
+                fixture.playerOwner.set(false);
+                try { call.getArgument(1, Runnable.class).run(); }
+                finally { fixture.playerOwner.set(previous); }
+                return null;
+            }).when(scheduler).runTaskAsynchronously(eq(fixture.plugin), any(Runnable.class));
+            AtomicInteger requirements = new AtomicInteger(), placeholders = new AtomicInteger();
+            fixture.handler.getPlaceholders().add(new RewardPlaceholderHandle("SyntheticValue") {
+                @Override public String getValue(Reward reward, AdvancedCoreUser user) {
+                    assertFalse(fixture.playerOwner.get(), "preprocessing may use storage or external providers");
+                    placeholders.incrementAndGet();
+                    return "value";
+                }
+            }.preProcess());
+            fixture.handler.addInjectedRequirements(new com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject("SyntheticStorage") {
+                @Override public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user,
+                        ConfigurationSection data, RewardOptions options) {
+                    assertFalse(fixture.playerOwner.get(), "custom requirements must retain the reward worker");
+                    requirements.incrementAndGet();
+                    return true;
+                }
+            });
+            Reward reward = fixture.reward("Due", true);
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            assertEquals(1, requirements.get());
+            assertEquals(1, placeholders.get());
+            assertTrue(reward.canGiveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture().join());
+            assertEquals(2, requirements.get(), "read-only eligibility uses the same worker contract");
+        }
+    }
+
+    @Test void nativeRequirementsReturnToTheWorkerBeforeTheNextCustomRequirement() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var scheduler = fixture.plugin.getBukkitScheduler();
+            doAnswer(call -> {
+                boolean previous = fixture.playerOwner.get();
+                fixture.playerOwner.set(false);
+                try { call.getArgument(1, Runnable.class).run(); }
+                finally { fixture.playerOwner.set(previous); }
+                return null;
+            }).when(scheduler).runTaskAsynchronously(eq(fixture.plugin), any(Runnable.class));
+            var order = new ArrayList<String>();
+            fixture.handler.addInjectedRequirements(new com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject("NativePredicate") {
+                @Override public boolean requiresPlayerThread() { return true; }
+                @Override public void prepareAsyncRequest(Reward reward, ConfigurationSection data, RewardOptions options) {
+                    assertFalse(fixture.playerOwner.get(), "file preparation belongs on the worker");
+                    order.add("prepare");
+                }
+                @Override public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user,
+                        ConfigurationSection data, RewardOptions options) {
+                    assertTrue(fixture.playerOwner.get());
+                    order.add("native");
+                    return true;
+                }
+            });
+            fixture.handler.addInjectedRequirements(new com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject("StoragePredicate") {
+                @Override public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user,
+                        ConfigurationSection data, RewardOptions options) {
+                    assertFalse(fixture.playerOwner.get());
+                    order.add("storage");
+                    return true;
+                }
+            });
+            Reward reward = fixture.reward("Due", true);
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            assertEquals(List.of("prepare", "native", "storage"), order);
+            order.clear();
+            assertTrue(reward.canGiveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture().join());
+            assertEquals(List.of("prepare", "native", "storage"), order);
+        }
+    }
+
+    @Test void configuredJavascriptRequirementRunsOnTheWorker() throws Exception {
+        try (Fixture fixture = new Fixture();
+                var engines = mockConstruction(com.bencodez.advancedcore.api.javascript.JavascriptEngine.class,
+                        withSettings().defaultAnswer(RETURNS_SELF), (engine, context) -> {
+                            when(engine.getBooleanValue(anyString())).thenAnswer(call -> {
+                                assertFalse(fixture.playerOwner.get(), "configured scripts must not block the player owner");
+                                return true;
+                            });
+                        })) {
+            var scheduler = fixture.plugin.getBukkitScheduler();
+            doAnswer(call -> {
+                boolean previous = fixture.playerOwner.get();
+                fixture.playerOwner.set(false);
+                try { call.getArgument(1, Runnable.class).run(); }
+                finally { fixture.playerOwner.set(previous); }
+                return null;
+            }).when(scheduler).runTaskAsynchronously(eq(fixture.plugin), any(Runnable.class));
+            doReturn(mock(org.bukkit.OfflinePlayer.class)).when(fixture.user).getOfflinePlayer();
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementJavascript.register(fixture.handler, fixture.plugin);
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementGameMode.register(fixture.handler, fixture.plugin);
+            Reward reward = fixture.reward("Due", true);
+            reward.getConfig().getConfigData().set("JavascriptExpression", "true");
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            assertEquals(1, engines.constructed().size());
+            verify(engines.constructed().getFirst()).getBooleanValue("true");
+        }
+    }
+
+    @Test void modeChangeDuringWorkerRequirementsKeepsTheTimedEligibilitySignal() {
+        try (Fixture fixture = new Fixture()) {
+            fixture.handler.addInjectedRequirements(new com.bencodez.advancedcore.api.rewards.injectedrequirement.RequirementInject("SyntheticTransition") {
+                @Override public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user,
+                        ConfigurationSection data, RewardOptions options) {
+                    fixture.mode.set(GameMode.CREATIVE);
+                    return true;
+                }
+            });
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementGameMode.register(fixture.handler, fixture.plugin);
+            Reward reward = fixture.reward("Due", true);
+            RewardOptions options = new RewardOptions().setCheckTimed(false);
+            options.setTimedQueueReplay(true);
+            var failure = assertThrows(java.util.concurrent.CompletionException.class,
+                    () -> reward.giveRewardAsync(fixture.user, options).toCompletableFuture().join());
+            assertTrue(Reward.isPlayerEligibilityDeferred(failure),
+                    "a later native denial must retain the timed queue's eligibility retry classification");
+            assertEquals(0, fixture.prefix.get());
+        }
+    }
+
+    @Test void whitelistedInlineWorldPreparesFilesOnlyOnTheWorker() throws Exception {
+        worldRequirementsPrepareFilesOnTheWorkerAndReadTheWorldOnTheOwner("Worlds");
+    }
+
+    @Test void blacklistedInlineWorldPreparesFilesOnlyOnTheWorker() throws Exception {
+        worldRequirementsPrepareFilesOnTheWorkerAndReadTheWorldOnTheOwner("BlackListedWorlds");
+    }
+
+    private void worldRequirementsPrepareFilesOnTheWorkerAndReadTheWorldOnTheOwner(String path) throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            var config = fixture.plugin.getOptions();
+            when(config.getDefaultRewardWorlds()).thenReturn(new ArrayList<>());
+            when(config.getDefaultRewardBlackListedWorlds()).thenReturn(new ArrayList<>());
+            var scheduler = fixture.plugin.getBukkitScheduler();
+            doAnswer(call -> {
+                boolean previous = fixture.playerOwner.get();
+                fixture.playerOwner.set(false);
+                try { call.getArgument(1, Runnable.class).run(); }
+                finally { fixture.playerOwner.set(previous); }
+                return null;
+            }).when(scheduler).runTaskAsynchronously(eq(fixture.plugin), any(Runnable.class));
+            org.bukkit.World world = mock(org.bukkit.World.class);
+            when(world.getName()).thenReturn("synthetic-world");
+            when(fixture.player.getWorld()).thenAnswer(call -> {
+                assertTrue(fixture.playerOwner.get());
+                return world;
+            });
+            com.bencodez.advancedcore.api.rewards.builtin.requirements.RequirementWorld.register(fixture.handler, fixture.plugin);
+            Reward reward = spy(fixture.reward("Due", true)).needsRewardFile(true);
+            assertFalse(reward.getConfig().hasRewardFile(), "inline source stays section-backed after snapshot preparation");
+            reward.getConfig().getConfigData().set(path, new ArrayList<>(
+                    List.of(path.equals("Worlds") ? "synthetic-world" : "other-world")));
+            doAnswer(call -> {
+                assertFalse(fixture.playerOwner.get(), "every generated-file preparation belongs on the worker");
+                return null;
+            }).when(reward).checkRewardFile();
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            verify(reward).checkRewardFile();
+            verify(fixture.player).getWorld();
+        }
+    }
+
     @Test void initiallyDeniedTimedRewardKeepsItsDueTimeAndBoundedRetry() throws Exception {
         try (Fixture fixture = new Fixture()) {
             fixture.mode.set(GameMode.CREATIVE);
@@ -657,6 +832,7 @@ class RewardGamemodeTimedTest {
             user.setData(data);
             doReturn(player).when(user).getPlayer();
             doReturn(true).when(user).isOnline();
+            handler.getRewardEligibility().signalLogin(user, player).toCompletableFuture().join();
             doAnswer(call -> {
                 call.getArgument(1, java.util.function.Consumer.class).accept(user);
                 return null;

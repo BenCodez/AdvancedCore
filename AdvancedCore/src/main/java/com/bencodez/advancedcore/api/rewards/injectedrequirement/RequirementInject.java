@@ -69,6 +69,15 @@ public abstract class RequirementInject extends Inject {
 	public abstract boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions);
 
+	/** Native-only predicates opt in; scripts and custom requirements remain on the worker. */
+	public boolean requiresPlayerThread() {
+		return false;
+	}
+
+	/** Worker preparation before an asynchronous native predicate, including any file work. */
+	public void prepareAsyncRequest(Reward reward, ConfigurationSection data, RewardOptions options) {
+	}
+
 	public RequirementInject priority(int priority) {
 		setPriority(priority);
 		return this;

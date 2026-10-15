@@ -111,6 +111,14 @@ public class BuiltinRequirementRegistrationTest {
                 "BlackListedWorlds", "GameModes", "RewardType", "JavascriptExpression", "Date", "LocationDistance"));
     }
 
+    @Test
+    public void onlyNativePredicatesRequestThePlayerOwner() {
+        withMockedServer(() -> BuiltinRequirements.register(rewardHandler, plugin));
+        assertEquals(List.of("Worlds", "BlackListedWorlds", "GameModes", "LocationDistance"),
+                rewardHandler.getInjectedRequirements().stream().filter(RequirementInject::requiresPlayerThread)
+                        .map(RequirementInject::getPath).toList());
+    }
+
     private void assertRequirementPaths(BiConsumer<RewardHandler, AdvancedCorePlugin> registrar,
             String... expectedPaths) {
         int before = rewardHandler.getInjectedRequirements().size();

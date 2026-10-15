@@ -61,6 +61,10 @@ class RewardEligibilityTest {
             synchronized (plugin) { return false; }
         });
         when(user.checkOfflineRewardsAsync()).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+        org.bukkit.metadata.MetadataValue accepted = mock(org.bukkit.metadata.MetadataValue.class);
+        when(accepted.getOwningPlugin()).thenReturn(plugin);
+        when(accepted.value()).thenReturn(Boolean.TRUE);
+        when(player.getMetadata(anyString())).thenReturn(List.of(accepted));
         RewardEligibility eligibility = new RewardEligibility(plugin, handler);
         eligibility.deferred(user);
         try {
@@ -368,6 +372,40 @@ class RewardEligibilityTest {
     }
 
     @Test
+    void missingReceiptCannotAuthenticateAFreshDeferredHint() {
+        try (SignalFixture fixture = new SignalFixture(false)) {
+            fixture.eligibility.deferred(fixture.user);
+            fixture.eligibility.signal(fixture.user).toCompletableFuture().join();
+            verify(fixture.user, never()).checkDelayedTimedRewards();
+            verify(fixture.user, never()).checkOfflineRewardsAsync();
+            fixture.eligibility.signalLogin(fixture.user, fixture.player).toCompletableFuture().join();
+            verify(fixture.user).checkDelayedTimedRewards();
+            verify(fixture.user).checkOfflineRewardsAsync();
+        }
+    }
+
+    @Test
+    void freshDeferredHintCannotWakeEitherQueueBeforeAcceptedLogin() {
+        try (SignalFixture fixture = new SignalFixture(false)) {
+            fixture.eligibility.loginPending(fixture.player);
+            YamlConfiguration definition = new YamlConfiguration();
+            definition.set("GameModes", List.of("SURVIVAL"));
+            assertFalse(fixture.eligibility.isEligible(definition, fixture.user),
+                    "the native pending-login receipt must deny even an allowed mode");
+            fixture.eligibility.deferred(fixture.user);
+            assertFalse(fixture.eligibility.isEligible(definition, fixture.user),
+                    "a new deferred hint is not an accepted-login receipt");
+            fixture.eligibility.signal(fixture.user).toCompletableFuture().join();
+            verify(fixture.user, never()).checkDelayedTimedRewards();
+            verify(fixture.user, never()).checkOfflineRewardsAsync();
+            fixture.eligibility.signalLogin(fixture.user, fixture.player).toCompletableFuture().join();
+            assertTrue(fixture.eligibility.isEligible(definition, fixture.user));
+            verify(fixture.user).checkDelayedTimedRewards();
+            verify(fixture.user).checkOfflineRewardsAsync();
+        }
+    }
+
+    @Test
     void allowedModeCannotBypassTheQuitGateBeforeAcceptedLogin() {
         try (SignalFixture fixture = new SignalFixture()) {
             Player previous = mock(Player.class);
@@ -466,7 +504,9 @@ class RewardEligibilityTest {
         final RewardEligibility eligibility;
         final java.util.concurrent.atomic.AtomicLong clock = new java.util.concurrent.atomic.AtomicLong();
 
-        SignalFixture() {
+        SignalFixture() { this(true); }
+
+        SignalFixture(boolean acceptedLogin) {
             when(plugin.isEnabled()).thenReturn(true);
             when(plugin.getTimer()).thenReturn(worker);
             when(plugin.getBukkitScheduler()).thenReturn(scheduler);
@@ -501,7 +541,7 @@ class RewardEligibilityTest {
                 eligibility.queued(user);
                 return java.util.concurrent.CompletableFuture.completedFuture(null);
             });
-            eligibility.signalLogin(user, player).toCompletableFuture().join();
+            if (acceptedLogin) eligibility.signalLogin(user, player).toCompletableFuture().join();
         }
 
         @Override public void close() { eligibility.close(); }

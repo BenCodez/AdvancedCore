@@ -139,6 +139,7 @@ class RewardGamemodeMutationTest {
         when(player.getUniqueId()).thenReturn(id);
         when(player.isOnline()).thenReturn(true);
         HashMap<org.bukkit.plugin.Plugin, MetadataValue> loginReceipt = new HashMap<>();
+        loginReceipt.put(plugin, new org.bukkit.metadata.FixedMetadataValue(plugin, Boolean.TRUE));
         when(player.getMetadata("AdvancedCoreRewardEligibilityLogin"))
                 .thenAnswer(call -> loginReceipt.isEmpty() ? List.of() : List.copyOf(loginReceipt.values()));
         doAnswer(call -> { MetadataValue value = call.getArgument(1);

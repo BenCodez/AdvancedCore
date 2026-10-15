@@ -123,6 +123,8 @@ public final class RewardEligibility {
         if (allowed.isEmpty() && denied.isEmpty() && !overflow.enabled()) return true;
         Player player = user.getPlayer();
         if (player == null || !player.isOnline()) return false;
+        if (player.getMetadata(LOGIN_RECEIPT_KEY).stream().anyMatch(value ->
+                value.getOwningPlugin() == plugin && Boolean.FALSE.equals(value.value()))) return false;
         if (overflow.enabled() && !acceptedSession(player)) return false;
         GameMode mode = player.getGameMode();
         if ((!allowed.isEmpty() && !containsMode(allowed, mode)) || containsMode(denied, mode)) return false;
@@ -155,6 +157,7 @@ public final class RewardEligibility {
             if (closed || current != null && (current.awaitingLogin || current.player != player)) return;
         }
         if (player == null || !player.isOnline()) return;
+        boolean accepted = acceptedSession(player);
         synchronized (this) {
             if (closed) return;
             Pending current = findPending(user.getUUID());
@@ -162,11 +165,12 @@ public final class RewardEligibility {
             if (current != null && (current.awaitingLogin || current.player != player)) return;
             if (current == null) {
                 if (pending.size() >= MAX_PENDING_PLAYERS) { overflow.enable(); startFallback(); return; }
-                current = new Pending(user, player, nanoClock.getAsLong());
+                current = new Pending(user, accepted ? player : null, nanoClock.getAsLong());
                 pending.put(user.getUUID(), current);
             }
             current.user = user;
-            current.player = player;
+            current.player = accepted ? player : null;
+            current.awaitingLogin = !accepted;
             current.revision++;
             startFallback();
         }

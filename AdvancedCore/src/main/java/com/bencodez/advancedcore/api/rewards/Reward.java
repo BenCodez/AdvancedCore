@@ -156,11 +156,31 @@ public class Reward {
 		return true;
 	}
 
-	/** Evaluates requirements on the player's owning scheduler without blocking the caller. */
+	/** Evaluates ordered requirements without blocking the caller or moving scripts onto the player owner. */
 	public CompletionStage<Boolean> canGiveRewardAsync(AdvancedCoreUser user, RewardOptions options) {
 		RewardOptions stableOptions = options == null ? new RewardOptions() : options.copyForDispatch();
-		return requestOnServerThread(user,
-				() -> CompletableFuture.completedFuture(canGiveReward(user, stableOptions)));
+		CompletionStage<Boolean> result = CompletableFuture.completedFuture(true);
+		for (RequirementInject inject : plugin.getRewardHandler().getInjectedRequirements()) {
+			result = result.thenCompose(allowed -> allowed
+					? requestRequirementAsync(inject, user, stableOptions).exceptionally(failure -> {
+						plugin.debug("Failed to check requirement " + inject.getPath());
+						plugin.debug(failure);
+						return false;
+					}) : CompletableFuture.completedFuture(false));
+		}
+		return result;
+	}
+
+	private CompletionStage<Boolean> requestRequirementAsync(RequirementInject inject, AdvancedCoreUser user,
+			RewardOptions options) {
+		return continueOffServerThread(() -> {
+			if (!plugin.isEnabled()) return CompletableFuture.failedFuture(
+					new IllegalStateException("Plugin disabled before reward requirement evaluation"));
+			inject.prepareAsyncRequest(this, getConfig().getConfigData(), options);
+			Supplier<CompletionStage<Boolean>> check = () -> CompletableFuture.completedFuture(
+					inject.onRequirementRequest(this, user, getConfig().getConfigData(), options));
+			return inject.requiresPlayerThread() ? requestOnServerThread(user, check) : check.get();
+		});
 	}
 
 	public boolean checkDelayed(AdvancedCoreUser user, HashMap<String, String> placeholders) {
@@ -1657,8 +1677,12 @@ public class Reward {
 			return CompletableFuture.completedFuture(null);
 		}
 		RewardOptions stableOptions = rewardOptions;
-		return requestOnServerThread(user, () -> evaluateLiveRewardDecision(user, stableOptions))
-				.thenCompose(decision -> finishRewardAsync(user, stableOptions, decision));
+		return requestOnServerThread(user, () -> CompletableFuture.completedFuture(
+				captureLiveRewardDecision(user, stableOptions)))
+				.thenCompose(snapshot -> continueOffServerThread(
+						() -> evaluateLiveRewardDecision(user, stableOptions, snapshot)))
+				.thenCompose(decision -> continueOffServerThread(
+						() -> finishRewardAsync(user, stableOptions, decision)));
 	}
 
 	/** Deterministic player-context check, invoked only on the owning scheduler. */
@@ -1707,55 +1731,55 @@ public class Reward {
 				|| (options.getAsyncReplayState() != null && options.getAsyncReplayState().highestCompletedCount() > 0);
 	}
 
-	private CompletionStage<LiveRewardDecision> evaluateLiveRewardDecision(AdvancedCoreUser user,
-			RewardOptions rewardOptions) {
-		boolean liveOnline = rewardOptions.isLivePlayerStateSet() ? rewardOptions.isOnline() : user.isOnline();
+	/** Captures only live player state; no scripts, placeholders or custom providers run here. */
+	private LiveRewardDecision captureLiveRewardDecision(AdvancedCoreUser user, RewardOptions options) {
+		boolean liveOnline = options.isLivePlayerStateSet() ? options.isOnline() : user.isOnline();
 		boolean vanished = plugin.getOptions().isTreatVanishAsOffline()
-				&& (rewardOptions.isLivePlayerStateSet() ? rewardOptions.isLivePlayerVanished() : user.isVanished());
-		if (!rewardOptions.isLivePlayerStateSet()) rewardOptions.captureLivePlayerState(liveOnline, vanished);
-		for (RewardPlaceholderHandle handle : plugin.getRewardHandler().getPlaceholders()) {
-			if (handle.isPreProcess()) rewardOptions.addPlaceholder(handle.getKey(), handle.getValue(this, user));
-		}
+				&& (options.isLivePlayerStateSet() ? options.isLivePlayerVanished() : user.isVanished());
+		if (!options.isLivePlayerStateSet()) options.captureLivePlayerState(liveOnline, vanished);
+		boolean eligible = checkPlayerEligibility(user, options);
+		boolean verifyOnline = !options.isOnline() || options.getServer() != null;
+		return new LiveRewardDecision(eligible, !eligible, vanished, verifyOnline && !liveOnline, false, !eligible);
+	}
 
-		boolean canGive = checkPlayerEligibility(user, rewardOptions);
-		boolean playerEligibilityDenied = !canGive;
-		boolean allowOffline = !canGive;
-		boolean chanceApproved = false;
-		if (!rewardOptions.isIgnoreRequirements()) {
+	private CompletionStage<LiveRewardDecision> evaluateLiveRewardDecision(AdvancedCoreUser user,
+			RewardOptions options, LiveRewardDecision snapshot) {
+		for (RewardPlaceholderHandle handle : plugin.getRewardHandler().getPlaceholders()) {
+			if (handle.isPreProcess()) options.addPlaceholder(handle.getKey(), handle.getValue(this, user));
+		}
+		CompletionStage<LiveRewardDecision> decision = CompletableFuture.completedFuture(snapshot);
+		AtomicBoolean chanceApproved = new AtomicBoolean();
+		if (!options.isIgnoreRequirements()) {
 			for (RequirementInject inject : plugin.getRewardHandler().getInjectedRequirements()) {
-				try {
-					if ("Chance".equals(inject.getPath()) && hasApprovedPartialReplayChance(rewardOptions)) continue;
-					if (!inject.onRequirementRequest(this, user, getConfig().getConfigData(), rewardOptions)) {
-						canGive = false;
-						if (!inject.isAllowReattempt()) {
-							return CompletableFuture.completedFuture(
-									new LiveRewardDecision(false, false, vanished, false, true, playerEligibilityDenied));
+				decision = decision.thenCompose(current -> {
+					if (current.terminalDenied() || ("Chance".equals(inject.getPath())
+							&& hasApprovedPartialReplayChance(options))) return CompletableFuture.completedFuture(current);
+					return requestRequirementAsync(inject, user, options).handle((allowed, failure) -> {
+						if (failure != null) {
+							plugin.debug("Failed to check requirement " + inject.getPath());
+							plugin.debug(failure);
+							if (isDurableReplay(options)) throw new java.util.concurrent.CompletionException(
+									new IllegalStateException("Failed to evaluate reward requirement " + inject.getPath(), failure));
+							return new LiveRewardDecision(false, current.allowOffline(), current.vanished(),
+									current.liveOffline(), false, current.playerEligibilityDenied());
 						}
-						allowOffline = true;
-					} else if ("Chance".equals(inject.getPath())) {
-						chanceApproved = true;
-					}
-				} catch (Exception e) {
-					plugin.debug("Failed to check requirement " + inject.getPath());
-					e.printStackTrace();
-					if (isDurableReplay(rewardOptions)) {
-						return CompletableFuture.failedFuture(
-								new IllegalStateException("Failed to evaluate reward requirement " + inject.getPath(), e));
-					}
-					canGive = false;
-				}
+						if (!allowed) return new LiveRewardDecision(false, inject.isAllowReattempt() || current.allowOffline(),
+								current.vanished(), current.liveOffline(), !inject.isAllowReattempt(),
+								current.playerEligibilityDenied() || "GameModes".equals(inject.getPath()));
+						if ("Chance".equals(inject.getPath())) chanceApproved.set(true);
+						return current;
+					});
+				});
 			}
 		}
-		if (canGive && chanceApproved && RewardEligibility.isConfigured(getConfig().getConfigData())) {
-			String key = chanceReplayKey(rewardOptions);
-			rewardOptions.addPlaceholder(key, "1");
-			if (rewardOptions.getAsyncReplayState() != null)
-				rewardOptions.getAsyncReplayState().recordReplayMetadata(key, "1");
-		}
-		boolean verifyOnline = !rewardOptions.isOnline() || rewardOptions.getServer() != null;
-		boolean liveOffline = verifyOnline && !liveOnline;
-		return CompletableFuture.completedFuture(
-				new LiveRewardDecision(canGive, allowOffline, vanished, liveOffline, false, playerEligibilityDenied));
+		return decision.thenApply(current -> {
+			if (current.canGive() && chanceApproved.get() && RewardEligibility.isConfigured(getConfig().getConfigData())) {
+				String key = chanceReplayKey(options);
+				options.addPlaceholder(key, "1");
+				if (options.getAsyncReplayState() != null) options.getAsyncReplayState().recordReplayMetadata(key, "1");
+			}
+			return current;
+		});
 	}
 
 	private CompletionStage<Void> finishRewardAsync(AdvancedCoreUser user, RewardOptions rewardOptions,
