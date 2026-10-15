@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -267,6 +268,73 @@ class RewardGamemodeTimedTest {
             delivery.get(2, TimeUnit.SECONDS);
             assertEquals(1, engines.constructed().size());
             verify(engines.constructed().getFirst()).execute("true");
+        }
+    }
+
+    @Test void configuredInjectionKeepsTheResolvedPlayerSessionAcrossWorkerBoundary() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            useWorkerContext(fixture);
+            fixture.handler.getInjectedRewards().clear();
+            AtomicReference<Player> current = new AtomicReference<>(fixture.player);
+            doAnswer(call -> current.get()).when(fixture.user).getPlayer();
+            doAnswer(call -> current.get() != null).when(fixture.user).isOnline();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(fixture.id)).thenAnswer(call -> current.get());
+            Player replacement = mock(Player.class);
+            installPlayerMetadata(replacement);
+            when(replacement.getUniqueId()).thenReturn(fixture.id);
+            when(replacement.isOnline()).thenReturn(true);
+            when(replacement.getGameMode()).thenAnswer(call -> {
+                assertTrue(fixture.playerOwner.get());
+                return GameMode.SURVIVAL;
+            });
+            var replaceOnHandoff = new java.util.concurrent.atomic.AtomicBoolean();
+            var replaced = new java.util.concurrent.atomic.AtomicBoolean();
+            var scheduler = fixture.plugin.getBukkitScheduler();
+            doAnswer(call -> {
+                Runnable task = call.getArgument(1, Runnable.class);
+                boolean ownerHandoff = fixture.playerOwner.get();
+                fixture.workers.add(() -> {
+                    if (ownerHandoff && replaceOnHandoff.compareAndSet(true, false)) {
+                        current.set(replacement);
+                        replaced.set(true);
+                    }
+                    boolean previous = fixture.playerOwner.get();
+                    fixture.playerOwner.set(false);
+                    try { task.run(); } finally { fixture.playerOwner.set(previous); }
+                });
+                return null;
+            }).when(scheduler).runTaskAsynchronously(eq(fixture.plugin), any(Runnable.class));
+            AtomicReference<java.util.concurrent.CompletionStage<Void>> guardCheck = new AtomicReference<>();
+            fixture.handler.addInjectedReward(new RewardInject("SessionBoundary") {
+                @Override public boolean supportsAsyncRequest() { return true; }
+                @Override public java.util.concurrent.CompletionStage<Object> onRewardRequestAsync(Reward reward,
+                        AdvancedCoreUser user, ConfigurationSection data, HashMap<String, String> placeholders) {
+                    assertFalse(fixture.playerOwner.get());
+                    AdvancedCoreUser.PlayerEligibilityGuard guard = user.capturePlayerEligibilityGuard();
+                    assertNotNull(guard);
+                    var check = guard.checkAsync();
+                    guardCheck.set(check);
+                    return check.thenApply(ignored -> null);
+                }
+                @Override public Object onRewardRequest(Reward reward, AdvancedCoreUser user,
+                        ConfigurationSection data, HashMap<String, String> placeholders) { return null; }
+            });
+            Reward reward = fixture.reward("SessionBoundary", true);
+            var unchanged = reward.giveRewardAsync(fixture.user, new RewardOptions().setGiveOffline(false));
+            fixture.drainQueuedWork();
+            unchanged.toCompletableFuture().get(2, TimeUnit.SECONDS);
+            assertNotNull(guardCheck.get());
+            guardCheck.set(null);
+            replaceOnHandoff.set(true);
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions().setGiveOffline(false));
+            fixture.drainQueuedWork();
+            assertTrue(replaced.get(), "replace only after owner resolution and before the injection worker");
+            assertNotNull(guardCheck.get(), "the real configured injection must execute");
+            var failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                    () -> guardCheck.get().toCompletableFuture().get(2, TimeUnit.SECONDS));
+            assertTrue(Reward.isPlayerEligibilityDeferred(failure));
+            delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
+            verify(replacement, never()).giveExp(anyInt());
         }
     }
 

@@ -141,3 +141,5 @@ native reads through `evaluatePlayerRequirement` with provider work through
 These phase helpers await the result and do not create another reward occurrence.
 
 For rewards opting into either gamemode key, the native eligibility observation runs on the player owner, then injection callbacks (including `Javascripts`) return to the existing asynchronous reward scheduler. Collected player actions still return to their owner and recheck eligibility before mutation. Unconfigured awaited rewards retain their established callback boundary. Custom callbacks and scripts must continue to use supported scheduled APIs for direct Bukkit work; arbitrary script code is not made thread-safe automatically.
+
+For rewards using gamemode eligibility, the native player session resolved before an injection is retained across the worker callback. Collected actions and mixed command sections revalidate that session on its owning scheduler; a reconnect does not silently transfer an admitted action to a replacement session. Deferred work still follows the existing retry policy.

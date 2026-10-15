@@ -1263,7 +1263,7 @@ public class Reward {
 		try {
 			if (!plugin.isEnabled()) return CompletableFuture.failedFuture(
 					new IllegalStateException("Plugin disabled before reward injection completed"));
-			Supplier<CompletionStage<Object>> request = () -> requestOnServerThread(user, () -> {
+			Supplier<CompletionStage<Object>> request = () -> requestOnServerThread(plugin, user, ownerPlayer -> {
 				if (eligibilityOptions != null && !bypassesPlayerEligibility(eligibilityOptions)
 						&& !checkPlayerEligibility(user, eligibilityOptions)) {
 					return CompletableFuture.failedFuture(new PlayerEligibilityDeferredException());
@@ -1272,14 +1272,14 @@ public class Reward {
 					if (!plugin.isEnabled()) return CompletableFuture.failedFuture(
 							new IllegalStateException("Plugin disabled before reward injection completed"));
 					return requestInjectionAsync(inject, user, placeholders, replayState, injectionKey, occurrenceId,
-							eligibilityOptions);
+							eligibilityOptions, ownerPlayer);
 				};
 				// Opted-in live eligibility owns only the native observation. Callback
 				// bodies may do blocking provider/script work; collected game actions
 				// retain their own final owner-thread eligibility checks.
 				return RewardEligibility.isConfigured(getConfig().getConfigData())
 						? continueOffServerThread(injection) : injection.get();
-			});
+			}, getServerThreadDispatchTimeoutMillis(), null);
 			CompletionStage<Object> result = inject.isSynchronize() && inject.supportsAsyncSynchronization()
 					? inject.runSynchronizedAsync(request)
 					: request.get();
@@ -1385,7 +1385,7 @@ public class Reward {
 
 	private CompletionStage<Object> requestInjectionAsync(RewardInject inject, AdvancedCoreUser user,
 			HashMap<String, String> placeholders, ReplayState replayState, String injectionKey, String occurrenceId,
-			RewardOptions eligibilityOptions) {
+			RewardOptions eligibilityOptions, Player ownerPlayer) {
 		ReplayState previous = ACTIVE_REPLAY_STATE.get();
 		String previousKey = ACTIVE_REPLAY_KEY.get();
 		String previousOccurrenceId = ACTIVE_REPLAY_OCCURRENCE_ID.get();
@@ -1400,13 +1400,13 @@ public class Reward {
 		}
 		AdvancedCoreUser.AsyncActionCollection actionCollection = playerEligibility == null
 				? user.beginAsyncActionCollection(replayState, placeholders, injectionKey)
-				: user.beginAsyncActionCollection(replayState, placeholders, injectionKey, playerEligibility);
+				: user.beginAsyncActionCollection(replayState, placeholders, injectionKey, playerEligibility, ownerPlayer);
 		CompletionStage<Object> result = CompletableFuture.failedFuture(
 				new IllegalStateException("Reward injection did not produce a result"));
 		try {
 			if (replayState.hasCheckpointConsumer()
 					&& inject.isPlayerRequiredFor(getConfig().getConfigData(), placeholders)
-					&& user.getPlayer() == null) {
+					&& (playerEligibility == null ? user.getPlayer() : ownerPlayer) == null) {
 				result = CompletableFuture.failedFuture(
 						new IllegalStateException("Player became unavailable before " + inject.getPath() + " delivery"));
 			} else if (inject.supportsAsyncRequest()) {

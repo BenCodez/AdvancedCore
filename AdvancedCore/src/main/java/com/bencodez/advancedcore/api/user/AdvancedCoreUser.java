@@ -96,11 +96,13 @@ public class AdvancedCoreUser {
 		private final String snapshotKey;
 		private final AdvancedCorePlugin plugin;
 		private final Supplier<Boolean> playerEligibility;
+		private final Player resolvedPlayer;
+		private final boolean playerResolved;
 		private boolean closed;
 
 		private AsyncActionCollection(AsyncActionCollection previous, AdvancedCoreUser owner, Reward.ReplayState replayState,
 				HashMap<String, String> placeholders, String injectionKey, AdvancedCorePlugin plugin,
-				Supplier<Boolean> playerEligibility) {
+				Supplier<Boolean> playerEligibility, Player resolvedPlayer, boolean playerResolved) {
 			this.previous = previous;
 			this.owner = owner;
 			this.replayState = replayState;
@@ -109,6 +111,8 @@ public class AdvancedCoreUser {
 			this.snapshotKey = checkpointKey + ACTION_SNAPSHOT_SUFFIX;
 			this.plugin = plugin;
 			this.playerEligibility = playerEligibility;
+			this.resolvedPlayer = resolvedPlayer;
+			this.playerResolved = playerResolved;
 		}
 
 		private boolean isPlayerEligible() {
@@ -390,7 +394,17 @@ public class AdvancedCoreUser {
 	public AsyncActionCollection beginAsyncActionCollection(Reward.ReplayState replayState,
 			HashMap<String, String> placeholders, String injectionKey, Supplier<Boolean> playerEligibility) {
 		AsyncActionCollection collection = new AsyncActionCollection(ASYNC_ACTION_COLLECTION.get(), this, replayState,
-				placeholders, injectionKey, plugin, playerEligibility);
+				placeholders, injectionKey, plugin, playerEligibility, null, false);
+		ASYNC_ACTION_COLLECTION.set(collection);
+		return collection;
+	}
+
+	/** Carries an already owner-resolved native session into a reward worker callback. */
+	public AsyncActionCollection beginAsyncActionCollection(Reward.ReplayState replayState,
+			HashMap<String, String> placeholders, String injectionKey, Supplier<Boolean> playerEligibility,
+			Player resolvedPlayer) {
+		AsyncActionCollection collection = new AsyncActionCollection(ASYNC_ACTION_COLLECTION.get(), this, replayState,
+				placeholders, injectionKey, plugin, playerEligibility, resolvedPlayer, true);
 		ASYNC_ACTION_COLLECTION.set(collection);
 		return collection;
 	}
@@ -409,7 +423,9 @@ public class AdvancedCoreUser {
 	public static PlayerEligibilityGuard captureCurrentPlayerEligibilityGuard() {
 		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
 		return collection == null || collection.playerEligibility == null ? null
-				: new PlayerEligibilityGuard(collection.owner, collection.owner.getPlayer(), collection::isPlayerEligible);
+				: new PlayerEligibilityGuard(collection.owner,
+						collection.playerResolved ? collection.resolvedPlayer : collection.owner.getPlayer(),
+						collection::isPlayerEligible);
 	}
 
 	/** Captures only this user's active reward policy; ordinary callers receive no guard. */
@@ -2254,6 +2270,12 @@ public class AdvancedCoreUser {
 		AsyncActionCollection collection = ASYNC_ACTION_COLLECTION.get();
 		Supplier<Boolean> playerEligibility = collection != null && collection.belongsTo(this)
 				&& collection.playerEligibility != null ? collection::isPlayerEligible : null;
+		if (playerAware && playerEligibility != null && collection.playerResolved
+				&& player != collection.resolvedPlayer) {
+			collectAsyncFailure(replayActionNotStarted("Player session changed before reward action scheduling",
+					Reward.playerEligibilityDeferred()));
+			return;
+		}
 		PlayerEligibilityGuard globalEligibility = !playerAware && playerEligibility != null
 				? capturePlayerEligibilityGuard() : null;
 		if (!collectAsyncAction(() -> {
@@ -2789,11 +2811,12 @@ public class AdvancedCoreUser {
 			PlayerEligibilityGuard eligibilityGuard, Reward.ReplayState replayState, String replayKey) {
 		try {
 			ArrayList<String> templates = commands == null ? new ArrayList<>() : new ArrayList<>(commands);
-			final ArrayList<String> cmds = PlaceholderUtils.replaceJavascript(getPlayer(),
+			final ArrayList<String> cmds = PlaceholderUtils.replaceJavascript(
+					eligibilityGuard == null ? getPlayer() : eligibilityGuard.player,
 					PlaceholderUtils.replacePlaceHolder(templates, placeholders));
 			return Reward.replayCommandSequence(plugin, placeholders, "player", templates, cmds, replayState, replayKey,
 					(command, ignoredIndex) -> {
-				final Player player = getPlayer();
+				final Player player = eligibilityGuard == null ? getPlayer() : eligibilityGuard.player;
 				if (player == null || !plugin.isEnabled()) {
 					if (player == null && eligibilityGuard != null && plugin.isEnabled()) {
 						return CompletableFuture.failedFuture(replayActionNotStarted(
@@ -2812,7 +2835,9 @@ public class AdvancedCoreUser {
 
 	/** Fails before mixed reward sections run console commands for an unavailable player. */
 	public CompletionStage<Void> validatePlayerCommandAvailabilityAsync() {
-		return getPlayer() == null || !plugin.isEnabled()
+		PlayerEligibilityGuard guard = capturePlayerEligibilityGuard();
+		Player player = guard == null ? getPlayer() : guard.player;
+		return player == null || !plugin.isEnabled()
 				? CompletableFuture.failedFuture(
 						new IllegalStateException("Player command could not run because the player or plugin is unavailable"))
 				: CompletableFuture.completedFuture(null);
