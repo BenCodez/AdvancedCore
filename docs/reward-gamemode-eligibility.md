@@ -139,3 +139,5 @@ contract. Custom requirements may override `onRequirementRequestAsync` to compos
 native reads through `evaluatePlayerRequirement` with provider work through
 `evaluateAsyncRequirement`; the default delegates to the existing synchronous callback.
 These phase helpers await the result and do not create another reward occurrence.
+
+For rewards opting into either gamemode key, the native eligibility observation runs on the player owner, then injection callbacks (including `Javascripts`) return to the existing asynchronous reward scheduler. Collected player actions still return to their owner and recheck eligibility before mutation. Unconfigured awaited rewards retain their established callback boundary. Custom callbacks and scripts must continue to use supported scheduled APIs for direct Bukkit work; arbitrary script code is not made thread-safe automatically.

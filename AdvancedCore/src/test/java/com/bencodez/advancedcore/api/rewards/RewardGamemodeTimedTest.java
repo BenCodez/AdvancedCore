@@ -212,6 +212,86 @@ class RewardGamemodeTimedTest {
         }
     }
 
+    @Test void allowedGameModeKeepsDefaultRewardInjectionOnTheWorker() throws Exception {
+        configuredGameModeRewardInjectionRunsOffOwner("GameModes", GameMode.SURVIVAL, "SURVIVAL");
+    }
+
+    @Test void blacklistedGameModeKeepsDefaultRewardInjectionOnTheWorker() throws Exception {
+        configuredGameModeRewardInjectionRunsOffOwner("BlackListedGameModes", GameMode.SURVIVAL, "CREATIVE");
+    }
+
+    private void configuredGameModeRewardInjectionRunsOffOwner(String path, GameMode currentMode,
+            String configuredMode) throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            useWorkerContext(fixture);
+            fixture.mode.set(currentMode);
+            doAnswer(call -> { assertTrue(fixture.playerOwner.get(), "native XP mutation requires its owner"); return null; })
+                    .when(fixture.player).giveExp(7);
+            AtomicInteger injected = new AtomicInteger();
+            fixture.handler.addInjectedReward(new RewardInject("WorkerBoundary") {
+                @Override public Object onRewardRequest(Reward reward, AdvancedCoreUser user,
+                        ConfigurationSection data, HashMap<String, String> placeholders) {
+                    assertFalse(fixture.playerOwner.get(), "default reward injections must run on the worker");
+                    injected.incrementAndGet();
+                    user.giveExp(7);
+                    return null;
+                }
+            });
+            Reward reward = fixture.reward("Due", false);
+            reward.getConfig().getConfigData().set(path, List.of(configuredMode));
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            assertEquals(1, injected.get());
+            verify(fixture.player, atLeastOnce()).getGameMode();
+            verify(fixture.player).giveExp(7);
+        }
+    }
+
+    @Test void configuredJavascriptRewardRunsOnTheWorker() throws Exception {
+        try (Fixture fixture = new Fixture();
+                var engines = mockConstruction(com.bencodez.advancedcore.api.javascript.JavascriptEngine.class,
+                        withSettings().defaultAnswer(RETURNS_SELF), (engine, context) -> {
+                            doAnswer(call -> {
+                                assertFalse(fixture.playerOwner.get(), "reward scripts must not block the player owner");
+                                return null;
+                            }).when(engine).execute(anyString());
+                        })) {
+            useWorkerContext(fixture);
+            doReturn(mock(org.bukkit.OfflinePlayer.class)).when(fixture.user).getOfflinePlayer();
+            com.bencodez.advancedcore.api.rewards.builtin.RewardJavascript.register(fixture.handler, fixture.plugin);
+            Reward reward = fixture.reward("Due", true);
+            reward.getConfig().getConfigData().set("Javascripts", new ArrayList<>(List.of("true")));
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            assertEquals(1, engines.constructed().size());
+            verify(engines.constructed().getFirst()).execute("true");
+        }
+    }
+
+    @Test void unconfiguredAwaitedInjectionRetainsItsEstablishedOwnerBoundary() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            useWorkerContext(fixture);
+            AtomicInteger calls = new AtomicInteger();
+            fixture.handler.addInjectedReward(new RewardInject("AwaitedControl") {
+                @Override public boolean supportsAsyncRequest() { return true; }
+                @Override public Object onRewardRequest(Reward reward, AdvancedCoreUser user,
+                        ConfigurationSection data, HashMap<String, String> placeholders) {
+                    assertTrue(fixture.playerOwner.get(), "unconfigured awaited delivery keeps its existing boundary");
+                    calls.incrementAndGet();
+                    return null;
+                }
+            });
+            Reward reward = fixture.reward("Due", false);
+            reward.getConfig().getConfigData().set("AwaitedControl", true);
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions()).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            assertEquals(1, calls.get());
+        }
+    }
+
     @Test void builtInPermissionRequirementReadsOnlinePlayerOnOwnerForGiveAndEligibility() throws Exception {
         try (Fixture fixture = new Fixture()) {
             var scheduler = fixture.plugin.getBukkitScheduler();

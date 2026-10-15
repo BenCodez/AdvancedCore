@@ -1268,8 +1268,17 @@ public class Reward {
 						&& !checkPlayerEligibility(user, eligibilityOptions)) {
 					return CompletableFuture.failedFuture(new PlayerEligibilityDeferredException());
 				}
-								return requestInjectionAsync(inject, user, placeholders, replayState, injectionKey, occurrenceId,
-										eligibilityOptions);
+				Supplier<CompletionStage<Object>> injection = () -> {
+					if (!plugin.isEnabled()) return CompletableFuture.failedFuture(
+							new IllegalStateException("Plugin disabled before reward injection completed"));
+					return requestInjectionAsync(inject, user, placeholders, replayState, injectionKey, occurrenceId,
+							eligibilityOptions);
+				};
+				// Opted-in live eligibility owns only the native observation. Callback
+				// bodies may do blocking provider/script work; collected game actions
+				// retain their own final owner-thread eligibility checks.
+				return RewardEligibility.isConfigured(getConfig().getConfigData())
+						? continueOffServerThread(injection) : injection.get();
 			});
 			CompletionStage<Object> result = inject.isSynchronize() && inject.supportsAsyncSynchronization()
 					? inject.runSynchronizedAsync(request)
