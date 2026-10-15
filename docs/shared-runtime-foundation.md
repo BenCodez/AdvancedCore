@@ -74,16 +74,25 @@ daemon worker until that accepted retirement actually settles, without renewing
 any caller wait. The runtime distinguishes an accepted native retirement from a
 pending time transition or consumer hook; its watchdog cannot discard that
 retirement's queued final task.
-Consequently, durable completion
-can outlive plugin disable, and a JVM exit before that completion can lose the
-unfinished work. A timeout never means that persistence succeeded.
+Durable completion can outlive plugin disable. While admitted shutdown work is
+pending, a JVM hook registered with native file admission during startup gives
+its existing owners the remainder of the same 15-second deadline during orderly
+process exit, including disable inside an already-running host shutdown hook.
+The hook performs no file writes or Bukkit calls and does not renew the deadline.
+It waits at most 15 seconds from process exit as well, even if the host has not yet
+started plugin disable. Successful ownership release or the disable deadline
+removes it during a reload;
+failed publication still retains the original failure and native admission fence.
+An exit after the deadline, a hard process kill, or failure to register the hook
+can still lose unfinished work. A timeout never means persistence succeeded.
 
 The 15-second limit bounds AdvancedCore's waits. Synchronous consumer methods
 (`onBeforeStorageShutdown`, `onUnLoad`, `onShutdownComplete`) and third-party
 Bukkit/integration cleanup must return promptly: Java cannot safely preempt them
-on the lifecycle thread. AdvancedCore introduces no server-wide shutdown hook or
-thread scan, and cannot guarantee a total server-stop time when another plugin
-or one of these callbacks blocks.
+on the lifecycle thread. The temporary process hook waits only for already-owned
+shutdown stages and never scans threads or calls other plugins. AdvancedCore
+cannot guarantee a total server-stop time when another plugin or one of these
+callbacks blocks.
 
 Consumer `onBeforeStorageShutdown()` stages settle before shared user storage
 retirement begins. A thrown exception, exceptional completion, or cancellation

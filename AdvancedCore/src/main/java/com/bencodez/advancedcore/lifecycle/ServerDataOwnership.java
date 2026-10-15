@@ -9,6 +9,11 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Non-blocking admission before native ServerData reads. Only opaque String
@@ -23,6 +28,11 @@ public final class ServerDataOwnership {
     private final String token = UUID.randomUUID().toString();
     private boolean completionAttached;
     private boolean released;
+    private final CompletableFuture<Long> shutdownStarted = new CompletableFuture<>();
+    private final CompletableFuture<Void> processReleased = new CompletableFuture<>();
+    private final AtomicBoolean hookRemoved = new AtomicBoolean();
+    private Thread processHook;
+    private Runtime processRuntime;
 
     private ServerDataOwnership(Properties properties, String key) {
         this.properties = properties;
@@ -50,7 +60,54 @@ public final class ServerDataOwnership {
             }
             properties.setProperty(key, ownership.token);
         }
+        try { ownership.installProcessHook(); }
+        catch (RuntimeException | Error failure) {
+            synchronized (properties) {
+                if (ownership.token.equals(properties.get(key))) properties.remove(key);
+            }
+            throw failure;
+        }
         return ownership;
+    }
+
+    private void installProcessHook() {
+        // Register during startup: registering from a host's shutdown hook is too late.
+        // The hook observes ownership only; it never invokes plugin or Bukkit callbacks.
+        processRuntime = Runtime.getRuntime();
+        processHook = new Thread(this::awaitProcessExit, "AdvancedCore-ServerData-Exit");
+        processRuntime.addShutdownHook(processHook);
+    }
+
+    /** Starts once at disable entry; final admission cannot renew the same deadline. */
+    public void beginShutdown(long startedNanos) {
+        if (shutdownStarted.complete(startedNanos)) {
+            CompletableFuture.delayedExecutor(remaining(startedNanos), TimeUnit.NANOSECONDS)
+                    .execute(this::removeProcessHook);
+        }
+    }
+
+    private void awaitProcessExit() {
+        long processExitStarted = System.nanoTime();
+        try {
+            long disableStarted = shutdownStarted.get(remaining(processExitStarted), TimeUnit.NANOSECONDS);
+            long budget = Math.min(remaining(processExitStarted), remaining(disableStarted));
+            if (budget > 0) processReleased.get(budget, TimeUnit.NANOSECONDS);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException | TimeoutException settledOrExpired) {
+            // Publication stages retain their real outcome; timeout is never an acknowledgement.
+        }
+    }
+
+    private static long remaining(long startedNanos) {
+        long elapsed = Math.max(0L, System.nanoTime() - startedNanos);
+        return Math.max(0L, TimeUnit.SECONDS.toNanos(15) - elapsed);
+    }
+
+    private void removeProcessHook() {
+        if (!hookRemoved.compareAndSet(false, true)) return;
+        try { processRuntime.removeShutdownHook(processHook); }
+        catch (IllegalStateException stopping) { /* The JVM is already invoking its hooks. */ }
     }
 
     /**
@@ -65,6 +122,7 @@ public final class ServerDataOwnership {
             if (completionAttached) return;
             completionAttached = true;
         }
+        beginShutdown(System.nanoTime());
         completion.whenComplete((ignored, failure) -> {
             if (failure != null) return;
             synchronized (this) {
@@ -75,6 +133,8 @@ public final class ServerDataOwnership {
                     released = true;
                 }
             }
+            processReleased.complete(null);
+            removeProcessHook();
         });
     }
 
