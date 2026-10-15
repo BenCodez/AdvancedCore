@@ -1,6 +1,8 @@
 package com.bencodez.advancedcore.api.user.presence;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.IdentityHashMap;
@@ -22,6 +24,9 @@ public final class PlayerPresenceService implements AutoCloseable {
     private final PlayerPresenceLookup lookup;
     private final Object admission = new Object();
     private final IdentityHashMap<CompletableFuture<PlayerPresence>, Boolean> pending = new IdentityHashMap<>();
+    private record BatchRequest(BatchPlayerPresenceLookup.Query query, CompletableFuture<PlayerPresence> result) { }
+    private final ArrayDeque<BatchRequest> queuedBatch = new ArrayDeque<>();
+    private boolean batchScheduled;
     private boolean closed;
 
     public PlayerPresenceService(Executor worker, PlayerPresenceLookup lookup) {
@@ -100,10 +105,63 @@ public final class PlayerPresenceService implements AutoCloseable {
     }
 
     private void submit(UUID identity, CompletableFuture<PlayerPresence> result, boolean completeOnlineHistory) {
+        if (lookup instanceof BatchPlayerPresenceLookup batch) {
+            var request = new BatchRequest(new BatchPlayerPresenceLookup.Query(identity, completeOnlineHistory), result);
+            try {
+                // Registration must reach its own place on the shared worker.
+                // Joining a previously queued read must never overtake persistence.
+                worker.execute(() -> registerBatch(request, batch));
+            } catch (RuntimeException rejected) {
+                finish(result, PlayerPresence.UNKNOWN);
+            }
+            return;
+        }
         try {
             worker.execute(() -> completeLookup(identity, result, completeOnlineHistory));
         } catch (RuntimeException rejected) {
             finish(result, PlayerPresence.UNKNOWN);
+        }
+    }
+
+    private void registerBatch(BatchRequest request, BatchPlayerPresenceLookup batch) {
+        synchronized (admission) {
+            if (closed || !pending.containsKey(request.result())) return;
+            queuedBatch.add(request);
+            if (batchScheduled) return;
+            batchScheduled = true;
+        }
+        try {
+            // Yield behind already queued storage and registrations before reading.
+            worker.execute(() -> completeBatch(batch));
+        } catch (RuntimeException rejected) {
+            ArrayList<BatchRequest> retiring;
+            synchronized (admission) {
+                retiring = new ArrayList<>(queuedBatch);
+                queuedBatch.clear();
+                batchScheduled = false;
+            }
+            for (var entry : retiring) finish(entry.result(), PlayerPresence.UNKNOWN);
+        }
+    }
+
+    private void completeBatch(BatchPlayerPresenceLookup batch) {
+        ArrayList<BatchRequest> cohort;
+        synchronized (admission) {
+            if (closed) return;
+            cohort = new ArrayList<>(queuedBatch);
+            queuedBatch.clear();
+            batchScheduled = false;
+        }
+        List<PlayerPresence> evidence = null;
+        try {
+            evidence = batch.checkBatch(cohort.stream().map(BatchRequest::query).toList());
+            if (evidence == null || evidence.size() != cohort.size()) evidence = null;
+        } catch (Exception failed) {
+            if (failed instanceof InterruptedException) Thread.currentThread().interrupt();
+        }
+        for (int index = 0; index < cohort.size(); index++) {
+            PlayerPresence result = evidence == null ? null : evidence.get(index);
+            finish(cohort.get(index).result(), result == null ? PlayerPresence.UNKNOWN : result);
         }
     }
 
@@ -142,6 +200,7 @@ public final class PlayerPresenceService implements AutoCloseable {
             closed = true;
             retiring = new ArrayList<>(pending.keySet());
             pending.clear();
+            queuedBatch.clear();
         }
         for (CompletableFuture<PlayerPresence> result : retiring)
             result.complete(PlayerPresence.UNKNOWN);

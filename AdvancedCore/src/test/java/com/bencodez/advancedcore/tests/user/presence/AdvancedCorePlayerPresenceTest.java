@@ -101,11 +101,11 @@ class AdvancedCorePlayerPresenceTest {
         }
         assertNotNull(registered.get());
         var result = plugin.checkPlayerPresenceAsync(USER);
-        assertFalse(result.toCompletableFuture().isDone()); tasks.remove().run();
+        assertFalse(result.toCompletableFuture().isDone()); while (!tasks.isEmpty()) tasks.remove().run();
         assertEquals(PlayerPresence.NEVER_JOINED, value(result));
         try (var lifecycle = mockConstruction(AdvancedCoreLifecycle.class)) { plugin.onDisable(); }
         assertEquals(PlayerPresence.UNKNOWN, registered.get().check(USER));
-        verify(worker).execute(any(Runnable.class)); verifyNoMoreInteractions(worker);
+        verify(worker, times(2)).execute(any(Runnable.class)); verifyNoMoreInteractions(worker);
         try (var files = Files.list(history)) { assertEquals(0, files.count()); }
     }
 
@@ -126,11 +126,11 @@ class AdvancedCorePlayerPresenceTest {
             runtime.when(() -> AdvancedCoreLifecycle.createRuntimeExecutors(plugin)).thenReturn(executors);
             assertThrows(IllegalStateException.class, plugin::onEnable);
         }
-        var result = plugin.checkPlayerPresenceAsync(USER); tasks.remove().run();
+        var result = plugin.checkPlayerPresenceAsync(USER); while (!tasks.isEmpty()) tasks.remove().run();
         assertEquals(PlayerPresence.UNKNOWN, value(result), "No saved record cannot prove absence when saving is disabled");
         var player = mock(org.bukkit.entity.Player.class); when(player.getUniqueId()).thenReturn(USER);
         registered.get().onJoin(new org.bukkit.event.player.PlayerJoinEvent(player, null));
-        result = plugin.checkPlayerPresenceAsync(USER); tasks.remove().run();
+        result = plugin.checkPlayerPresenceAsync(USER); while (!tasks.isEmpty()) tasks.remove().run();
         assertEquals(PlayerPresence.JOINED, value(result));
         try (var files = Files.list(history)) { assertEquals(0, files.count()); }
         try (var lifecycle = mockConstruction(AdvancedCoreLifecycle.class)) { plugin.onDisable(); }

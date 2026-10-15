@@ -22,17 +22,24 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
 /** Read-only retained server history, with owner-observed joins in this generation. */
-public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, Listener, AutoCloseable {
+public final class BukkitPlayerPresenceLookup implements BatchPlayerPresenceLookup, Listener, AutoCloseable {
     private static final int MAX_DIRECTORY_ENTRIES = 1_000_000;
     private static final int MAX_RECOVERY_IDENTITIES = 65536;
+    private static final Set<String> CANONICAL_SUFFIXES = Set.of(".dat", ".dat_old", ".dat_new", ".dat.tmp",
+            ".dat.offline-read", ".dat_old.offline-read");
     private record ScopeIdentity(Object fileKey, FileTime created) { }
     private record RecoveryIndex(ScopeIdentity scope, FileTime modified, Set<UUID> identities, boolean offlineHistory) { }
+    private record RecoverySnapshot(RecoveryIndex index, Set<UUID> retainedCandidates) { }
     private static final RecoveryIndex RETIRED = new RecoveryIndex(null, null, Set.of(), true);
     private final AtomicReference<RecoveryIndex> recoveryIndex = new AtomicReference<>();
     private final Object recoveryScan = new Object();
     @FunctionalInterface interface AttributeReader {
         BasicFileAttributes read(Path path) throws IOException;
     }
+    @FunctionalInterface interface DirectoryReader {
+        java.nio.file.DirectoryStream<Path> open(Path path) throws IOException;
+    }
+    private final DirectoryReader directoryReader;
     private final AttributeReader attributeReader;
     private final Path historyDirectory;
     private final HashSet<UUID> joined = new HashSet<>();
@@ -46,7 +53,12 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
     }
 
     BukkitPlayerPresenceLookup(Path historyDirectory, AttributeReader attributeReader) {
+        this(historyDirectory, attributeReader, Files::newDirectoryStream);
+    }
+
+    BukkitPlayerPresenceLookup(Path historyDirectory, AttributeReader attributeReader, DirectoryReader directoryReader) {
         this.attributeReader = java.util.Objects.requireNonNull(attributeReader);
+        this.directoryReader = java.util.Objects.requireNonNull(directoryReader);
         Path candidate = historyDirectory == null ? null : historyDirectory.toAbsolutePath();
         if (candidate != null) for (Path part : candidate) {
             if (part.toString().equals("..")) { candidate = null; break; }
@@ -139,6 +151,10 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
     }
 
     private PlayerPresence check(UUID identity, boolean completeOnlineHistory) {
+        return check(identity, completeOnlineHistory, true);
+    }
+
+    private PlayerPresence check(UUID identity, boolean completeOnlineHistory, boolean scanRecovery) {
         if (identity == null) return PlayerPresence.UNKNOWN;
         PlayerPresence live = liveEvidence(identity);
         if (live != null) return live;
@@ -181,7 +197,7 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
             }
             // Native saves use UUID-random.dat; their existence prevents absence
             // proof even if a crash left no canonical record. Never load or alter them.
-            boolean recovery = !valid && !present && !failed && hasRecovery(identity, before, completeOnlineHistory);
+            boolean recovery = scanRecovery && !valid && !present && !failed && hasRecovery(identity, before, completeOnlineHistory);
             BasicFileAttributes after = attributes(historyDirectory);
             if (!unlinkedScope() || !after.isDirectory() || after.isOther() || !scope.equals(identity(after)))
                 return PlayerPresence.UNKNOWN;
@@ -201,7 +217,7 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
 
     private boolean hasRecovery(UUID identity, BasicFileAttributes scope, boolean completeOnlineHistory) throws IOException {
         // Even a cached absence index needs currently readable directory scope.
-        try (var ignored = Files.newDirectoryStream(historyDirectory)) { }
+        try (var ignored = directoryReader.open(historyDirectory)) { }
         synchronized (recoveryScan) {
             ScopeIdentity scopeIdentity = identity(scope);
             if (scopeIdentity == null) return true;
@@ -213,40 +229,94 @@ public final class BukkitPlayerPresenceLookup implements PlayerPresenceLookup, L
                     && cached.modified().equals(scope.lastModifiedTime())
                     && (cached.identities().contains(identity) || (completeOnlineHistory && cached.offlineHistory())))
                 return true;
-            HashSet<UUID> identities = new HashSet<>();
-            boolean offlineHistory = false;
-            int examined = 0;
-            try (var entries = Files.newDirectoryStream(historyDirectory)) {
-                for (Path entry : entries) {
-                    if (++examined > MAX_DIRECTORY_ENTRIES) return true;
-                    String name = entry.getFileName().toString();
-                    if (name.length() < 40) continue;
-                    String suffix = name.substring(36).toLowerCase(java.util.Locale.ROOT);
-                    boolean temporary = suffix.startsWith("-") && suffix.endsWith(".dat")
-                            && suffix.length() > 5;
-                    boolean corrupted = suffix.startsWith("_corrupted_")
-                            && (suffix.endsWith(".dat") || suffix.endsWith(".dat_old"));
-                    UUID record;
-                    try { record = UUID.fromString(name.substring(0, 36)); }
-                    catch (IllegalArgumentException unrelated) { continue; }
-                    if (!record.toString().equalsIgnoreCase(name.substring(0, 36))) continue;
-                    // Native offline UUIDs can retain history under an earlier name.
-                    // Their ownership cannot be inferred from the current name cache.
-                    if (!isOnlineIdentity(record) && (suffix.startsWith(".dat") || temporary || corrupted))
-                        offlineHistory = true;
-                    if (!temporary && !corrupted) continue;
-                    identities.add(record);
-                    if (identities.size() > MAX_RECOVERY_IDENTITIES) return true;
-                }
-            }
-            BasicFileAttributes after = attributes(historyDirectory);
-            if (!unlinkedScope() || !after.isDirectory() || after.isOther() || !scopeIdentity.equals(identity(after))
-                    || !scope.lastModifiedTime().equals(after.lastModifiedTime())) return true;
-            RecoveryIndex scanned = new RecoveryIndex(scopeIdentity, scope.lastModifiedTime(), Set.copyOf(identities), offlineHistory);
-            // close never waits for the scan and a retired scan cannot repopulate it.
-            if (!recoveryIndex.compareAndSet(cached, scanned)) return true;
-            return identities.contains(identity) || (completeOnlineHistory && offlineHistory);
+            RecoverySnapshot scanned = scanRecovery(scope, Set.of());
+            return scanned == null || scanned.index().identities().contains(identity)
+                    || (completeOnlineHistory && scanned.index().offlineHistory());
         }
+    }
+
+    /** Called under recoveryScan; no negative result is retained for a later cohort. */
+    private RecoverySnapshot scanRecovery(BasicFileAttributes scope, Set<UUID> candidates) throws IOException {
+        RecoveryIndex cached = recoveryIndex.get();
+        if (cached == RETIRED) return null;
+        ScopeIdentity scopeIdentity = identity(scope);
+        if (scopeIdentity == null) return null;
+        HashSet<UUID> identities = new HashSet<>();
+        HashSet<UUID> retainedCandidates = new HashSet<>();
+        boolean offlineHistory = false;
+        int examined = 0;
+        try (var entries = directoryReader.open(historyDirectory)) {
+            for (Path entry : entries) {
+                if (++examined > MAX_DIRECTORY_ENTRIES) return null;
+                String name = entry.getFileName().toString();
+                if (name.length() < 40) continue;
+                String suffix = name.substring(36).toLowerCase(java.util.Locale.ROOT);
+                boolean temporary = suffix.startsWith("-") && suffix.endsWith(".dat")
+                        && suffix.length() > 5;
+                boolean corrupted = suffix.startsWith("_corrupted_")
+                        && (suffix.endsWith(".dat") || suffix.endsWith(".dat_old"));
+                UUID record;
+                try { record = UUID.fromString(name.substring(0, 36)); }
+                catch (IllegalArgumentException unrelated) { continue; }
+                if (!record.toString().equalsIgnoreCase(name.substring(0, 36))) continue;
+                // Native offline UUIDs can retain history under an earlier name.
+                // Their ownership cannot be inferred from the current name cache.
+                if (!isOnlineIdentity(record) && (suffix.startsWith(".dat") || temporary || corrupted))
+                    offlineHistory = true;
+                boolean canonical = CANONICAL_SUFFIXES.contains(suffix);
+                if (candidates.contains(record) && (canonical || temporary || corrupted)) retainedCandidates.add(record);
+                if (!temporary && !corrupted) continue;
+                identities.add(record);
+                if (identities.size() > MAX_RECOVERY_IDENTITIES) return null;
+            }
+        }
+        BasicFileAttributes after = attributes(historyDirectory);
+        if (!unlinkedScope() || !after.isDirectory() || after.isOther() || !scopeIdentity.equals(identity(after))
+                || !scope.lastModifiedTime().equals(after.lastModifiedTime())) return null;
+        RecoveryIndex scanned = new RecoveryIndex(scopeIdentity, scope.lastModifiedTime(), Set.copyOf(identities), offlineHistory);
+        // close never waits for the scan and a retired scan cannot repopulate it.
+        if (!recoveryIndex.compareAndSet(cached, scanned)) return null;
+        return new RecoverySnapshot(scanned, Set.copyOf(retainedCandidates));
+    }
+
+    @Override
+    public java.util.List<PlayerPresence> checkBatch(java.util.List<BatchPlayerPresenceLookup.Query> queries) {
+        synchronized (joined) {
+            if (closed) return java.util.Collections.nCopies(queries.size(), PlayerPresence.UNKNOWN);
+        }
+        var results = new java.util.ArrayList<PlayerPresence>(queries.size());
+        var candidates = new HashSet<UUID>();
+        BasicFileAttributes before = null;
+        try {
+            if (historyDirectory != null && unlinkedScope()) before = attributes(historyDirectory);
+        } catch (IOException | RuntimeException unavailable) { /* Positives may still be available. */ }
+        for (var query : queries) {
+            PlayerPresence evidence = check(query.identity(), query.completeOnlineHistory(), false);
+            results.add(evidence);
+            if (evidence == PlayerPresence.NEVER_JOINED) candidates.add(query.identity());
+        }
+        if (candidates.isEmpty()) return results;
+        RecoverySnapshot snapshot = null;
+        try {
+            if (before != null && before.isDirectory() && !before.isOther()) {
+                synchronized (recoveryScan) { snapshot = scanRecovery(before, candidates); }
+            }
+        } catch (IOException | RuntimeException unavailable) { /* All provisional negatives stay unknown. */ }
+        for (int index = 0; index < queries.size(); index++) {
+            if (results.get(index) != PlayerPresence.NEVER_JOINED) continue;
+            var query = queries.get(index);
+            PlayerPresence live = liveEvidence(query.identity());
+            if (live != null) { results.set(index, live); continue; }
+            synchronized (joined) {
+                if (!closed && joined.contains(query.identity())) results.set(index, PlayerPresence.JOINED);
+                else if (closed || negativeUnavailable || snapshot == null
+                        || snapshot.retainedCandidates().contains(query.identity())
+                        || snapshot.index().identities().contains(query.identity())
+                        || (query.completeOnlineHistory() && (observedOfflineHistory || snapshot.index().offlineHistory())))
+                    results.set(index, PlayerPresence.UNKNOWN);
+            }
+        }
+        return results;
     }
 
     private static ScopeIdentity identity(BasicFileAttributes attributes) {

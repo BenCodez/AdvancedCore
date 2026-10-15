@@ -37,6 +37,13 @@ Native interrupted-save files (`UUID-random.dat`) and corruption backups prevent
 canonical record survives; their contents are never read as positive proof or changed. A worker-owned directory
 index preserves retained recovery evidence across checks. Every absent result requires a fresh bounded
 enumeration: directory identity and timestamps alone cannot certify unchanged entries.
+For the built-in provider, requests register at their own position on the existing storage worker,
+then one bounded cohort shares a fresh scan. Registration turns cannot move a later request ahead
+of previously queued persistence. Each cohort includes at most the existing 128 admitted entries;
+custom providers retain their original individual scheduling. Point-record checks run before the
+common enumeration, and a canonical/recovery record discovered there prevents a false negative.
+Subsequent cohorts always scan afresh, including on keyless filesystems with colliding timestamps;
+no cached negative result certifies a later request.
 Scanning is bounded to 1,000,000 entries and 65,536 recovery identities; incomplete, failed or unstable scans
 remain unknown. Closing the lookup clears the index without waiting for an in-flight scan.
 File keys strengthen stability checks when the provider supplies them. Providers without file keys use
