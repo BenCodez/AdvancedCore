@@ -45,6 +45,8 @@ public class RewardHandler {
     private final RewardInjectionRegistry rewardInjectionRegistry;
     @Getter
     private final RewardExecutor rewardExecutor;
+    @Getter
+    private final RewardEligibility rewardEligibility;
 
     AdvancedCorePlugin plugin;
 
@@ -59,6 +61,7 @@ public class RewardHandler {
         subRewardResolver = new SubRewardResolver(this, plugin);
         rewardLoader = new RewardLoader(this, plugin);
         rewardExecutor = new RewardExecutor(this, plugin);
+        rewardEligibility = new RewardEligibility(plugin, this);
     }
 
     public void addDirectlyDefined(DirectlyDefinedReward directlyDefinedReward) {
@@ -288,6 +291,7 @@ public class RewardHandler {
     }
 
     public void shutdown() {
+        rewardEligibility.close();
         delayedTimer.shutdown();
         try {
             delayedTimer.awaitTermination(10, TimeUnit.SECONDS);

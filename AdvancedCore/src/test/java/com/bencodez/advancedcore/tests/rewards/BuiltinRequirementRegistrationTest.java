@@ -108,7 +108,7 @@ public class BuiltinRequirementRegistrationTest {
     public void builtinCatalogRegistersAllRequirementPathsInHistoricalOrder() {
         withMockedServer(() -> assertRequirementPaths(BuiltinRequirements::register,
                 "Chance", "RewardExpiration", "Permission", "DayOfMonth", "Server", "BlockedServers", "Worlds",
-                "BlackListedWorlds", "RewardType", "JavascriptExpression", "Date", "LocationDistance"));
+                "BlackListedWorlds", "GameModes", "RewardType", "JavascriptExpression", "Date", "LocationDistance"));
     }
 
     private void assertRequirementPaths(BiConsumer<RewardHandler, AdvancedCorePlugin> registrar,

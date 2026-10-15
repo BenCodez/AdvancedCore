@@ -249,6 +249,9 @@ public final class RewardCommands {
 				ArrayList<String> consoleCommands = (ArrayList<String>) section.getList("Console", new ArrayList<>());
 				ArrayList<String> userCommands = (ArrayList<String>) section.getList("Player", new ArrayList<>());
 				boolean stagger = section.getBoolean("Stagger", true);
+				AdvancedCoreUser.PlayerEligibilityGuard eligibilityGuard = user.capturePlayerEligibilityGuard();
+				Reward.ReplayState replayState = Reward.currentReplayState();
+				String replayKey = Reward.currentReplayKey();
 				boolean playerCommandsPending = Reward.hasReplayCommandSnapshot(placeholders, "player")
 						? Reward.hasPendingReplayCommandWork(placeholders, "player")
 						: !userCommands.isEmpty();
@@ -260,9 +263,14 @@ public final class RewardCommands {
 				return availability.thenCompose(ignored -> consoleCommands.isEmpty()
 						&& !Reward.hasReplayCommandSnapshot(placeholders, "console")
 						? CompletableFuture.completedFuture(null)
-						: MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
-								placeholders, stagger))
-						.thenCompose(ignored -> user.preformCommandAsync(userCommands, placeholders))
+						: eligibilityGuard == null
+								? MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
+										placeholders, stagger)
+								: MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
+										placeholders, stagger, eligibilityGuard))
+						.thenCompose(ignored -> eligibilityGuard == null
+								? user.preformCommandAsync(userCommands, placeholders)
+								: user.preformCommandAsync(userCommands, placeholders, eligibilityGuard, replayState, replayKey))
                         .thenApply(ignored -> null);
             }
         }.addEditButton(new EditGUIButton(new ItemBuilder(Material.PAPER), new EditGUIValueList("Commands.Console", null) {
