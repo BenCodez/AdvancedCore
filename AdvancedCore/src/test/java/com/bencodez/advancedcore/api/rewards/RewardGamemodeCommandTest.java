@@ -25,6 +25,7 @@ import org.bukkit.Server;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.metadata.MetadataValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -148,6 +149,14 @@ class RewardGamemodeCommandTest {
         UUID id = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(id);
         when(player.isOnline()).thenReturn(true);
+        HashMap<org.bukkit.plugin.Plugin, MetadataValue> loginReceipt = new HashMap<>();
+        when(player.getMetadata("AdvancedCoreRewardEligibilityLogin"))
+                .thenAnswer(call -> loginReceipt.isEmpty() ? List.of() : List.copyOf(loginReceipt.values()));
+        doAnswer(call -> { MetadataValue value = call.getArgument(1);
+            loginReceipt.put(value.getOwningPlugin(), value); return null; })
+                .when(player).setMetadata(eq("AdvancedCoreRewardEligibilityLogin"), any(MetadataValue.class));
+        doAnswer(call -> { loginReceipt.remove(call.getArgument(1)); return null; })
+                .when(player).removeMetadata(eq("AdvancedCoreRewardEligibilityLogin"), any());
         AtomicReference<GameMode> mode = new AtomicReference<>(GameMode.SURVIVAL);
         when(player.getGameMode()).thenAnswer(call -> {
             assertTrue(playerOwner.get(), "gamemode must only be read on the player owner scheduler");
@@ -226,7 +235,9 @@ class RewardGamemodeCommandTest {
                 assertEquals(1, persisted.get().size());
                 mode.set(GameMode.SURVIVAL);
                 when(player.isOnline()).thenReturn(true);
-                var replay = handler.getRewardEligibility().signal(user).toCompletableFuture();
+                var replay = (disconnect || retirement != 0
+                        ? handler.getRewardEligibility().signalLogin(user, player)
+                        : handler.getRewardEligibility().signal(user)).toCompletableFuture();
                 drainUntilDone(callbacks, replay);
             }
             assertEquals(kind.equals("mixed-player") ? List.of("console-prefix", "first", "second")

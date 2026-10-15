@@ -32,6 +32,13 @@ public final class RewardEligibilityListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
+    public void onLogin(AdvancedCoreLoginEvent event) {
+        if (plugin.isEnabled() && !event.isCancelled() && event.getUser() != null && event.getPlayer() != null) {
+            plugin.getRewardHandler().getRewardEligibility().signalLogin(event.getUser(), event.getPlayer());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent event) {
         plugin.getRewardHandler().getRewardEligibility().disconnected(event.getPlayer());
     }

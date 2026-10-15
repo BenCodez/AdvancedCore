@@ -10,10 +10,12 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.LongSupplier;
 
 import org.bukkit.GameMode;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.metadata.FixedMetadataValue;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
@@ -23,6 +25,10 @@ import com.bencodez.simpleapi.folialib.enums.EntityTaskResult;
 public final class RewardEligibility {
     public static final int MAX_PENDING_PLAYERS = 4096;
     private static final int FALLBACK_BATCH = 128;
+    private static final String LOGIN_RECEIPT_KEY = "AdvancedCoreRewardEligibilityLogin";
+    private static final long INITIAL_FALLBACK_NANOS = TimeUnit.SECONDS.toNanos(10);
+    private static final long MAX_FALLBACK_NANOS = TimeUnit.MINUTES.toNanos(5);
+    private final LongSupplier nanoClock;
     private final AdvancedCorePlugin plugin;
     private final RewardHandler handler;
     private final LinkedHashMap<String, Pending> pending = new LinkedHashMap<>();
@@ -30,8 +36,13 @@ public final class RewardEligibility {
     private boolean closed;
 
     RewardEligibility(AdvancedCorePlugin plugin, RewardHandler handler) {
+        this(plugin, handler, System::nanoTime);
+    }
+
+    RewardEligibility(AdvancedCorePlugin plugin, RewardHandler handler, LongSupplier nanoClock) {
         this.plugin = plugin;
         this.handler = handler;
+        this.nanoClock = Objects.requireNonNull(nanoClock, "nanoClock");
     }
 
     /**
@@ -73,8 +84,19 @@ public final class RewardEligibility {
     /** Fast deterministic predicate; callers must already hold the player owner. */
     public boolean isEligible(ConfigurationSection data, AdvancedCoreUser user) {
         if (!isConfigured(data)) return true;
-        synchronized (this) { if (closed) return false; }
         if (!validModes(data, "GameModes") || !validModes(data, "BlackListedGameModes")) return false;
+        Pending observed;
+        synchronized (this) {
+            observed = pending.get(user.getUUID());
+            if (closed || observed != null && observed.awaitingLogin) return false;
+        }
+        if (observed != null) {
+            Player current = user.getPlayer();
+            synchronized (this) {
+                if (closed || pending.get(user.getUUID()) != observed || observed.awaitingLogin
+                        || observed.player == null || observed.player != current) return false;
+            }
+        }
         List<String> allowed = data.getStringList("GameModes");
         List<String> denied = data.getStringList("BlackListedGameModes");
         if (allowed.isEmpty() && denied.isEmpty()) return true;
@@ -106,13 +128,19 @@ public final class RewardEligibility {
     /** Records only a wake-up hint. The existing persistent queue remains authoritative. Owner-thread only. */
     void deferred(AdvancedCoreUser user) {
         Player player = user.getPlayer();
+        synchronized (this) {
+            Pending current = pending.get(user.getUUID());
+            if (closed || current != null && (current.awaitingLogin || current.player != player)) return;
+        }
         if (player == null || !player.isOnline()) return;
         synchronized (this) {
             if (closed) return;
             Pending current = pending.get(user.getUUID());
+            // Only the accepted login or receipt check may bind an unknown session.
+            if (current != null && (current.awaitingLogin || current.player != player)) return;
             if (current == null) {
                 if (pending.size() >= MAX_PENDING_PLAYERS) return;
-                current = new Pending(user, player);
+                current = new Pending(user, player, nanoClock.getAsLong());
                 pending.put(user.getUUID(), current);
             }
             current.user = user;
@@ -123,16 +151,33 @@ public final class RewardEligibility {
     }
 
     /** Publication can race a signal that observed an empty queue; renew the wake-up afterwards. */
-    synchronized void queued(AdvancedCoreUser user) {
-        if (closed) return;
+    void queued(AdvancedCoreUser user) {
+        retainHint(user);
+    }
+
+    /**
+     * Retains a bounded automatic wake-up for an already-due timed occurrence.
+     * A false result requires the caller to keep its ordinary future retry deadline
+     * and timer. This worker-safe hint never owns or completes the stored reward.
+     */
+    public synchronized boolean retainTimedRetry(AdvancedCoreUser user) {
+        Objects.requireNonNull(user, "user");
+        if (user.getPlugin() != plugin) throw new IllegalArgumentException("User belongs to another plugin");
+        return plugin.isEnabled() && retainHint(user) && fallback != null
+                && !fallback.isCancelled() && !fallback.isDone();
+    }
+
+    private synchronized boolean retainHint(AdvancedCoreUser user) {
+        if (closed) return false;
         Pending current = pending.get(user.getUUID());
         if (current == null) {
-            if (pending.size() >= MAX_PENDING_PLAYERS) return;
-            current = new Pending(user, null);
+            if (pending.size() >= MAX_PENDING_PLAYERS) return false;
+            current = new Pending(user, null, nanoClock.getAsLong());
             pending.put(user.getUUID(), current);
         }
         current.revision++;
         startFallback();
+        return true;
     }
 
     /**
@@ -141,6 +186,10 @@ public final class RewardEligibility {
      * This method accepts the consumer's user identity, including offline-mode identities.
      */
     public CompletionStage<Void> signal(AdvancedCoreUser user) {
+        return signal(user, null);
+    }
+
+    private CompletionStage<Void> signal(AdvancedCoreUser user, Pending fallbackEntry) {
         Objects.requireNonNull(user, "user");
         if (user.getPlugin() != plugin) return CompletableFuture.failedFuture(
                 new IllegalArgumentException("User belongs to another plugin"));
@@ -150,12 +199,22 @@ public final class RewardEligibility {
             if (closed || !plugin.isEnabled()) return CompletableFuture.failedFuture(
                     new IllegalStateException("Reward eligibility is closed"));
             current = pending.get(user.getUUID());
+            if (current != null && current.awaitingLogin) return CompletableFuture.completedFuture(null);
+            long now = nanoClock.getAsLong();
+            if (fallbackEntry != null && (current != fallbackEntry || current.running != null
+                    || now - current.nextSweepNanos < 0)) return CompletableFuture.completedFuture(null);
             if (current == null) {
                 if (pending.size() >= MAX_PENDING_PLAYERS) return CompletableFuture.failedFuture(
                         new IllegalStateException("Too many pending reward eligibility checks"));
-                current = new Pending(user, null);
+                current = new Pending(user, null, nanoClock.getAsLong());
                 pending.put(user.getUUID(), current);
             }
+            if (fallbackEntry == null) {
+                current.fallbackDelayNanos = INITIAL_FALLBACK_NANOS;
+            } else {
+                current.fallbackDelayNanos = Math.min(MAX_FALLBACK_NANOS, current.fallbackDelayNanos * 2);
+            }
+            current.nextSweepNanos = now + current.fallbackDelayNanos;
             if (current.running != null) return current.running;
             current.running = new CompletableFuture<>();
             revision = current.revision;
@@ -175,13 +234,26 @@ public final class RewardEligibility {
 
     private void runSignalCheck(AdvancedCoreUser user, Pending captured, long revision,
             CompletableFuture<Void> result) {
+        boolean awaitingLogin;
+        boolean needsBinding;
         synchronized (this) {
             if (closed || pending.get(user.getUUID()) != captured || captured.running != result) return;
+            awaitingLogin = captured.awaitingLogin;
+            needsBinding = captured.player == null;
+        }
+        if (awaitingLogin) {
+            finishSignal(user, captured, revision, result, false, null);
+            return;
+        }
+        if (needsBinding) {
+            resolveSignalPlayer(user, captured, revision, result);
+            return;
         }
         final boolean claimedBeforeCheck;
         final CompletionStage<Void> check;
         try {
             claimedBeforeCheck = user.hasPendingRewardReplay();
+            user.checkDelayedTimedRewards();
             check = user.checkOfflineRewardsAsync();
             if (check == null) throw new IllegalStateException("Offline replay returned no completion stage");
         } catch (Throwable failure) {
@@ -203,6 +275,40 @@ public final class RewardEligibility {
             } catch (Throwable rejected) {
                 finishSignal(user, captured, revision, result, false, failure == null ? rejected : failure);
             }
+        });
+    }
+
+    /** Unknown worker-published hints require proof before any queue/storage probe. */
+    private void resolveSignalPlayer(AdvancedCoreUser user, Pending captured, long revision,
+            CompletableFuture<Void> result) {
+        Reward.continueOnResolvedPlayerThread(plugin, user, player -> {
+            synchronized (this) {
+                if (closed || pending.get(user.getUUID()) != captured || captured.running != result
+                        || captured.awaitingLogin) return CompletableFuture.completedFuture(false);
+                if (captured.player != null) return CompletableFuture.completedFuture(true);
+            }
+            boolean accepted = player != null && user.getPlayer() == player && player.isOnline()
+                    && player.getMetadata(LOGIN_RECEIPT_KEY).stream().anyMatch(value ->
+                            value.getOwningPlugin() == plugin && Boolean.TRUE.equals(value.value()));
+            synchronized (this) {
+                if (closed || pending.get(user.getUUID()) != captured || captured.running != result
+                        || captured.awaitingLogin) return CompletableFuture.completedFuture(false);
+                // A newer accepted login may have rebound the hint while this task waited.
+                if (captured.player != null) return CompletableFuture.completedFuture(true);
+                if (accepted) captured.player = player;
+                else {
+                    captured.awaitingLogin = true;
+                    captured.revision++;
+                }
+            }
+            return CompletableFuture.completedFuture(accepted);
+        }).whenComplete((accepted, failure) -> {
+            if (failure != null || !Boolean.TRUE.equals(accepted)) {
+                finishSignal(user, captured, revision, result, false, failure);
+                return;
+            }
+            try { plugin.getTimer().execute(() -> runSignalCheck(user, captured, revision, result)); }
+            catch (Throwable rejected) { finishSignal(user, captured, revision, result, false, rejected); }
         });
     }
 
@@ -229,9 +335,52 @@ public final class RewardEligibility {
         for (AdvancedCoreUser user : users) signal(user);
     }
 
-    public synchronized void disconnected(Player player) {
-        pending.entrySet().removeIf(entry -> entry.getValue().player == player && entry.getValue().running == null);
-        stopIdleFallback();
+    /**
+     * The logical hint may be the sole automatic wake-up for due timed work.
+     * Retain it across quit without polling storage or keeping a native player.
+     */
+    public void disconnected(Player player) {
+        player.removeMetadata(LOGIN_RECEIPT_KEY, plugin);
+        synchronized (this) {
+            for (Pending entry : pending.values()) {
+                if (entry.player == player) {
+                    entry.player = null;
+                    entry.awaitingLogin = true;
+                    entry.revision++;
+                }
+            }
+        }
+    }
+
+    /** Rebinds only known work after the resolved, authenticated login event. */
+    public CompletionStage<Void> signalLogin(AdvancedCoreUser user, Player player) {
+        Objects.requireNonNull(user, "user");
+        Objects.requireNonNull(player, "player");
+        if (user.getPlugin() != plugin) return CompletableFuture.failedFuture(
+                new IllegalArgumentException("User belongs to another plugin"));
+        synchronized (this) {
+            if (closed || !plugin.isEnabled()) return CompletableFuture.failedFuture(
+                    new IllegalStateException("Reward eligibility is closed"));
+        }
+        // Login events are asynchronous and can outlive their connection. Validate
+        // on that exact player's owner, rather than scheduling a replacement session.
+        return Reward.continueOnPlayerThread(plugin, player, () -> {
+            if (user.getPlayer() != player || !player.isOnline())
+                return CompletableFuture.completedFuture(null);
+            synchronized (this) { if (closed) return CompletableFuture.completedFuture(null); }
+            // Keep the receipt on the native session even if its work is published later.
+            player.setMetadata(LOGIN_RECEIPT_KEY, new FixedMetadataValue(plugin, Boolean.TRUE));
+            synchronized (this) {
+                if (closed) return CompletableFuture.completedFuture(null);
+                Pending current = pending.get(user.getUUID());
+                if (current == null) return CompletableFuture.completedFuture(null);
+                current.user = user;
+                current.player = player;
+                current.awaitingLogin = false;
+                current.revision++;
+            }
+            return signal(user);
+        });
     }
 
     private void sweep() {
@@ -246,7 +395,7 @@ public final class RewardEligibility {
             // Rotate bounded hints to give every pending player a turn.
             for (Pending entry : batch) pending.put(entry.user.getUUID(), entry);
         }
-        for (Pending entry : batch) signal(entry.user);
+        for (Pending entry : batch) signal(entry.user, entry);
     }
 
     private void stopIdleFallback() {
@@ -279,7 +428,14 @@ public final class RewardEligibility {
         private AdvancedCoreUser user;
         private Player player;
         private long revision;
+        private boolean awaitingLogin;
         private CompletableFuture<Void> running;
-        private Pending(AdvancedCoreUser user, Player player) { this.user = user; this.player = player; }
+        private long fallbackDelayNanos = INITIAL_FALLBACK_NANOS;
+        private long nextSweepNanos;
+        private Pending(AdvancedCoreUser user, Player player, long now) {
+            this.user = user;
+            this.player = player;
+            this.nextSweepNanos = now + INITIAL_FALLBACK_NANOS;
+        }
     }
 }

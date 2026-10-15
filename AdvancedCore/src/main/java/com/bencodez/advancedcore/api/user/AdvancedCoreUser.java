@@ -1535,6 +1535,9 @@ public class AdvancedCoreUser {
 
 	/** Restores a due timed entry after an asynchronous replay fails. */
 	private void restoreTimedReward(String rewardEntry, long time, Throwable failure) {
+		boolean eligibilityDeferred = Reward.isPlayerEligibilityDeferred(failure);
+		boolean retainedEligibilityRetry = eligibilityDeferred
+				&& plugin.getRewardHandler().getRewardEligibility().retainTimedRetry(this);
 		long retryTime;
 		synchronized (plugin) {
 			ReplayClaims claims = replayClaims();
@@ -1559,15 +1562,20 @@ public class AdvancedCoreUser {
 			int retry = Math.min(8, asyncRetryCount(restoredEntry) + 1);
 			long retryDelay = Math.min(TimeUnit.MINUTES.toMillis(5), TimeUnit.SECONDS.toMillis(1L << retry));
 			retryTime = System.currentTimeMillis() + retryDelay;
-			pending.put(withAsyncRetryCount(withAsyncReplayProgress(restoredEntry, failure), retry), retryTime);
+			pending.put(withAsyncRetryCount(withAsyncReplayProgress(restoredEntry, failure), retry),
+					retainedEligibilityRetry ? time : retryTime);
 			setTimedRewards(pending);
 			releaseReplayClaimsIfEmpty(claims);
 		}
-		// A due entry restored after its original timer fired needs its own retry
-		// timer; waiting for reconnect would strand it indefinitely.
-		loadTimedDelayedTimer(retryTime);
-		plugin.getLogger().warning("Could not deliver queued timed reward for " + getPlayerName()
-				+ "; it will be retried: " + failure.getMessage());
+		// Accepted eligibility retries share the bounded fallback. A separate timer
+		// is needed only when that owner cannot retain the hint or this is another failure.
+		if (!retainedEligibilityRetry) loadTimedDelayedTimer(retryTime);
+		if (eligibilityDeferred) {
+			plugin.debug("Queued timed reward remains deferred by player eligibility for " + getPlayerName());
+		} else {
+			plugin.getLogger().warning("Could not deliver queued timed reward for " + getPlayerName()
+					+ "; it will be retried: " + failure.getMessage());
+		}
 	}
 
 	private ReplayClaims replayClaims() {

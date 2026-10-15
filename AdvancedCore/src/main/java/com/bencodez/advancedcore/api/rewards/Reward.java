@@ -1275,10 +1275,28 @@ public class Reward {
 		return requestOnServerThread(plugin, user, request, TimeUnit.SECONDS.toMillis(30));
 	}
 
+	/** Runs a continuation on the exact native session supplied by a login event. */
+	static <T> CompletionStage<T> continueOnPlayerThread(AdvancedCorePlugin plugin, Player player,
+			Supplier<CompletionStage<T>> request) {
+		return requestOnServerThread(plugin, null, ignored -> request.get(), TimeUnit.SECONDS.toMillis(30),
+				java.util.Objects.requireNonNull(player, "player"));
+	}
+
 	private static <T> CompletionStage<T> requestOnServerThread(AdvancedCorePlugin plugin, AdvancedCoreUser user,
 			Supplier<CompletionStage<T>> request, long timeoutMillis) {
+		return requestOnServerThread(plugin, user, ignored -> request.get(), timeoutMillis, null);
+	}
+
+	/** Resolves off the entity owner, then supplies that exact session on its owner. */
+	static <T> CompletionStage<T> continueOnResolvedPlayerThread(AdvancedCorePlugin plugin, AdvancedCoreUser user,
+			Function<Player, CompletionStage<T>> request) {
+		return requestOnServerThread(plugin, user, request, TimeUnit.SECONDS.toMillis(30), null);
+	}
+
+	private static <T> CompletionStage<T> requestOnServerThread(AdvancedCorePlugin plugin, AdvancedCoreUser user,
+			Function<Player, CompletionStage<T>> request, long timeoutMillis, Player nativeSession) {
 		CompletableFuture<CompletionStage<T>> handoff = new CompletableFuture<>();
-		Runnable invocation = () -> {
+		Consumer<Player> invocation = ownerPlayer -> {
 			if (!plugin.isEnabled()) {
 				handoff.complete(CompletableFuture.failedFuture(
 						new IllegalStateException("Plugin disabled before reward injection completed")));
@@ -1289,7 +1307,7 @@ public class Reward {
 			// queued task must not produce late reward side effects.
 			if (!handoff.complete(result)) return;
 			try {
-				CompletionStage<T> stage = request.get();
+				CompletionStage<T> stage = request.apply(ownerPlayer);
 				if (stage == null) {
 					result.completeExceptionally(
 							new IllegalStateException("Reward injection returned a null asynchronous result"));
@@ -1310,9 +1328,10 @@ public class Reward {
 				return;
 			}
 			try {
-				Player player = user.getPlayer();
-				if (player != null) plugin.getBukkitScheduler().executeOrScheduleSync(plugin, invocation, player);
-				else invocation.run();
+				Player player = nativeSession != null ? nativeSession : user.getPlayer();
+				if (player != null) plugin.getBukkitScheduler().executeOrScheduleSync(plugin,
+						() -> invocation.accept(player), player);
+				else invocation.accept(null);
 			} catch (Throwable failure) {
 				handoff.completeExceptionally(failure);
 			}
@@ -1665,7 +1684,7 @@ public class Reward {
 		return new PlayerEligibilityDeferredException();
 	}
 
-	private static boolean isPlayerEligibilityDeferred(Throwable failure) {
+	public static boolean isPlayerEligibilityDeferred(Throwable failure) {
 		for (Throwable current = failure; current != null; current = current.getCause()) {
 			if (current instanceof PlayerEligibilityDeferredException) return true;
 		}
@@ -1699,6 +1718,7 @@ public class Reward {
 		}
 
 		boolean canGive = checkPlayerEligibility(user, rewardOptions);
+		boolean playerEligibilityDenied = !canGive;
 		boolean allowOffline = !canGive;
 		boolean chanceApproved = false;
 		if (!rewardOptions.isIgnoreRequirements()) {
@@ -1709,7 +1729,7 @@ public class Reward {
 						canGive = false;
 						if (!inject.isAllowReattempt()) {
 							return CompletableFuture.completedFuture(
-									new LiveRewardDecision(false, false, vanished, false, true));
+									new LiveRewardDecision(false, false, vanished, false, true, playerEligibilityDenied));
 						}
 						allowOffline = true;
 					} else if ("Chance".equals(inject.getPath())) {
@@ -1735,12 +1755,16 @@ public class Reward {
 		boolean verifyOnline = !rewardOptions.isOnline() || rewardOptions.getServer() != null;
 		boolean liveOffline = verifyOnline && !liveOnline;
 		return CompletableFuture.completedFuture(
-				new LiveRewardDecision(canGive, allowOffline, vanished, liveOffline, false));
+				new LiveRewardDecision(canGive, allowOffline, vanished, liveOffline, false, playerEligibilityDenied));
 	}
 
 	private CompletionStage<Void> finishRewardAsync(AdvancedCoreUser user, RewardOptions rewardOptions,
 			LiveRewardDecision decision) {
 		if (decision.terminalDenied()) return CompletableFuture.completedFuture(null);
+		if (decision.playerEligibilityDenied() && rewardOptions.isTimedQueueReplay()
+				&& !isForceOffline() && !rewardOptions.isForceOffline()) {
+			return CompletableFuture.failedFuture(playerEligibilityDeferred());
+		}
 		boolean vanished = decision.vanished();
 		if (plugin.getOptions().isPauseRewards() || vanished) {
 			return deferRewardWithoutBlockingOwner(user, rewardOptions);
@@ -1774,7 +1798,7 @@ public class Reward {
 	}
 
 	private record LiveRewardDecision(boolean canGive, boolean allowOffline, boolean vanished, boolean liveOffline,
-			boolean terminalDenied) { }
+			boolean terminalDenied, boolean playerEligibilityDenied) { }
 
 	private <T> CompletionStage<T> continueOffServerThread(Supplier<CompletionStage<T>> request) {
 		CompletableFuture<CompletionStage<T>> handoff = new CompletableFuture<>();
@@ -1905,6 +1929,10 @@ public class Reward {
 					if (!deliveryOptions.isGiveOffline() && !deliveryOptions.isTimedQueueReplay()) {
 						return CompletableFuture.completedFuture(null);
 					}
+					// A restored durable occurrence still needs a future eligibility wake-up.
+					// Retirement can defer it without reaching another live mode check.
+					plugin.getRewardHandler().getRewardEligibility().queued(user);
+					if (deliveryOptions.isTimedQueueReplay()) return CompletableFuture.failedFuture(failure);
 					return deferRewardWithoutBlockingOwner(user, deliveryOptions);
 				});
 	}

@@ -22,6 +22,7 @@ import org.bukkit.GameMode;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.metadata.MetadataValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -83,6 +84,14 @@ class RewardGamemodeReplayTest {
         UUID id = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(id);
         when(player.isOnline()).thenReturn(true);
+        HashMap<org.bukkit.plugin.Plugin, MetadataValue> loginReceipt = new HashMap<>();
+        when(player.getMetadata("AdvancedCoreRewardEligibilityLogin"))
+                .thenAnswer(call -> loginReceipt.isEmpty() ? List.of() : List.copyOf(loginReceipt.values()));
+        doAnswer(call -> { MetadataValue value = call.getArgument(1);
+            loginReceipt.put(value.getOwningPlugin(), value); return null; })
+                .when(player).setMetadata(eq("AdvancedCoreRewardEligibilityLogin"), any(MetadataValue.class));
+        doAnswer(call -> { loginReceipt.remove(call.getArgument(1)); return null; })
+                .when(player).removeMetadata(eq("AdvancedCoreRewardEligibilityLogin"), any());
         AtomicReference<GameMode> mode = new AtomicReference<>(GameMode.SURVIVAL);
         when(player.getGameMode()).thenAnswer(call -> mode.get());
         AdvancedCoreUser user = spy(new AdvancedCoreUser(plugin, id, "GamemodePlayer"));
@@ -109,6 +118,7 @@ class RewardGamemodeReplayTest {
             handler.getRewards().add(reward);
             handler.addInjectedReward(effect("Prefix", prefix, mode, GameMode.CREATIVE, false, yield ? boundary : null));
             handler.addInjectedReward(effect("Remainder", remainder, mode, GameMode.CREATIVE, true, null));
+            handler.getRewardEligibility().signalLogin(user, player).toCompletableFuture().join();
             RewardOptions options = new RewardOptions().setCheckTimed(false).setGiveOffline(true);
             options.setAsyncReplayOccurrenceId("gamemode-occurrence");
             options.setAsyncReplayKey("GamemodeParent/GamemodeChild");
@@ -302,6 +312,7 @@ class RewardGamemodeReplayTest {
         final Player player = mock(Player.class);
         final UUID id = UUID.randomUUID();
         final AtomicReference<GameMode> mode = new AtomicReference<>(GameMode.SURVIVAL);
+        final HashMap<org.bukkit.plugin.Plugin, MetadataValue> loginReceipt = new HashMap<>();
         final org.mockito.MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
         RewardHandler handler;
         AdvancedCoreUser user;
@@ -341,11 +352,19 @@ class RewardGamemodeReplayTest {
             when(player.getUniqueId()).thenReturn(id);
             when(player.isOnline()).thenReturn(true);
             when(player.getGameMode()).thenAnswer(call -> mode.get());
+            when(player.getMetadata("AdvancedCoreRewardEligibilityLogin"))
+                    .thenAnswer(call -> loginReceipt.isEmpty() ? List.of() : List.copyOf(loginReceipt.values()));
+            doAnswer(call -> { MetadataValue value = call.getArgument(1);
+            loginReceipt.put(value.getOwningPlugin(), value); return null; })
+                    .when(player).setMetadata(eq("AdvancedCoreRewardEligibilityLogin"), any(MetadataValue.class));
+            doAnswer(call -> { loginReceipt.remove(call.getArgument(1)); return null; })
+                    .when(player).removeMetadata(eq("AdvancedCoreRewardEligibilityLogin"), any());
             bukkit.when(Bukkit::getPluginManager).thenReturn(mock(org.bukkit.plugin.PluginManager.class));
             AdvancedCorePlugin.setInstance(plugin);
             handler = new RewardHandler(plugin);
             when(plugin.getRewardHandler()).thenReturn(handler);
             user = newUser();
+            handler.getRewardEligibility().signalLogin(user, player).toCompletableFuture().join();
         }
 
         ArrayList<String> stored(String path) { return persisted.getOrDefault(path, new ArrayList<>()); }

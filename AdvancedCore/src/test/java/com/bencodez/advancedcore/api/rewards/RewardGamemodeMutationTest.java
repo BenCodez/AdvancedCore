@@ -25,6 +25,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.metadata.MetadataValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -137,6 +138,14 @@ class RewardGamemodeMutationTest {
         UUID id = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(id);
         when(player.isOnline()).thenReturn(true);
+        HashMap<org.bukkit.plugin.Plugin, MetadataValue> loginReceipt = new HashMap<>();
+        when(player.getMetadata("AdvancedCoreRewardEligibilityLogin"))
+                .thenAnswer(call -> loginReceipt.isEmpty() ? List.of() : List.copyOf(loginReceipt.values()));
+        doAnswer(call -> { MetadataValue value = call.getArgument(1);
+            loginReceipt.put(value.getOwningPlugin(), value); return null; })
+                .when(player).setMetadata(eq("AdvancedCoreRewardEligibilityLogin"), any(MetadataValue.class));
+        doAnswer(call -> { loginReceipt.remove(call.getArgument(1)); return null; })
+                .when(player).removeMetadata(eq("AdvancedCoreRewardEligibilityLogin"), any());
         if (retiringScheduler != null) doAnswer(call -> {
             retiringScheduler.retireNext(retirement == 1);
             return null;
@@ -209,7 +218,9 @@ class RewardGamemodeMutationTest {
                 if (inventoryHandler != null) assertTrue(inventoryHandler.getItems().isEmpty());
                 mode.set(GameMode.SURVIVAL);
                 when(player.isOnline()).thenReturn(true);
-                var replay = handler.getRewardEligibility().signal(user).toCompletableFuture();
+                var replay = (disconnect || retirement != 0
+                        ? handler.getRewardEligibility().signalLogin(user, player)
+                        : handler.getRewardEligibility().signal(user)).toCompletableFuture();
                 runNext(callbacks);
                 replay.get(2, TimeUnit.SECONDS);
             }

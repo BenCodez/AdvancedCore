@@ -103,6 +103,13 @@ class RewardGamemodeEconomyTest {
         economyScenario(true, "none", "retired-later");
     }
 
+    @Test void repeatedRetiredDepositReplayRetainsItsWakeHint() throws Exception {
+        economyScenario(false, "policy", "retired-repeat");
+    }
+    @Test void repeatedRetiredWithdrawalReplayRetainsItsWakeHint() throws Exception {
+        economyScenario(true, "policy", "retired-repeat");
+    }
+
     private void economyScenario(boolean withdrawal, String policy) throws Exception {
         economyScenario(withdrawal, policy, "mode");
     }
@@ -160,7 +167,14 @@ class RewardGamemodeEconomyTest {
                 : null;
         ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
         when(plugin.getTimer()).thenReturn(timer);
-        doAnswer(call -> { call.getArgument(0, Runnable.class).run(); return null; }).when(timer).execute(any());
+        doAnswer(call -> {
+            Runnable task = call.getArgument(0);
+            // A real worker executes the final ownership observation after the
+            // completed replay has released its serial tail, rather than reentrantly.
+            if (transition.equals("retired-repeat")) callbacks.add(() -> onScheduler(playerOwner, false, task));
+            else task.run();
+            return null;
+        }).when(timer).execute(any());
         Player player = mock(Player.class);
         UUID id = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(id);
@@ -203,6 +217,8 @@ class RewardGamemodeEconomyTest {
         RewardHandler handler = new RewardHandler(plugin);
         when(plugin.getRewardHandler()).thenReturn(handler);
         AtomicInteger prefix = new AtomicInteger();
+        AtomicInteger nativeRequests = new AtomicInteger();
+        AtomicBoolean retireSuffixOnReplay = new AtomicBoolean();
         AtomicReference<Double> amount = new AtomicReference<>(withdrawal ? -5.0 : 5.0);
         try (var bukkit = mockStatic(Bukkit.class)) {
             bukkit.when(() -> Bukkit.getPlayer(id)).thenAnswer(call -> currentPlayer.get());
@@ -225,8 +241,12 @@ class RewardGamemodeEconomyTest {
             handler.addInjectedReward(new RewardInject("EconomyActions") {
                 @Override public Object onRewardRequest(Reward ignored, AdvancedCoreUser target,
                         ConfigurationSection ignoredData, HashMap<String, String> placeholders) {
+                    nativeRequests.incrementAndGet();
                     target.giveMoney(2.0);
                     target.giveMoney(amount.get());
+                    // Arm only after replay reached the real injector. Its completed
+                    // deposit is checkpointed, so the next owner task belongs to the suffix.
+                    if (retireSuffixOnReplay.compareAndSet(true, false)) retiringScheduler.retireNext(true);
                     return null;
                 }
             });
@@ -265,7 +285,28 @@ class RewardGamemodeEconomyTest {
                 amount.set(withdrawal ? -7.0 : 7.0);
                 mode.set(GameMode.SURVIVAL);
                 if (!transition.equals("mode")) currentPlayer.set(replacement);
-                var replay = handler.getRewardEligibility().signal(user).toCompletableFuture();
+                if (transition.equals("retired-repeat")) {
+                    // This is the durable replay phase used by a fallback sweep: retire again
+                    // while the player mode remains allowed, so no mode-denial check renews its hint.
+                    retireSuffixOnReplay.set(true);
+                    var retiredReplay = handler.getRewardEligibility()
+                            .signalLogin(user, replacement).toCompletableFuture();
+                    drainUntilDone(callbacks, retiredReplay);
+                    assertEquals(2, nativeRequests.get(), "the durable replay must reach its real native injector");
+                    assertFalse(retireSuffixOnReplay.get(), "retirement must be armed by the suffix injector");
+                    assertEquals(List.of("deposit:2.0"), mutations);
+                    assertEquals(1, persisted.get().size());
+                    assertFalse(user.hasPendingRewardReplay(), "the failed replay must release its storage claim");
+                    java.lang.reflect.Field pending = RewardEligibility.class.getDeclaredField("pending");
+                    pending.setAccessible(true);
+                    assertTrue(((java.util.Map<?, ?>) pending.get(handler.getRewardEligibility())).containsKey(user.getUUID()),
+                            "a restored durable occurrence must retain its cached eligibility wake hint");
+                }
+                // A replacement connection becomes eligible through the accepted
+                // login event, not merely by appearing in the player lookup.
+                var replay = transition.equals("mode") || transition.equals("retired-repeat")
+                        ? handler.getRewardEligibility().signal(user).toCompletableFuture()
+                        : handler.getRewardEligibility().signalLogin(user, replacement).toCompletableFuture();
                 drainUntilDone(callbacks, replay);
             }
             String action = withdrawal ? "withdraw:" : "deposit:";

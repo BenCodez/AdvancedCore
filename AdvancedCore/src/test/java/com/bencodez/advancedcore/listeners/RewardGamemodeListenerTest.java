@@ -51,4 +51,15 @@ class RewardGamemodeListenerTest {
         callback.getValue().run();
         verify(eligibility).signal(player);
     }
+    @Test
+    void cancelledResolvedLoginDoesNotWakeQueues() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        when(plugin.isEnabled()).thenReturn(true);
+        var event = new AdvancedCoreLoginEvent(mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class),
+                "synthetic-logical-user", mock(Player.class));
+        event.setCancelled(true);
+        new RewardEligibilityListener(plugin).onLogin(event);
+        verify(plugin, never()).getRewardHandler();
+    }
+
 }
