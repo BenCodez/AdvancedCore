@@ -42,7 +42,10 @@ final class RewardEligibilityStartup {
     private static CompletionStage<Void> probe(AdvancedCorePlugin plugin, RewardEligibility eligibility, Player player,
             AtomicBoolean queryInFlight) {
         return Reward.continueOnPlayerThread(plugin, player, () -> {
-            if (!current(plugin, eligibility) || !player.isOnline() || pendingLogin(plugin, player))
+            if (!current(plugin, eligibility) || !player.isOnline())
+                return CompletableFuture.completedFuture(null);
+            if (!plugin.isLoadUserData()) return eligibility.nativeSessionReady(player);
+            if (pendingLogin(plugin, player))
                 return CompletableFuture.completedFuture(null);
             String name = player.getName();
             boolean wait = plugin.getOptions().isWaitUntilLoggedIn();

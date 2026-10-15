@@ -44,6 +44,63 @@ import com.bencodez.advancedcore.listeners.RewardEligibilityListener;
 class RewardGamemodeTimedTest {
     @TempDir File directory;
 
+    @Test void noDataNativeJoinAllowsAnEligibleRewardWithoutALoginEvent() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            when(fixture.plugin.isLoadUserData()).thenReturn(false);
+            useWorkerContext(fixture);
+            fixture.onOwner(() -> fixture.player.removeMetadata("AdvancedCoreRewardEligibilityLogin", fixture.plugin));
+            RewardEligibilityListener listener = new RewardEligibilityListener(fixture.plugin);
+            fixture.onOwner(() -> listener.onNativeJoin(new org.bukkit.event.player.PlayerJoinEvent(fixture.player, "")));
+            Reward reward = fixture.reward("Due", true);
+            var delivery = reward.giveRewardAsync(fixture.user, new RewardOptions().setGiveOffline(false)).toCompletableFuture();
+            fixture.drain();
+            delivery.get(2, TimeUnit.SECONDS);
+            assertEquals(1, fixture.prefix.get());
+            verify(fixture.player).giveExp(3);
+            verify(fixture.plugin.getUserManager(), never()).getUserAsync(anyString(), any(), any());
+        }
+    }
+
+    @Test void noDataNativeReconnectResumesTheSameDeferredTimedOccurrence() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            when(fixture.plugin.isLoadUserData()).thenReturn(false);
+            useWorkerContext(fixture);
+            fixture.queueWorkers.set(true);
+            RewardEligibilityListener listener = new RewardEligibilityListener(fixture.plugin);
+            fixture.onOwner(() -> listener.onNativeJoin(new org.bukkit.event.player.PlayerJoinEvent(fixture.player, "")));
+            fixture.mode.set(GameMode.CREATIVE);
+            Reward reward = fixture.reward("Due", true);
+            fixture.user.addTimedReward(reward, new HashMap<>(), System.currentTimeMillis() - 10_000);
+            String originalOccurrence = occurrence(fixture.onlyTimedKey());
+            fixture.user.checkDelayedTimedRewards();
+            fixture.drainQueuedWork();
+            assertEquals(originalOccurrence, occurrence(fixture.onlyTimedKey()));
+            fixture.onOwner(() -> listener.onQuit(new PlayerQuitEvent(fixture.player, "")));
+            Player replacement = mock(Player.class);
+            installPlayerMetadata(replacement);
+            when(replacement.getUniqueId()).thenReturn(fixture.id);
+            when(replacement.getName()).thenReturn("TimedPlayer");
+            when(replacement.isOnline()).thenReturn(true);
+            when(replacement.getGameMode()).thenAnswer(call -> {
+                assertTrue(fixture.playerOwner.get());
+                return GameMode.SURVIVAL;
+            });
+            doReturn(replacement).when(fixture.user).getPlayer();
+            fixture.bukkit.when(() -> Bukkit.getPlayer(fixture.id)).thenReturn(replacement);
+            fixture.onOwner(() -> listener.onNativeJoin(new org.bukkit.event.player.PlayerJoinEvent(replacement, "")));
+            fixture.drainQueuedWork();
+            verify(replacement).giveExp(3);
+            verify(fixture.player, never()).giveExp(anyInt());
+            assertEquals(1, fixture.prefix.get());
+            assertTrue(fixture.user.getTimedRewards().isEmpty());
+            verify(fixture.plugin.getUserManager(), never()).getUserAsync(anyString(), any(), any());
+            fixture.onOwner(() -> listener.onNativeJoin(new org.bukkit.event.player.PlayerJoinEvent(replacement, "")));
+            fixture.drainQueuedWork();
+            verify(replacement, times(1)).giveExp(3);
+            assertEquals(1, fixture.prefix.get());
+        }
+    }
+
     @Test void customRequirementsAndPreprocessingStayOffThePlayerOwner() throws Exception {
         try (Fixture fixture = new Fixture()) {
             var scheduler = fixture.plugin.getBukkitScheduler();
@@ -1025,6 +1082,7 @@ class RewardGamemodeTimedTest {
 
         Fixture(java.util.function.LongSupplier nanoClock) {
             when(plugin.isEnabled()).thenReturn(true);
+            when(plugin.isLoadUserData()).thenReturn(true);
             when(plugin.getDataFolder()).thenReturn(directory);
             when(plugin.getLogger()).thenReturn(logger);
             AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);

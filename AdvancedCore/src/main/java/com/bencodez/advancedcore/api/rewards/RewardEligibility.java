@@ -67,6 +67,32 @@ public final class RewardEligibility {
     }
 
     /**
+     * Owner-thread native join/bootstrap for consumers that disable user-data loading.
+     * Those consumers do not install the ordinary AdvancedCore login listener. Accept
+     * the native session without resolving a user or emitting a synthetic login event.
+     */
+    public CompletionStage<Void> nativeSessionReady(Player player) {
+        Objects.requireNonNull(player, "player");
+        List<AdvancedCoreUser> known = new ArrayList<>();
+        synchronized (this) {
+            if (closed || !plugin.isEnabled() || plugin.isLoadUserData()
+                    || plugin.getRewardHandler() != handler || !player.isOnline())
+                return CompletableFuture.completedFuture(null);
+            for (Pending entry : allPending()) known.add(entry.user);
+        }
+        player.setMetadata(LOGIN_RECEIPT_KEY, new FixedMetadataValue(plugin, Boolean.TRUE));
+        // Inspect only bounded, already-known identities. getPlayer() uses the
+        // native registry and temporary name cache; it does not load stored users.
+        List<AdvancedCoreUser> matching = new ArrayList<>();
+        for (AdvancedCoreUser user : known) if (user.getPlayer() == player) matching.add(user);
+        CompletionStage<Void> tail = CompletableFuture.completedFuture(null);
+        for (AdvancedCoreUser user : matching) {
+            tail = tail.thenCompose(ignored -> signalLogin(user, player));
+        }
+        return tail;
+    }
+
+    /**
      * Schedules an opted-in player action with explicit Folia retirement handling.
      * Callers share their action claim with both terminal callbacks so a late
      * task cannot execute after its unstarted work has been retained for retry.

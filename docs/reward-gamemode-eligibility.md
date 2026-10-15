@@ -69,6 +69,14 @@ a later normal authenticated login remains the recovery path for a session whose
 startup check could not complete. Disconnect, handler replacement and disable
 invalidate pending receipt publication.
 
+Consumers that explicitly disable AdvancedCore user-data loading do not register
+its normal login listener. For those consumers, native join and startup accept
+the connected session directly on its owning scheduler, without loading a user,
+querying authentication integrations, or firing an AdvancedCore login event.
+Reconnect wakes only already-known deferred work and retains its original replay
+identity. Consumers with user-data loading enabled keep the ordinary authenticated
+login requirement described above.
+
 The retained-hint table is limited to 4,096 logical users. If it fills, ordinary
 offline work is still discovered automatically: the existing fallback takes a
 snapshot of currently online players and visits at most 128 per pass, using each

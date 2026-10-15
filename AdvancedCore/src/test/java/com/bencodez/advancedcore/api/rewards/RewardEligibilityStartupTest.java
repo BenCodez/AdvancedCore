@@ -13,11 +13,14 @@ import java.util.function.Consumer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.MetadataValue;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.junit.jupiter.api.Test;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
+import com.bencodez.advancedcore.listeners.AdvancedCoreLoginEvent;
+import com.bencodez.advancedcore.listeners.RewardEligibilityListener;
 
 class RewardEligibilityStartupTest {
     @Test void existingOnlineSessionWithoutAnAuthenticationPluginGetsAReceipt() {
@@ -29,6 +32,77 @@ class RewardEligibilityStartupTest {
             verify(fixture.users).getUserAsync(eq("StartupPlayer"), any(), any());
             verify(fixture.user, never()).checkOfflineRewardsAsync();
             verify(fixture.user, never()).checkDelayedTimedRewards();
+        }
+    }
+
+    @Test void noDataNativeJoinDoesNotLeaveTheSessionPending() {
+        try (Fixture fixture = new Fixture()) {
+            when(fixture.plugin.isLoadUserData()).thenReturn(false);
+            fixture.onOwner(() -> new RewardEligibilityListener(fixture.plugin)
+                    .onNativeJoin(new PlayerJoinEvent(fixture.player, "")));
+            assertEquals(Boolean.TRUE, fixture.receipts.get(0).value(), "native join alone accepts the unmanaged session");
+            RewardEligibilityStartup.start(fixture.plugin, fixture.eligibility);
+            assertEquals(Boolean.TRUE, fixture.receipts.get(0).value());
+            verifyNoInteractions(fixture.users);
+        }
+    }
+
+    @Test void noDataStartupAcceptsExistingSessionWithoutLoadingUserOrAuthenticationProvider() {
+        try (Fixture fixture = new Fixture()) {
+            when(fixture.plugin.isLoadUserData()).thenReturn(false);
+            RewardEligibilityStartup.start(fixture.plugin, fixture.eligibility);
+            assertEquals(Boolean.TRUE, fixture.receipts.get(0).value());
+            verifyNoInteractions(fixture.users);
+            verify(fixture.plugin, never()).isAuthMeLoaded();
+            verify(fixture.plugin, never()).isNLoginLoaded();
+            verify(fixture.plugin, never()).isLoginSecurityLoaded();
+        }
+    }
+
+    @Test void enabledNativeJoinRemainsPendingUntilTheOrdinaryLoginPathAcceptsIt() {
+        try (Fixture fixture = new Fixture()) {
+            when(fixture.plugin.isLoadUserData()).thenReturn(true);
+            fixture.onOwner(() -> new RewardEligibilityListener(fixture.plugin)
+                    .onNativeJoin(new PlayerJoinEvent(fixture.player, "")));
+            assertEquals(Boolean.FALSE, fixture.receipts.get(0).value());
+            RewardEligibilityStartup.start(fixture.plugin, fixture.eligibility);
+            assertEquals(Boolean.FALSE, fixture.receipts.get(0).value());
+            verifyNoInteractions(fixture.users);
+            new RewardEligibilityListener(fixture.plugin).onLogin(
+                    new AdvancedCoreLoginEvent(fixture.user, fixture.user.getUUID(), fixture.player));
+            assertEquals(Boolean.TRUE, fixture.receipts.get(0).value());
+        }
+    }
+
+    @Test void noDataStartupRebindsOnlyKnownWorkForTheExactNativeSession() {
+        try (Fixture fixture = new Fixture()) {
+            when(fixture.plugin.isLoadUserData()).thenReturn(false);
+            when(fixture.user.checkOfflineRewardsAsync()).thenReturn(CompletableFuture.completedFuture(null));
+            AdvancedCoreUser unrelated = mock(AdvancedCoreUser.class);
+            when(unrelated.getPlugin()).thenReturn(fixture.plugin);
+            when(unrelated.getUUID()).thenReturn(UUID.randomUUID().toString());
+            when(unrelated.getPlayer()).thenReturn(mock(Player.class));
+            fixture.eligibility.queued(fixture.user);
+            fixture.eligibility.signal(fixture.user).toCompletableFuture().join();
+            fixture.eligibility.queued(unrelated);
+            RewardEligibilityStartup.start(fixture.plugin, fixture.eligibility);
+            assertEquals(Boolean.TRUE, fixture.receipts.get(0).value());
+            verify(fixture.user).checkDelayedTimedRewards();
+            verify(fixture.user).checkOfflineRewardsAsync();
+            verify(unrelated, never()).checkDelayedTimedRewards();
+            verify(unrelated, never()).checkOfflineRewardsAsync();
+            verifyNoInteractions(fixture.users);
+        }
+    }
+
+    @Test void enabledUserDataCannotUseTheNativeSessionShortcut() {
+        try (Fixture fixture = new Fixture()) {
+            fixture.onOwner(() -> {
+                fixture.eligibility.loginPending(fixture.player);
+                fixture.eligibility.nativeSessionReady(fixture.player).toCompletableFuture().join();
+            });
+            assertEquals(Boolean.FALSE, fixture.receipts.get(0).value());
+            verifyNoInteractions(fixture.users);
         }
     }
 
@@ -246,6 +320,7 @@ class RewardEligibilityStartupTest {
 
         Fixture() {
             when(plugin.isEnabled()).thenReturn(true);
+            when(plugin.isLoadUserData()).thenReturn(true);
             when(plugin.getOptions()).thenReturn(options);
             when(plugin.getUserManager()).thenReturn(users);
             when(plugin.getRewardHandler()).thenReturn(handler);

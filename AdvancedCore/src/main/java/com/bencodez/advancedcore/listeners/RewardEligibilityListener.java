@@ -17,8 +17,12 @@ public final class RewardEligibilityListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onNativeJoin(org.bukkit.event.player.PlayerJoinEvent event) {
         var handler = plugin.getRewardHandler();
-        if (plugin.isEnabled() && handler != null)
-            handler.getRewardEligibility().loginPending(event.getPlayer());
+        if (plugin.isEnabled() && handler != null) {
+            if (plugin.isLoadUserData()) handler.getRewardEligibility().loginPending(event.getPlayer());
+            else handler.getRewardEligibility().nativeSessionReady(event.getPlayer()).whenComplete((ignored, failure) -> {
+                if (failure != null) plugin.debug("A native reward session could not resume its pending work");
+            });
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
