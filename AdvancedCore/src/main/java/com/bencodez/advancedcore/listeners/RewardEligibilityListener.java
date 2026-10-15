@@ -14,6 +14,13 @@ public final class RewardEligibilityListener implements Listener {
     private final AdvancedCorePlugin plugin;
     public RewardEligibilityListener(AdvancedCorePlugin plugin) { this.plugin = plugin; }
 
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onNativeJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        var handler = plugin.getRewardHandler();
+        if (plugin.isEnabled() && handler != null)
+            handler.getRewardEligibility().loginPending(event.getPlayer());
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onGameModeChange(PlayerGameModeChangeEvent event) {
         if (!plugin.isEnabled() || event.isCancelled()) return;

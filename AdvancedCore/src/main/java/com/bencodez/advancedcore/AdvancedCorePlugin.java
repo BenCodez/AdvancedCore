@@ -1380,6 +1380,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 		getRewardHandler().checkSubRewards();
 		getRewardHandler().checkDirectlyDefinedRewardFiles();
+		getRewardHandler().getRewardEligibility().bootstrapOnlinePlayers();
 	}
 
 	/**

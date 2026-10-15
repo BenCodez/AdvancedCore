@@ -88,6 +88,48 @@ class RewardGamemodeTimedTest {
         }
     }
 
+    @Test void fullHintBudgetStillWakesAnOrdinaryOfflineRewardAfterModeChange() throws Exception {
+        fullHintBudgetScenario(false);
+    }
+
+    @Test void fullTimedHintBudgetStillWakesAnOrdinaryOfflineRewardAfterModeChange() throws Exception {
+        fullHintBudgetScenario(true);
+    }
+
+    private void fullHintBudgetScenario(boolean protectedTimedHints) throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            fixture.handler.getRewardEligibility().signalLogin(fixture.user, fixture.player)
+                    .toCompletableFuture().join();
+            for (int i = 0; i < RewardEligibility.MAX_PENDING_PLAYERS; i++) {
+                AdvancedCoreUser retained = mock(AdvancedCoreUser.class, withSettings().stubOnly());
+                when(retained.getUUID()).thenReturn("synthetic-retained-" + i);
+                if (protectedTimedHints) {
+                    when(retained.getPlugin()).thenReturn(fixture.plugin);
+                    assertTrue(fixture.handler.getRewardEligibility().retainTimedRetry(retained));
+                } else fixture.handler.getRewardEligibility().queued(retained);
+            }
+            fixture.mode.set(GameMode.CREATIVE);
+            Reward reward = fixture.reward("Offline", true);
+            String id = UUID.randomUUID().toString();
+            RewardOptions options = new RewardOptions().setCheckTimed(false).setGiveOffline(true);
+            options.setAsyncReplayOccurrenceId(id);
+            reward.giveRewardAsync(fixture.user, options).toCompletableFuture().join();
+            fixture.drain();
+            assertEquals(1, fixture.stored("OfflineRewards").size());
+            assertTrue(fixture.stored("OfflineRewards").get(0).contains(id));
+            verify(fixture.player, never()).giveExp(3);
+            fixture.mode.set(GameMode.SURVIVAL);
+            fixture.onOwner(() -> fixture.handler.getRewardEligibility().signal(fixture.player));
+            fixture.drainQueuedWork();
+            verify(fixture.player).giveExp(3);
+            assertEquals(1, fixture.offlinePrefix.get());
+            assertTrue(fixture.stored("OfflineRewards").isEmpty());
+            fixture.onOwner(() -> fixture.handler.getRewardEligibility().signal(fixture.player));
+            fixture.drainQueuedWork();
+            verify(fixture.player, times(1)).giveExp(3);
+        }
+    }
+
     @Test void closedFallbackRetainsFutureTimerInsteadOfStrandingDueWork() throws Exception {
         try (Fixture fixture = new Fixture()) {
             fixture.mode.set(GameMode.CREATIVE);
@@ -591,6 +633,7 @@ class RewardGamemodeTimedTest {
                         return mock(ScheduledFuture.class);
                     });
             when(player.getUniqueId()).thenReturn(id);
+            when(player.getName()).thenReturn("TimedPlayer");
             when(player.isOnline()).thenReturn(true);
             when(player.getGameMode()).thenAnswer(call -> {
                 assertTrue(playerOwner.get(), "gamemode reads require the owning scheduler");
@@ -614,6 +657,11 @@ class RewardGamemodeTimedTest {
             user.setData(data);
             doReturn(player).when(user).getPlayer();
             doReturn(true).when(user).isOnline();
+            doAnswer(call -> {
+                call.getArgument(1, java.util.function.Consumer.class).accept(user);
+                return null;
+            }).when(users).getUserAsync(eq("TimedPlayer"), any(java.util.function.Consumer.class),
+                    any(java.util.function.Consumer.class));
             handler.addInjectedReward(new RewardInject("Prefix") {
                 @Override public Object onRewardRequest(Reward reward, AdvancedCoreUser target,
                         ConfigurationSection ignoredData, HashMap<String, String> placeholders) {

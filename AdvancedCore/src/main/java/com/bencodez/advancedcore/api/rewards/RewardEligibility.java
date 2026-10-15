@@ -32,8 +32,11 @@ public final class RewardEligibility {
     private final AdvancedCorePlugin plugin;
     private final RewardHandler handler;
     private final LinkedHashMap<String, Pending> pending = new LinkedHashMap<>();
+    private final LinkedHashMap<String, Pending> overflowRunning = new LinkedHashMap<>();
+    private final RewardEligibilityOverflow overflow;
     private ScheduledFuture<?> fallback;
     private boolean closed;
+    private boolean startupRequested;
 
     RewardEligibility(AdvancedCorePlugin plugin, RewardHandler handler) {
         this(plugin, handler, System::nanoTime);
@@ -43,6 +46,24 @@ public final class RewardEligibility {
         this.plugin = plugin;
         this.handler = handler;
         this.nanoClock = Objects.requireNonNull(nanoClock, "nanoClock");
+        this.overflow = new RewardEligibilityOverflow(plugin, this, nanoClock);
+    }
+
+    /** Initializes only existing native sessions after all startup dependencies are ready. */
+    public void bootstrapOnlinePlayers() {
+        synchronized (this) {
+            if (closed || startupRequested) return;
+            startupRequested = true;
+        }
+        RewardEligibilityStartup.start(plugin, this);
+    }
+
+    synchronized boolean isOpen() { return !closed; }
+
+    /** A newly joining native session must finish the ordinary accepted-login path. */
+    public void loginPending(Player player) {
+        synchronized (this) { if (closed) return; }
+        player.setMetadata(LOGIN_RECEIPT_KEY, new FixedMetadataValue(plugin, Boolean.FALSE));
     }
 
     /**
@@ -87,21 +108,22 @@ public final class RewardEligibility {
         if (!validModes(data, "GameModes") || !validModes(data, "BlackListedGameModes")) return false;
         Pending observed;
         synchronized (this) {
-            observed = pending.get(user.getUUID());
+            observed = findPending(user.getUUID());
             if (closed || observed != null && observed.awaitingLogin) return false;
         }
         if (observed != null) {
             Player current = user.getPlayer();
             synchronized (this) {
-                if (closed || pending.get(user.getUUID()) != observed || observed.awaitingLogin
+                if (closed || findPending(user.getUUID()) != observed || observed.awaitingLogin
                         || observed.player == null || observed.player != current) return false;
             }
         }
         List<String> allowed = data.getStringList("GameModes");
         List<String> denied = data.getStringList("BlackListedGameModes");
-        if (allowed.isEmpty() && denied.isEmpty()) return true;
+        if (allowed.isEmpty() && denied.isEmpty() && !overflow.enabled()) return true;
         Player player = user.getPlayer();
         if (player == null || !player.isOnline()) return false;
+        if (overflow.enabled() && !acceptedSession(player)) return false;
         GameMode mode = player.getGameMode();
         if ((!allowed.isEmpty() && !containsMode(allowed, mode)) || containsMode(denied, mode)) return false;
         return true;
@@ -129,17 +151,17 @@ public final class RewardEligibility {
     void deferred(AdvancedCoreUser user) {
         Player player = user.getPlayer();
         synchronized (this) {
-            Pending current = pending.get(user.getUUID());
+            Pending current = findPending(user.getUUID());
             if (closed || current != null && (current.awaitingLogin || current.player != player)) return;
         }
         if (player == null || !player.isOnline()) return;
         synchronized (this) {
             if (closed) return;
-            Pending current = pending.get(user.getUUID());
+            Pending current = findPending(user.getUUID());
             // Only the accepted login or receipt check may bind an unknown session.
             if (current != null && (current.awaitingLogin || current.player != player)) return;
             if (current == null) {
-                if (pending.size() >= MAX_PENDING_PLAYERS) return;
+                if (pending.size() >= MAX_PENDING_PLAYERS) { overflow.enable(); startFallback(); return; }
                 current = new Pending(user, player, nanoClock.getAsLong());
                 pending.put(user.getUUID(), current);
             }
@@ -169,9 +191,9 @@ public final class RewardEligibility {
 
     private synchronized boolean retainHint(AdvancedCoreUser user) {
         if (closed) return false;
-        Pending current = pending.get(user.getUUID());
+        Pending current = findPending(user.getUUID());
         if (current == null) {
-            if (pending.size() >= MAX_PENDING_PLAYERS) return false;
+            if (pending.size() >= MAX_PENDING_PLAYERS) { overflow.enable(); startFallback(); return false; }
             current = new Pending(user, null, nanoClock.getAsLong());
             pending.put(user.getUUID(), current);
         }
@@ -189,6 +211,37 @@ public final class RewardEligibility {
         return signal(user, null);
     }
 
+    private Pending findPending(String uuid) {
+        Pending current = pending.get(uuid);
+        return current == null ? overflowRunning.get(uuid) : current;
+    }
+
+    boolean acceptedSession(Player player) {
+        return player.getMetadata(LOGIN_RECEIPT_KEY).stream().anyMatch(value ->
+                value.getOwningPlugin() == plugin && Boolean.TRUE.equals(value.value()));
+    }
+
+    /** Called only after exact native-session validation on its owner. */
+    CompletionStage<Void> signalOverflow(AdvancedCoreUser user, Player player) {
+        if (user.getPlugin() != plugin) return CompletableFuture.failedFuture(
+                new IllegalArgumentException("User belongs to another plugin"));
+        synchronized (this) {
+            if (closed || !plugin.isEnabled()) return CompletableFuture.completedFuture(null);
+            Pending current = findPending(user.getUUID());
+            if (current == null) {
+                if (overflowRunning.size() >= RewardEligibilityOverflow.BATCH)
+                    return CompletableFuture.completedFuture(null);
+                current = new Pending(user, player, nanoClock.getAsLong());
+                overflowRunning.put(user.getUUID(), current);
+            }
+            current.user = user;
+            current.player = player;
+            current.awaitingLogin = false;
+            current.revision++;
+        }
+        return signal(user);
+    }
+
     private CompletionStage<Void> signal(AdvancedCoreUser user, Pending fallbackEntry) {
         Objects.requireNonNull(user, "user");
         if (user.getPlugin() != plugin) return CompletableFuture.failedFuture(
@@ -198,8 +251,9 @@ public final class RewardEligibility {
         synchronized (this) {
             if (closed || !plugin.isEnabled()) return CompletableFuture.failedFuture(
                     new IllegalStateException("Reward eligibility is closed"));
-            current = pending.get(user.getUUID());
-            if (current != null && current.awaitingLogin) return CompletableFuture.completedFuture(null);
+            current = findPending(user.getUUID());
+            if (current != null && current.awaitingLogin
+                    && overflowRunning.get(user.getUUID()) != current) return CompletableFuture.completedFuture(null);
             long now = nanoClock.getAsLong();
             if (fallbackEntry != null && (current != fallbackEntry || current.running != null
                     || now - current.nextSweepNanos < 0)) return CompletableFuture.completedFuture(null);
@@ -237,12 +291,19 @@ public final class RewardEligibility {
         boolean awaitingLogin;
         boolean needsBinding;
         synchronized (this) {
-            if (closed || pending.get(user.getUUID()) != captured || captured.running != result) return;
+            if (closed || findPending(user.getUUID()) != captured || captured.running != result) return;
             awaitingLogin = captured.awaitingLogin;
             needsBinding = captured.player == null;
         }
         if (awaitingLogin) {
-            finishSignal(user, captured, revision, result, false, null);
+            // Overflow admissions are temporary execution gates. They may retire
+            // after claims finish; online discovery remains the automatic wake-up.
+            boolean retire = false;
+            try {
+                synchronized (this) { retire = overflowRunning.get(user.getUUID()) == captured; }
+                retire = retire && !user.hasPendingRewardReplay();
+                finishSignal(user, captured, revision, result, retire, null);
+            } catch (Throwable failure) { finishSignal(user, captured, revision, result, false, failure); }
             return;
         }
         if (needsBinding) {
@@ -283,7 +344,7 @@ public final class RewardEligibility {
             CompletableFuture<Void> result) {
         Reward.continueOnResolvedPlayerThread(plugin, user, player -> {
             synchronized (this) {
-                if (closed || pending.get(user.getUUID()) != captured || captured.running != result
+                if (closed || findPending(user.getUUID()) != captured || captured.running != result
                         || captured.awaitingLogin) return CompletableFuture.completedFuture(false);
                 if (captured.player != null) return CompletableFuture.completedFuture(true);
             }
@@ -291,7 +352,7 @@ public final class RewardEligibility {
                     && player.getMetadata(LOGIN_RECEIPT_KEY).stream().anyMatch(value ->
                             value.getOwningPlugin() == plugin && Boolean.TRUE.equals(value.value()));
             synchronized (this) {
-                if (closed || pending.get(user.getUUID()) != captured || captured.running != result
+                if (closed || findPending(user.getUUID()) != captured || captured.running != result
                         || captured.awaitingLogin) return CompletableFuture.completedFuture(false);
                 // A newer accepted login may have rebound the hint while this task waited.
                 if (captured.player != null) return CompletableFuture.completedFuture(true);
@@ -315,9 +376,11 @@ public final class RewardEligibility {
     private void finishSignal(AdvancedCoreUser user, Pending captured, long revision,
             CompletableFuture<Void> result, boolean canRetireHint, Throwable failure) {
         synchronized (this) {
-            if (pending.get(user.getUUID()) == captured && captured.running == result) {
+            if (findPending(user.getUUID()) == captured && captured.running == result) {
                 captured.running = null;
-                if (failure == null && canRetireHint && captured.revision == revision)
+                if (failure == null && canRetireHint && overflowRunning.get(user.getUUID()) == captured)
+                    overflowRunning.remove(user.getUUID());
+                else if (failure == null && canRetireHint && captured.revision == revision)
                     pending.remove(user.getUUID());
                 else startFallback();
                 stopIdleFallback();
@@ -333,6 +396,7 @@ public final class RewardEligibility {
             for (Pending entry : pending.values()) if (entry.player == player) users.add(entry.user);
         }
         for (AdvancedCoreUser user : users) signal(user);
+        if (overflow.enabled()) overflow.signal(player);
     }
 
     /**
@@ -342,7 +406,7 @@ public final class RewardEligibility {
     public void disconnected(Player player) {
         player.removeMetadata(LOGIN_RECEIPT_KEY, plugin);
         synchronized (this) {
-            for (Pending entry : pending.values()) {
+            for (Pending entry : allPending()) {
                 if (entry.player == player) {
                     entry.player = null;
                     entry.awaitingLogin = true;
@@ -372,14 +436,16 @@ public final class RewardEligibility {
             player.setMetadata(LOGIN_RECEIPT_KEY, new FixedMetadataValue(plugin, Boolean.TRUE));
             synchronized (this) {
                 if (closed) return CompletableFuture.completedFuture(null);
-                Pending current = pending.get(user.getUUID());
-                if (current == null) return CompletableFuture.completedFuture(null);
-                current.user = user;
-                current.player = player;
-                current.awaitingLogin = false;
-                current.revision++;
+                Pending current = findPending(user.getUUID());
+                if (current == null && !overflow.enabled()) return CompletableFuture.completedFuture(null);
+                if (current != null) {
+                    current.user = user;
+                    current.player = player;
+                    current.awaitingLogin = false;
+                    current.revision++;
+                }
             }
-            return signal(user);
+            return overflow.enabled() ? signalOverflow(user, player) : signal(user);
         });
     }
 
@@ -395,11 +461,21 @@ public final class RewardEligibility {
             // Rotate bounded hints to give every pending player a turn.
             for (Pending entry : batch) pending.put(entry.user.getUUID(), entry);
         }
+        List<Pending> temporary;
+        synchronized (this) { temporary = new ArrayList<>(overflowRunning.values()); }
         for (Pending entry : batch) signal(entry.user, entry);
+        for (Pending entry : temporary) signal(entry.user, entry);
+        overflow.sweep();
+    }
+
+    private List<Pending> allPending() {
+        List<Pending> entries = new ArrayList<>(pending.values());
+        entries.addAll(overflowRunning.values());
+        return entries;
     }
 
     private void stopIdleFallback() {
-        if (pending.isEmpty() && fallback != null) { fallback.cancel(false); fallback = null; }
+        if (pending.isEmpty() && overflowRunning.isEmpty() && !overflow.enabled() && fallback != null) { fallback.cancel(false); fallback = null; }
     }
 
     private void startFallback() {
@@ -417,9 +493,11 @@ public final class RewardEligibility {
             closed = true;
             if (fallback != null) fallback.cancel(false);
             fallback = null;
-            for (Pending entry : pending.values()) if (entry.running != null) running.add(entry.running);
+            for (Pending entry : allPending()) if (entry.running != null) running.add(entry.running);
             pending.clear();
+            overflowRunning.clear();
         }
+        overflow.close();
         for (CompletableFuture<Void> result : running) result.completeExceptionally(
                 new IllegalStateException("Reward eligibility closed before replay completed"));
     }

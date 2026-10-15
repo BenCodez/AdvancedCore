@@ -56,6 +56,37 @@ accepted. Quit removes only this plugin's receipt; it is session metadata, not p
 player data or a new reward queue. Plugin startup continues reconstructing timed callbacks
 from the existing durable queue.
 
+When the plugin is freshly enabled while players are already connected, it also
+initializes receipts for those existing native sessions after its integrations
+are ready. It uses the configured authentication providers, resolves the existing
+user asynchronously by name (including offline-mode identity rules), and rechecks
+the exact session on its owning scheduler. Newly joining sessions still use the
+normal accepted-login path; this bootstrap does not emit another generic login
+event or create another reward occurrence. Checks are sequential. A timed-out
+provider query cannot accumulate more queries while its underlying operation is
+still running. Provider failures fail closed and produce a bounded debug notice;
+a later normal authenticated login remains the recovery path for a session whose
+startup check could not complete. Disconnect, handler replacement and disable
+invalidate pending receipt publication.
+
+The retained-hint table is limited to 4,096 logical users. If it fills, ordinary
+offline work is still discovered automatically: the existing fallback takes a
+snapshot of currently online players and visits at most 128 per pass, using each
+player's owning scheduler and asynchronous name-based user resolution. One
+snapshot is finished before taking another, so a changing online population cannot
+repeatedly displace an unvisited member of that cycle. Discovery backs off from ten
+seconds to at most five minutes between passes and remains available until disable.
+It scans online sessions, not the stored player database. Mode/world/login signals
+also try immediate discovery. At most 128 overflow resolutions and 128 temporary
+replay admissions may be outstanding; saturated admissions remain discoverable in
+a later pass. An uncompleted storage or replay callback still occupies its slot,
+rather than allowing timed-out requests to accumulate. Temporary admissions retain
+the session gate while replay claims run; after saturation, configured gamemode
+actions also require the plugin's accepted-login receipt. An offline or merely
+connected replacement cannot acquire rewards through overflow recovery. The existing
+persistent queue, occurrence identities and completed-effect checkpoints remain
+authoritative; this is neither a second reward queue nor another delivery path.
+
 The existing `GiveOffline` policy still controls whether a denied ordinary reward
 is retained. Forced or ignored requirements keep their established bypass behavior.
 No temporary-inventory detection or integration is included in this change.
