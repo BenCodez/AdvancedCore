@@ -814,6 +814,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 		Bukkit.getPluginManager().registerEvents(FireworkHandler.getInstance(), this);
 		Bukkit.getPluginManager().registerEvents(new BInventoryListener(this), this);
+		Bukkit.getPluginManager().registerEvents(new com.bencodez.advancedcore.listeners.RewardEligibilityListener(this), this);
 	}
 
 	private void loadConfig(boolean userStorage) {
@@ -1442,6 +1443,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		}
 		getRewardHandler().checkSubRewards();
 		getRewardHandler().checkDirectlyDefinedRewardFiles();
+		getRewardHandler().getRewardEligibility().bootstrapOnlinePlayers();
 	}
 
 	/**

@@ -108,7 +108,15 @@ public class BuiltinRequirementRegistrationTest {
     public void builtinCatalogRegistersAllRequirementPathsInHistoricalOrder() {
         withMockedServer(() -> assertRequirementPaths(BuiltinRequirements::register,
                 "Chance", "RewardExpiration", "Permission", "DayOfMonth", "Server", "BlockedServers", "Worlds",
-                "BlackListedWorlds", "RewardType", "JavascriptExpression", "Date", "LocationDistance"));
+                "BlackListedWorlds", "GameModes", "RewardType", "JavascriptExpression", "Date", "LocationDistance"));
+    }
+
+    @Test
+    public void onlyNativePredicatesRequestThePlayerOwner() {
+        withMockedServer(() -> BuiltinRequirements.register(rewardHandler, plugin));
+        assertEquals(List.of("Worlds", "BlackListedWorlds", "GameModes", "LocationDistance"),
+                rewardHandler.getInjectedRequirements().stream().filter(RequirementInject::requiresPlayerThread)
+                        .map(RequirementInject::getPath).toList());
     }
 
     private void assertRequirementPaths(BiConsumer<RewardHandler, AdvancedCorePlugin> registrar,

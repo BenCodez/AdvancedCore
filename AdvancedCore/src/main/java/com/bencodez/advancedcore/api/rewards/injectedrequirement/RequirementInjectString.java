@@ -28,8 +28,7 @@ public abstract class RequirementInjectString extends RequirementInject {
 	@Override
 	public boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions) {
-		if ((data.isString(getPath()) && !data.getString(getPath(), "").isEmpty())
-				|| (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData()) {
+		if (appliesTo(data)) {
 			String value = data.getString(getPath(), getDefaultValue());
 			AdvancedCorePlugin.getInstance()
 					.extraDebug(reward.getRewardName() + ": Checking " + getPath() + ", value: " + value);
@@ -37,6 +36,12 @@ public abstract class RequirementInjectString extends RequirementInject {
 
 		}
 		return true;
+	}
+
+	/** Same activation rule for synchronous and phased asynchronous implementations. */
+	protected final boolean appliesTo(ConfigurationSection data) {
+		return (data.isString(getPath()) && !data.getString(getPath(), "").isEmpty())
+				|| (isAlwaysForce() && data.contains(getPath(), true)) || isAlwaysForceNoData();
 	}
 
 	public abstract boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String value,

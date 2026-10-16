@@ -80,6 +80,30 @@ public class LuckPermsHandle {
 		return negate ? !has : has;
 	}
 
+    /**
+     * Worker-only static-context lookup. Unlike hasPermission, this never discovers
+     * an online player; a reconnect cannot move native permission reads onto a worker.
+     */
+    public boolean hasOfflinePermission(UUID uuid, String permission) {
+        if (api == null) return false;
+        boolean negate = permission.startsWith("!");
+        if (negate) permission = permission.substring(1);
+        User user = api.getUserManager().getUser(uuid);
+        if (user == null) {
+            try {
+                user = api.getUserManager().loadUser(uuid).get(10, TimeUnit.SECONDS);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return false;
+            } catch (Exception failure) {
+                return false;
+            }
+        }
+        if (user == null) return false;
+        boolean allowed = checkUserPermission(user, permission, null);
+        return negate ? !allowed : allowed;
+    }
+
 	/**
 	 * Async permission check for offline users. Safe to call from the main thread.
 	 */

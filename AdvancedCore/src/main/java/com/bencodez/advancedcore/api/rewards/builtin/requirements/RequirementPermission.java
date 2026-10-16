@@ -2,7 +2,10 @@ package com.bencodez.advancedcore.api.rewards.builtin.requirements;
 
 import java.util.UUID;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import org.bukkit.entity.Player;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
@@ -27,6 +30,33 @@ public final class RequirementPermission {
 
     public static void register(RewardHandler handler, AdvancedCorePlugin plugin) {
         handler.getInjectedRequirements().add(new RequirementInjectString("Permission", "") {
+            @Override
+            public CompletionStage<Boolean> onRequirementRequestAsync(Reward reward, AdvancedCoreUser user,
+                    ConfigurationSection data, RewardOptions options) {
+                if (!appliesTo(data) || !reward.getConfig().getRequirePermission()) {
+                    return CompletableFuture.completedFuture(true);
+                }
+                String configured = data.getString(getPath(), getDefaultValue());
+                if (configured.isEmpty()) configured = "AdvancedCore.Reward." + reward.getName();
+                boolean reverse = configured.startsWith("!");
+                String permission = reverse ? configured.substring(1) : configured;
+                UUID identity = UUID.fromString(user.getUUID());
+                return reward.evaluatePlayerRequirement(user, player -> {
+                    if (player != null) {
+                        if (!identity.equals(player.getUniqueId()) || !player.isOnline()) {
+                            return CompletableFuture.completedFuture(false);
+                        }
+                        boolean allowed = player.hasPermission(permission);
+                        return CompletableFuture.completedFuture(reverse ? !allowed : allowed);
+                    }
+                    var worlds = Bukkit.getWorlds();
+                    String world = worlds.isEmpty() ? null : worlds.get(0).getName();
+                    return reward.evaluateAsyncRequirement(() -> PlayerManager.getInstance()
+                            .hasOfflineServerPermission(identity, world, permission))
+                            .thenApply(allowed -> reverse ? !allowed : allowed);
+                });
+            }
+
             @Override
             public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user, String str,
                     RewardOptions rewardOptions) {

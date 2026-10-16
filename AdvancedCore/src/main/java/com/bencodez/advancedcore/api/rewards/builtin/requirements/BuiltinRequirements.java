@@ -16,6 +16,7 @@ public final class BuiltinRequirements {
         RequirementDayOfMonth.register(handler, plugin);
         RequirementServer.register(handler, plugin);
         RequirementWorld.register(handler, plugin);
+        RequirementGameMode.register(handler, plugin);
         RequirementRewardType.register(handler, plugin);
         RequirementJavascript.register(handler, plugin);
         RequirementDate.register(handler, plugin);
