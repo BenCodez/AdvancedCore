@@ -79,11 +79,11 @@ class ServerDataPublicationOrderingTest {
             assertEquals("concurrent", live.getString("Unrelated.Value"));
             assertEquals("candidate", YamlConfiguration.loadConfiguration(data.getdFile()).getString("Unrelated.Value"));
             data.failing = false;
-            data.setLastUpdated();
+            assertQuarantinedAfterUnconfirmedFinalPublication(data);
             var restarted = YamlConfiguration.loadConfiguration(data.getdFile());
             assertEquals(456L, restarted.getLong("FullInventory.committed.Time"));
-            assertEquals(java.util.List.of("concurrent"), restarted.getStringList("TimedPermissions.example"));
-            assertEquals("concurrent", restarted.getString("Unrelated.Value"));
+            assertEquals(java.util.List.of("candidate"), restarted.getStringList("TimedPermissions.example"));
+            assertEquals("candidate", restarted.getString("Unrelated.Value"));
         }
     }
 
@@ -143,8 +143,8 @@ class ServerDataPublicationOrderingTest {
             assertEquals("candidate", published.getString("Unrelated"));
             assertPreservedRows(published, expectedRows);
             data.failing = false;
-            data.setLastUpdated();
-            data.reloadData();
+            if (successful) { data.setLastUpdated(); data.reloadData(); }
+            else assertQuarantinedAfterUnconfirmedFinalPublication(data);
             assertPreservedRows(data.getData(), expectedRows);
             assertPreservedRows(YamlConfiguration.loadConfiguration(data.getdFile()), expectedRows);
             assertEquals(!successful, result.isCompletedExceptionally());
@@ -254,10 +254,29 @@ class ServerDataPublicationOrderingTest {
             assertEquals("candidate", published.getString("Nested.branch.committed"));
             assertNestedFinalValues(live);
             data.failing = false;
-            data.setLastUpdated();
-            assertNestedFinalValues(YamlConfiguration.loadConfiguration(data.getdFile()));
+            if (failForce) assertQuarantinedAfterUnconfirmedFinalPublication(data);
+            else {
+                data.setLastUpdated();
+                assertNestedFinalValues(YamlConfiguration.loadConfiguration(data.getdFile()));
+            }
             assertEquals(failForce, result.isCompletedExceptionally());
         }
+    }
+
+    private static void assertQuarantinedAfterUnconfirmedFinalPublication(FailingDirectoryForceServerData data)
+            throws Exception {
+        byte[] visible = Files.readAllBytes(data.getdFile().toPath());
+        assertEquals(2, data.failedForces, "only one settlement retry is allowed");
+        assertThrows(IllegalStateException.class, data::setLastUpdated);
+        assertThrows(IllegalStateException.class, data::saveData);
+        assertThrows(IllegalStateException.class, data::saveDataChecked);
+        assertThrows(IllegalStateException.class, data::reloadData);
+        assertThrows(IllegalStateException.class, data::setup);
+        assertThrows(CompletionException.class,
+                () -> data.mutateFinalData(yaml -> yaml.set("UnacknowledgedSuccessor", true)).toCompletableFuture().join());
+        assertFalse(data.getData().contains("UnacknowledgedSuccessor"));
+        assertArrayEquals(visible, Files.readAllBytes(data.getdFile().toPath()),
+                "later operations cannot silently make an unacknowledged final candidate durable");
     }
 
     private static void assertNestedFinalValues(FileConfiguration yaml) {
@@ -733,6 +752,7 @@ class ServerDataPublicationOrderingTest {
         final java.io.IOException forceFailure = new java.io.IOException("synthetic directory force failure");
         boolean failing = true;
         boolean failAfterBarrier = true;
+        int failedForces;
         FailingDirectoryForceServerData(AdvancedCorePlugin plugin) { super(plugin); }
         @Override protected void forceDirectory(java.nio.file.Path directory) throws java.io.IOException {
             if (!failing) { super.forceDirectory(directory); return; }
@@ -742,7 +762,7 @@ class ServerDataPublicationOrderingTest {
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt(); throw new java.io.IOException(interrupted);
             }
-            if (failAfterBarrier) throw forceFailure;
+            if (failAfterBarrier) { failedForces++; throw forceFailure; }
             super.forceDirectory(directory);
         }
     }

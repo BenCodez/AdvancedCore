@@ -49,7 +49,33 @@ class FullInventoryFinalPublicationTest {
 		laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(false);
 	}
 
+	@Test void transientDirectoryFailureSettlesOriginalInventoryReceiptBeforeLaterSaves() throws Exception {
+		laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(false, true, false);
+	}
+
+	@Test void fallbackDirectoryFailureSettlesOriginalInventoryReceiptBeforeLaterSaves() throws Exception {
+		laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(false, true, true);
+	}
+
+	@Test void fallbackMarkerCleanupFailureSettlesOriginalInventoryReceiptBeforeLaterSaves() throws Exception {
+		laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(false, true, true, 2);
+	}
+
+	@Test void fallbackBackupCleanupFailureSettlesOriginalInventoryReceiptBeforeLaterSaves() throws Exception {
+		laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(false, true, true, 3);
+	}
+
 	private void laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(boolean failInventory) throws Exception {
+		laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(failInventory, false, false);
+	}
+
+	private void laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(boolean failInventory,
+			boolean failVisibleDirectory, boolean fallback) throws Exception {
+		laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(failInventory, failVisibleDirectory, fallback, 1);
+	}
+
+	private void laterWholeFileSaveAndRestartKeepOverflowAndReplayReceiptConsistent(boolean failInventory,
+			boolean failVisibleDirectory, boolean fallback, int failingVisibleForce) throws Exception {
 		ConfigurationSerialization.registerClass(PersistedItem.class, "ACFinalOverflowTestItem");
 		var plugin = mock(AdvancedCorePlugin.class);
 		var options = mock(AdvancedCoreConfigOptions.class);
@@ -65,6 +91,8 @@ class FullInventoryFinalPublicationTest {
 				.when(checkpointExecutor).execute(any(Runnable.class));
 		when(plugin.getTimer()).thenReturn(checkpointExecutor);
 		var owner = new FailingPublicationOwner(plugin); owner.setup();
+		owner.fallback = fallback;
+		owner.failingVisibleForce = failingVisibleForce;
 		when(plugin.getServerDataFile()).thenReturn(owner);
 		var handler = new FullInventoryHandler(plugin);
 		when(plugin.getFullInventoryHandler()).thenReturn(handler);
@@ -99,6 +127,7 @@ class FullInventoryFinalPublicationTest {
 			var replay = user.endAsyncActionCollection(actions).toCompletableFuture();
 			ownerTask.get().run(); assertFalse(replay.isDone());
 			owner.failNext.set(failInventory);
+			owner.failVisibleDirectory.set(failVisibleDirectory);
 			var finalFiles = handler.shutdownAsync(Runnable::run).toCompletableFuture();
 			if (failInventory) assertThrows(java.util.concurrent.CompletionException.class, finalFiles::join);
 			else finalFiles.get(2, TimeUnit.SECONDS);
@@ -139,10 +168,23 @@ class FullInventoryFinalPublicationTest {
 
 	private static final class FailingPublicationOwner extends ServerData {
 		private final AtomicBoolean failNext = new AtomicBoolean();
+		private final AtomicBoolean failVisibleDirectory = new AtomicBoolean();
+		private boolean fallback;
+		private int failingVisibleForce = 1;
+		private int visibleForces;
 		private FailingPublicationOwner(AdvancedCorePlugin plugin) { super(plugin); }
 		@Override protected void moveAtomically(Path source, Path target) throws IOException {
 			if (failNext.compareAndSet(true, false)) throw new IOException("inventory publication rejected");
+			if (fallback) throw new java.nio.file.AtomicMoveNotSupportedException(source.toString(), target.toString(), "fixture");
 			super.moveAtomically(source, target);
+		}
+		@Override protected void forceDirectory(Path directory) throws IOException {
+			if (java.nio.file.Files.exists(getdFile().toPath())
+					&& java.nio.file.Files.readString(getdFile().toPath()).contains("FullInventory:")
+					&& failVisibleDirectory.get() && ++visibleForces == failingVisibleForce
+					&& failVisibleDirectory.compareAndSet(true, false))
+				throw new IOException("synthetic transient directory force failure after visible inventory");
+			super.forceDirectory(directory);
 		}
 	}
 

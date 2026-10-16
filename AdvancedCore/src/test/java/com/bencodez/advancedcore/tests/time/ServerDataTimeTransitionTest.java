@@ -153,9 +153,7 @@ class ServerDataTimeTransitionTest {
 			yaml.set("FullInventory.committed.Time", 456L);
 			yaml.set("FullInventory.committed.Items.0", "stored-item");
 		}).toCompletableFuture();
-		var failure = assertThrows(java.util.concurrent.CompletionException.class, result::join);
-		assertTrue(failure.getCause() instanceof UncheckedIOException);
-		assertEquals(data.forceFailure, failure.getCause().getCause(), "the original durability failure remains observable");
+		result.join();
 		assertSame(live, data.getData());
 		assertEquals(456L, live.getLong("FullInventory.committed.Time"));
 		assertFalse(live.contains("FullInventory.previous"));
@@ -166,7 +164,7 @@ class ServerDataTimeTransitionTest {
 		data.setLastUpdated();
 		data.setData("TimedPermissions.example", java.util.List.of("example.use%line%1234"));
 		data.mutateFinalData(yaml -> yaml.set("IgnoreTime", true)).toCompletableFuture().join();
-		assertTrue(result.isCompletedExceptionally(), "later saves cannot acknowledge the failed stage");
+		assertFalse(result.isCompletedExceptionally(), "the original stage confirms its own settled publication");
 		TestServerData restarted = serverData();
 		restarted.setup();
 		assertEquals(456L, restarted.getData().getLong("FullInventory.committed.Time"));
@@ -182,28 +180,24 @@ class ServerDataTimeTransitionTest {
 	}
 
 	@Test
-	void failedFallbackCleanupFencesOrdinaryAndCheckedWritesUntilItSettles() throws Exception {
+	void failedFallbackCleanupQuarantinesOwnerAfterOneSettlementRetry() throws Exception {
 		PublicationFailureServerData data = new PublicationFailureServerData(plugin(), true);
 		data.setup();
 		data.getData().set("FullInventory.previous.Time", 123L);
 		data.saveDataChecked();
 		data.directoryForces = 0;
-		data.failingForce = 3;
+		data.failFromForce = 3;
 		assertThrows(java.util.concurrent.CompletionException.class, () -> data.mutateFinalData(
 				yaml -> yaml.set("FullInventory.committed.Time", 456L)).toCompletableFuture().join());
 		byte[] visibleSnapshot = Files.readAllBytes(data.getdFile().toPath());
-		data.failEveryForce = true;
-		assertThrows(UncheckedIOException.class, data::setLastUpdated);
-		assertThrows(UncheckedIOException.class, data::saveData);
-		assertThrows(UncheckedIOException.class, data::saveDataChecked);
+		assertEquals(4, data.directoryForces, "two preparation forces, failed target force and one retry");
+		data.failFromForce = 0;
+		assertThrows(IllegalStateException.class, data::setLastUpdated);
+		assertThrows(IllegalStateException.class, data::saveData);
+		assertThrows(IllegalStateException.class, data::saveDataChecked);
+		assertThrows(IllegalStateException.class, data::reloadData);
+		assertThrows(IllegalStateException.class, data::setup);
 		assertArrayEquals(visibleSnapshot, Files.readAllBytes(data.getdFile().toPath()));
-		data.failEveryForce = false;
-		data.failingForce = 0;
-		data.saveData();
-		TestServerData restarted = serverData();
-		restarted.setup();
-		assertEquals(456L, restarted.getData().getLong("FullInventory.committed.Time"));
-		assertTrue(restarted.getLastUpdated() > 0L);
 	}
 
 	@Test
@@ -227,18 +221,45 @@ class ServerDataTimeTransitionTest {
 	}
 
 	@Test
-	void moveThatThrowsAfterReplacingReconcilesVisibleCandidateWithoutAcknowledgingIt() throws Exception {
+	void moveThatThrowsAfterReplacingSettlesAndAcknowledgesTheProvenCandidate() throws Exception {
 		MoveFailureServerData data = new MoveFailureServerData(plugin());
 		data.setup();
 		data.getData().set("FullInventory.previous.Time", 123L);
 		data.saveDataChecked();
 		data.moveFailure = 1;
-		assertThrows(java.util.concurrent.CompletionException.class, () -> data.mutateFinalData(
-				yaml -> yaml.set("FullInventory.committed.Time", 456L)).toCompletableFuture().join());
+		data.mutateFinalData(yaml -> yaml.set("FullInventory.committed.Time", 456L)).toCompletableFuture().join();
 		assertEquals(456L, data.getData().getLong("FullInventory.committed.Time"));
 		data.moveFailure = 0;
 		data.setLastUpdated();
 		assertEquals(456L, YamlConfiguration.loadConfiguration(data.getdFile()).getLong("FullInventory.committed.Time"));
+	}
+
+	@Test
+	void unchangedCandidateCannotAcknowledgeMoveFailureBeforeReplacement() throws Exception {
+		verifyUnchangedCandidateMoveFailure(2);
+	}
+
+	@Test
+	void unchangedCandidateCannotInferReplacementFromEqualHashes() throws Exception {
+		verifyUnchangedCandidateMoveFailure(1);
+	}
+
+	private void verifyUnchangedCandidateMoveFailure(int moveFailure) throws Exception {
+		MoveFailureServerData data = new MoveFailureServerData(plugin());
+		data.setup();
+		data.getData().set("Stored", 123L);
+		// An ordinary visible file is not evidence that its contents were forced.
+		Files.writeString(data.getdFile().toPath(), data.getData().saveToString());
+		byte[] original = Files.readAllBytes(data.getdFile().toPath());
+		data.moveFailure = moveFailure;
+		assertThrows(java.util.concurrent.CompletionException.class,
+				() -> data.mutateFinalData(yaml -> { }).toCompletableFuture().join());
+		assertArrayEquals(original, Files.readAllBytes(data.getdFile().toPath()));
+		// A subsequent confirmed replacement still succeeds; no no-op failure
+		// can manufacture a visibility transition or poison ordinary recovery.
+		data.moveFailure = 0;
+		data.mutateFinalData(yaml -> { }).toCompletableFuture().join();
+		assertEquals(123L, YamlConfiguration.loadConfiguration(data.getdFile()).getLong("Stored"));
 	}
 
 	@Test
@@ -447,6 +468,7 @@ class ServerDataTimeTransitionTest {
 		private int directoryForces;
 		private int failingForce;
 		private boolean failEveryForce;
+		private int failFromForce;
 
 		private PublicationFailureServerData(AdvancedCorePlugin plugin, boolean fallback) {
 			super(plugin);
@@ -459,7 +481,8 @@ class ServerDataTimeTransitionTest {
 		}
 
 		@Override protected void forceDirectory(Path directory) throws IOException {
-			if (++directoryForces == failingForce || failEveryForce) throw forceFailure;
+			if (++directoryForces == failingForce || failEveryForce
+					|| failFromForce > 0 && directoryForces >= failFromForce) throw forceFailure;
 			super.forceDirectory(directory);
 		}
 	}

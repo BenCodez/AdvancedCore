@@ -12,7 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.LongSupplier;
-import java.util.function.Supplier;
+import java.util.function.Function;
+import java.util.concurrent.Executor;
 
 import org.bukkit.Bukkit;
 
@@ -49,6 +50,7 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     private volatile CompletionStage<Void> inventoryPersistence = CompletableFuture.completedFuture(null);
     private volatile CompletionStage<Void> timestampPersistence = CompletableFuture.completedFuture(null);
     private volatile CompletionStage<Void> permissionPersistence = CompletableFuture.completedFuture(null);
+    private CompletionStage<Void> finalPublicationOrder = CompletableFuture.completedFuture(null);
     private volatile CompletionStage<Void> userStorageRetirement = CompletableFuture.completedFuture(null);
 	private CompletionStage<Void> startedUserStorageRetirement;
 	private volatile CompletionStage<Void> admittedUserStorageRetirement;
@@ -115,10 +117,10 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     @Override public List<Cleanup> beforeExecutorShutdown() {
         return List.of(
                 new Cleanup("full inventory handler", () -> {
-                    inventoryPersistence = finalPersistence("full inventory snapshot", () -> {
+                    inventoryPersistence = finalPersistence("full inventory snapshot", executor -> {
                         FullInventoryHandler handler = plugin.getFullInventoryHandler();
                         return handler == null ? CompletableFuture.completedFuture(null)
-                                : Objects.requireNonNull(handler.shutdownAsync(persistenceWorker), "inventory persistence");
+                                : Objects.requireNonNull(handler.shutdownAsync(executor), "inventory persistence");
                     });
                 }),
                 new Cleanup("Javascript engine", () -> {
@@ -202,9 +204,9 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
                     if (plugin.getHologramHandler() != null) plugin.getHologramHandler().onShutDown();
                 }),
                 new Cleanup("permission handler", () -> {
-                    permissionPersistence = finalPersistence("timed permission snapshot", () ->
+                    permissionPersistence = finalPersistence("timed permission snapshot", executor ->
                             plugin.getPermissionHandler() == null ? CompletableFuture.completedFuture(null)
-                                    : Objects.requireNonNull(plugin.getPermissionHandler().shutDownAsync(persistenceWorker),
+                                    : Objects.requireNonNull(plugin.getPermissionHandler().shutDownAsync(executor),
                                             "permission persistence"));
                 }),
                 new Cleanup("dialog service", () -> {
@@ -434,20 +436,36 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
         return completion;
     }
 
-    private CompletionStage<Void> finalPersistence(String component, Supplier<CompletionStage<Void>> submission) {
-        CompletionStage<Void> completion;
-        try { completion = submission.get(); }
-        catch (Throwable failure) { completion = CompletableFuture.failedFuture(failure); }
+    private CompletionStage<Void> finalPersistence(String component,
+            Function<Executor, CompletionStage<Void>> submission) {
+        var completion = new CompletableFuture<Void>();
+        CompletionStage<Void> predecessor = finalPublicationOrder;
+        finalPublicationOrder = completion;
+        Executor ordered = task -> predecessor.whenComplete((ignored, priorFailure) -> {
+            // Failure is still reported by its original stage; independent
+            // cleanup may proceed only after that owner has actually settled.
+            try { persistenceWorker.execute(task); }
+            catch (Throwable failure) { completion.completeExceptionally(failure); }
+        });
+        try {
+            // Handler shutdown fences admission now, while its actual snapshot
+            // waits on the preceding publication through the supplied executor.
+            Objects.requireNonNull(submission.apply(ordered), "final persistence")
+                    .whenComplete((ignored, failure) -> {
+                        if (failure == null) completion.complete(null);
+                        else completion.completeExceptionally(failure);
+                    });
+        } catch (Throwable failure) { completion.completeExceptionally(failure); }
         return observePersistence(component, completion);
     }
 
-    private CompletionStage<Void> submitTimestampPersistence() {
+    private CompletionStage<Void> submitTimestampPersistence(Executor executor) {
         ServerData owner = plugin.getServerDataFile();
         if (owner == null) return CompletableFuture.completedFuture(null);
         long lastUpdated = System.currentTimeMillis();
         var completion = new CompletableFuture<Void>();
         try {
-            persistenceWorker.execute(() -> {
+            executor.execute(() -> {
                 try {
                     owner.mutateFinalData(data -> data.set("LastUpdated", lastUpdated))
                             .whenComplete((ignored, failure) -> {
@@ -505,8 +523,10 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     private void finishPersistenceSubmission() {
         // Do not discard accepted snapshots on timeout or close the native owner
         // while inventory delivery can still advance its durable replay receipt.
-        persistenceWorker.shutdown();
         CompletableFuture<Void> completion = finalFilePersistence();
+        // Asynchronous owners can settle after this lifecycle callback returns.
+        // Keep the existing worker available for their ordered successors.
+        completion.whenComplete((ignored, failure) -> persistenceWorker.shutdown());
         if (completion.isDone()) return;
         LongSupplier budget = shutdownRemainingNanos;
         long remaining = budget == null ? TimeUnit.SECONDS.toNanos(15) : Math.max(0L, budget.getAsLong());

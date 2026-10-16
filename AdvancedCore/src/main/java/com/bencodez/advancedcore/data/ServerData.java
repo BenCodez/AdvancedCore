@@ -34,6 +34,7 @@ public class ServerData extends YMLFile {
 	private boolean publicationSettlementPending;
 	private boolean replacementCleanupPending;
 	private boolean replacementUncertain;
+	private boolean finalPublicationIndeterminate;
 	/**
 	 * Durable state for one locally detected time transition. The identifier is
 	 * deliberately stable while a transition is pending so consumers can store
@@ -55,6 +56,7 @@ public class ServerData extends YMLFile {
 
 	@Override
 	public synchronized void setup() {
+		requireFinalPublicationSettled();
 		Path target = getdFile().toPath().toAbsolutePath();
 		Path backup = backupPath(target);
 		Path replacementMarker = replacementMarkerPath(target);
@@ -111,6 +113,7 @@ public class ServerData extends YMLFile {
 			java.util.function.Consumer<org.bukkit.configuration.file.FileConfiguration> mutation) {
 		try {
 			synchronized (this) {
+				requireFinalPublicationSettled();
 				java.util.Objects.requireNonNull(mutation, "mutation");
 				Class<?> saveOwner = getClass().getMethod("saveData").getDeclaringClass();
 				if (saveOwner != YMLFile.class && saveOwner != ServerData.class) {
@@ -140,8 +143,23 @@ public class ServerData extends YMLFile {
 							replacementUncertain = true;
 							if (failure != reconciliationFailure) failure.addSuppressed(reconciliationFailure);
 						}
+						// Retry only the retained commit's durability/cleanup, never its
+						// mutation or file replacement. A confirmed commit must settle
+						// this original stage before a later save can publish its values.
+						if (!replacementUncertain && (publicationSettlementPending || replacementCleanupPending)) {
+							try { prepareSnapshotPublication(); }
+							catch (Throwable settlementFailure) {
+								finalPublicationIndeterminate = true;
+								if (failure != settlementFailure) failure.addSuppressed(settlementFailure);
+								throw failure;
+							}
+						} else {
+							finalPublicationIndeterminate = true;
+							throw failure;
+						}
+					} else {
+						throw failure;
 					}
-					throw failure;
 				}
 				finally { finalDataSnapshot = null; }
 				reconcileFinalData(live, candidate, before);
@@ -292,12 +310,14 @@ public class ServerData extends YMLFile {
 		try {
 			if (Files.isRegularFile(target)) {
 				String actualHash = snapshotHash(target);
+				// Equal predecessor/candidate bytes cannot prove that the forced
+				// temporary file replaced an older, potentially unforced target.
+				if (actualHash.equals(previousHash)) return;
 				if (intendedHash.equals(actualHash)) {
 					visiblePublication++;
 					publicationSettlementPending = true;
 					return;
 				}
-				if (actualHash.equals(previousHash)) return;
 			} else if (previouslyAbsent && Files.notExists(target)) return;
 		} catch (IOException | RuntimeException inspectionFailure) {
 			if (failure != inspectionFailure) failure.addSuppressed(inspectionFailure);
@@ -308,6 +328,7 @@ public class ServerData extends YMLFile {
 	}
 
 	private void prepareSnapshotPublication() {
+		requireFinalPublicationSettled();
 		if (replacementUncertain)
 			throw new IllegalStateException("ServerData replacement outcome is unknown; restart required before saving");
 		if (!publicationSettlementPending && !replacementCleanupPending) return;
@@ -319,6 +340,11 @@ public class ServerData extends YMLFile {
 			clearReplacementState(replacementMarkerPath(target), backupPath(target));
 			replacementCleanupPending = false;
 		}
+	}
+
+	private void requireFinalPublicationSettled() {
+		if (finalPublicationIndeterminate)
+			throw new IllegalStateException("Final ServerData publication is unconfirmed; restart required before reuse");
 	}
 
 	private Path backupPath(Path target) {
@@ -438,7 +464,7 @@ public class ServerData extends YMLFile {
 		try {
 			Class<?> owner = getClass().getMethod("saveData").getDeclaringClass();
 			if (owner == ServerData.class || owner == YMLFile.class) {
-				synchronized (this) { operation.run(); }
+				synchronized (this) { requireFinalPublicationSettled(); operation.run(); }
 			} else {
 				// Existing adapters retain their own nonblocking mutation/publication model.
 				operation.run();

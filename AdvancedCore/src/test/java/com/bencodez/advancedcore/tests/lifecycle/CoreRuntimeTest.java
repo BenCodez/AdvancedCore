@@ -961,12 +961,12 @@ class CoreRuntimeTest {
 		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
 		platform.beforeExecutorShutdown().stream().filter(cleanup -> cleanup.name().equals("full inventory handler")
 				|| cleanup.name().equals("server data timestamp")).forEach(cleanup -> cleanup.action().run());
+		inventorySave.complete(null);
 		assertTrue(admitted.await(2, TimeUnit.SECONDS));
 		platform.afterExecutorShutdown().forEach(cleanup -> cleanup.action().run());
 		assertNotNull(files.get()); assertFalse(files.get().toCompletableFuture().isDone());
 		var failedPermission = new IllegalStateException("permission publication failed");
 		permissionSave.completeExceptionally(failedPermission);
-		inventorySave.complete(null);
 		assertFalse(files.get().toCompletableFuture().isDone(), "aggregate waits for every owner settlement");
 		timestampSave.complete(null);
 		assertSame(failedPermission, assertThrows(CompletionException.class,

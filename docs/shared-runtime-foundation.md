@@ -39,9 +39,14 @@ period. The public `RewardHandler.shutdown()` keeps its ten-second maximum for
 standalone callers, while lifecycle shutdown supplies only its remaining budget.
 
 Final inventory, server timestamp, and timed-permission mutations are admitted in
-order on one bounded daemon persistence worker. `ServerData.mutateFinalData`
+order on one bounded daemon persistence worker. Each publication stage settles
+before its successor snapshot starts, including asynchronous adapters. Handler
+admission is fenced immediately, and the worker remains available for ordered
+successors until all final stages settle. `ServerData.mutateFinalData`
 returns the actual file owner's publication stage. Native and completion-aware
-final mutations are staged in a private YAML candidate and become live only after confirmed publication.
+final mutations are staged in a private YAML candidate. Native live YAML retains
+a replacement that has become visible even if its directory sync then fails;
+visibility alone does not acknowledge its reward receipt.
 Native ServerData forces that candidate on the shutdown worker; an ordered
 adapter serializes under its own YAML monitor and confirms its existing publisher.
 Later unrelated saves cannot publish a failed final overflow mutation. Ordered
@@ -53,7 +58,15 @@ one save callback, but cannot claim confirmed publication without overriding the
 additive completion contract; they report an unsupported confirmation. A legacy
 callback failure remains observable, with no second mutation or save invocation.
 Its live changes retain the old non-transactional behavior; candidate isolation
-remains specific to native and completion-aware owners. An I/O failure remains a failed stage. Inventory persistence gates user-storage
+remains specific to native and completion-aware owners. For a known visible
+native replacement, one immediate retry may settle only its retained directory
+sync and cleanup, without repeating the mutation or move. Confirmation settles
+the original publication successfully. If that retry fails, its stage fails and
+the owner rejects subsequent saves, final mutations, reload and setup; later
+cleanup cannot silently commit unacknowledged overflow. This fence does not
+remove the separate file/receipt crash window or promise replay safety after an
+uncertain restart. Failures before replacement retain their existing recovery
+behavior. Inventory persistence gates user-storage
 retirement and cannot acknowledge reserved replay overflow before its actual
 save succeeds. The public synchronous handler shutdown methods remain available.
 The shutdown-completion hook follows submission of final file saves; it is not a
