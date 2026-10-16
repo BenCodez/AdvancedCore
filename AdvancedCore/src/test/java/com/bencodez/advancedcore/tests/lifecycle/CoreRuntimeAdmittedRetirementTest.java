@@ -287,7 +287,9 @@ class CoreRuntimeAdmittedRetirementTest {
         try {
             new AdvancedCoreRuntime(platform, clock::get).shutdown(0L);
             fixture.manager.getTimer().submit(() -> null).get(2, TimeUnit.SECONDS);
-            assertTrue(rewards.getDelayedTimer().isTerminated(), "worker exit alone does not finish replay");
+            // The storage barrier does not order the delayed worker's final exit.
+            assertTrue(rewards.getDelayedTimer().awaitTermination(2, TimeUnit.SECONDS),
+                    "worker exit alone does not finish replay");
             assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
             verify(fixture.mysql, never()).close();
             var acknowledgingCallback = callback.submit(() -> {
