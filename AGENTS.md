@@ -15,6 +15,8 @@ mvn -B -f AdvancedCore/pom.xml test
 mvn -B -f AdvancedCore/pom.xml package
 ```
 
+All test classes and test-only helpers must live under `com.bencodez.advancedcore.tests` or its subpackages, with matching directories under `AdvancedCore/src/test/java`. Keep tests out of production packages. Preserve production visibility when relocating tests; use narrowly scoped test-only reflective helpers when package-private access is required. Preserve test discovery and the package-phase artifact tests.
+
 Confirm the current workflow and POM before relying on these commands. Do not use deployment, install, or developer-copy profiles for routine validation. Verify that the package invocation produced a fresh JAR, record discovered test counts, and run `git diff --check`.
 
 ## Architecture and compatibility boundaries

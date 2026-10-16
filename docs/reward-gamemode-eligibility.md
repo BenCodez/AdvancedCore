@@ -6,7 +6,25 @@ Rewards may opt into the live player's Bukkit gamemode with `GameModes` and
 
 An allowlist requires the current mode to be present. A denylist rejects the
 current mode, and denial wins when a mode appears in both lists. Omitting both
-keys preserves existing reward behavior. Invalid types or names fail closed.
+keys preserves existing reward behavior when no global default is configured.
+Invalid types or names fail closed.
+
+The embedding plugin can set `DefaultRewardGameModes` in its primary configuration
+(the same configuration that supplies `DefaultRewardWorlds`). For example:
+
+```yaml
+DefaultRewardGameModes:
+  - SURVIVAL
+```
+
+The default is an empty list, so existing configurations keep their behavior.
+A reward's explicit `GameModes` list overrides the global allowlist, including
+`GameModes: []` to opt out. `BlackListedGameModes` still rejects matching modes.
+The global list has the same four-entry limit and valid names as a reward list;
+a malformed default denies rewards that inherit it, while an explicit valid
+reward allowlist remains independent. Saved changes take effect through the
+embedding plugin's normal configuration reload. AdvancedCore does not regenerate
+or rewrite existing reward definitions to apply the default.
 
 ```yaml
 GameModes:
@@ -25,6 +43,9 @@ the queue remains the source of truth. The transition wakeup uses a one-second
 player-owned delay so it observes the committed mode, and reads it again before
 remaining effects. Completed effects keep their existing replay checkpoints; this
 does not promise atomicity between external commands and storage after a crash.
+An already-passed chance is retained with the original deferred occurrence even
+when eligibility changes before its first effect. Replay does not roll it again,
+including after handler replacement or removal of a global default.
 
 Native transition signals recheck due timed rewards as well as the offline queue.
 A timed occurrence deferred specifically by player eligibility retains its original

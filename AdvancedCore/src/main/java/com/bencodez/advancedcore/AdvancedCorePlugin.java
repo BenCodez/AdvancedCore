@@ -1343,8 +1343,54 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		advancedCoreBuildNumber = conf.getString("buildnumber", "NOTSET");
 	}
 
+	private volatile com.bencodez.advancedcore.api.user.presence.PlayerPresenceService playerPresenceService;
+	private com.bencodez.advancedcore.api.user.presence.BukkitPlayerPresenceLookup playerPresenceLookup;
+
+	/**
+	 * Read checked history for an already resolved server UUID, without name/profile
+	 * resolution or storage on the caller. UNKNOWN is retained by display filters.
+	 * Completion may run on a worker; schedule platform effects explicitly.
+	 */
+	public java.util.concurrent.CompletionStage<com.bencodez.advancedcore.api.user.presence.PlayerPresence>
+			checkPlayerPresenceAsync(java.util.UUID identity) {
+		var service = playerPresenceService;
+		return service == null
+				? java.util.concurrent.CompletableFuture.completedStage(
+						com.bencodez.advancedcore.api.user.presence.PlayerPresence.UNKNOWN)
+				: service.checkAsync(identity);
+	}
+
+	/** Check verified current/historical UUIDs; unresolved aliases must not be omitted. */
+	public java.util.concurrent.CompletionStage<com.bencodez.advancedcore.api.user.presence.PlayerPresence>
+			checkPlayerPresenceIdentitiesAsync(java.util.Collection<java.util.UUID> identities) {
+		var service = playerPresenceService;
+		return service == null
+				? java.util.concurrent.CompletableFuture.completedStage(
+						com.bencodez.advancedcore.api.user.presence.PlayerPresence.UNKNOWN)
+				: service.checkIdentitiesAsync(identities);
+	}
+
+	/** Also require proof that no unmapped offline identity can retain earlier history. */
+	public java.util.concurrent.CompletionStage<com.bencodez.advancedcore.api.user.presence.PlayerPresence>
+			checkPlayerPresenceIdentitiesAsync(java.util.Collection<java.util.UUID> identities, boolean completeOnlineHistory) {
+		var service = playerPresenceService;
+		return service == null
+				? java.util.concurrent.CompletableFuture.completedStage(
+						com.bencodez.advancedcore.api.user.presence.PlayerPresence.UNKNOWN)
+				: service.checkIdentitiesAsync(identities, completeOnlineHistory);
+	}
+
 	@Override
 	public void onDisable() {
+		var presence = playerPresenceService;
+		playerPresenceService = null;
+		if (presence != null) presence.close();
+		var lookup = playerPresenceLookup;
+		playerPresenceLookup = null;
+		if (lookup != null) {
+			lookup.close();
+			org.bukkit.event.HandlerList.unregisterAll(lookup);
+		}
 		new com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle(this).shutdown();
 		javaPlugin = null;
 	}
@@ -1359,6 +1405,23 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 		loginTimer = runtimeExecutors.getLoginTimer();
 		advancedCoreCommandLoader = CommandLoader.getInstance();
 		inventoryTimer = runtimeExecutors.getInventoryTimer();
+		var previousPresence = playerPresenceService;
+		if (previousPresence != null) previousPresence.close();
+		playerPresenceService = null;
+		var previousLookup = playerPresenceLookup;
+		if (previousLookup != null) {
+			previousLookup.close();
+			org.bukkit.event.HandlerList.unregisterAll(previousLookup);
+		}
+		var presenceServer = getServer();
+		var presenceDirectory = com.bencodez.advancedcore.api.user.presence.BukkitPlayerPresenceLookup
+				.capturePrimaryHistoryDirectory(presenceServer);
+		var presenceLookup = new com.bencodez.advancedcore.api.user.presence.BukkitPlayerPresenceLookup(presenceDirectory);
+		presenceLookup.capturePlayerSaving(presenceServer);
+		playerPresenceLookup = presenceLookup;
+		registerEvents(presenceLookup);
+		presenceLookup.captureJoinedPlayers(presenceServer);
+		playerPresenceService = new com.bencodez.advancedcore.api.user.presence.PlayerPresenceService(timer, presenceLookup);
 
 		onPreLoad();
 

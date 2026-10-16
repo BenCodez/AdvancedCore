@@ -1032,11 +1032,14 @@ public class AdvancedCoreUser {
 		int completed = completedAsyncInjections(failure);
 		String serializedProgress = replayFailure == null ? "" : encodeAsyncReplayProgress(replayFailure.getReplayProgress(),
 				replayFailure.getReplayRegistryFingerprints());
-		if (completed <= 0 && serializedProgress.isEmpty()) return rewardEntry;
 		int placeholders = rewardEntry.indexOf("%placeholders%");
 		String storedReference = placeholders < 0 ? rewardEntry : rewardEntry.substring(0, placeholders);
 		String suffix = placeholders < 0 ? "" : rewardEntry.substring(placeholders);
 		if (replayFailure != null) suffix = "%placeholders%" + ArrayUtils.makeString(replayFailure.getReplayPlaceholders());
+		// A nondeterministic decision may be durable work before the first effect.
+		// Preserve its snapshot without inventing a completed-stage marker.
+		if (completed <= 0 && serializedProgress.isEmpty()) return replayFailure == null
+				? rewardEntry : storedReference + suffix;
 		QueuedReplay queuedReplay = parseQueuedReplay(stripAsyncRetryMarker(storedReference));
 		if (!serializedProgress.isEmpty()) return queuedReference(queuedReplay) + ASYNC_PROGRESS_DELIMITER
 				+ serializedProgress + suffix;

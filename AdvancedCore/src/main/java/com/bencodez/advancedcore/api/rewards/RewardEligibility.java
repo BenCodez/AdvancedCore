@@ -128,10 +128,32 @@ public final class RewardEligibility {
         return data.contains("GameModes", true) || data.contains("BlackListedGameModes", true);
     }
 
+    /** Includes the embedding plugin's optional default for definitions without an allowlist. */
+    public static boolean isConfigured(AdvancedCorePlugin plugin, ConfigurationSection data) {
+        if (isConfigured(data)) return true;
+        Object defaults = defaultModes(plugin);
+        return !(defaults instanceof List<?> modes) || !modes.isEmpty();
+    }
+
+    private static Object defaultModes(AdvancedCorePlugin plugin) {
+        var options = plugin.getOptions();
+        if (options == null) return List.of();
+        var config = options.getYmlConfig();
+        // Read the in-memory section so malformed YAML cannot become an empty
+        // typed list and silently remove the configured restriction.
+        if (config != null && config.getData() != null
+                && config.getData().contains("DefaultRewardGameModes", true)) {
+            return config.getData().get("DefaultRewardGameModes");
+        }
+        var modes = options.getDefaultRewardGameModes();
+        return modes == null ? List.of() : modes;
+    }
+
     /** Fast deterministic predicate; callers must already hold the player owner. */
     public boolean isEligible(ConfigurationSection data, AdvancedCoreUser user) {
-        if (!isConfigured(data)) return true;
-        if (!validModes(data, "GameModes") || !validModes(data, "BlackListedGameModes")) return false;
+        if (!isConfigured(plugin, data)) return true;
+        Object allowedValue = data.contains("GameModes", true) ? data.get("GameModes") : defaultModes(plugin);
+        if (!validModeList(allowedValue) || !validModes(data, "BlackListedGameModes")) return false;
         Pending observed;
         synchronized (this) {
             observed = findPending(user.getUUID());
@@ -144,7 +166,7 @@ public final class RewardEligibility {
                         || observed.player == null || observed.player != current) return false;
             }
         }
-        List<String> allowed = data.getStringList("GameModes");
+        List<?> allowed = (List<?>) allowedValue;
         List<String> denied = data.getStringList("BlackListedGameModes");
         if (allowed.isEmpty() && denied.isEmpty() && !overflow.enabled()) return true;
         Player player = user.getPlayer();
@@ -159,19 +181,21 @@ public final class RewardEligibility {
 
     public static boolean validModes(ConfigurationSection data, String path) {
         if (!data.contains(path, true)) return true;
-        if (!data.isList(path)) return false;
-        List<?> values = data.getList(path);
-        if (values == null || values.size() > GameMode.values().length) return false;
-        for (Object value : values) {
-            if (!(value instanceof String name)) return false;
+        return validModeList(data.get(path));
+    }
+
+    private static boolean validModeList(Object value) {
+        if (!(value instanceof List<?> values) || values.size() > GameMode.values().length) return false;
+        for (Object entry : values) {
+            if (!(entry instanceof String name)) return false;
             try { GameMode.valueOf(name.trim().toUpperCase(Locale.ROOT)); }
             catch (IllegalArgumentException failure) { return false; }
         }
         return true;
     }
 
-    private static boolean containsMode(List<String> modes, GameMode mode) {
-        for (String candidate : modes) if (mode.name().equalsIgnoreCase(candidate.trim())) return true;
+    private static boolean containsMode(List<?> modes, GameMode mode) {
+        for (Object candidate : modes) if (mode.name().equalsIgnoreCase(((String) candidate).trim())) return true;
         return false;
     }
 
