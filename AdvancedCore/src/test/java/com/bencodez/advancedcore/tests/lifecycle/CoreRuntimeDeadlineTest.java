@@ -33,6 +33,12 @@ import com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend;
 
 class CoreRuntimeDeadlineTest {
     @org.junit.jupiter.api.io.TempDir java.io.File directory;
+    private AdvancedCorePlugin rewardPlugin() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        when(plugin.getDataFolder()).thenReturn(directory);
+        return plugin;
+    }
+
     @Test void overlappingExecutorAndActualRewardWaitsShareOneDisableDeadline() throws Exception {
         AtomicLong clock = new AtomicLong();
         RuntimePlatform platform = platform();
@@ -42,7 +48,7 @@ class CoreRuntimeDeadlineTest {
         ScheduledExecutorService inventory = timedExecutor(clock);
         ScheduledExecutorService separateStorage = timedExecutor(clock);
         ScheduledExecutorService delayedRewards = timedExecutor(clock);
-        RewardHandler rewards = mock(RewardHandler.class, CALLS_REAL_METHODS);
+        RewardHandler rewards = mock(RewardHandler.class, withSettings().useConstructor(rewardPlugin()).defaultAnswer(CALLS_REAL_METHODS));
         var timerField = RewardHandler.class.getDeclaredField("delayedTimer");
         timerField.setAccessible(true);
         timerField.set(rewards, delayedRewards);
@@ -182,7 +188,7 @@ class CoreRuntimeDeadlineTest {
     }
 
     @Test void standaloneRewardShutdownKeepsItsExistingTenSecondGrace() throws Exception {
-        RewardHandler rewards = mock(RewardHandler.class, CALLS_REAL_METHODS);
+        RewardHandler rewards = mock(RewardHandler.class, withSettings().useConstructor(rewardPlugin()).defaultAnswer(CALLS_REAL_METHODS));
         ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
         var timerField = RewardHandler.class.getDeclaredField("delayedTimer");
         timerField.setAccessible(true); timerField.set(rewards, timer);

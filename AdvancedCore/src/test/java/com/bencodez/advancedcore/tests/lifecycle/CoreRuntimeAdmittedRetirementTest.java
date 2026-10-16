@@ -118,6 +118,10 @@ class CoreRuntimeAdmittedRetirementTest {
         assertAdmittedTimedRewardFinishesBeforeNativeRetirement("time-cancelled");
     }
 
+    @Test void admittedExternalTimedCheckDrainsBeforeReplaySnapshot() throws Exception {
+        assertAdmittedTimedRewardFinishesBeforeNativeRetirement("external");
+    }
+
     private void assertAdmittedTimedRewardFinishesBeforeNativeRetirement(String preparationOutcome)
             throws Exception {
         Fixture fixture = new Fixture();
@@ -157,7 +161,7 @@ class CoreRuntimeAdmittedRetirementTest {
         doReturn(CompletableFuture.completedFuture(null)).when(rewards)
                 .givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class), any(RewardOptions.class));
         CompletableFuture<Void> hook = new CompletableFuture<>();
-        if (preparationOutcome.equals("normal") || preparationOutcome.startsWith("time-")) hook.complete(null);
+        if (preparationOutcome.equals("normal") || preparationOutcome.equals("external") || preparationOutcome.startsWith("time-")) hook.complete(null);
         else if (preparationOutcome.equals("failed")) hook.completeExceptionally(new IllegalStateException("consumer failed"));
         else hook.cancel(false);
         when(fixture.plugin.onBeforeStorageShutdown()).thenReturn(hook);
@@ -170,12 +174,18 @@ class CoreRuntimeAdmittedRetirementTest {
             when(fixture.plugin.getTimeChecker()).thenReturn(checker);
             when(checker.beginShutdown()).thenReturn(timeRetirement);
         }
-        var execution = rewards.getDelayedTimer().submit(user::checkDelayedTimedRewards);
+        var external = java.util.concurrent.Executors.newSingleThreadExecutor(
+                AdvancedCoreRuntime.daemonThreads("external-admitted-replay"));
+        var execution = preparationOutcome.equals("external")
+                ? external.submit(user::checkDelayedTimedRewards)
+                : rewards.getDelayedTimer().submit(user::checkDelayedTimedRewards);
         assertTrue(reading.await(2, TimeUnit.SECONDS));
         BukkitRuntimePlatform platform = fixture.platform();
         try {
             new AdvancedCoreRuntime(platform, clock::get).shutdown(0L);
-            assertTrue(interrupted.await(2, TimeUnit.SECONDS), "zero caller budget still cancels queued timer work");
+            if (!preparationOutcome.equals("external")) {
+                assertTrue(interrupted.await(2, TimeUnit.SECONDS), "zero caller budget still cancels queued timer work");
+            }
             // A real manager-worker barrier removes the race with the old native
             // retirement task. The fixed path keeps admission open for the held reward.
             fixture.manager.getTimer().submit(() -> null).get(2, TimeUnit.SECONDS);
@@ -184,7 +194,7 @@ class CoreRuntimeAdmittedRetirementTest {
             verify(fixture.mysql, never()).close();
             release.countDown();
             execution.get(2, TimeUnit.SECONDS);
-            if (preparationOutcome.equals("normal")) {
+            if (preparationOutcome.equals("normal") || preparationOutcome.equals("external")) {
                 platform.beforeExecutorShutdownCompletion().toCompletableFuture().get(2, TimeUnit.SECONDS);
             } else {
                 assertThrows(java.util.concurrent.ExecutionException.class,
@@ -199,6 +209,7 @@ class CoreRuntimeAdmittedRetirementTest {
             assertEquals(TimeUnit.SECONDS.toNanos(15), clock.get(), "accepted work does not renew caller waits");
         } finally {
             release.countDown();
+            external.shutdownNow();
             rewards.shutdown(0, TimeUnit.NANOSECONDS);
             fixture.manager.getTimer().shutdownNow();
         }
@@ -300,6 +311,79 @@ class CoreRuntimeAdmittedRetirementTest {
             assertEquals(TimeUnit.SECONDS.toNanos(15), clock.get());
         } finally {
             releaseAcknowledgement.countDown();
+            callback.shutdownNow();
+            rewards.shutdown(0, TimeUnit.NANOSECONDS);
+            fixture.manager.getTimer().shutdownNow();
+        }
+    }
+
+    @Test void consumerCallbackCannotStartNewTimedReplayAfterShutdownFence() throws Exception {
+        assertConsumerCannotStartLateReplay("timed");
+    }
+
+    @Test void consumerCallbackCannotStartNewOfflineReplayAfterShutdownFence() throws Exception {
+        assertConsumerCannotStartLateReplay("offline");
+    }
+
+    @Test void consumerCallbackCannotForceNewOfflineReplayAfterShutdownFence() throws Exception {
+        assertConsumerCannotStartLateReplay("forced");
+    }
+
+    private void assertConsumerCannotStartLateReplay(String kind) throws Exception {
+        Fixture fixture = new Fixture();
+        when(fixture.backend.isOpen()).thenReturn(true);
+        RewardHandler rewards = spy(new RewardHandler(fixture.plugin));
+        when(fixture.plugin.getRewardHandler()).thenReturn(rewards);
+        AdvancedCoreUser user = new AdvancedCoreUser(fixture.plugin, fixture.uuid, "late-replay-fixture");
+        UserData data = mock(UserData.class);
+        user.setData(data);
+        when(fixture.plugin.getOptions().isProcessRewards()).thenReturn(true);
+        when(fixture.users.getOfflineRewardsPath()).thenReturn("OfflineRewards");
+        String key = kind.equals("timed") ? "TimedRewards" : "OfflineRewards";
+        String entry = kind.equals("timed") ? "ShutdownReward%ExecutionTime/%1" : "ShutdownReward";
+        ArrayList<String> persisted = new ArrayList<>(List.of(entry));
+        when(data.getStringList(key, UserDataFetchMode.DEFAULT))
+                .thenAnswer(call -> new ArrayList<>(persisted));
+        doAnswer(call -> {
+            persisted.clear();
+            persisted.addAll(call.getArgument(1));
+            return null;
+        }).when(data).setStringList(eq(key), any(), anyBoolean());
+        CompletableFuture<Void> dispatch = new CompletableFuture<>();
+        doReturn(dispatch).when(rewards).givePersistedQueueRewardAsync(eq(user),
+                any(PersistedQueueReference.class), any(RewardOptions.class));
+        CompletableFuture<Void> hook = new CompletableFuture<>();
+        when(fixture.plugin.onBeforeStorageShutdown()).thenReturn(hook);
+        CountDownLatch admitted = new CountDownLatch(1);
+        CountDownLatch finishHook = new CountDownLatch(1);
+        var callback = java.util.concurrent.Executors.newSingleThreadExecutor(
+                AdvancedCoreRuntime.daemonThreads("late-replay-consumer"));
+        BukkitRuntimePlatform platform = fixture.platform();
+        try {
+            var execution = callback.submit(() -> fixture.shared.withStorageReadAdmission(() -> {
+                admitted.countDown();
+                awaitIgnoringInterrupt(finishHook);
+                hook.complete(null);
+                // The completion callback is still admitted to storage, but
+                // shutdown has already fenced admission of fresh replay work.
+                if (kind.equals("timed")) user.checkDelayedTimedRewards();
+                else if (kind.equals("offline")) user.checkOfflineRewards();
+                else user.forceRunOfflineRewardsAsync().toCompletableFuture().join();
+                return null;
+            }));
+            assertTrue(admitted.await(2, TimeUnit.SECONDS));
+            new AdvancedCoreRuntime(platform, () -> TimeUnit.SECONDS.toNanos(15)).shutdown(0L);
+            finishHook.countDown();
+            execution.get(2, TimeUnit.SECONDS);
+            verify(rewards, never()).givePersistedQueueRewardAsync(eq(user),
+                    any(PersistedQueueReference.class), any(RewardOptions.class));
+            assertEquals(List.of(entry), persisted,
+                    "late replay remains durable for the next enable instead of extending a snapshotted tail");
+            platform.beforeExecutorShutdownCompletion().toCompletableFuture().get(2, TimeUnit.SECONDS);
+            verify(fixture.mysql, times(1)).close();
+        } finally {
+            finishHook.countDown();
+            dispatch.complete(null);
             callback.shutdownNow();
             rewards.shutdown(0, TimeUnit.NANOSECONDS);
             fixture.manager.getTimer().shutdownNow();

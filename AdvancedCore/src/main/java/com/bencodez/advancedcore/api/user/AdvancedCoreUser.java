@@ -444,7 +444,7 @@ public class AdvancedCoreUser {
 	/**
 	 * Snapshot completion of already-admitted persisted replay, including its
 	 * queue acknowledgement or restore callback. The lifecycle calls this from
-	 * its manager-worker barrier after delayed-task admission and execution end,
+	 * its manager-worker barrier after delayed-task and replay-check admission end,
 	 * so a check deferred to that worker has appended its tail before the snapshot.
 	 * This creates no new replay owner and does not admit or execute rewards.
 	 */
@@ -1092,6 +1092,13 @@ public class AdvancedCoreUser {
 	}
 
 	private void checkDelayedTimedRewards(ReplayPlayerState capturedState) {
+		try (RewardHandler.PersistedReplayCheck admission = plugin.getRewardHandler().admitPersistedReplayCheck()) {
+			if (admission == null) return;
+			checkAdmittedDelayedTimedRewards(capturedState);
+		}
+	}
+
+	private void checkAdmittedDelayedTimedRewards(ReplayPlayerState capturedState) {
 		UserDataManager manager = sharedReplayDataManager();
 		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
 			ReplayPlayerState state = captureReplayPlayerState();
@@ -1187,6 +1194,13 @@ public class AdvancedCoreUser {
 	}
 
 	private CompletionStage<Void> dispatchOfflineRewards(boolean force, ReplayPlayerState capturedState) {
+		try (RewardHandler.PersistedReplayCheck admission = plugin.getRewardHandler().admitPersistedReplayCheck()) {
+			if (admission == null) return CompletableFuture.completedFuture(null);
+			return dispatchAdmittedOfflineRewards(force, capturedState);
+		}
+	}
+
+	private CompletionStage<Void> dispatchAdmittedOfflineRewards(boolean force, ReplayPlayerState capturedState) {
 		ArrayList<String> rewards = new ArrayList<>(getOfflineRewards());
 		ArrayList<CompletableFuture<Void>> completions = new ArrayList<>();
 		for (String rewardEntry : rewards) {
