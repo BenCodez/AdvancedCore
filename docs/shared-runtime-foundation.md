@@ -53,6 +53,17 @@ Later unrelated saves cannot publish a failed final overflow mutation. Ordered
 snapshots carry only successfully published final changes forward and preserve
 newer explicit edits, including an edit that writes the same previous value.
 No caller waits for publication while holding the YAML owner's monitor. Legacy
+live read/mutate/save transactions use `ServerData.publicationMonitor()`, whose
+native default is the file object itself. A facade must return its backing
+owner's stable monitor and delegate YAML access, mutations and publication to
+that same owner; overriding the monitor alone does not reroute inherited native
+methods. Overflow-section replacement and recovered time-transition validation
+use this contract so ordinary or final whole-file snapshots cannot interleave
+with those compound live operations. This lock does not turn a queued or void
+save into a durable acknowledgement and must never be held while awaiting an
+asynchronous publication stage.
+
+Legacy
 void `saveData` overrides retain the established live-YAML mutation followed by
 one save callback, but cannot claim confirmed publication without overriding the
 additive completion contract; they report an unsupported confirmation. A legacy

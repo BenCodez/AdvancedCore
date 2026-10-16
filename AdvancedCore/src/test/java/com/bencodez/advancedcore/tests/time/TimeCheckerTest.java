@@ -63,6 +63,7 @@ public class TimeCheckerTest {
 		plugin = mock(AdvancedCorePlugin.class);
 		options = mock(AdvancedCoreConfigOptions.class);
 		serverDataFile = mock(ServerData.class);
+		when(serverDataFile.publicationMonitor()).thenCallRealMethod();
 
 		// 3) stub plugin getters
 		when(plugin.getOptions()).thenReturn(options);

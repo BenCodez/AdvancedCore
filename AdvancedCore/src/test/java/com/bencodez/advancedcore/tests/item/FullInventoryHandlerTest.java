@@ -821,6 +821,7 @@ public class FullInventoryHandlerTest {
 		ScheduledExecutorService sharedInventoryTimer = mock(ScheduledExecutorService.class);
 		BukkitScheduler bukkitScheduler = mock(BukkitScheduler.class);
 		ServerData serverData = mock(ServerData.class);
+		when(serverData.publicationMonitor()).thenCallRealMethod();
 		org.mockito.Mockito.doCallRealMethod().when(serverData).mutateFinalData(any());
 		YamlConfiguration data = new YamlConfiguration();
 

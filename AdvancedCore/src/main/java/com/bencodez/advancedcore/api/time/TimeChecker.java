@@ -492,7 +492,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 					// The read is observational. Settle publication on the existing
 					// checked owner only after reserving the shutdown drain. Recheck
 					// under that owner's monitor so reload cannot revive a stale slot.
-					synchronized (serverData) {
+					synchronized (serverData.publicationMonitor()) {
 						if (!serverData.isPendingTimeChangeTransition(durable.persisted)) return;
 						serverData.beginTimeChangeTransition(type, durable.persisted.periodKey(),
 								durable.persisted.markerValue());

@@ -477,7 +477,7 @@ public class FullInventoryHandler {
 	private boolean savePendingItemsLocked(Collection<ReservedOverflow> reservedOverflows,
 			ServerData serverData) {
 		if (serverData == null) return false;
-		synchronized (serverData) {
+		synchronized (serverData.publicationMonitor()) {
 			return savePendingItemsUnderDataLock(reservedOverflows, serverData);
 		}
 	}

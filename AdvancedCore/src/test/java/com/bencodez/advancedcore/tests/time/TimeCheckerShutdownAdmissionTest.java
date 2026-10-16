@@ -46,6 +46,49 @@ import com.bencodez.advancedcore.data.ServerData;
 class TimeCheckerShutdownAdmissionTest {
     @TempDir File directory;
 
+    @Test void recoveredFacadeValidationAndBeginShareTheActualPublicationOwner() throws Exception {
+        try (Fixture fixture = new Fixture(directory)) {
+            var facade = new PublicationFacade(fixture.plugin, fixture.data);
+            when(fixture.plugin.getServerDataFile()).thenReturn(facade);
+            fixture.startCalendarCheck();
+            fixture.data.allowValidation.countDown();
+            fixture.calendarCheck.get(5, TimeUnit.SECONDS);
+            assertEquals(2, facade.validations.get());
+            assertTrue(facade.recoveryValidatedUnderOwner.get(),
+                    "recovered validation must remain atomic with begin against native publication");
+            assertTrue(facade.recoveryBeganUnderOwner.get());
+            assertEquals(3, fixture.events.get());
+            assertNull(fixture.data.getPendingTimeChangeTransition(TimeType.DAY));
+        }
+    }
+
+    private static final class PublicationFacade extends ServerData {
+        private final ServerData owner;
+        final AtomicInteger validations = new AtomicInteger();
+        final AtomicBoolean recoveryValidatedUnderOwner = new AtomicBoolean();
+        final AtomicBoolean recoveryBeganUnderOwner = new AtomicBoolean();
+        PublicationFacade(AdvancedCorePlugin plugin, ServerData owner) { super(plugin); this.owner = owner; }
+        @Override public Object publicationMonitor() { return owner.publicationMonitor(); }
+        @Override public TimeChangeTransitionState getPendingTimeChangeTransition(TimeType type) {
+            return owner.getPendingTimeChangeTransition(type);
+        }
+        @Override public boolean isPendingTimeChangeTransition(TimeChangeTransitionState state) {
+            if (validations.incrementAndGet() == 2)
+                recoveryValidatedUnderOwner.set(Thread.holdsLock(owner));
+            return owner.isPendingTimeChangeTransition(state);
+        }
+        @Override public TimeChangeTransitionState beginTimeChangeTransition(TimeType type, String period, String marker) {
+            recoveryBeganUnderOwner.set(Thread.holdsLock(owner));
+            return owner.beginTimeChangeTransition(type, period, marker);
+        }
+        @Override public void completeTimeChangeTransition(TimeChangeTransitionState state) {
+            owner.completeTimeChangeTransition(state);
+        }
+        @Override public void failTimeChangeTransition(TimeChangeTransitionState state) {
+            owner.failTimeChangeTransition(state);
+        }
+    }
+
     @Test void inventorySaveDoesNotBlockShutdownAdmissionOrCompleteItsDrainEarly() throws Exception {
         try (Fixture fixture = new Fixture(directory)) {
             fixture.startCalendarCheck();

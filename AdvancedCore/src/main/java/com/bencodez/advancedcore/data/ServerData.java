@@ -48,6 +48,20 @@ public class ServerData extends YMLFile {
 		super(plugin, new File(plugin.getDataFolder(), "ServerData.yml"));
 	}
 
+	/**
+	 * The stable monitor protecting this owner's live YAML and whole-file snapshots.
+	 * Callers performing a compound live read/mutate/save must use this monitor,
+	 * rather than the exposed facade. Adapters must return their actual backing
+	 * owner's monitor and use it consistently for their delegated mutations and
+	 * publications. The native owner uses itself. This does not acknowledge queued
+	 * persistence: never wait for a publication stage while holding this monitor.
+	 *
+	 * @return the non-null, stable publication monitor
+	 */
+	public Object publicationMonitor() {
+		return this;
+	}
+
 	@Override
 	public synchronized void saveData() {
 		prepareSnapshotPublication();
