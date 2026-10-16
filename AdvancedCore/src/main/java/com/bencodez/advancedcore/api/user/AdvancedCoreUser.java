@@ -1092,18 +1092,27 @@ public class AdvancedCoreUser {
 	}
 
 	private void checkDelayedTimedRewards(ReplayPlayerState capturedState) {
-		try (RewardHandler.PersistedReplayCheck admission = plugin.getRewardHandler().admitPersistedReplayCheck()) {
-			if (admission == null) return;
+		RewardHandler.PersistedReplayCheck admission = plugin.getRewardHandler().admitPersistedReplayCheck();
+		if (admission == null) return;
+		boolean deferred = false;
+		try {
+			UserDataManager manager = sharedReplayDataManager();
+			if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
+				ReplayPlayerState state = captureReplayPlayerState();
+				// Transfer the original admission through the queued storage callback.
+				// Reacquiring after the shutdown fence would discard accepted work.
+				deferred = manager.deferSharedStorageWork(() -> {
+					try (admission) { checkAdmittedDelayedTimedRewards(state); }
+				});
+				if (deferred) return;
+			}
 			checkAdmittedDelayedTimedRewards(capturedState);
+		} finally {
+			if (!deferred) admission.close();
 		}
 	}
 
 	private void checkAdmittedDelayedTimedRewards(ReplayPlayerState capturedState) {
-		UserDataManager manager = sharedReplayDataManager();
-		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
-			ReplayPlayerState state = captureReplayPlayerState();
-			if (manager.deferSharedStorageWork(() -> checkDelayedTimedRewards(state))) return;
-		}
 		plugin.debug("Checking timed/delayed for " + getPlayerName());
 		HashMap<String, Long> timed = getTimedRewards();
 		for (Entry<String, Long> entry : timed.entrySet()) {

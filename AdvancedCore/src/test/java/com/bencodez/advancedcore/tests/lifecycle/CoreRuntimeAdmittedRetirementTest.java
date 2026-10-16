@@ -234,8 +234,52 @@ class CoreRuntimeAdmittedRetirementTest {
         assertDetachedTimedAcknowledgementRetainsStorage(false, true);
     }
 
+    @Test void queuedTimedStorageCheckRetainsAdmissionAcrossShutdownFence() throws Exception {
+        assertDetachedTimedAcknowledgementRetainsStorage(true, false, true);
+    }
+
+    @Test void failedQueuedTimedStorageCheckRestoresBeforeNativeRetirement() throws Exception {
+        assertDetachedTimedAcknowledgementRetainsStorage(true, true, true);
+    }
+
+    @Test void rejectedTimedStorageHandoffReleasesReplayAdmission() throws Exception {
+        assertFailedTimedStorageHandoffReleasesReplayAdmission(false);
+    }
+
+    @Test void failedTimedPlayerCaptureReleasesReplayAdmission() throws Exception {
+        assertFailedTimedStorageHandoffReleasesReplayAdmission(true);
+    }
+
+    private void assertFailedTimedStorageHandoffReleasesReplayAdmission(boolean failCapture) throws Exception {
+        Fixture fixture = new Fixture();
+        RewardHandler rewards = new RewardHandler(fixture.plugin);
+        when(fixture.plugin.getRewardHandler()).thenReturn(rewards);
+        AdvancedCoreUser user = new AdvancedCoreUser(fixture.plugin, fixture.uuid, "rejected-handoff-fixture");
+        if (failCapture) {
+            when(fixture.plugin.getOptions().isTreatVanishAsOffline())
+                    .thenThrow(new IllegalStateException("player capture failed"));
+        } else fixture.manager.getTimer().shutdown();
+        try {
+            try (var bukkit = mockStatic(Bukkit.class)) {
+                bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+                bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+                if (failCapture) assertThrows(IllegalStateException.class, user::checkDelayedTimedRewards);
+                else assertThrows(java.util.concurrent.RejectedExecutionException.class, user::checkDelayedTimedRewards);
+            }
+            rewards.beginShutdown().toCompletableFuture().get(2, TimeUnit.SECONDS);
+        } finally {
+            rewards.shutdown(0, TimeUnit.NANOSECONDS);
+            fixture.manager.getTimer().shutdownNow();
+        }
+    }
+
     private void assertDetachedTimedAcknowledgementRetainsStorage(boolean deferredCheck, boolean failedDispatch)
             throws Exception {
+        assertDetachedTimedAcknowledgementRetainsStorage(deferredCheck, failedDispatch, false);
+    }
+
+    private void assertDetachedTimedAcknowledgementRetainsStorage(boolean deferredCheck, boolean failedDispatch,
+            boolean queuedAcrossShutdown) throws Exception {
         Fixture fixture = new Fixture();
         AtomicLong clock = new AtomicLong(TimeUnit.SECONDS.toNanos(15));
         RewardHandler rewards = spy(new RewardHandler(fixture.plugin));
@@ -267,6 +311,15 @@ class CoreRuntimeAdmittedRetirementTest {
         CountDownLatch dispatched = new CountDownLatch(1);
         doAnswer(call -> { dispatched.countDown(); return dispatch; }).when(rewards)
                 .givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class), any(RewardOptions.class));
+        CountDownLatch storageOccupied = new CountDownLatch(1);
+        CountDownLatch releaseStorage = new CountDownLatch(queuedAcrossShutdown ? 1 : 0);
+        if (queuedAcrossShutdown) {
+            fixture.manager.getTimer().execute(() -> {
+                storageOccupied.countDown();
+                awaitIgnoringInterrupt(releaseStorage);
+            });
+            assertTrue(storageOccupied.await(2, TimeUnit.SECONDS));
+        }
         var checking = rewards.getDelayedTimer().submit(() -> {
             if (deferredCheck) {
                 // Exercise Spigot's caller classification on the actual delayed
@@ -280,12 +333,17 @@ class CoreRuntimeAdmittedRetirementTest {
             } else user.checkDelayedTimedRewards();
         });
         checking.get(2, TimeUnit.SECONDS);
-        assertTrue(dispatched.await(2, TimeUnit.SECONDS));
+        if (!queuedAcrossShutdown) assertTrue(dispatched.await(2, TimeUnit.SECONDS));
         BukkitRuntimePlatform platform = fixture.platform();
         var callback = java.util.concurrent.Executors.newSingleThreadExecutor(
                 AdvancedCoreRuntime.daemonThreads("held-timed-acknowledgement"));
         try {
             new AdvancedCoreRuntime(platform, clock::get).shutdown(0L);
+            if (queuedAcrossShutdown) {
+                releaseStorage.countDown();
+                assertTrue(dispatched.await(2, TimeUnit.SECONDS),
+                        "a timed check admitted before shutdown must dispatch after its queued storage handoff");
+            }
             fixture.manager.getTimer().submit(() -> null).get(2, TimeUnit.SECONDS);
             // The storage barrier does not order the delayed worker's final exit.
             assertTrue(rewards.getDelayedTimer().awaitTermination(2, TimeUnit.SECONDS),
@@ -312,6 +370,7 @@ class CoreRuntimeAdmittedRetirementTest {
             verify(fixture.mysql, times(1)).close();
             assertEquals(TimeUnit.SECONDS.toNanos(15), clock.get());
         } finally {
+            releaseStorage.countDown();
             releaseAcknowledgement.countDown();
             callback.shutdownNow();
             rewards.shutdown(0, TimeUnit.NANOSECONDS);
