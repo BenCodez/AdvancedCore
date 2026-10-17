@@ -13,6 +13,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -27,6 +28,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
+import com.bencodez.advancedcore.api.rewards.RewardEligibility;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.simpleapi.messages.MessageAPI;
 
@@ -124,12 +126,22 @@ public class FullInventoryHandler {
 	 * they never checkpoint a queued delivery as completed.
 	 */
 	public CompletionStage<Void> giveItemAsync(Player player, ItemStack... item) {
+		return giveItemWhenEligibleAsync(player, null, item);
+	}
+
+	/** Replay-aware delivery with an optional final owner-thread eligibility check. */
+	public CompletionStage<Void> giveItemWhenEligibleAsync(Player player, BooleanSupplier eligibility, ItemStack... item) {
 		CompletableFuture<Void> completion = new CompletableFuture<>();
-		scheduleItemDelivery(player, item, completion);
+		scheduleItemDelivery(player, item, completion, eligibility);
 		return completion;
 	}
 
 	private void scheduleItemDelivery(Player player, ItemStack[] item, CompletableFuture<Void> completion) {
+		scheduleItemDelivery(player, item, completion, null);
+	}
+
+	private void scheduleItemDelivery(Player player, ItemStack[] item, CompletableFuture<Void> completion,
+			BooleanSupplier eligibility) {
 		if (player == null || item == null || item.length == 0) {
 			if (completion != null) completion.complete(null);
 			return;
@@ -166,7 +178,14 @@ public class FullInventoryHandler {
 					deliveryLock.readLock().lock();
 					replayDeliveryLocked = true;
 				}
-				if (completion != null) validateReplayDeliveryTarget(player, deliveryPlayerId);
+				if (completion != null) validateReplayDeliveryTarget(player, deliveryPlayerId, eligibility != null);
+				// Check only before the initial mutation. Retained overflow is already
+				// committed and must remain deliverable if eligibility later changes.
+				if (eligibility != null && !eligibility.getAsBoolean()) {
+					throw AdvancedCoreUser.replayActionNotStarted(
+							"Player reward context became unavailable before item mutation",
+							com.bencodez.advancedcore.api.rewards.Reward.playerEligibilityDeferred());
+				}
 				if (completion != null) replayOverflowCompletions.put(reservationId, completion);
 				boolean pendingOverflow = giveItemOwnedPlayer(player, itemsToGive, reservationId);
 				if (completion != null) {
@@ -191,7 +210,18 @@ public class FullInventoryHandler {
 			}
 		};
 		try {
-			plugin.getBukkitScheduler().runTask(plugin, delivery, player);
+			if (completion != null && eligibility != null) {
+				RewardEligibility.runPlayerTask(plugin, player, delivery, () -> {
+					if (deliveryClaimed.compareAndSet(false, true)) {
+						completion.completeExceptionally(RewardEligibility.retiredPlayerActionFailure(plugin));
+					}
+				}, failure -> {
+					if (deliveryClaimed.compareAndSet(false, true)) {
+						completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
+								"Scheduler rejected item delivery before dispatch", failure));
+					}
+				});
+			} else plugin.getBukkitScheduler().runTask(plugin, delivery, player);
 		} catch (Throwable failure) {
 			deliveryClaimed.set(true);
 			if (completion != null) completion.completeExceptionally(AdvancedCoreUser.replayActionNotStarted(
@@ -218,13 +248,14 @@ public class FullInventoryHandler {
 	 * captured UUID and entity identity to remain current; a retry can then safely
 	 * schedule delivery for the live entity.
 	 */
-	private void validateReplayDeliveryTarget(Player player, UUID playerId) {
+	private void validateReplayDeliveryTarget(Player player, UUID playerId, boolean eligibilityDeferral) {
 		if (!plugin.isEnabled()) {
 			throw AdvancedCoreUser.replayActionNotStarted("Plugin disabled before item delivery");
 		}
 		Player current = Bukkit.getPlayer(playerId);
 		if (current != player || !current.isOnline()) {
-			throw AdvancedCoreUser.replayActionNotStarted("Player became unavailable before item delivery");
+			throw AdvancedCoreUser.replayActionNotStarted("Player became unavailable before item delivery",
+					eligibilityDeferral ? com.bencodez.advancedcore.api.rewards.Reward.playerEligibilityDeferred() : null);
 		}
 	}
 

@@ -26,6 +26,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -45,6 +46,7 @@ import org.mockito.MockedStatic;
 import com.bencodez.advancedcore.AdvancedCoreConfigOptions;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.item.FullInventoryHandler;
+import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.data.ServerData;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
@@ -152,6 +154,98 @@ public class FullInventoryHandlerTest {
 
 		assertTrue(delivery.toCompletableFuture().isDone());
 		verify(inventory).addItem(item);
+	}
+
+	@Test
+	public void eligibilityLossBeforeDeliveryDoesNotMutateInventoryOrOverflow() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		World world = mock(World.class);
+		ItemStack item = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(player.getWorld()).thenReturn(world);
+		when(fixture.plugin.getOptions().isDropOnFullInv()).thenReturn(true);
+		AtomicBoolean eligible = new AtomicBoolean(true);
+		CompletionStage<Void> delivery = fixture.handler.giveItemWhenEligibleAsync(player, eligible::get, item);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+		eligible.set(false);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			task.getValue().run();
+		}
+
+		java.util.concurrent.ExecutionException failure = assertThrows(java.util.concurrent.ExecutionException.class,
+				() -> delivery.toCompletableFuture().get(2, TimeUnit.SECONDS));
+		assertTrue(AdvancedCoreUser.isReplayActionNotStarted(failure));
+		assertEquals(Reward.playerEligibilityDeferred().getClass(), failure.getCause().getCause().getClass());
+		verify(inventory, never()).addItem(any(ItemStack[].class));
+		verify(world, never()).dropItem(any(Location.class), any(ItemStack.class));
+		verify(player, never()).updateInventory();
+		assertTrue(fixture.handler.getItems().isEmpty());
+	}
+
+	@Test
+	public void oldAsyncItemVarargsStillAcceptNullFirstItem() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(null, item)).thenReturn(new HashMap<>());
+
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, null, item);
+		ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			task.getValue().run();
+		}
+		delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
+		verify(inventory).addItem(null, item);
+	}
+
+	@Test
+	public void committedOverflowRemainsDeliverableAfterEligibilityChanges() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		ItemStack excess = mock(ItemStack.class);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		when(inventory.addItem(excess)).thenReturn(new HashMap<>());
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		AtomicBoolean eligible = new AtomicBoolean(true);
+		AtomicInteger eligibilityChecks = new AtomicInteger();
+		CompletionStage<Void> delivery = fixture.handler.giveItemWhenEligibleAsync(player,
+				() -> { eligibilityChecks.incrementAndGet(); return eligible.get(); }, item);
+		ArgumentCaptor<Runnable> tasks = ArgumentCaptor.forClass(Runnable.class);
+		verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), tasks.capture(), eq(player));
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			tasks.getValue().run();
+			delivery.toCompletableFuture().get(2, TimeUnit.SECONDS);
+			assertEquals(List.of(excess), fixture.handler.getItems().get(uuid));
+			eligible.set(false);
+			fixture.handler.check(player);
+			verify(fixture.bukkitScheduler, times(2)).runTask(eq(fixture.plugin), tasks.capture(), eq(player));
+			tasks.getValue().run();
+		}
+		assertEquals(1, eligibilityChecks.get());
+		verify(inventory, times(1)).addItem(item);
+		verify(inventory, times(1)).addItem(excess);
+		assertTrue(fixture.handler.getItems().isEmpty());
 	}
 
 	@Test

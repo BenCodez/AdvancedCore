@@ -69,6 +69,22 @@ public abstract class RequirementInject extends Inject {
 	public abstract boolean onRequirementRequest(Reward reward, AdvancedCoreUser user, ConfigurationSection data,
 			RewardOptions rewardOptions);
 
+	/** Override to split native reads from asynchronous provider work. */
+	public java.util.concurrent.CompletionStage<Boolean> onRequirementRequestAsync(Reward reward,
+			AdvancedCoreUser user, ConfigurationSection data, RewardOptions options) {
+		return java.util.concurrent.CompletableFuture.completedFuture(
+				onRequirementRequest(reward, user, data, options));
+	}
+
+	/** Native-only predicates opt in; scripts and custom requirements remain on the worker. */
+	public boolean requiresPlayerThread() {
+		return false;
+	}
+
+	/** Worker preparation before an asynchronous native predicate, including any file work. */
+	public void prepareAsyncRequest(Reward reward, ConfigurationSection data, RewardOptions options) {
+	}
+
 	public RequirementInject priority(int priority) {
 		setPriority(priority);
 		return this;

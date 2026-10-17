@@ -274,6 +274,13 @@ public class MiscUtils {
 	 */
 	public CompletionStage<Void> executeConsoleCommandsAsync(String playerName, String command,
 			HashMap<String, String> placeholders) {
+		return executeConsoleCommandsAsync(playerName, command, placeholders,
+				AdvancedCoreUser.captureCurrentPlayerEligibilityGuard());
+	}
+
+	/** Carries the originating reward's optional player policy into the actual dispatch. */
+	public CompletionStage<Void> executeConsoleCommandsAsync(String playerName, String command,
+			HashMap<String, String> placeholders, AdvancedCoreUser.PlayerEligibilityGuard eligibilityGuard) {
 		try {
 			ArrayList<String> templates = command == null || command.isEmpty()
 					? new ArrayList<>() : new ArrayList<>(java.util.List.of(command));
@@ -289,7 +296,7 @@ public class MiscUtils {
 			return Reward.replayCommandSequence(plugin, placeholders, "console", templates, commands,
 					(cmd, ignoredIndex) -> {
 						plugin.debug("Executing console command: " + cmd);
-						return runConsoleCommandAsync(stripLeadingSlash(cmd), 0, false, false);
+						return runConsoleCommandAsync(stripLeadingSlash(cmd), 0, false, false, eligibilityGuard);
 					});
 		} catch (Throwable failure) {
 			return CompletableFuture.failedFuture(failure);
@@ -301,9 +308,17 @@ public class MiscUtils {
 	 * only after every dispatch has run. This keeps an async reward injector from
 	 * checkpointing a command list while any member is still queued.
 	 */
-	@SuppressWarnings("deprecation")
 	public CompletionStage<Void> executeConsoleCommandsAsync(final String playerName, final ArrayList<String> cmds,
 			final HashMap<String, String> placeholders, final boolean stagger) {
+		return executeConsoleCommandsAsync(playerName, cmds, placeholders, stagger,
+				AdvancedCoreUser.captureCurrentPlayerEligibilityGuard());
+	}
+
+	/** Retains the legacy stagger schedule while checking a captured policy for every command. */
+	@SuppressWarnings("deprecation")
+	public CompletionStage<Void> executeConsoleCommandsAsync(final String playerName, final ArrayList<String> cmds,
+			final HashMap<String, String> placeholders, final boolean stagger,
+			AdvancedCoreUser.PlayerEligibilityGuard eligibilityGuard) {
 		try {
 			placeholders.put("player", playerName);
 			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
@@ -317,7 +332,7 @@ public class MiscUtils {
 					(command, index) -> {
 						plugin.debug("Executing console command: " + command);
 						return runConsoleCommandAsync(stripLeadingSlash(command), index > 0 ? 1 : 0,
-								stagger && index > 0, stagger || index == 0);
+								stagger && index > 0, stagger || index == 0, eligibilityGuard);
 					});
 		} catch (Throwable failure) {
 			return CompletableFuture.failedFuture(failure);
@@ -535,15 +550,42 @@ public class MiscUtils {
 	 * after a failed replay has already been retried.
 	 */
 	private CompletionStage<Void> runConsoleCommandAsync(String command, int delay, boolean hasDelay,
-			boolean scheduleAsTask) {
+			boolean scheduleAsTask, AdvancedCoreUser.PlayerEligibilityGuard eligibilityGuard) {
 		CompletableFuture<Void> completion = new CompletableFuture<>();
 		AtomicBoolean claimed = new AtomicBoolean();
-		Runnable dispatch = () -> {
+		Runnable finalDispatch = () -> {
 			if (!claimed.compareAndSet(false, true)) return;
 			try {
+				if (eligibilityGuard != null && !plugin.isEnabled()) {
+					throw new IllegalStateException("Plugin disabled before console command dispatch");
+				}
 				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
 				completion.complete(null);
 			} catch (Throwable failure) {
+				completion.completeExceptionally(failure);
+			}
+		};
+		AtomicBoolean started = new AtomicBoolean();
+		Runnable dispatch = eligibilityGuard == null ? finalDispatch : () -> {
+			if (!started.compareAndSet(false, true) || claimed.get()) return;
+			try {
+				eligibilityGuard.checkAsync().whenComplete((ignored, failure) -> {
+					if (failure != null) {
+						claimed.set(true);
+						completion.completeExceptionally(failure);
+						return;
+					}
+					try {
+						// Only the captured eligibility result crosses back to the global owner.
+						// Folia cannot make this handoff atomic with a player mode transition.
+						if (!claimed.get()) plugin.getBukkitScheduler().executeOrScheduleSync(plugin, finalDispatch);
+					} catch (Throwable schedulingFailure) {
+						claimed.set(true);
+						completion.completeExceptionally(schedulingFailure);
+					}
+				});
+			} catch (Throwable failure) {
+				claimed.set(true);
 				completion.completeExceptionally(failure);
 			}
 		};

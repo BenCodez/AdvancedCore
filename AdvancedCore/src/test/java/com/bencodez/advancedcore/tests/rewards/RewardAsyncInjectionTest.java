@@ -111,6 +111,10 @@ class RewardAsyncInjectionTest {
 			invocation.getArgument(1, Runnable.class).run();
 			return null;
 		}).when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class), any(Player.class));
+		doAnswer(invocation -> {
+			invocation.getArgument(1, Runnable.class).run();
+			return null;
+		}).when(scheduler).runTaskAsynchronously(eq(plugin), any(Runnable.class));
 		when(plugin.getBukkitScheduler()).thenReturn(scheduler);
 		AdvancedCorePlugin.setInstance(plugin);
 		try {
@@ -784,6 +788,9 @@ class RewardAsyncInjectionTest {
 		when(user.getPlayer()).thenReturn(mock(Player.class));
 		org.bukkit.plugin.PluginManager pluginManager = mock(org.bukkit.plugin.PluginManager.class);
 		ArgumentCaptor<Runnable> asyncTask = ArgumentCaptor.forClass(Runnable.class);
+		java.util.Queue<Runnable> workers = new java.util.concurrent.ConcurrentLinkedQueue<>();
+		doAnswer(invocation -> { workers.add(invocation.getArgument(1)); return null; })
+				.when(scheduler).runTaskAsynchronously(eq(plugin), any(Runnable.class));
 
 		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
 			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
@@ -794,14 +801,17 @@ class RewardAsyncInjectionTest {
 			verify(scheduler).runTaskAsynchronously(eq(plugin), asyncTask.capture());
 			verify(pluginManager, never()).callEvent(any());
 			assertFalse(result.toCompletableFuture().isDone());
-			asyncTask.getValue().run();
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			for (int count = 0; count < 100 && !workers.isEmpty(); count++) workers.remove().run();
+			assertTrue(workers.isEmpty());
+			assertTrue(result.toCompletableFuture().isDone(), "all queued worker continuations must complete");
 			result.toCompletableFuture().join();
 			verify(pluginManager).callEvent(any());
 		}
 	}
 
 	@Test
-	void asyncRewardRequirementsRunOnPlayerOwnerScheduler() {
+	void nativeAsyncRewardRequirementsRunOnPlayerOwnerScheduler() {
 		AdvancedCoreConfigOptions config = mock(AdvancedCoreConfigOptions.class);
 		when(config.isProcessRewards()).thenReturn(true);
 		when(config.getFormatRewardTimeFormat()).thenReturn("yyyy-MM-dd");
@@ -811,6 +821,7 @@ class RewardAsyncInjectionTest {
 		when(user.isOnline()).thenReturn(true);
 		AtomicReference<String> requirementThread = new AtomicReference<>();
 		handler.getInjectedRequirements().add(new RequirementInject("OwnerThread") {
+			@Override public boolean requiresPlayerThread() { return true; }
 			@Override
 			public boolean onRequirementRequest(Reward ignored, AdvancedCoreUser ignoredUser,
 					ConfigurationSection ignoredData, RewardOptions ignoredOptions) {
@@ -819,6 +830,9 @@ class RewardAsyncInjectionTest {
 			}
 		});
 		ArgumentCaptor<Runnable> asyncTask = ArgumentCaptor.forClass(Runnable.class);
+		java.util.Queue<Runnable> workers = new java.util.concurrent.ConcurrentLinkedQueue<>();
+		doAnswer(invocation -> { workers.add(invocation.getArgument(1)); return null; })
+				.when(scheduler).runTaskAsynchronously(eq(plugin), any(Runnable.class));
 		doAnswer(invocation -> {
 			Thread ownerThread = new Thread(invocation.getArgument(1, Runnable.class), "player-owner-thread");
 			ownerThread.start();
@@ -833,7 +847,10 @@ class RewardAsyncInjectionTest {
 			CompletionStage<Void> result = reward.giveRewardAsync(user, new RewardOptions().setCheckTimed(false));
 
 			verify(scheduler).runTaskAsynchronously(eq(plugin), asyncTask.capture());
-			asyncTask.getValue().run();
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			for (int count = 0; count < 100 && !workers.isEmpty(); count++) workers.remove().run();
+			assertTrue(workers.isEmpty());
+			assertTrue(result.toCompletableFuture().isDone(), "all queued worker continuations must complete");
 			result.toCompletableFuture().join();
 		}
 

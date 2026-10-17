@@ -627,6 +627,12 @@ public class AdvancedCoreConfigOptions {
 	 * @return the list of worlds where default rewards are disabled
 	 * @param defaultRewardBlackListedWorlds the list of worlds to set
 	 */
+	/** Default gamemode allowlist; an explicit reward GameModes list overrides it. */
+	@Getter
+	@Setter
+	@ConfigDataListString(path = "DefaultRewardGameModes")
+	private ArrayList<String> defaultRewardGameModes = new ArrayList<>();
+
 	@Getter
 	@Setter
 	@ConfigDataListString(path = "DefaultRewardBlackListedWorlds")
@@ -679,6 +685,7 @@ public class AdvancedCoreConfigOptions {
 	 */
 	public void load(AdvancedCorePlugin plugin) {
 		if (getYmlConfig() != null) {
+			defaultRewardGameModes = new ArrayList<>();
 			new AnnotationHandler().load(getYmlConfig().getData(), this);
 			debug = DebugLevel.getDebug(debugLevelStr);
 			storageType = UserStorage.value(userStorageString.toUpperCase());

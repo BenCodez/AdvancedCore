@@ -34,6 +34,7 @@ import org.mockito.MockedStatic;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
+import com.bencodez.advancedcore.api.rewards.RewardEligibility;
 import com.bencodez.advancedcore.api.time.TimeChecker;
 import com.bencodez.advancedcore.api.user.UserManager;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
@@ -442,7 +443,9 @@ class NativeServerDataAdmissionTest {
         when(plugin.getServer()).thenReturn(server);
         when(server.getScheduler()).thenReturn(mock(org.bukkit.scheduler.BukkitScheduler.class));
         when(plugin.getLogger()).thenReturn(mock(java.util.logging.Logger.class));
-        when(plugin.getRewardHandler()).thenReturn(mock(RewardHandler.class));
+        RewardHandler rewards = mock(RewardHandler.class);
+        when(rewards.getRewardEligibility()).thenReturn(mock(RewardEligibility.class));
+        when(plugin.getRewardHandler()).thenReturn(rewards);
         doCallRealMethod().when(plugin).onEnable();
         doCallRealMethod().when(plugin).onDisable();
         doCallRealMethod().when(plugin).hasServerDataOwnership();

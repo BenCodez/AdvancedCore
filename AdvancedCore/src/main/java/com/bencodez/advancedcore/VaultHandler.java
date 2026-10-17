@@ -36,6 +36,30 @@ public class VaultHandler {
 						plugin.getRewardHandler()
 								.addInjectedRequirements(new RequirementInjectString("VaultGroup", "") {
 
+                                    @Override
+                                    public java.util.concurrent.CompletionStage<Boolean> onRequirementRequestAsync(
+                                            Reward reward, AdvancedCoreUser user,
+                                            org.bukkit.configuration.ConfigurationSection data, RewardOptions options) {
+                                        if (!appliesTo(data)) return java.util.concurrent.CompletableFuture.completedFuture(true);
+                                        String type = data.getString(getPath(), getDefaultValue());
+                                        if (type.isEmpty()) return java.util.concurrent.CompletableFuture.completedFuture(true);
+                                        java.util.function.Supplier<java.util.concurrent.CompletionStage<Boolean>> offline =
+                                                () -> reward.evaluateAsyncRequirement(() -> {
+                                                    String group = getPerms().getPrimaryGroup(null, user.getOfflinePlayer());
+                                                    return group != null && group.equalsIgnoreCase(type);
+                                                });
+                                        if (options.isGiveOffline()) return offline.get();
+                                        return reward.evaluatePlayerRequirement(user, player -> {
+                                            if (player != null && user.isOnline()) {
+                                                if (!player.isOnline()) return java.util.concurrent.CompletableFuture.completedFuture(false);
+                                                String group = getPerms().getPrimaryGroup(player);
+                                                return java.util.concurrent.CompletableFuture.completedFuture(
+                                                        group != null && group.equalsIgnoreCase(type));
+                                            }
+                                            return offline.get();
+                                        });
+                                    }
+
 									@Override
 									public boolean onRequirementsRequest(Reward reward, AdvancedCoreUser user,
 											String type, RewardOptions rewardOptions) {
