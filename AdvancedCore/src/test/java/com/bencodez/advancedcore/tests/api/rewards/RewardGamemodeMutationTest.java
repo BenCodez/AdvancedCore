@@ -132,6 +132,7 @@ class RewardGamemodeMutationTest {
         when(plugin.getTimer()).thenReturn(timer);
         doAnswer(call -> { call.getArgument(0, Runnable.class).run(); return null; }).when(timer).execute(any());
         ServerData serverData = mock(ServerData.class);
+        when(serverData.publicationMonitor()).thenCallRealMethod();
         when(plugin.getServerDataFile()).thenReturn(serverData);
         when(serverData.getData()).thenReturn(new YamlConfiguration());
         FullInventoryHandler inventoryHandler = itemAction ? new FullInventoryHandler(plugin) : null;

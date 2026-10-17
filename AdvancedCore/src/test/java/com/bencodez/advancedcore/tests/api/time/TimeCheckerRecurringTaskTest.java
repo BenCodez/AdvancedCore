@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -45,7 +46,7 @@ class TimeCheckerRecurringTaskTest {
 		Mockito.doThrow(new IllegalStateException("disk unavailable")).doNothing().when(checker).update();
 
 		try (MockedStatic<Executors> executors = Mockito.mockStatic(Executors.class)) {
-			executors.when(Executors::newSingleThreadScheduledExecutor).thenReturn(timer);
+			executors.when(() -> Executors.newSingleThreadScheduledExecutor(any(ThreadFactory.class))).thenReturn(timer);
 			checker.loadTimer();
 		}
 		recurring.getValue().run();

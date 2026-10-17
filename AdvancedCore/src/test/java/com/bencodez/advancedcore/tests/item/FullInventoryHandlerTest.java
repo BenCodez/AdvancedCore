@@ -520,6 +520,140 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
+	public void asyncShutdownReturnsWhileCheckedSnapshotIsBlockedOnOwnedDaemonWorker() throws Exception {
+		Fixture fixture = createFixture();
+		assertTrue(fixture.handler.getTimer().submit(() -> Thread.currentThread().isDaemon()).get(2, TimeUnit.SECONDS));
+		UUID uuid = UUID.randomUUID();
+		ItemStack item = mock(ItemStack.class);
+		fixture.handler.add(uuid, item);
+		CountDownLatch saving = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		AtomicReference<Thread> workerThread = new AtomicReference<>();
+		doAnswer(call -> {
+			workerThread.set(Thread.currentThread());
+			saving.countDown();
+			assertTrue(release.await(2, TimeUnit.SECONDS));
+			return null;
+		}).when(fixture.serverData).saveDataChecked();
+		var worker = java.util.concurrent.Executors.newSingleThreadExecutor(
+				com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("inventory-save-fixture"));
+		try {
+			CompletionStage<Void> completion = fixture.handler.shutdownAsync(worker);
+			assertTrue(saving.await(2, TimeUnit.SECONDS));
+			assertFalse(completion.toCompletableFuture().isDone());
+			assertTrue(workerThread.get().isDaemon());
+			assertNotSame(Thread.currentThread(), workerThread.get());
+			assertEquals(completion, fixture.handler.shutdownAsync(worker));
+			release.countDown();
+			completion.toCompletableFuture().get(2, TimeUnit.SECONDS);
+			assertEquals(item, fixture.data.getItemStack("FullInventory." + uuid + ".Items.0"));
+			verify(fixture.serverData, times(1)).saveDataChecked();
+		} finally {
+			release.countDown();
+			worker.shutdownNow();
+		}
+	}
+
+	@Test
+	public void failedCheckedShutdownSaveDoesNotAcknowledgeAcceptedReplayOverflow() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		ItemStack excess = mock(ItemStack.class);
+		when(fixture.plugin.getOptions().isDropOnFullInv()).thenReturn(false);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		CountDownLatch started = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		fixture.handler.getTimer().execute(() -> {
+			started.countDown();
+			try { release.await(2, TimeUnit.SECONDS); }
+			catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+		});
+		assertTrue(started.await(2, TimeUnit.SECONDS));
+		try {
+			CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+			verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+			try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+				bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+				task.getValue().run();
+			}
+			doAnswer(call -> { throw new java.io.UncheckedIOException(new java.io.IOException("disk failure")); })
+					.when(fixture.serverData).saveDataChecked();
+			CompletionStage<Void> completion = fixture.handler.shutdownAsync(Runnable::run);
+			assertThrows(java.util.concurrent.CompletionException.class, () -> completion.toCompletableFuture().join());
+			assertFalse(delivery.toCompletableFuture().isDone(), "failed disk save must keep the replay receipt pending");
+			assertFalse(fixture.handler.getItems().containsKey(uuid), "failed reservation must not enter the delivery sweep");
+			assertFalse(fixture.data.contains("FullInventory." + uuid), "unacknowledged overflow must stay out of later whole-file snapshots");
+			verify(inventory, times(1)).addItem(item);
+		} finally { release.countDown(); }
+	}
+
+	@Test
+	public void pendingFinalPublicationFencesPreviouslyQueuedOverflowDropFallback() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class); PlayerInventory inventory = mock(PlayerInventory.class);
+		World world = mock(World.class); ItemStack item = mock(ItemStack.class), excess = mock(ItemStack.class);
+		when(fixture.plugin.getOptions().isDropOnFullInv()).thenReturn(false);
+		when(player.getUniqueId()).thenReturn(uuid); when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory); when(player.getWorld()).thenReturn(world);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		AtomicReference<Runnable> first = new AtomicReference<>(), fallback = new AtomicReference<>();
+		CountDownLatch fallbackScheduled = new CountDownLatch(1);
+		doAnswer(call -> {
+			Runnable task = call.getArgument(1);
+			if (!first.compareAndSet(null, task)) { fallback.set(task); fallbackScheduled.countDown(); }
+			return null;
+		}).when(fixture.bukkitScheduler).runTask(eq(fixture.plugin), any(Runnable.class), eq(player));
+		doAnswer(call -> { throw new IllegalStateException("ordinary snapshot failed"); }).when(fixture.serverData).saveData();
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			first.get().run();
+			assertTrue(fallbackScheduled.await(2, TimeUnit.SECONDS));
+			var publication = new java.util.concurrent.CompletableFuture<Void>();
+			doAnswer(call -> {
+				var candidate = new YamlConfiguration();
+				call.getArgument(0, java.util.function.Consumer.class).accept(candidate);
+				return publication.thenRun(() -> {
+					fixture.data.set("FullInventory", null);
+					for (String path : candidate.getKeys(true)) {
+						if (!candidate.isConfigurationSection(path)) fixture.data.set(path, candidate.get(path));
+					}
+				});
+			}).when(fixture.serverData).mutateFinalData(any());
+			var finalFiles = fixture.handler.shutdownAsync(Runnable::run).toCompletableFuture();
+			assertFalse(finalFiles.isDone()); fallback.get().run();
+			verify(world, never()).dropItem(any(Location.class), any(ItemStack.class));
+			assertFalse(delivery.toCompletableFuture().isDone());
+			assertFalse(fixture.data.contains("FullInventory." + uuid));
+			publication.complete(null); finalFiles.get(2, TimeUnit.SECONDS);
+			assertEquals(excess, fixture.data.getItemStack("FullInventory." + uuid + ".Items.0"));
+			assertTrue(delivery.toCompletableFuture().isDone());
+			assertEquals(java.util.List.of(excess), fixture.handler.getItems().get(uuid));
+		}
+	}
+
+	@Test
+	public void rejectedAsyncShutdownPersistenceReportsFailureWithoutCallerThreadSave() {
+		Fixture fixture = createFixture();
+		CompletionStage<Void> completion = fixture.handler.shutdownAsync(task -> {
+			throw new java.util.concurrent.RejectedExecutionException("worker stopped");
+		});
+		assertThrows(java.util.concurrent.CompletionException.class, () -> completion.toCompletableFuture().join());
+		verify(fixture.serverData, never()).saveDataChecked();
+		assertTrue(fixture.handler.getTimer().isShutdown());
+	}
+
+	@Test
 	public void shutdownPersistsAcceptedOverflowBeforeDiscardingQueuedPersistence() throws Exception {
 		Fixture fixture = createFixture();
 		UUID uuid = UUID.randomUUID();
@@ -781,6 +915,8 @@ public class FullInventoryHandlerTest {
 		ScheduledExecutorService sharedInventoryTimer = mock(ScheduledExecutorService.class);
 		BukkitScheduler bukkitScheduler = mock(BukkitScheduler.class);
 		ServerData serverData = mock(ServerData.class);
+		when(serverData.publicationMonitor()).thenCallRealMethod();
+		org.mockito.Mockito.doCallRealMethod().when(serverData).mutateFinalData(any());
 		YamlConfiguration data = new YamlConfiguration();
 
 		when(plugin.getInventoryTimer()).thenReturn(sharedInventoryTimer);

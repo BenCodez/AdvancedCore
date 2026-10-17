@@ -92,6 +92,54 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	private static AdvancedCorePlugin javaPlugin;
 
+	/** Lifecycle admission is independent from consumer replay/checkpoint synchronization. */
+	private final Object lifecycleLock = new Object();
+	private com.bencodez.advancedcore.lifecycle.ServerDataOwnership serverDataOwnership;
+	private boolean advancedCoreShutdownStarted;
+	private boolean advancedCoreEnableStarted;
+	private boolean serverDataStartupRejected;
+
+	/** Native file admission also covers consumer hooks that read ServerData early. */
+	private void acquireServerDataOwnership() {
+		synchronized (lifecycleLock) {
+			if (serverDataOwnership != null && !serverDataOwnership.isReleased()) {
+				if (!advancedCoreShutdownStarted) return;
+				throw new IllegalStateException("Previous ServerData shutdown has not finished");
+			}
+			try {
+				serverDataOwnership = com.bencodez.advancedcore.lifecycle.ServerDataOwnership.acquire(
+						new File(getDataFolder(), "ServerData.yml").toPath());
+				advancedCoreShutdownStarted = false;
+				advancedCoreEnableStarted = false;
+				serverDataStartupRejected = false;
+			} catch (RuntimeException | Error failure) {
+				serverDataStartupRejected = true;
+				throw failure;
+			}
+		}
+	}
+
+	/** Internal lifecycle fence, independent of consumer shutdown-hook overrides. */
+	public final boolean hasServerDataOwnership() {
+		synchronized (lifecycleLock) {
+			return serverDataOwnership != null && !serverDataOwnership.isReleased();
+		}
+	}
+
+	/** Internal lifecycle fence, independent of consumer shutdown-hook overrides. */
+	public final void releaseServerDataOwnershipAfter(CompletionStage<Void> completion) {
+		com.bencodez.advancedcore.lifecycle.ServerDataOwnership ownership;
+		synchronized (lifecycleLock) { ownership = serverDataOwnership; }
+		if (ownership != null) ownership.releaseAfter(completion);
+	}
+
+	private void cleanUpFailedStartup(Throwable failure) {
+		try { onDisable(); }
+		catch (Throwable cleanupFailure) {
+			if (cleanupFailure != failure) failure.addSuppressed(cleanupFailure);
+		}
+	}
+
 	/**
 	 * Gets the singleton instance of this plugin.
 	 * 
@@ -844,6 +892,15 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * Load AdvancedCore hook
 	 */
 	public void loadHook() {
+		acquireServerDataOwnership();
+		try { loadCoreHook(); }
+		catch (RuntimeException | Error failure) {
+			cleanUpFailedStartup(failure);
+			throw failure;
+		}
+	}
+
+	private void loadCoreHook() {
 		serverDataFile = new ServerData(this);
 
 		hologramHandler = new HologramHandler(this);
@@ -1382,21 +1439,80 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
-		var presence = playerPresenceService;
-		playerPresenceService = null;
-		if (presence != null) presence.close();
-		var lookup = playerPresenceLookup;
-		playerPresenceLookup = null;
-		if (lookup != null) {
-			lookup.close();
-			org.bukkit.event.HandlerList.unregisterAll(lookup);
+		long startedNanos = System.nanoTime();
+		synchronized (lifecycleLock) {
+			if (advancedCoreShutdownStarted || serverDataStartupRejected) return;
+			advancedCoreShutdownStarted = true;
 		}
-		new com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle(this).shutdown();
-		javaPlugin = null;
+		try {
+			if (serverDataOwnership != null) serverDataOwnership.beginShutdown(startedNanos);
+			var presence = playerPresenceService;
+			playerPresenceService = null;
+			try {
+				if (presence != null) presence.close();
+			} finally {
+				var lookup = playerPresenceLookup;
+				playerPresenceLookup = null;
+				if (lookup != null) {
+					try { lookup.close(); }
+					finally { org.bukkit.event.HandlerList.unregisterAll(lookup); }
+				}
+			}
+		} finally {
+			try { new com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle(this).shutdown(startedNanos); }
+			finally { if (javaPlugin == this) javaPlugin = null; }
+		}
+	}
+
+	/**
+	 * Gives a plugin one asynchronous admission boundary before native user
+	 * storage starts retiring. The default keeps the established shutdown
+	 * sequence unchanged. Implementations must return promptly and may use the
+	 * returned stage to account for work admitted before storage retirement;
+	 * they must not wait synchronously for that work here.
+	 * Exceptional completion or cancellation is reported after shared storage
+	 * retirement settles; it does not skip flushing accepted cache writes.
+	 *
+	 * @return completion of plugin-owned pre-storage-shutdown work
+	 */
+	public CompletionStage<Void> onBeforeStorageShutdown() {
+		return CompletableFuture.completedFuture(null);
+	}
+
+	/**
+	 * Called after platform cleanup and submission of the final permission-data save.
+	 * Deferred storage retirement and final file saves may still be running; implementations must
+	 * retain any owner needed by their pre-storage stage until that stage settles.
+	 * The default is a no-op so existing subclasses retain their lifecycle.
+	 */
+	public void onShutdownComplete() { }
+
+	/**
+	 * Called on the established lifecycle thread after final file work is admitted.
+	 * The stage settles only when all final file owners confirm publication (or fail).
+	 * Consumers must retain required owners until both their preparation and this
+	 * stage settle, and must not synchronously wait or include owner termination in it.
+	 * Existing zero-argument hooks keep their thread and invocation timing.
+	 */
+	public void onShutdownComplete(CompletionStage<Void> finalFilesStage) {
+		onShutdownComplete();
 	}
 
 	@Override
 	public void onEnable() {
+		synchronized (lifecycleLock) {
+			acquireServerDataOwnership();
+			if (advancedCoreEnableStarted) throw new IllegalStateException("AdvancedCore is already enabled");
+			advancedCoreEnableStarted = true;
+		}
+		try { enableCore(); }
+		catch (RuntimeException | Error failure) {
+			cleanUpFailedStartup(failure);
+			throw failure;
+		}
+	}
+
+	private void enableCore() {
 		javaPlugin = this;
 		com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle.RuntimeExecutors runtimeExecutors = com.bencodez.advancedcore.lifecycle.AdvancedCoreLifecycle
 				.createRuntimeExecutors(this);
@@ -1716,7 +1832,7 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void finishReloadAdvancedCore() {
-		timeChecker.update();
+		timeChecker.requestUpdate();
 		TabCompleteHandler.getInstance().reload();
 		TabCompleteHandler.getInstance().loadTabCompleteOptions();
 		getRewardHandler().checkSubRewards();

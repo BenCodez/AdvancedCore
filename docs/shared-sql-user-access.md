@@ -96,3 +96,20 @@ to surface acquisition and query failures with their original cause. A failed re
 cannot publish a schema-only/default snapshot, and a failed delete cannot remove
 identity or runtime caches. Existing `getExact`/`getExactQuery` callers retain
 the legacy read fallback; legacy deletion also leaves caches intact on SQL failure.
+
+## Spigot shutdown worker ownership
+
+The user-data manager retains the exact identity of its private storage executor
+thread. That worker remains a storage lane during server shutdown, even when
+Spigot's primary-thread probe reports every thread as primary after the server
+has stopped. Shared-cache retirement still runs asynchronously on this worker.
+All other threads retain the existing Bukkit and Folia tick-thread checks;
+matching a worker name or disabling a plugin does not bypass them. This needs no
+configuration or data migration and does not change the public retirement API.
+
+Shutdown uses one 15-second monotonic budget from plugin-disable entry, including
+the deferred-storage watchdog and forced-worker waits. A driver that ignores an
+interrupt keeps its retirement stage pending and its native provider owned until
+the actual worker exits. Owned workers are daemon threads; deadline expiry never
+reports an unfinished flush as successful. See the shared runtime foundation
+contract for final-file persistence and synchronous consumer-hook limitations.

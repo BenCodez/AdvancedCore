@@ -55,8 +55,11 @@ public class AdvancedCoreLifecycleTest {
 		when(plugin.getInventoryTimer()).thenReturn(inventoryTimer);
 		when(plugin.getTimeChecker()).thenReturn(timeChecker);
 		when(timeChecker.getTimer()).thenReturn(timeTimer);
+		when(timeChecker.beginShutdown()).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 		when(plugin.getRewardHandler()).thenReturn(rewardHandler);
 		when(plugin.getFullInventoryHandler()).thenReturn(fullInventoryHandler);
+		when(fullInventoryHandler.shutdownAsync(org.mockito.ArgumentMatchers.any(java.util.concurrent.Executor.class)))
+				.thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
 
 		new AdvancedCoreLifecycle(plugin).shutdown();
 
@@ -68,8 +71,8 @@ public class AdvancedCoreLifecycleTest {
 		verify(loginTimer).awaitTermination(2, TimeUnit.SECONDS);
 		verify(inventoryTimer, times(2)).awaitTermination(1, TimeUnit.SECONDS);
 		verify(timeTimer).awaitTermination(2, TimeUnit.SECONDS);
-		verify(rewardHandler).shutdown();
-		verify(fullInventoryHandler).shutdown();
+		verify(rewardHandler).shutdown(TimeUnit.SECONDS.toNanos(10), TimeUnit.NANOSECONDS);
+		verify(fullInventoryHandler).shutdownAsync(org.mockito.ArgumentMatchers.any(java.util.concurrent.Executor.class));
 		verify(plugin).onUnLoad();
 	}
 }

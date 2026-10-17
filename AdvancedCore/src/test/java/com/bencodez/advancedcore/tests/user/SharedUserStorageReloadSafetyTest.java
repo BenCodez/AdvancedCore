@@ -214,6 +214,65 @@ class SharedUserStorageReloadSafetyTest {
 		}
 	}
 
+    @Test
+    void queuedNotificationIsFencedWhenRetirementIsAdmittedBeforeItsWorkerRuns() throws Exception {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserDataManager manager = new UserDataManager(plugin);
+        SqlUserBackend backend = mock(SqlUserBackend.class);
+        when(backend.isOpen()).thenReturn(true);
+        when(backend.storageType()).thenReturn(UserStorage.SQLITE);
+        SharedUserDataRuntime runtime = new SharedUserDataRuntime(backend, new RoutingCacheOwner(manager));
+        manager.bindSharedRuntime(runtime);
+        CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
+        var delivered = new java.util.concurrent.atomic.AtomicInteger();
+        manager.getTimer().execute(() -> {
+            entered.countDown();
+            try { assertTrue(release.await(5, TimeUnit.SECONDS)); }
+            catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new RuntimeException(failure); }
+        });
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            manager.dispatchSharedUserDataNotification(delivered::incrementAndGet);
+            CompletionStage<Void> retirement = manager.closeSharedRuntimeAsyncCompletion(() -> {});
+            assertFalse(retirement.toCompletableFuture().isDone());
+            release.countDown();
+            retirement.toCompletableFuture().get(5, TimeUnit.SECONDS);
+            manager.getTimer().submit(() -> {}).get(5, TimeUnit.SECONDS);
+            assertEquals(0, delivered.get());
+            assertNull(manager.getLastDeferredStorageFailure());
+            verify(backend).close();
+        } finally { release.countDown(); manager.getTimer().shutdownNow(); }
+    }
+
+    @Test
+    void alreadyAdmittedNotificationFinishesItsNestedStorageAccessBeforeRetirement() throws Exception {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserDataManager manager = new UserDataManager(plugin);
+        SqlUserBackend backend = mock(SqlUserBackend.class);
+        when(backend.isOpen()).thenReturn(true);
+        when(backend.storageType()).thenReturn(UserStorage.SQLITE);
+        SharedUserDataRuntime runtime = new SharedUserDataRuntime(backend, new RoutingCacheOwner(manager));
+        manager.bindSharedRuntime(runtime);
+        CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
+        var delivered = new java.util.concurrent.atomic.AtomicInteger();
+        try {
+            manager.dispatchSharedUserDataNotification(() -> {
+                entered.countDown();
+                try { assertTrue(release.await(5, TimeUnit.SECONDS)); }
+                catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new RuntimeException(failure); }
+                runtime.withStorageReadAdmission(() -> { delivered.incrementAndGet(); return null; });
+            });
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            CompletionStage<Void> retirement = manager.closeSharedRuntimeAsyncCompletion(() -> {});
+            assertFalse(retirement.toCompletableFuture().isDone());
+            release.countDown();
+            retirement.toCompletableFuture().get(5, TimeUnit.SECONDS);
+            assertEquals(1, delivered.get());
+            assertNull(manager.getLastDeferredStorageFailure());
+            verify(backend).close();
+        } finally { release.countDown(); manager.getTimer().shutdownNow(); }
+    }
+
 	@Test
 	void sharedBackendReplacementCompletesOnTheManagerWorkerWithoutBlockingTheCaller() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);

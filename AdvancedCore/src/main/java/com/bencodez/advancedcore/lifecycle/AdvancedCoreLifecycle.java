@@ -27,7 +27,11 @@ public final class AdvancedCoreLifecycle {
     }
 
     public void shutdown() {
-        if (plugin != null) new AdvancedCoreRuntime(new BukkitRuntimePlatform(plugin)).shutdown();
+        shutdown(System.nanoTime());
+    }
+
+    public void shutdown(long startedNanos) {
+        if (plugin != null) new AdvancedCoreRuntime(new BukkitRuntimePlatform(plugin)).shutdown(startedNanos);
     }
 
     static void shutdown(ScheduledExecutorService executor) {

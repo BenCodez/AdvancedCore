@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +56,8 @@ public class FullInventoryHandler {
 	private final AdvancedCorePlugin plugin;
 	private final ReentrantReadWriteLock deliveryLock = new ReentrantReadWriteLock(true);
 	private final AtomicBoolean shuttingDown = new AtomicBoolean();
+	private final java.util.concurrent.atomic.AtomicReference<CompletableFuture<Void>> shutdownPersistence =
+			new java.util.concurrent.atomic.AtomicReference<>();
 
 	@Getter
 	private ScheduledExecutorService timer;
@@ -264,7 +267,8 @@ public class FullInventoryHandler {
 
 	public synchronized void loadTimer() {
 		if (timer == null || timer.isShutdown() || timer.isTerminated()) {
-			timer = Executors.newSingleThreadScheduledExecutor();
+			timer = Executors.newSingleThreadScheduledExecutor(
+					com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("AdvancedCore-FullInventory"));
 			checkTask = null;
 		}
 		if (checkTask != null && !checkTask.isDone() && !checkTask.isCancelled()) {
@@ -291,6 +295,77 @@ public class FullInventoryHandler {
 	}
 
 	/**
+	 * Fences player delivery immediately and exposes the actual final disk save.
+	 * The caller owns the persistence executor; pending or failed saves never
+	 * acknowledge replay overflow and must keep storage retirement ordered behind it.
+	 */
+	public CompletionStage<Void> shutdownAsync(Executor persistenceExecutor) {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		if (!shutdownPersistence.compareAndSet(null, completion)) return shutdownPersistence.get();
+		shuttingDown.set(true);
+		ScheduledFuture<?> task = checkTask;
+		if (task != null) task.cancel(false);
+		ServerData serverData = plugin.getServerDataFile();
+		try {
+			persistenceExecutor.execute(() -> {
+				try {
+					finalSnapshot(serverData).whenComplete((ignored, failure) -> {
+						if (failure == null) completion.complete(null);
+						else completion.completeExceptionally(failure);
+					});
+				} catch (Throwable failure) {
+					completion.completeExceptionally(failure);
+				} finally {
+					if (timer != null) timer.shutdownNow();
+				}
+			});
+		} catch (Throwable failure) {
+			completion.completeExceptionally(failure);
+			if (timer != null) timer.shutdownNow();
+		}
+		return completion;
+	}
+
+	private CompletionStage<Void> finalSnapshot(ServerData serverData) {
+		HashMap<String, ReservedOverflow> reservations;
+		CompletionStage<Void> publication;
+		deliveryLock.writeLock().lock();
+		try {
+			reservations = new HashMap<>(replayOverflowReservations);
+			YamlConfiguration snapshot = pendingItemsSnapshot(reservations.values());
+			YamlConfiguration replacement = copySection(snapshot, "FullInventory");
+			publication = serverData.mutateFinalData(data -> replaceSection(data, "FullInventory", replacement));
+		} finally { deliveryLock.writeLock().unlock(); }
+		// Publication may belong to a consumer's different worker. Never join while
+		// holding delivery/YAML admission; that worker may finish earlier accepted work.
+		return publication.thenRun(() -> {
+			deliveryLock.writeLock().lock();
+			try {
+				reservations.forEach(this::promoteReservedOverflowLocked);
+			} finally { deliveryLock.writeLock().unlock(); }
+			reservations.keySet().forEach(id -> completeReplayOverflow(id, null));
+		});
+	}
+
+	/** Caller holds delivery admission; only pending stored items are serialized. */
+	private YamlConfiguration pendingItemsSnapshot(Collection<ReservedOverflow> reservedOverflows) {
+		HashMap<UUID, ArrayList<ItemStack>> snapshotItems = new HashMap<>();
+		items.forEach((uuid, values) -> snapshotItems.put(uuid, new ArrayList<>(values)));
+		for (ReservedOverflow overflow : reservedOverflows) {
+			if (!overflow.items.isEmpty()) snapshotItems.computeIfAbsent(overflow.playerId,
+					ignored -> new ArrayList<>()).addAll(overflow.items);
+		}
+		YamlConfiguration snapshot = new YamlConfiguration();
+		long now = System.currentTimeMillis();
+		for (Entry<UUID, ArrayList<ItemStack>> entry : snapshotItems.entrySet()) {
+			String path = "FullInventory." + entry.getKey();
+			for (int i = 0; i < entry.getValue().size(); i++) snapshot.set(path + ".Items." + i, entry.getValue().get(i));
+			snapshot.set(path + ".Time", now);
+		}
+		return snapshot;
+	}
+
+	/**
 	 * Saves pending items to disk. The complete replacement section is first built in
 	 * a temporary configuration. Only after that succeeds is the live configuration
 	 * replaced in memory, followed by a single disk save. Delivery operations hold a
@@ -303,12 +378,16 @@ public class FullInventoryHandler {
 
 	/** Saves pending items and reports whether the disk snapshot completed. */
 	public boolean saveDurably() {
+		return saveDurably(plugin.getServerDataFile());
+	}
+
+	private boolean saveDurably(ServerData serverData) {
 		HashMap<String, ReservedOverflow> reservations;
 		boolean saved;
 		deliveryLock.writeLock().lock();
 		try {
 			reservations = new HashMap<>(replayOverflowReservations);
-			if (!savePendingItemsLocked(reservations.values())) return false;
+			if (!savePendingItemsLocked(reservations.values(), serverData)) return false;
 			for (Entry<String, ReservedOverflow> entry : reservations.entrySet()) {
 				promoteReservedOverflowLocked(entry.getKey(), entry.getValue());
 			}
@@ -342,7 +421,10 @@ public class FullInventoryHandler {
 		try {
 			ReservedOverflow reservation = replayOverflowReservations.get(reservationId);
 			if (reservation == null || reservation.items.isEmpty()) return true;
-			if (!savePendingItemsLocked(java.util.List.of(reservation))) return false;
+			// The captured final snapshot owns shutdown acknowledgement. Do not race it
+			// with a void legacy save from a previously queued timer task.
+			if (shuttingDown.get()) return false;
+			if (!savePendingItemsLocked(java.util.List.of(reservation), plugin.getServerDataFile())) return false;
 			promoteReservedOverflowLocked(reservationId, reservation);
 			return true;
 		} finally {
@@ -380,6 +462,9 @@ public class FullInventoryHandler {
 		try {
 			ReservedOverflow reservation = replayOverflowReservations.get(reservationId);
 			if (reservation == null) return true;
+			// A pending final publication already owns these items. An older queued
+			// fallback cannot drop them while the owner's snapshot is publishing.
+			if (shuttingDown.get()) return false;
 			if (!playerId.equals(reservation.playerId)) return false;
 			ArrayList<ItemStack> remaining = new ArrayList<>();
 			for (ItemStack item : reservation.items) {
@@ -420,33 +505,22 @@ public class FullInventoryHandler {
 	}
 
 	/** Caller holds the write lock. Includes only the reservations in this durable handoff. */
-	private boolean savePendingItemsLocked(Collection<ReservedOverflow> reservedOverflows) {
+	private boolean savePendingItemsLocked(Collection<ReservedOverflow> reservedOverflows,
+			ServerData serverData) {
+		if (serverData == null) return false;
+		synchronized (serverData.publicationMonitor()) {
+			return savePendingItemsUnderDataLock(reservedOverflows, serverData);
+		}
+	}
+
+	private boolean savePendingItemsUnderDataLock(Collection<ReservedOverflow> reservedOverflows,
+			ServerData serverData) {
 		FileConfiguration data = null;
 		YamlConfiguration previous = null;
 		try {
-			ServerData serverData = plugin.getServerDataFile();
 			if (serverData == null || serverData.getData() == null) return false;
 
-			HashMap<UUID, ArrayList<ItemStack>> snapshotItems = new HashMap<>();
-			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
-				snapshotItems.put(entry.getKey(), new ArrayList<>(entry.getValue()));
-			}
-			for (ReservedOverflow reservedOverflow : reservedOverflows) {
-				if (!reservedOverflow.items.isEmpty()) {
-					snapshotItems.computeIfAbsent(reservedOverflow.playerId, ignored -> new ArrayList<>())
-						.addAll(reservedOverflow.items);
-				}
-			}
-
-			YamlConfiguration snapshot = new YamlConfiguration();
-			long now = System.currentTimeMillis();
-			for (Entry<UUID, ArrayList<ItemStack>> entry : snapshotItems.entrySet()) {
-				String basePath = "FullInventory." + entry.getKey();
-				for (int i = 0; i < entry.getValue().size(); i++) {
-					snapshot.set(basePath + ".Items." + i, entry.getValue().get(i));
-				}
-				snapshot.set(basePath + ".Time", now);
-			}
+			YamlConfiguration snapshot = pendingItemsSnapshot(reservedOverflows);
 
 			data = serverData.getData();
 			previous = copySection(data, "FullInventory");
