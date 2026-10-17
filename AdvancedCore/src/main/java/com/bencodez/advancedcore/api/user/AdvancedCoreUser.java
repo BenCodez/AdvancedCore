@@ -1304,32 +1304,44 @@ public class AdvancedCoreUser {
 	 * this pass; a concurrent replay may already own other pending occurrences.
 	 */
 	public CompletionStage<Void> checkOfflineRewardsAsync() {
-		return Reward.continueOnServerThread(plugin, this,
-				() -> CompletableFuture.completedFuture(captureReplayPlayerState())).thenCompose(state -> {
-			CompletableFuture<CompletionStage<Void>> handoff = new CompletableFuture<>();
-			Runnable work = () -> {
-				CompletableFuture<Void> outcome = new CompletableFuture<>();
-				if (!handoff.complete(outcome)) return;
+		RewardHandler.PersistedReplayCheck admission = plugin.getRewardHandler().admitPersistedReplayCheck();
+		if (admission == null) return CompletableFuture.completedFuture(null);
+		try {
+			CompletionStage<ReplayPlayerState> captured = Reward.continueOnServerThread(plugin, this,
+					() -> CompletableFuture.completedFuture(captureReplayPlayerState()));
+			// Observe the owned handoffs, not the caller's cancellable dependent stage.
+			captured.whenComplete((state, failure) -> { if (failure != null) admission.close(); });
+			CompletionStage<Void> owned = captured.thenCompose(state -> {
+				CompletableFuture<CompletionStage<Void>> handoff = new CompletableFuture<>();
+				handoff.whenComplete((stage, failure) -> { if (failure != null) admission.close(); });
+				Runnable work = () -> {
+					CompletableFuture<Void> outcome = new CompletableFuture<>();
+					if (!handoff.complete(outcome)) return;
+					try (admission) {
+						if (!plugin.isEnabled()) throw new IllegalStateException("Plugin disabled before offline replay");
+						checkAdmittedOfflineRewards(false, state).whenComplete((ignored, failure) -> {
+							if (failure == null) outcome.complete(null); else outcome.completeExceptionally(failure);
+						});
+					} catch (Throwable failure) { outcome.completeExceptionally(failure); }
+				};
 				try {
-					if (!plugin.isEnabled()) throw new IllegalStateException("Plugin disabled before offline replay");
-					if (!plugin.getOptions().isProcessRewards()) { outcome.complete(null); return; }
-					if (isCheckWorld()) setCheckWorld(false);
-					dispatchOfflineRewards(false, state).whenComplete((ignored, failure) -> {
-						if (failure == null) outcome.complete(null); else outcome.completeExceptionally(failure);
+					// Shared-runtime admission and queue storage stay off the owner.
+					plugin.getTimer().execute(() -> {
+						try {
+							UserDataManager manager = sharedReplayDataManager();
+							if (manager == null || !manager.deferSharedStorageWork(work)) work.run();
+						} catch (Throwable failure) { handoff.completeExceptionally(failure); }
 					});
-				} catch (Throwable failure) { outcome.completeExceptionally(failure); }
-			};
-			try {
-				// Runtime admission and queue storage must also stay off the owner.
-				plugin.getTimer().execute(() -> {
-					try {
-						UserDataManager manager = sharedReplayDataManager();
-						if (manager == null || !manager.deferSharedStorageWork(work)) work.run();
-					} catch (Throwable failure) { handoff.completeExceptionally(failure); }
-				});
-			} catch (Throwable failure) { handoff.completeExceptionally(failure); }
-			return handoff.orTimeout(30, TimeUnit.SECONDS).thenCompose(stage -> stage);
-		});
+				} catch (Throwable failure) { handoff.completeExceptionally(failure); }
+				return handoff.orTimeout(30, TimeUnit.SECONDS).thenCompose(stage -> stage);
+			});
+			// Cancelling the public result must not suppress a successful owner capture's
+			// continuation: that continuation still owns admission and durable replay.
+			return owned.thenApply(ignored -> null);
+		} catch (RuntimeException | Error failure) {
+			admission.close();
+			return CompletableFuture.failedFuture(failure);
+		}
 	}
 
 	/** Snapshot of local replay ownership only; never reads user storage. */
@@ -1366,22 +1378,31 @@ public class AdvancedCoreUser {
 			plugin.debug("Processing rewards is disabled");
 			return;
 		}
-		UserDataManager manager = sharedReplayDataManager();
-		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
-			ReplayPlayerState state = captureReplayPlayerState();
-			if (manager.deferSharedStorageWork(() -> checkOfflineRewards(state))) return;
+		RewardHandler.PersistedReplayCheck admission = plugin.getRewardHandler().admitPersistedReplayCheck();
+		if (admission == null) return;
+		boolean deferred = false;
+		try {
+			UserDataManager manager = sharedReplayDataManager();
+			if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
+				ReplayPlayerState state = captureReplayPlayerState();
+				deferred = manager.deferSharedStorageWork(() -> {
+					try (admission) { checkAdmittedOfflineRewards(false, state); }
+				});
+				if (deferred) return;
+			}
+			checkAdmittedOfflineRewards(false, capturedState);
+		} finally {
+			if (!deferred) admission.close();
 		}
-		if (isCheckWorld()) {
-			setCheckWorld(false);
-		}
-		dispatchOfflineRewards(false, capturedState);
 	}
 
-	private CompletionStage<Void> dispatchOfflineRewards(boolean force, ReplayPlayerState capturedState) {
-		try (RewardHandler.PersistedReplayCheck admission = plugin.getRewardHandler().admitPersistedReplayCheck()) {
-			if (admission == null) return CompletableFuture.completedFuture(null);
-			return dispatchAdmittedOfflineRewards(force, capturedState);
+	private CompletionStage<Void> checkAdmittedOfflineRewards(boolean force, ReplayPlayerState capturedState) {
+		if (!plugin.getOptions().isProcessRewards()) {
+			plugin.debug("Processing rewards is disabled");
+			return CompletableFuture.completedFuture(null);
 		}
+		if (force || isCheckWorld()) setCheckWorld(false);
+		return dispatchAdmittedOfflineRewards(force, capturedState);
 	}
 
 	private CompletionStage<Void> dispatchAdmittedOfflineRewards(boolean force, ReplayPlayerState capturedState) {
@@ -1744,32 +1765,38 @@ public class AdvancedCoreUser {
 			plugin.debug("Processing rewards is disabled");
 			return CompletableFuture.completedFuture(null);
 		}
-		UserDataManager manager = sharedReplayDataManager();
-		if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
-			ReplayPlayerState state = captureReplayPlayerState();
-			CompletableFuture<Void> completion = new CompletableFuture<>();
-			try {
-				if (manager.deferSharedStorageWork(() -> {
-					try {
-						forceRunOfflineRewardsAsync(state).whenComplete((ignored, failure) -> {
-							if (failure == null) completion.complete(null);
-							else completion.completeExceptionally(failure);
-						});
-					} catch (Throwable failure) {
-						completion.completeExceptionally(failure);
-					}
-				})) return completion;
-			} catch (RuntimeException | Error failure) {
-				completion.completeExceptionally(failure);
-				return completion;
-			}
-		}
-
-		setCheckWorld(false);
+		RewardHandler.PersistedReplayCheck admission = plugin.getRewardHandler().admitPersistedReplayCheck();
+		if (admission == null) return CompletableFuture.completedFuture(null);
+		boolean deferred = false;
 		try {
-			return dispatchOfflineRewards(true, capturedState);
-		} catch (RuntimeException | Error failure) {
-			return CompletableFuture.failedFuture(failure);
+			UserDataManager manager = sharedReplayDataManager();
+			if (capturedState == null && manager != null && manager.mustDeferSharedStorageAccess()) {
+				ReplayPlayerState state = captureReplayPlayerState();
+				CompletableFuture<Void> completion = new CompletableFuture<>();
+				try {
+					deferred = manager.deferSharedStorageWork(() -> {
+						try (admission) {
+							checkAdmittedOfflineRewards(true, state).whenComplete((ignored, failure) -> {
+								if (failure == null) completion.complete(null);
+								else completion.completeExceptionally(failure);
+							});
+						} catch (Throwable failure) {
+							completion.completeExceptionally(failure);
+						}
+					});
+					if (deferred) return completion;
+				} catch (RuntimeException | Error failure) {
+					completion.completeExceptionally(failure);
+					return completion;
+				}
+			}
+			try {
+				return checkAdmittedOfflineRewards(true, capturedState);
+			} catch (RuntimeException | Error failure) {
+				return CompletableFuture.failedFuture(failure);
+			}
+		} finally {
+			if (!deferred) admission.close();
 		}
 	}
 

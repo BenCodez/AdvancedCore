@@ -250,6 +250,324 @@ class CoreRuntimeAdmittedRetirementTest {
         assertFailedTimedStorageHandoffReleasesReplayAdmission(true);
     }
 
+    @Test void queuedOfflineStorageCheckRetainsAdmissionAcrossShutdownFence() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.NORMAL, false, false);
+    }
+
+    @Test void queuedForcedOfflineCheckRetainsAdmissionAcrossShutdownFence() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.FORCED_ASYNC, false, false);
+    }
+
+    @Test void queuedVoidForcedOfflineCheckRetainsAdmissionAcrossShutdownFence() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.FORCED_VOID, false, false);
+    }
+
+    @Test void queuedAsyncOfflineCheckRetainsAdmissionAcrossShutdownFence() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.NORMAL_ASYNC, false, false);
+    }
+
+    @Test void failedQueuedOfflineCheckRestoresBeforeNativeRetirement() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.NORMAL, true, false);
+    }
+
+    @Test void failedQueuedForcedOfflineCheckRestoresBeforeNativeRetirement() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.FORCED_ASYNC, true, false);
+    }
+
+    @Test void failedQueuedAsyncOfflineCheckRestoresBeforeNativeRetirement() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.NORMAL_ASYNC, true, false);
+    }
+
+    @Test void cancelledForcedOfflineCallerCannotRetireAcceptedQueuedWork() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.FORCED_ASYNC, false, true);
+    }
+
+    @Test void cancelledAsyncOfflineCallerCannotRetireAcceptedQueuedWork() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.NORMAL_ASYNC, false, true);
+    }
+
+    private enum OfflineEntry { NORMAL, NORMAL_ASYNC, FORCED_ASYNC, FORCED_VOID }
+
+    @Test void disabledOfflineProcessingDoesNotRetainReplayAdmission() throws Exception {
+        assertOfflineNoOpReleasesAdmission(false);
+    }
+
+    @Test void emptyOfflineQueuesDoNotRetainReplayAdmission() throws Exception {
+        assertOfflineNoOpReleasesAdmission(true);
+    }
+
+    @Test void offlineChecksAfterShutdownFenceDoNotReadQueues() throws Exception {
+        assertOfflineNoOpReleasesAdmission(true, true);
+    }
+
+    private void assertOfflineNoOpReleasesAdmission(boolean process) throws Exception {
+        assertOfflineNoOpReleasesAdmission(process, false);
+    }
+
+    private void assertOfflineNoOpReleasesAdmission(boolean process, boolean closed) throws Exception {
+        for (OfflineEntry entry : OfflineEntry.values()) {
+            Fixture fixture = new Fixture();
+            when(fixture.plugin.isEnabled()).thenReturn(true);
+            when(fixture.plugin.getOptions().isProcessRewards()).thenReturn(process);
+            when(fixture.users.getOfflineRewardsPath()).thenReturn("OfflineRewards");
+            var apiWorker = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(
+                    AdvancedCoreRuntime.daemonThreads("empty-offline-api-handoff"));
+            when(fixture.plugin.getTimer()).thenReturn(apiWorker);
+            var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+            when(fixture.plugin.getBukkitScheduler()).thenReturn(scheduler);
+            doAnswer(call -> { call.getArgument(1, Runnable.class).run(); return null; }).when(scheduler)
+                    .executeOrScheduleSync(eq(fixture.plugin), any(Runnable.class));
+            RewardHandler rewards = new RewardHandler(fixture.plugin);
+            when(fixture.plugin.getRewardHandler()).thenReturn(rewards);
+            AdvancedCoreUser user = new AdvancedCoreUser(fixture.plugin, fixture.uuid, "empty-offline-fixture");
+            UserData data = mock(UserData.class);
+            user.setData(data);
+            when(data.getStringList("OfflineRewards", UserDataFetchMode.DEFAULT)).thenReturn(new ArrayList<>());
+            try {
+                if (closed) rewards.beginShutdown().toCompletableFuture().get(2, TimeUnit.SECONDS);
+                java.util.concurrent.CompletionStage<Void> completion;
+                try (var bukkit = mockStatic(Bukkit.class)) {
+                    bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+                    bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+                    completion = invokeOffline(user, entry);
+                }
+                if (completion != null) completion.toCompletableFuture().get(2, TimeUnit.SECONDS);
+                fixture.manager.getTimer().submit(() -> null).get(2, TimeUnit.SECONDS);
+                rewards.beginShutdown().toCompletableFuture().get(2, TimeUnit.SECONDS);
+                assertFalse(user.hasPendingRewardReplay(), entry.name());
+                verify(data, times(process && !closed ? 1 : 0)).getStringList("OfflineRewards", UserDataFetchMode.DEFAULT);
+            } finally {
+                apiWorker.shutdownNow();
+                rewards.shutdown(0, TimeUnit.NANOSECONDS);
+                fixture.manager.getTimer().shutdownNow();
+            }
+        }
+    }
+
+    @Test void rejectedOfflineStorageHandoffReleasesAdmission() throws Exception {
+        assertFailedOfflineHandoffReleasesAdmission(OfflineEntry.NORMAL, false);
+    }
+
+    @Test void failedOfflinePlayerCaptureReleasesAdmission() throws Exception {
+        assertFailedOfflineHandoffReleasesAdmission(OfflineEntry.NORMAL, true);
+    }
+
+    @Test void rejectedForcedOfflineStorageHandoffReleasesAdmission() throws Exception {
+        assertFailedOfflineHandoffReleasesAdmission(OfflineEntry.FORCED_ASYNC, false);
+    }
+
+    @Test void failedForcedOfflinePlayerCaptureReleasesAdmission() throws Exception {
+        assertFailedOfflineHandoffReleasesAdmission(OfflineEntry.FORCED_ASYNC, true);
+    }
+
+    @Test void rejectedAsyncOfflineWorkerHandoffReleasesAdmission() throws Exception {
+        assertFailedOfflineHandoffReleasesAdmission(OfflineEntry.NORMAL_ASYNC, false);
+    }
+
+    @Test void failedAsyncOfflinePlayerCaptureReleasesAdmission() throws Exception {
+        assertFailedOfflineHandoffReleasesAdmission(OfflineEntry.NORMAL_ASYNC, true);
+    }
+
+    private void assertFailedOfflineHandoffReleasesAdmission(OfflineEntry entry, boolean failCapture) throws Exception {
+        Fixture fixture = new Fixture();
+        when(fixture.plugin.isEnabled()).thenReturn(true);
+        when(fixture.plugin.getOptions().isProcessRewards()).thenReturn(true);
+        when(fixture.users.getOfflineRewardsPath()).thenReturn("OfflineRewards");
+        var apiWorker = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(
+                AdvancedCoreRuntime.daemonThreads("rejected-offline-api-handoff"));
+        when(fixture.plugin.getTimer()).thenReturn(apiWorker);
+        var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+        when(fixture.plugin.getBukkitScheduler()).thenReturn(scheduler);
+        doAnswer(call -> { call.getArgument(1, Runnable.class).run(); return null; }).when(scheduler)
+                .executeOrScheduleSync(eq(fixture.plugin), any(Runnable.class));
+        RewardHandler rewards = new RewardHandler(fixture.plugin);
+        when(fixture.plugin.getRewardHandler()).thenReturn(rewards);
+        AdvancedCoreUser user = new AdvancedCoreUser(fixture.plugin, fixture.uuid, "rejected-offline-fixture");
+        UserData data = mock(UserData.class);
+        user.setData(data);
+        if (failCapture) when(fixture.plugin.getOptions().isTreatVanishAsOffline())
+                .thenThrow(new IllegalStateException("capture failed"));
+        else if (entry == OfflineEntry.NORMAL_ASYNC) apiWorker.shutdown();
+        else fixture.manager.getTimer().shutdown();
+        try {
+            try (var bukkit = mockStatic(Bukkit.class)) {
+                bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+                bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+                Class<? extends Throwable> type = failCapture ? IllegalStateException.class
+                        : java.util.concurrent.RejectedExecutionException.class;
+                if (entry == OfflineEntry.NORMAL || (failCapture && entry != OfflineEntry.NORMAL_ASYNC)) {
+                    assertThrows(type, () -> invokeOffline(user, entry));
+                } else {
+                    var completion = invokeOffline(user, entry);
+                    Throwable failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                            () -> completion.toCompletableFuture().get(2, TimeUnit.SECONDS)).getCause();
+                    assertInstanceOf(type, failure);
+                }
+            }
+            rewards.beginShutdown().toCompletableFuture().get(2, TimeUnit.SECONDS);
+            verify(data, never()).getStringList(eq("OfflineRewards"), any());
+        } finally {
+            apiWorker.shutdownNow();
+            rewards.shutdown(0, TimeUnit.NANOSECONDS);
+            fixture.manager.getTimer().shutdownNow();
+        }
+    }
+
+    @Test void cancelledAsyncOfflineCallerStillReleasesFailedOwnerCaptureAdmission() throws Exception {
+        Fixture fixture = new Fixture();
+        when(fixture.plugin.isEnabled()).thenReturn(true);
+        when(fixture.plugin.getOptions().isProcessRewards()).thenReturn(true);
+        when(fixture.plugin.getOptions().isTreatVanishAsOffline()).thenThrow(new IllegalStateException("capture failed"));
+        var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+        when(fixture.plugin.getBukkitScheduler()).thenReturn(scheduler);
+        var capture = new java.util.concurrent.atomic.AtomicReference<Runnable>();
+        doAnswer(call -> { capture.set(call.getArgument(1)); return null; }).when(scheduler)
+                .executeOrScheduleSync(eq(fixture.plugin), any(Runnable.class));
+        RewardHandler rewards = new RewardHandler(fixture.plugin);
+        when(fixture.plugin.getRewardHandler()).thenReturn(rewards);
+        AdvancedCoreUser user = new AdvancedCoreUser(fixture.plugin, fixture.uuid, "cancelled-capture-fixture");
+        UserData data = mock(UserData.class);
+        user.setData(data);
+        try {
+            var completion = user.checkOfflineRewardsAsync().toCompletableFuture();
+            assertNotNull(capture.get());
+            assertTrue(completion.cancel(false));
+            var drain = rewards.beginShutdown().toCompletableFuture();
+            assertFalse(drain.isDone(), "caller cancellation cannot discard the owned capture");
+            try (var bukkit = mockStatic(Bukkit.class)) {
+                bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+                bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+                capture.get().run();
+            }
+            drain.get(2, TimeUnit.SECONDS);
+            verify(data, never()).getStringList(anyString(), any());
+        } finally {
+            rewards.shutdown(0, TimeUnit.NANOSECONDS);
+            fixture.manager.getTimer().shutdownNow();
+        }
+    }
+
+    private java.util.concurrent.CompletionStage<Void> invokeOffline(AdvancedCoreUser user, OfflineEntry entry) {
+        return switch (entry) {
+            case NORMAL -> { user.checkOfflineRewards(); yield null; }
+            case NORMAL_ASYNC -> user.checkOfflineRewardsAsync();
+            case FORCED_ASYNC -> user.forceRunOfflineRewardsAsync();
+            case FORCED_VOID -> { user.forceRunOfflineRewards(); yield null; }
+        };
+    }
+
+    @Test void cancelledAsyncCallerBeforeSuccessfulCaptureRetainsReplayAndRetirement() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.NORMAL_ASYNC, false, true, true);
+    }
+
+    @Test void cancelledAsyncCallerBeforeSuccessfulCaptureRetainsFailedReplayForRetry() throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(OfflineEntry.NORMAL_ASYNC, true, true, true);
+    }
+
+    private void assertQueuedOfflineCheckRetainsStorage(OfflineEntry entry, boolean failedDispatch,
+            boolean cancelCaller) throws Exception {
+        assertQueuedOfflineCheckRetainsStorage(entry, failedDispatch, cancelCaller, false);
+    }
+
+    private void assertQueuedOfflineCheckRetainsStorage(OfflineEntry entry, boolean failedDispatch,
+            boolean cancelCaller, boolean deferCapture) throws Exception {
+        Fixture fixture = new Fixture();
+        when(fixture.plugin.isEnabled()).thenReturn(true);
+        when(fixture.plugin.getOptions().isProcessRewards()).thenReturn(true);
+        when(fixture.users.getOfflineRewardsPath()).thenReturn("OfflineRewards");
+        var apiWorker = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(
+                AdvancedCoreRuntime.daemonThreads("offline-api-handoff"));
+        when(fixture.plugin.getTimer()).thenReturn(apiWorker);
+        var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);
+        when(fixture.plugin.getBukkitScheduler()).thenReturn(scheduler);
+        var capture = new java.util.concurrent.atomic.AtomicReference<Runnable>();
+        doAnswer(call -> {
+            Runnable task = call.getArgument(1);
+            if (deferCapture) capture.set(task); else task.run();
+            return null;
+        }).when(scheduler)
+                .executeOrScheduleSync(eq(fixture.plugin), any(Runnable.class));
+        RewardHandler rewards = spy(new RewardHandler(fixture.plugin));
+        when(fixture.plugin.getRewardHandler()).thenReturn(rewards);
+        AdvancedCoreUser user = new AdvancedCoreUser(fixture.plugin, fixture.uuid, "offline-handoff-fixture");
+        UserData data = mock(UserData.class);
+        user.setData(data);
+        ArrayList<String> persisted = new ArrayList<>(List.of("ShutdownReward"));
+        AtomicBoolean nativeClosed = new AtomicBoolean();
+        doAnswer(call -> { nativeClosed.set(true); return null; }).when(fixture.mysql).close();
+        when(data.getStringList("OfflineRewards", UserDataFetchMode.DEFAULT))
+                .thenAnswer(call -> new ArrayList<>(persisted));
+        org.mockito.stubbing.Answer<Void> write = call -> {
+            assertFalse(nativeClosed.get(), "queue handling must retain its native owner");
+            persisted.clear();
+            persisted.addAll(call.getArgument(1));
+            return null;
+        };
+        doAnswer(write).when(data).setStringList(eq("OfflineRewards"), any(), anyBoolean());
+        doAnswer(write).when(data).setStringList(eq("OfflineRewards"), any());
+        CompletableFuture<Void> dispatch = new CompletableFuture<>();
+        CountDownLatch dispatched = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<String> dispatchedEntry = new java.util.concurrent.atomic.AtomicReference<>();
+        doAnswer(call -> {
+            dispatchedEntry.set(persisted.get(0));
+            dispatched.countDown();
+            return dispatch;
+        }).when(rewards)
+                .givePersistedQueueRewardAsync(eq(user), any(PersistedQueueReference.class), any(RewardOptions.class));
+        CountDownLatch occupied = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        var handoffWorker = entry == OfflineEntry.NORMAL_ASYNC ? apiWorker : fixture.manager.getTimer();
+        handoffWorker.execute(() -> { occupied.countDown(); awaitIgnoringInterrupt(release); });
+        assertTrue(occupied.await(2, TimeUnit.SECONDS));
+        try {
+            java.util.concurrent.CompletionStage<Void> completion;
+            try (var bukkit = mockStatic(Bukkit.class)) {
+                bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+                bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+                completion = invokeOffline(user, entry);
+            }
+            verify(data, never()).getStringList(eq("OfflineRewards"), any());
+            if (cancelCaller) assertTrue(completion.toCompletableFuture().cancel(false));
+            var checksDrained = rewards.beginShutdown().toCompletableFuture();
+            assertFalse(checksDrained.isDone(), "accepted offline work must own admission across its queued handoff");
+            if (deferCapture) {
+                assertNotNull(capture.get());
+                try (var bukkit = mockStatic(Bukkit.class)) {
+                    bukkit.when(Bukkit::getServer).thenReturn(mock(Server.class));
+                    bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+                    capture.get().run();
+                }
+                assertFalse(checksDrained.isDone(), "successful capture must retain the queued worker's admission");
+                verify(data, never()).getStringList(eq("OfflineRewards"), any());
+            }
+            release.countDown();
+            assertTrue(dispatched.await(2, TimeUnit.SECONDS), "admitted work must dispatch after the fence closes");
+            checksDrained.get(2, TimeUnit.SECONDS);
+            BukkitRuntimePlatform platform = fixture.platform();
+            new AdvancedCoreRuntime(platform).shutdown(0L);
+            assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
+            verify(fixture.mysql, never()).close();
+            if (completion != null && !cancelCaller) assertFalse(completion.toCompletableFuture().isDone());
+            if (failedDispatch) dispatch.completeExceptionally(new IllegalStateException("dispatch failed"));
+            else dispatch.complete(null);
+            if (completion != null && !cancelCaller) completion.toCompletableFuture().get(2, TimeUnit.SECONDS);
+            platform.beforeExecutorShutdownCompletion().toCompletableFuture().get(2, TimeUnit.SECONDS);
+            if (failedDispatch) {
+                assertEquals(1, persisted.size());
+                assertEquals(dispatchedEntry.get(), persisted.get(0),
+                        "failed offline replay must preserve the exact occurrence and payload");
+            } else assertTrue(persisted.isEmpty());
+            verify(fixture.cache, times(1)).flush(fixture.uuid, UserStorage.MYSQL, fixture.storage);
+            verify(fixture.mysql, times(1)).close();
+        } finally {
+            release.countDown();
+            dispatch.complete(null);
+            apiWorker.shutdownNow();
+            rewards.shutdown(0, TimeUnit.NANOSECONDS);
+            fixture.manager.getTimer().shutdownNow();
+        }
+    }
+
     private void assertFailedTimedStorageHandoffReleasesReplayAdmission(boolean failCapture) throws Exception {
         Fixture fixture = new Fixture();
         RewardHandler rewards = new RewardHandler(fixture.plugin);
