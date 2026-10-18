@@ -238,8 +238,8 @@
         <dependency>
             <groupId>com.bencodez</groupId>
             <artifactId>simpleapi</artifactId>
-            <!-- Published SQL lifecycle and delayed entity scheduling fixes. -->
-            <version>1.0.2-20261018.002045-42</version>
+            <!-- Shared SQL lifecycle and delayed entity scheduling support. -->
+            <version>1.0.2-SNAPSHOT</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
