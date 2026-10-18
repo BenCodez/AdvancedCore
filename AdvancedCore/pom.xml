@@ -238,8 +238,8 @@
         <dependency>
             <groupId>com.bencodez</groupId>
             <artifactId>simpleapi</artifactId>
-            <!-- Published SQL lifecycle fix; do not resolve an older rolling snapshot. -->
-            <version>1.0.2-20261011.161601-40</version>
+            <!-- Published SQL lifecycle and delayed entity scheduling fixes. -->
+            <version>1.0.2-20261018.002045-42</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
