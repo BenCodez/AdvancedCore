@@ -27,6 +27,7 @@ class FinalPublicationSequenceTest {
 
     private void verifySequence(boolean failInventory) throws Exception {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        when(plugin.isLoadServerData()).thenReturn(true);
         FullInventoryHandler inventory = mock(FullInventoryHandler.class);
         PermissionHandler permissions = mock(PermissionHandler.class);
         ServerData owner = mock(ServerData.class);

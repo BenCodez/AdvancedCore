@@ -940,6 +940,7 @@ class CoreRuntimeTest {
 
 	@Test void shutdownHookReceivesActualFinalStagesAndRetainsExceptionalSettlement() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isLoadServerData()).thenReturn(true);
 		var inventory = mock(FullInventoryHandler.class);
 		var permissions = mock(com.bencodez.advancedcore.api.permissions.PermissionHandler.class);
 		var data = mock(com.bencodez.advancedcore.data.ServerData.class);

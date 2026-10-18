@@ -33,6 +33,7 @@ import org.mockito.MockedStatic;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.permissions.PermissionHandler;
+import com.bencodez.advancedcore.api.item.FullInventoryHandler;
 import com.bencodez.advancedcore.api.rewards.RewardHandler;
 import com.bencodez.advancedcore.api.rewards.RewardEligibility;
 import com.bencodez.advancedcore.api.time.TimeChecker;
@@ -157,6 +158,58 @@ class NativeServerDataAdmissionTest {
         successor.plugin.onEnable();
         successor.plugin.onDisable();
         successor.awaitRelease();
+    }
+
+    @Test void disabledUninitializedServerDataSkipsAllFinalWritesAndAllowsSameJvmReenable() throws Exception {
+        Fixture fixture = fixture();
+        when(fixture.plugin.isLoadServerData()).thenReturn(false);
+        ServerData owner = spy(new ServerData(fixture.plugin));
+        when(fixture.plugin.getServerDataFile()).thenReturn(owner);
+        for (int generation = 0; generation < 2; generation++) {
+            FullInventoryHandler inventory = new FullInventoryHandler(fixture.plugin);
+            PermissionHandler permissions = new PermissionHandler(fixture.plugin);
+            workers.add(inventory.getTimer());
+            workers.add(permissions.getTimer());
+            when(fixture.plugin.getFullInventoryHandler()).thenReturn(inventory);
+            when(fixture.plugin.getPermissionHandler()).thenReturn(permissions);
+            fixture.plugin.onEnable();
+            fixture.plugin.onDisable();
+            fixture.finalFiles.get().toCompletableFuture().get(2, TimeUnit.SECONDS);
+            fixture.awaitRelease();
+            assertTrue(inventory.getTimer().isTerminated());
+            assertTrue(permissions.getTimer().isTerminated());
+            assertFalse(fixture.plugin.hasServerDataOwnership());
+        }
+        verify(owner, never()).mutateFinalData(any());
+        assertNull(owner.getData());
+        assertFalse(Files.exists(directory.resolve("ServerData.yml")));
+        verify(fixture.plugin, times(2)).onUnLoad();
+    }
+
+    @Test void enabledUninitializedServerDataStillFailsAndRetainsNativeAdmission() throws Exception {
+        Fixture fixture = fixture();
+        ServerData owner = new ServerData(fixture.plugin);
+        when(fixture.plugin.getServerDataFile()).thenReturn(owner);
+        fixture.plugin.onEnable();
+        fixture.plugin.onDisable();
+        assertThrows(java.util.concurrent.ExecutionException.class,
+                () -> fixture.finalFiles.get().toCompletableFuture().get(2, TimeUnit.SECONDS));
+        assertThrows(java.util.concurrent.ExecutionException.class,
+                () -> fixture.releaseFence.get().get(2, TimeUnit.SECONDS));
+        assertTrue(fixture.plugin.hasServerDataOwnership(), "enabled but failed persistence cannot release ownership");
+    }
+
+    @Test void initializedServerDataStillPublishesWhenLoadFlagChangesBeforeShutdown() throws Exception {
+        Fixture fixture = fixture();
+        ServerData owner = new ServerData(fixture.plugin);
+        owner.setup();
+        when(fixture.plugin.getServerDataFile()).thenReturn(owner);
+        fixture.plugin.onEnable();
+        when(fixture.plugin.isLoadServerData()).thenReturn(false);
+        fixture.plugin.onDisable();
+        fixture.awaitRelease();
+        assertTrue(YamlConfiguration.loadConfiguration(directory.resolve("ServerData.yml").toFile())
+                .getLong("LastUpdated") > 0);
     }
 
     @Test void successfulShutdownAllowsSameInstanceReenableAndDuplicateDisableStaysInert() throws Exception {
@@ -437,6 +490,7 @@ class NativeServerDataAdmissionTest {
     private Fixture fixture(Path dataDirectory) {
         AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         initializeLifecycleLock(plugin);
+        when(plugin.isLoadServerData()).thenReturn(true);
         Server server = mock(Server.class);
         when(plugin.getDataFolder()).thenReturn(dataDirectory.toFile());
         when(plugin.getName()).thenReturn("native-admission-fixture");

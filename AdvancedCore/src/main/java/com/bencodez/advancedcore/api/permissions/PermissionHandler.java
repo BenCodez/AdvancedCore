@@ -401,6 +401,12 @@ public class PermissionHandler {
 		acceptingExpirations.set(false);
 		timer.shutdownNow();
 		ServerData serverData = plugin.getServerDataFile();
+		if (!plugin.isLoadServerData() && (serverData == null || serverData.getData() == null)) {
+			// Expiration admission and its timer are already stopped; intentionally
+			// unloaded ServerData has no final permission file to publish.
+			completion.complete(null);
+			return completion;
+		}
 		try {
 			persistenceExecutor.execute(() -> {
 				try {

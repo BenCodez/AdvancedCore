@@ -306,6 +306,13 @@ public class FullInventoryHandler {
 		ScheduledFuture<?> task = checkTask;
 		if (task != null) task.cancel(false);
 		ServerData serverData = plugin.getServerDataFile();
+		if (!plugin.isLoadServerData() && (serverData == null || serverData.getData() == null)) {
+			// No native file was loaded. Still fence delivery and retire its timer,
+			// but do not snapshot or acknowledge any unpublished replay overflow.
+			if (timer != null) timer.shutdownNow();
+			completion.complete(null);
+			return completion;
+		}
 		try {
 			persistenceExecutor.execute(() -> {
 				try {

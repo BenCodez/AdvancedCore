@@ -61,6 +61,7 @@ class ShutdownProcessPersistenceTest {
             Path directory = Path.of(args[0]);
             boolean blocked = args[1].equals("blocked");
             var plugin = mock(AdvancedCorePlugin.class);
+            when(plugin.isLoadServerData()).thenReturn(true);
             var owner = mock(ServerData.class);
             when(plugin.getLogger()).thenReturn(Logger.getLogger("shutdown-fixture"));
             when(plugin.getServerDataFile()).thenReturn(owner);

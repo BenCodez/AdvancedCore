@@ -461,7 +461,9 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
 
     private CompletionStage<Void> submitTimestampPersistence(Executor executor) {
         ServerData owner = plugin.getServerDataFile();
-        if (owner == null) return CompletableFuture.completedFuture(null);
+        if (owner == null || (!plugin.isLoadServerData() && owner.getData() == null)) {
+            return CompletableFuture.completedFuture(null);
+        }
         long lastUpdated = System.currentTimeMillis();
         var completion = new CompletableFuture<Void>();
         try {
