@@ -34,11 +34,10 @@ final class RetiringOwnerScheduler {
             Consumer<Runnable> retirementQueue) {
         this.ownerQueue = ownerQueue;
         this.retirementQueue = retirementQueue;
-        FoliaLib folia = mock(FoliaLib.class);
-        ServerImplementation implementation = mock(ServerImplementation.class);
+        FoliaLib folia = mock(FoliaLib.class, RETURNS_DEEP_STUBS);
+        ServerImplementation implementation = folia.getImpl();
         when(scheduler.getFoliaLib()).thenReturn(folia);
         when(folia.isFolia()).thenReturn(true);
-        when(folia.getImpl()).thenReturn(implementation);
         // Exercise the real wrapper that discards runAtEntity's returned future.
         doCallRealMethod().when(scheduler).runTask(eq(plugin), any(Runnable.class), any(Entity.class));
         when(implementation.runAtEntity(any(Entity.class), any())).thenAnswer(call ->
