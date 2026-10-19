@@ -119,13 +119,13 @@ class FullInventoryPublicationMonitorTest {
         final CountDownLatch cleared = new CountDownLatch(1), release = new CountDownLatch(1);
         final AtomicBoolean armed = new AtomicBoolean();
 
-        @Override public void set(String path, Object value) {
-            super.set(path, value);
-            if (path.equals("FullInventory") && value == null && armed.compareAndSet(true, false)) {
+        @Override public java.util.Set<String> getKeys(boolean deep) {
+            if (!deep && armed.compareAndSet(true, false)) {
                 cleared.countDown();
                 try { assertTrue(release.await(10, TimeUnit.SECONDS)); }
                 catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new AssertionError(failure); }
             }
+            return super.getKeys(deep);
         }
     }
 
@@ -135,5 +135,8 @@ class FullInventoryPublicationMonitorTest {
         @Override public Object publicationMonitor() { return owner.publicationMonitor(); }
         @Override public FileConfiguration getData() { return owner.getData(); }
         @Override public void saveData() { owner.saveData(); }
+        @Override public CompletionStage<Void> mutateFinalData(java.util.function.Consumer<FileConfiguration> mutation) {
+            return owner.mutateFinalData(mutation);
+        }
     }
 }
