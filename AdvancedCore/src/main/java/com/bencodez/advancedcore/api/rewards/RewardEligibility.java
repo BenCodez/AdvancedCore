@@ -19,7 +19,7 @@ import org.bukkit.metadata.FixedMetadataValue;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.tcoded.folialib.enums.EntityTaskResult;
+import com.bencodez.simpleapi.folialib.enums.EntityTaskResult;
 
 /** Owns optional eligibility observations and bounded replay wake-ups, never reward payloads. */
 public final class RewardEligibility {
