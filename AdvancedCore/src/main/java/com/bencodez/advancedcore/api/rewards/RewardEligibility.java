@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
@@ -19,7 +20,6 @@ import org.bukkit.metadata.FixedMetadataValue;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
-import com.bencodez.simpleapi.folialib.enums.EntityTaskResult;
 
 /** Owns optional eligibility observations and bounded replay wake-ups, never reward payloads. */
 public final class RewardEligibility {
@@ -94,8 +94,8 @@ public final class RewardEligibility {
 
     /**
      * Schedules an opted-in player action with explicit Folia retirement handling.
-     * Callers share their action claim with both terminal callbacks so a late
-     * task cannot execute after its unstarted work has been retained for retry.
+     * Dispatch and terminal callbacks share a claim so a late task cannot execute
+     * after its unstarted work has been retained for retry.
      */
     public static void runPlayerTask(AdvancedCorePlugin plugin, Player player, Runnable action,
             Runnable retired, Consumer<Throwable> rejected) {
@@ -105,14 +105,25 @@ public final class RewardEligibility {
             scheduler.runTask(plugin, action, player);
             return;
         }
-        var result = folia.getImpl().runAtEntityWithFallback(player, ignored -> action.run(), retired);
+        AtomicBoolean claimed = new AtomicBoolean();
+        Runnable retireOnce = () -> {
+            if (claimed.compareAndSet(false, true)) retired.run();
+        };
+        Consumer<Throwable> rejectOnce = failure -> {
+            if (claimed.compareAndSet(false, true)) rejected.accept(failure);
+        };
+        // SimpleAPI relocates FoliaLib. Its enum names are stable across shading;
+        // the shaded and original enum classes are different Java types.
+        CompletionStage<? extends Enum<?>> result = folia.getScheduler().runAtEntityWithFallback(player,
+                ignored -> { if (claimed.compareAndSet(false, true)) action.run(); }, retireOnce);
         if (result == null) throw new IllegalStateException("Entity scheduler returned no admission result");
         result.whenComplete((status, failure) -> {
-            if (failure != null) rejected.accept(failure);
-            else if (status == EntityTaskResult.ENTITY_RETIRED || status == EntityTaskResult.SCHEDULER_RETIRED) {
-                retired.run();
-            } else if (status != EntityTaskResult.SUCCESS) {
-                rejected.accept(new IllegalStateException("Entity scheduler returned an unknown admission result"));
+            if (failure != null) rejectOnce.accept(failure);
+            else {
+                String name = status == null ? "" : status.name();
+                if (name.equals("ENTITY_RETIRED") || name.equals("SCHEDULER_RETIRED")) retireOnce.run();
+                else if (!name.equals("SUCCESS")) rejectOnce.accept(
+                        new IllegalStateException("Entity scheduler returned an unknown admission result"));
             }
         });
     }
