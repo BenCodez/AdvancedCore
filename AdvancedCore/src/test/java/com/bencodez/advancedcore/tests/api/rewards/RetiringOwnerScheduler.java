@@ -14,7 +14,7 @@ import org.bukkit.entity.Entity;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.simpleapi.folialib.FoliaLib;
 import com.bencodez.simpleapi.folialib.enums.EntityTaskResult;
-import com.bencodez.simpleapi.folialib.impl.ServerImplementation;
+import com.bencodez.simpleapi.folialib.impl.PlatformScheduler;
 import com.bencodez.simpleapi.folialib.wrapper.task.WrappedTask;
 import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
@@ -34,10 +34,12 @@ final class RetiringOwnerScheduler {
             Consumer<Runnable> retirementQueue) {
         this.ownerQueue = ownerQueue;
         this.retirementQueue = retirementQueue;
-        FoliaLib folia = mock(FoliaLib.class, RETURNS_DEEP_STUBS);
-        ServerImplementation implementation = folia.getImpl();
+        FoliaLib folia = mock(FoliaLib.class);
+        PlatformScheduler implementation = mock(PlatformScheduler.class);
         when(scheduler.getFoliaLib()).thenReturn(folia);
         when(folia.isFolia()).thenReturn(true);
+        when(folia.getImpl()).thenReturn(implementation);
+        when(folia.getScheduler()).thenReturn(implementation);
         // Exercise the real wrapper that discards runAtEntity's returned future.
         doCallRealMethod().when(scheduler).runTask(eq(plugin), any(Runnable.class), any(Entity.class));
         when(implementation.runAtEntity(any(Entity.class), any())).thenAnswer(call ->
