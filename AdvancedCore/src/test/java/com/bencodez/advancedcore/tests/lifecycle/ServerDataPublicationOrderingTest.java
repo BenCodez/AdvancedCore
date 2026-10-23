@@ -33,6 +33,76 @@ import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 class ServerDataPublicationOrderingTest {
     @TempDir File dataFolder;
 
+    @Test void ordinaryCallbackPublishesLiveProjectionBeforeBlockedNativeDiskIo() throws Exception {
+        try (var scheduler = mockConstruction(BukkitScheduler.class)) {
+            AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+            when(plugin.getDataFolder()).thenReturn(dataFolder);
+            BarrierServerData data = new BarrierServerData(plugin);
+            data.install();
+            FileConfiguration live = data.getData();
+            live.set("VoteParty.Total", 7);
+            var display = new java.util.concurrent.atomic.AtomicInteger(7);
+            var finished = new CompletableFuture<Void>();
+            Thread writer = new Thread(() -> {
+                try {
+                    data.mutateOrdinaryData(yaml -> {
+                        assertSame(live, yaml);
+                        assertTrue(Thread.holdsLock(data.publicationMonitor()));
+                        yaml.set("VoteParty.Total", 17);
+                        display.set(yaml.getInt("VoteParty.Total"));
+                    });
+                    finished.complete(null);
+                } catch (Throwable failure) { finished.completeExceptionally(failure); }
+            }, "ordinary-live-projection");
+            try {
+                writer.start();
+                assertTrue(data.ordinaryWriteStarted.await(2, TimeUnit.SECONDS));
+                assertFalse(finished.isDone(), "disk I/O is still held");
+                assertEquals(17, display.get(), "display must not wait for disk I/O");
+                assertSame(live, data.getData());
+            } finally {
+                data.releaseOrdinaryWrite.countDown();
+                writer.join(2000);
+                if (writer.isAlive()) writer.interrupt();
+            }
+            assertFalse(writer.isAlive());
+            finished.get(2, TimeUnit.SECONDS);
+            assertEquals(17, YamlConfiguration.loadConfiguration(data.getdFile()).getInt("VoteParty.Total"));
+        }
+    }
+
+    @Test void ordinaryCallbackFailurePreservesLiveIdentityWithoutSavingOrClaimingRollback() throws Exception {
+        try (var scheduler = mockConstruction(BukkitScheduler.class)) {
+            LegacySavingOwner data = legacySavingOwner();
+            FileConfiguration live = data.getData();
+            var failure = new IllegalArgumentException("synthetic projection failure");
+            assertSame(failure, assertThrows(IllegalArgumentException.class, () -> data.mutateOrdinaryData(yaml -> {
+                assertSame(live, yaml);
+                yaml.set("VoteParty.Total", 17);
+                throw failure;
+            })));
+            assertEquals(0, data.saves);
+            assertSame(live, data.getData());
+            assertEquals(17, live.getInt("VoteParty.Total"));
+            assertFalse(data.getdFile().exists());
+        }
+    }
+
+    @Test void ordinaryCallbackRetainsTheCustomOwnersSaveFailure() throws Exception {
+        try (var scheduler = mockConstruction(BukkitScheduler.class)) {
+            LegacySavingOwner data = legacySavingOwner();
+            data.saveFailure = new IllegalStateException("synthetic owner failure");
+            var display = new java.util.concurrent.atomic.AtomicInteger();
+            assertSame(data.saveFailure, assertThrows(IllegalStateException.class, () -> data.mutateOrdinaryData(yaml -> {
+                yaml.set("VoteParty.Total", 17);
+                display.set(yaml.getInt("VoteParty.Total"));
+            })));
+            assertEquals(1, data.saves);
+            assertEquals(17, display.get());
+            assertSame(data.getData(), data.savedData);
+        }
+    }
+
     @Test void heartbeatCannotOverwriteAcknowledgedFinalPublication() throws Exception {
         verifyPublicationOrder(true);
     }
@@ -272,6 +342,9 @@ class ServerDataPublicationOrderingTest {
         assertThrows(IllegalStateException.class, data::saveDataChecked);
         assertThrows(IllegalStateException.class, data::reloadData);
         assertThrows(IllegalStateException.class, data::setup);
+        var callbackCalled = new java.util.concurrent.atomic.AtomicBoolean();
+        assertThrows(IllegalStateException.class, () -> data.mutateOrdinaryData(yaml -> callbackCalled.set(true)));
+        assertFalse(callbackCalled.get(), "an unconfirmed final publication fences the callback itself");
         assertThrows(CompletionException.class,
                 () -> data.mutateFinalData(yaml -> yaml.set("UnacknowledgedSuccessor", true)).toCompletableFuture().join());
         assertFalse(data.getData().contains("UnacknowledgedSuccessor"));
@@ -383,6 +456,13 @@ class ServerDataPublicationOrderingTest {
 		verifyInheritedMutatorIsPublicationOrdered(data -> data.setValue("Inherited.Value", "new"),
 				"Inherited.Value");
 	}
+
+    @Test void ordinaryCallbackCannotMutateLiveYamlDuringNativeFinalPublication() throws Exception {
+        verifyInheritedMutatorIsPublicationOrdered(data -> data.mutateOrdinaryData(yaml -> {
+            assertTrue(Thread.holdsLock(data.publicationMonitor()));
+            yaml.set("Ordinary.Value", "new");
+        }), "Ordinary.Value");
+    }
 
 	@Test void inheritedCreateSectionCannotMutateLiveYamlDuringNativePublication() throws Exception {
 		verifyInheritedMutatorIsPublicationOrdered(data -> data.createSection("Inherited.Section"),
@@ -572,13 +652,16 @@ class ServerDataPublicationOrderingTest {
                     when(source.getName()).thenReturn("ExamplePlugin");
                     when(source.getDescription()).thenReturn(new org.bukkit.plugin.PluginDescriptionFile(
                             "ExamplePlugin", "1.0", "example.Main"));
-                    data.setPluginVersion(source); written.complete(null);
+                    data.setPluginVersion(source);
+                    data.mutateOrdinaryData(yaml -> yaml.set("Custom.Callback", "value"));
+                    written.complete(null);
                 } catch (Throwable failure) { written.completeExceptionally(failure); }
             }, "custom-ordinary-mutation");
             try {
                 holder.start(); assertTrue(ownerHeld.await(2, TimeUnit.SECONDS)); writer.start();
                 written.get(2, TimeUnit.SECONDS);
-                assertEquals(7, data.saved.get());
+                assertEquals(8, data.saved.get());
+                assertEquals("value", data.getData().getString("Custom.Callback"));
                 assertEquals(3, data.getData().getInt("PrevDay"));
             } finally {
                 releaseOwner.countDown(); holder.join(2000); writer.join(2000);

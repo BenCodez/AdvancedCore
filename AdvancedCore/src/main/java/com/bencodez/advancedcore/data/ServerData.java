@@ -343,8 +343,6 @@ public class ServerData extends YMLFile {
 
 	private void prepareSnapshotPublication() {
 		requireFinalPublicationSettled();
-		if (replacementUncertain)
-			throw new IllegalStateException("ServerData replacement outcome is unknown; restart required before saving");
 		if (!publicationSettlementPending && !replacementCleanupPending) return;
 		Path target = getdFile().toPath().toAbsolutePath();
 		try { forceDirectory(target.getParent()); }
@@ -359,6 +357,8 @@ public class ServerData extends YMLFile {
 	private void requireFinalPublicationSettled() {
 		if (finalPublicationIndeterminate)
 			throw new IllegalStateException("Final ServerData publication is unconfirmed; restart required before reuse");
+		if (replacementUncertain)
+			throw new IllegalStateException("ServerData replacement outcome is unknown; restart required before saving");
 	}
 
 	private Path backupPath(Path target) {
@@ -488,7 +488,23 @@ public class ServerData extends YMLFile {
 		}
 	}
 
-	private void mutateOrdinaryData(java.util.function.Consumer<org.bukkit.configuration.file.FileConfiguration> mutation) {
+	/**
+	 * Mutates the live YAML and then invokes the ordinary {@link #saveData()} path.
+	 * The callback runs synchronously on the caller before saving, so an adapter
+	 * can update its in-memory projection before disk I/O begins. Native owners
+	 * check final-publication settlement and hold their publication monitor across
+	 * both operations; the callback receives the existing live YAML, not a copy.
+	 * Adapters with another owner must delegate this operation to that owner and
+	 * compose their projection update inside its callback.
+	 *
+	 * This is an ordinary save, not a durable publication acknowledgement. A callback
+	 * failure propagates without saving or rolling back any live changes. Callbacks
+	 * must not wait for asynchronous work or perform another save/reload operation.
+	 * Existing custom save owners retain their own synchronization and save behavior.
+	 *
+	 * @param mutation the synchronous mutation and optional in-memory projection update
+	 */
+	public void mutateOrdinaryData(java.util.function.Consumer<org.bukkit.configuration.file.FileConfiguration> mutation) {
 		withNativePublicationOrdering(() -> { mutation.accept(getData()); saveData(); });
 	}
 

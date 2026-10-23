@@ -290,12 +290,30 @@ class ServerDataTimeTransitionTest {
 				yaml -> yaml.set("FullInventory.unpublished.Time", 456L)).toCompletableFuture().join());
 		byte[] unknownSnapshot = Files.readAllBytes(data.getdFile().toPath());
 		data.moveFailure = 0;
+		var live = data.getData();
+		String liveBefore = live.saveToString();
+		var callbackCalled = new java.util.concurrent.atomic.AtomicBoolean();
+		assertThrows(IllegalStateException.class, () -> data.mutateOrdinaryData(yaml -> {
+			callbackCalled.set(true);
+			yaml.set("Ordinary.Unconfirmed", 27);
+		}));
+		assertFalse(callbackCalled.get(), "unknown replacement must reject before invoking a live callback");
 		assertThrows(IllegalStateException.class, data::setLastUpdated);
+		assertThrows(IllegalStateException.class, () -> data.setData("Ordinary.Value", 27));
+		assertThrows(IllegalStateException.class, () -> data.setValue("Ordinary.Value", 27));
+		assertThrows(IllegalStateException.class, () -> data.createSection("Ordinary.Section"));
+		var bulk = new YamlConfiguration();
+		bulk.set("Ordinary.Bulk", 27);
+		assertThrows(IllegalStateException.class, () -> data.setData(bulk));
+		assertThrows(IllegalStateException.class, data::reloadData);
+		assertThrows(IllegalStateException.class, data::setup);
 		assertThrows(IllegalStateException.class, data::saveData);
 		assertThrows(IllegalStateException.class, data::saveDataChecked);
 		assertThrows(java.util.concurrent.CompletionException.class, () -> data.mutateFinalData(
 				yaml -> yaml.set("IgnoreTime", true)).toCompletableFuture().join());
 		assertArrayEquals(unknownSnapshot, Files.readAllBytes(data.getdFile().toPath()));
+		assertSame(live, data.getData());
+		assertEquals(liveBefore, live.saveToString(), "rejected operations must not change live YAML");
 	}
 
 	@Test
