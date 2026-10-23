@@ -415,7 +415,7 @@ public class FullInventoryHandlerTest {
 	}
 
 	@Test
-	public void replayOverflowSaveFailureDropsOnlyReservedOverflowWithoutReplayingPartialInsert() throws Exception {
+	public void replayOverflowRejectedBeforePublicationDropsOnlyReservedOverflowWithoutReplayingPartialInsert() throws Exception {
 		Fixture fixture = createFixture();
 		UUID uuid = UUID.randomUUID();
 		Player player = mock(Player.class);
@@ -433,9 +433,7 @@ public class FullInventoryHandlerTest {
 		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
 		when(world.dropItem(location, excess)).thenReturn(mock(org.bukkit.entity.Item.class));
 		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
-		doAnswer(invocation -> {
-			throw new IllegalStateException("disk unavailable");
-		}).when(fixture.serverData).saveData();
+		fixture.handler.getTimer().shutdownNow(); // Rejected before any owner publication.
 
 		AtomicInteger scheduled = new AtomicInteger();
 		AtomicReference<Runnable> initialDelivery = new AtomicReference<>();
@@ -487,9 +485,7 @@ public class FullInventoryHandlerTest {
 		when(player.getInventory()).thenReturn(inventory);
 		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
 		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
-		doAnswer(invocation -> {
-			throw new IllegalStateException("disk unavailable");
-		}).when(fixture.serverData).saveData();
+		fixture.handler.getTimer().shutdownNow(); // Rejected before any owner publication.
 
 		AtomicReference<Runnable> initialDelivery = new AtomicReference<>();
 		AtomicReference<Runnable> fallback = new AtomicReference<>();
@@ -517,6 +513,140 @@ public class FullInventoryHandlerTest {
 		verify(inventory, times(1)).addItem(item);
 		assertFalse(fixture.handler.getItems().containsKey(uuid));
 		assertFalse(fixture.data.contains("FullInventory"));
+	}
+
+	@Test
+	public void asyncShutdownReturnsWhileCheckedSnapshotIsBlockedOnOwnedDaemonWorker() throws Exception {
+		Fixture fixture = createFixture();
+		assertTrue(fixture.handler.getTimer().submit(() -> Thread.currentThread().isDaemon()).get(2, TimeUnit.SECONDS));
+		UUID uuid = UUID.randomUUID();
+		ItemStack item = mock(ItemStack.class);
+		fixture.handler.add(uuid, item);
+		CountDownLatch saving = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		AtomicReference<Thread> workerThread = new AtomicReference<>();
+		doAnswer(call -> {
+			workerThread.set(Thread.currentThread());
+			saving.countDown();
+			assertTrue(release.await(2, TimeUnit.SECONDS));
+			return null;
+		}).when(fixture.serverData).saveDataChecked();
+		var worker = java.util.concurrent.Executors.newSingleThreadExecutor(
+				com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("inventory-save-fixture"));
+		try {
+			CompletionStage<Void> completion = fixture.handler.shutdownAsync(worker);
+			assertTrue(saving.await(2, TimeUnit.SECONDS));
+			assertFalse(completion.toCompletableFuture().isDone());
+			assertTrue(workerThread.get().isDaemon());
+			assertNotSame(Thread.currentThread(), workerThread.get());
+			assertEquals(completion, fixture.handler.shutdownAsync(worker));
+			release.countDown();
+			completion.toCompletableFuture().get(2, TimeUnit.SECONDS);
+			assertEquals(item, fixture.data.getItemStack("FullInventory." + uuid + ".Items.0"));
+			verify(fixture.serverData, times(1)).saveDataChecked();
+		} finally {
+			release.countDown();
+			worker.shutdownNow();
+		}
+	}
+
+	@Test
+	public void failedCheckedShutdownSaveDoesNotAcknowledgeAcceptedReplayOverflow() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class);
+		PlayerInventory inventory = mock(PlayerInventory.class);
+		ItemStack item = mock(ItemStack.class);
+		ItemStack excess = mock(ItemStack.class);
+		when(fixture.plugin.getOptions().isDropOnFullInv()).thenReturn(false);
+		when(player.getUniqueId()).thenReturn(uuid);
+		when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		CountDownLatch started = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		fixture.handler.getTimer().execute(() -> {
+			started.countDown();
+			try { release.await(2, TimeUnit.SECONDS); }
+			catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+		});
+		assertTrue(started.await(2, TimeUnit.SECONDS));
+		try {
+			CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+			verify(fixture.bukkitScheduler).runTask(eq(fixture.plugin), task.capture(), eq(player));
+			try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+				bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+				task.getValue().run();
+			}
+			doAnswer(call -> { throw new java.io.UncheckedIOException(new java.io.IOException("disk failure")); })
+					.when(fixture.serverData).saveDataChecked();
+			CompletionStage<Void> completion = fixture.handler.shutdownAsync(Runnable::run);
+			assertThrows(java.util.concurrent.CompletionException.class, () -> completion.toCompletableFuture().join());
+			assertFalse(delivery.toCompletableFuture().isDone(), "failed disk save must keep the replay receipt pending");
+			assertFalse(fixture.handler.getItems().containsKey(uuid), "failed reservation must not enter the delivery sweep");
+			assertFalse(fixture.data.contains("FullInventory." + uuid), "unacknowledged overflow must stay out of later whole-file snapshots");
+			verify(inventory, times(1)).addItem(item);
+		} finally { release.countDown(); }
+	}
+
+	@Test
+	public void pendingFinalPublicationFencesPreviouslyQueuedOverflowDropFallback() throws Exception {
+		Fixture fixture = createFixture();
+		UUID uuid = UUID.randomUUID();
+		Player player = mock(Player.class); PlayerInventory inventory = mock(PlayerInventory.class);
+		World world = mock(World.class); ItemStack item = mock(ItemStack.class), excess = mock(ItemStack.class);
+		when(fixture.plugin.getOptions().isDropOnFullInv()).thenReturn(false);
+		when(player.getUniqueId()).thenReturn(uuid); when(player.isOnline()).thenReturn(true);
+		when(player.getInventory()).thenReturn(inventory); when(player.getWorld()).thenReturn(world);
+		when(inventory.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, excess)));
+		fixture.handler.getLastMessageTime().put(uuid, System.currentTimeMillis());
+		AtomicReference<Runnable> first = new AtomicReference<>(), fallback = new AtomicReference<>();
+		CountDownLatch fallbackScheduled = new CountDownLatch(1);
+		doAnswer(call -> {
+			Runnable task = call.getArgument(1);
+			if (!first.compareAndSet(null, task)) { fallback.set(task); fallbackScheduled.countDown(); }
+			return null;
+		}).when(fixture.bukkitScheduler).runTask(eq(fixture.plugin), any(Runnable.class), eq(player));
+		fixture.handler.getTimer().shutdownNow(); // Queue the fallback before any owner save.
+		CompletionStage<Void> delivery = fixture.handler.giveItemAsync(player, item);
+		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(player);
+			first.get().run();
+			assertTrue(fallbackScheduled.await(2, TimeUnit.SECONDS));
+			var publication = new java.util.concurrent.CompletableFuture<Void>();
+			doAnswer(call -> {
+				var candidate = new YamlConfiguration();
+				call.getArgument(0, java.util.function.Consumer.class).accept(candidate);
+				return publication.thenRun(() -> {
+					fixture.data.set("FullInventory", null);
+					for (String path : candidate.getKeys(true)) {
+						if (!candidate.isConfigurationSection(path)) fixture.data.set(path, candidate.get(path));
+					}
+				});
+			}).when(fixture.serverData).mutateFinalData(any());
+			var finalFiles = fixture.handler.shutdownAsync(Runnable::run).toCompletableFuture();
+			assertFalse(finalFiles.isDone()); fallback.get().run();
+			verify(world, never()).dropItem(any(Location.class), any(ItemStack.class));
+			assertFalse(delivery.toCompletableFuture().isDone());
+			assertFalse(fixture.data.contains("FullInventory." + uuid));
+			publication.complete(null); finalFiles.get(2, TimeUnit.SECONDS);
+			assertEquals(excess, fixture.data.getItemStack("FullInventory." + uuid + ".Items.0"));
+			assertTrue(delivery.toCompletableFuture().isDone());
+			assertEquals(java.util.List.of(excess), fixture.handler.getItems().get(uuid));
+		}
+	}
+
+	@Test
+	public void rejectedAsyncShutdownPersistenceReportsFailureWithoutCallerThreadSave() {
+		Fixture fixture = createFixture();
+		CompletionStage<Void> completion = fixture.handler.shutdownAsync(task -> {
+			throw new java.util.concurrent.RejectedExecutionException("worker stopped");
+		});
+		assertThrows(java.util.concurrent.CompletionException.class, () -> completion.toCompletableFuture().join());
+		verify(fixture.serverData, never()).saveDataChecked();
+		assertTrue(fixture.handler.getTimer().isShutdown());
 	}
 
 	@Test
@@ -771,6 +901,90 @@ public class FullInventoryHandlerTest {
 		assertEquals(excessItem, root.getItemStack(uuid + ".Items.0"));
 	}
 
+    @Test void disabledUninitializedServerDataPreservesSafeOverflowFallback() throws Exception {
+        Fixture f = createFixture();
+        when(f.plugin.isLoadServerData()).thenReturn(false); when(f.serverData.getData()).thenReturn(null);
+        UUID owner = UUID.randomUUID(); var player = mock(Player.class); var slots = mock(PlayerInventory.class);
+        var input = mock(ItemStack.class); var overflow = mock(ItemStack.class);
+        var world = mock(World.class); var location = mock(Location.class);
+        when(player.getUniqueId()).thenReturn(owner); when(player.isOnline()).thenReturn(true);
+        when(player.getInventory()).thenReturn(slots); when(player.getWorld()).thenReturn(world); when(player.getLocation()).thenReturn(location);
+        when(slots.addItem(input)).thenReturn(new HashMap<>(java.util.Map.of(0, overflow)));
+        when(world.dropItem(location, overflow)).thenReturn(mock(org.bukkit.entity.Item.class));
+        f.handler.getLastMessageTime().put(owner, System.currentTimeMillis());
+        var tasks = new java.util.concurrent.LinkedBlockingQueue<Runnable>();
+        doAnswer(call -> { tasks.add(call.getArgument(1)); return null; })
+                .when(f.bukkitScheduler).runTask(eq(f.plugin), any(Runnable.class), eq(player));
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(() -> Bukkit.getPlayer(owner)).thenReturn(player);
+            var receipt = f.handler.giveItemAsync(player, input).toCompletableFuture();
+            tasks.poll(3, TimeUnit.SECONDS).run(); f.handler.getTimer().submit(() -> {}).get(3, TimeUnit.SECONDS);
+            Runnable fallback = tasks.poll(3, TimeUnit.SECONDS); assertNotNull(fallback); assertFalse(receipt.isDone());
+            fallback.run(); receipt.get(3, TimeUnit.SECONDS);
+            verify(slots, times(1)).addItem(input); verify(world, times(1)).dropItem(location, overflow);
+            verify(f.serverData, never()).mutateFinalData(any()); assertFalse(f.handler.getItems().containsKey(owner));
+        }
+    }
+
+    @Test void overlappingSuccessfulAsyncOwnerSavesRetainEveryUnpublishedOverflow() throws Exception {
+        overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(false);
+    }
+    @Test void failedEarlierSaveCannotDropOverflowOwnedByAnotherPendingPublication() throws Exception {
+        overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(true);
+    }
+    private void overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(boolean failFirst) throws Exception {
+        Fixture f = createFixture();
+        var submissions = new java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration, java.util.concurrent.CompletableFuture<Void>>>();
+        doAnswer(call -> {
+            var candidate = new YamlConfiguration();
+            call.getArgument(0, java.util.function.Consumer.class).accept(candidate);
+            var confirmed = new java.util.concurrent.CompletableFuture<Void>();
+            submissions.add(java.util.Map.entry(candidate, confirmed));
+            return confirmed.thenRun(() -> {
+                synchronized (f.serverData.publicationMonitor()) {
+                    f.data.set("FullInventory", null);
+                    for (String path : candidate.getKeys(true))
+                        if (!candidate.isConfigurationSection(path)) f.data.set(path, candidate.get(path));
+                }
+            });
+        }).when(f.serverData).mutateFinalData(any());
+        var ownerTasks = new java.util.concurrent.LinkedBlockingQueue<Runnable>();
+        doAnswer(call -> { ownerTasks.add(call.getArgument(1)); return null; })
+                .when(f.bukkitScheduler).runTask(eq(f.plugin), any(Runnable.class), any(Player.class));
+        UUID first = UUID.randomUUID(), second = UUID.randomUUID();
+        var a = mock(Player.class); var b = mock(Player.class);
+        var slots = mock(PlayerInventory.class); var item = mock(ItemStack.class);
+        when(a.getUniqueId()).thenReturn(first); when(b.getUniqueId()).thenReturn(second);
+        for (Player player : List.of(a, b)) { when(player.isOnline()).thenReturn(true); when(player.getInventory()).thenReturn(slots); }
+        when(slots.addItem(item)).thenReturn(new HashMap<>(java.util.Map.of(0, item)));
+        f.handler.getLastMessageTime().put(first, System.currentTimeMillis());
+        f.handler.getLastMessageTime().put(second, System.currentTimeMillis());
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(() -> Bukkit.getPlayer(first)).thenReturn(a); bukkit.when(() -> Bukkit.getPlayer(second)).thenReturn(b);
+            var receiptA = f.handler.giveItemAsync(a, item).toCompletableFuture();
+            ownerTasks.poll(3, TimeUnit.SECONDS).run(); var publicationA = submissions.poll(3, TimeUnit.SECONDS);
+            var receiptB = f.handler.giveItemAsync(b, item).toCompletableFuture();
+            ownerTasks.poll(3, TimeUnit.SECONDS).run(); var publicationB = submissions.poll(3, TimeUnit.SECONDS);
+            assertNotNull(publicationA); assertNotNull(publicationB);
+            assertFalse(receiptA.isDone()); assertFalse(receiptB.isDone()); assertTrue(f.handler.getItems().isEmpty());
+            assertTrue(publicationB.getKey().contains("FullInventory." + first));
+            assertTrue(publicationB.getKey().contains("FullInventory." + second));
+            if (failFirst) {
+                publicationA.getValue().completeExceptionally(new IllegalStateException("first publication rejected"));
+                // An unconfirmed owner save can already be visible on disk.
+                // It must remain reserved for confirmed retry, never fall back to a drop.
+                f.handler.getTimer().submit(() -> {}).get(3, TimeUnit.SECONDS);
+                assertTrue(ownerTasks.isEmpty()); verify(a, never()).getWorld(); assertFalse(receiptA.isDone());
+            } else publicationA.getValue().complete(null);
+            publicationB.getValue().complete(null);
+            receiptA.get(3, TimeUnit.SECONDS); receiptB.get(3, TimeUnit.SECONDS);
+            assertEquals(List.of(item), f.handler.getItems().get(first));
+            assertEquals(List.of(item), f.handler.getItems().get(second));
+            assertEquals(item, f.data.getItemStack("FullInventory." + first + ".Items.0"));
+            assertEquals(item, f.data.getItemStack("FullInventory." + second + ".Items.0"));
+        }
+    }
+
 	private Fixture createFixture() {
 		return createFixture(TimeUnit.SECONDS.toMillis(30));
 	}
@@ -781,8 +995,13 @@ public class FullInventoryHandlerTest {
 		ScheduledExecutorService sharedInventoryTimer = mock(ScheduledExecutorService.class);
 		BukkitScheduler bukkitScheduler = mock(BukkitScheduler.class);
 		ServerData serverData = mock(ServerData.class);
+		when(serverData.publicationMonitor()).thenCallRealMethod();
+		org.mockito.Mockito.doCallRealMethod().when(serverData).mutateFinalData(any());
+		// The fixture's synchronous publisher is the existing controllable saveData stub.
+		doAnswer(call -> { serverData.saveData(); return null; }).when(serverData).saveDataChecked();
 		YamlConfiguration data = new YamlConfiguration();
 
+		when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getAnonymousLogger());
 		when(plugin.getInventoryTimer()).thenReturn(sharedInventoryTimer);
 		when(plugin.getOptions()).thenReturn(options);
 		when(plugin.isEnabled()).thenReturn(true);

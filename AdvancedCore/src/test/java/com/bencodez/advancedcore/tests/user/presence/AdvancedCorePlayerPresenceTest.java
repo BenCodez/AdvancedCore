@@ -64,6 +64,25 @@ class AdvancedCorePlayerPresenceTest {
                 .getLoaded().getDeclaredConstructor().newInstance();
     }
 
+    private final java.util.List<AdvancedCorePlugin> plugins = new java.util.ArrayList<>();
+
+    private AdvancedCorePlugin lifecyclePlugin() {
+        var plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+        try {
+            Field lock = AdvancedCorePlugin.class.getDeclaredField("lifecycleLock");
+            lock.setAccessible(true); lock.set(plugin, new Object());
+        } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+        doReturn(temporary.toFile()).when(plugin).getDataFolder();
+        doReturn(mock(java.util.logging.Logger.class)).when(plugin).getLogger();
+        plugins.add(plugin);
+        return plugin;
+    }
+
+    @org.junit.jupiter.api.AfterEach void releaseFixtureOwnership() {
+        for (var plugin : plugins) plugin.releaseServerDataOwnershipAfter(
+                java.util.concurrent.CompletableFuture.completedFuture(null));
+    }
+
     @Test void olderApiCapturesActualPlayerStorageWithoutWorldDirectoryAssumptions() throws Exception {
         Path history = Files.createDirectory(temporary.resolve("legacy-playerdata"));
         Server server = (Server) new ByteBuddy().subclass(Object.class).implement(Server.class)
@@ -77,11 +96,11 @@ class AdvancedCorePlayerPresenceTest {
         assertEquals(PlayerPresence.NEVER_JOINED, new BukkitPlayerPresenceLookup(history).check(USER));
     }
 
-    @Test void actualEnableRegistersJoinEvidenceBeforePublishingAndDisableRetiresIt() throws Exception {
+    @Test void actualEnableRegistersJoinEvidenceAndFailedStartupRetiresIt() throws Exception {
         Path level = Files.createDirectory(temporary.resolve("runtime-level"));
         Path history = Files.createDirectory(level.resolve("playerdata"));
         Server server = levelServer(level);
-        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+        AdvancedCorePlugin plugin = lifecyclePlugin();
         doReturn(server).when(plugin).getServer();
         var worker = mock(java.util.concurrent.ScheduledExecutorService.class);
         var tasks = new ArrayDeque<Runnable>();
@@ -94,16 +113,22 @@ class AdvancedCorePlayerPresenceTest {
             assertEquals(PlayerPresence.UNKNOWN, value(plugin.checkPlayerPresenceAsync(USER)));
             return null;
         }).when(plugin).registerEvents(any(BukkitPlayerPresenceLookup.class));
-        doThrow(new IllegalStateException("stop after presence initialization")).when(plugin).onPreLoad();
-        try (var runtime = mockStatic(AdvancedCoreLifecycle.class)) {
+        doAnswer(call -> {
+            var result = plugin.checkPlayerPresenceAsync(USER);
+            assertFalse(result.toCompletableFuture().isDone());
+            while (!tasks.isEmpty()) tasks.remove().run();
+            assertEquals(PlayerPresence.NEVER_JOINED, value(result));
+            throw new IllegalStateException("stop after presence initialization");
+        }).when(plugin).onPreLoad();
+        try (var runtime = mockStatic(AdvancedCoreLifecycle.class);
+                var lifecycle = mockConstruction(AdvancedCoreLifecycle.class)) {
             runtime.when(() -> AdvancedCoreLifecycle.createRuntimeExecutors(plugin)).thenReturn(executors);
             assertThrows(IllegalStateException.class, plugin::onEnable);
+            plugin.onDisable();
+            assertEquals(1, lifecycle.constructed().size(), "failed startup cleanup and repeated disable run once");
         }
         assertNotNull(registered.get());
-        var result = plugin.checkPlayerPresenceAsync(USER);
-        assertFalse(result.toCompletableFuture().isDone()); while (!tasks.isEmpty()) tasks.remove().run();
-        assertEquals(PlayerPresence.NEVER_JOINED, value(result));
-        try (var lifecycle = mockConstruction(AdvancedCoreLifecycle.class)) { plugin.onDisable(); }
+        assertEquals(PlayerPresence.UNKNOWN, value(plugin.checkPlayerPresenceAsync(USER)));
         assertEquals(PlayerPresence.UNKNOWN, registered.get().check(USER));
         verify(worker, times(2)).execute(any(Runnable.class)); verifyNoMoreInteractions(worker);
         try (var files = Files.list(history)) { assertEquals(0, files.count()); }
@@ -113,7 +138,7 @@ class AdvancedCorePlayerPresenceTest {
         Path level = Files.createDirectory(temporary.resolve("saving-disabled"));
         Path history = Files.createDirectory(level.resolve("playerdata"));
         Server server = levelServer(level, true);
-        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+        AdvancedCorePlugin plugin = lifecyclePlugin();
         doReturn(server).when(plugin).getServer();
         var worker = mock(java.util.concurrent.ScheduledExecutorService.class); var tasks = new ArrayDeque<Runnable>();
         doAnswer(call -> { tasks.add(call.getArgument(0)); return null; }).when(worker).execute(any(Runnable.class));
@@ -121,19 +146,22 @@ class AdvancedCorePlayerPresenceTest {
         var registered = new java.util.concurrent.atomic.AtomicReference<BukkitPlayerPresenceLookup>();
         doAnswer(call -> { registered.set(call.getArgument(0)); return null; })
                 .when(plugin).registerEvents(any(BukkitPlayerPresenceLookup.class));
-        doThrow(new IllegalStateException("stop after presence initialization")).when(plugin).onPreLoad();
-        try (var runtime = mockStatic(AdvancedCoreLifecycle.class)) {
+        doAnswer(call -> {
+            var result = plugin.checkPlayerPresenceAsync(USER); while (!tasks.isEmpty()) tasks.remove().run();
+            assertEquals(PlayerPresence.UNKNOWN, value(result), "No saved record cannot prove absence when saving is disabled");
+            var player = mock(org.bukkit.entity.Player.class); when(player.getUniqueId()).thenReturn(USER);
+            registered.get().onJoin(new org.bukkit.event.player.PlayerJoinEvent(player, null));
+            result = plugin.checkPlayerPresenceAsync(USER); while (!tasks.isEmpty()) tasks.remove().run();
+            assertEquals(PlayerPresence.JOINED, value(result));
+            throw new IllegalStateException("stop after presence initialization");
+        }).when(plugin).onPreLoad();
+        try (var runtime = mockStatic(AdvancedCoreLifecycle.class);
+                var lifecycle = mockConstruction(AdvancedCoreLifecycle.class)) {
             runtime.when(() -> AdvancedCoreLifecycle.createRuntimeExecutors(plugin)).thenReturn(executors);
             assertThrows(IllegalStateException.class, plugin::onEnable);
         }
-        var result = plugin.checkPlayerPresenceAsync(USER); while (!tasks.isEmpty()) tasks.remove().run();
-        assertEquals(PlayerPresence.UNKNOWN, value(result), "No saved record cannot prove absence when saving is disabled");
-        var player = mock(org.bukkit.entity.Player.class); when(player.getUniqueId()).thenReturn(USER);
-        registered.get().onJoin(new org.bukkit.event.player.PlayerJoinEvent(player, null));
-        result = plugin.checkPlayerPresenceAsync(USER); while (!tasks.isEmpty()) tasks.remove().run();
-        assertEquals(PlayerPresence.JOINED, value(result));
+        assertEquals(PlayerPresence.UNKNOWN, value(plugin.checkPlayerPresenceAsync(USER)));
         try (var files = Files.list(history)) { assertEquals(0, files.count()); }
-        try (var lifecycle = mockConstruction(AdvancedCoreLifecycle.class)) { plugin.onDisable(); }
     }
 
     private static void attach(AdvancedCorePlugin plugin, PlayerPresenceService service) throws Exception {
@@ -146,7 +174,7 @@ class AdvancedCorePlayerPresenceTest {
     }
 
     @Test void partialStartupHasUnknownHistoryInsteadOfCreatingAnIdentity() {
-        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+        AdvancedCorePlugin plugin = lifecyclePlugin();
         assertEquals(PlayerPresence.UNKNOWN, value(plugin.checkPlayerPresenceAsync(USER)));
         assertEquals(PlayerPresence.UNKNOWN, value(plugin.checkPlayerPresenceAsync(null)));
         verify(plugin, never()).getServer();
@@ -155,7 +183,7 @@ class AdvancedCorePlayerPresenceTest {
 
     @Test void publicApiKeepsUuidLookupAndHistoryOffRequestingThread() throws Exception {
         var worker = new ArrayDeque<Runnable>();
-        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+        AdvancedCorePlugin plugin = lifecyclePlugin();
         try (var service = new PlayerPresenceService(worker::add, id -> {
             assertEquals(USER, id); return PlayerPresence.JOINED;
         })) {
@@ -171,7 +199,7 @@ class AdvancedCorePlayerPresenceTest {
 
     @Test void actualDisableRetiresRequestsBeforeExistingLifecycleRuns() throws Exception {
         var worker = new ArrayDeque<Runnable>();
-        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+        AdvancedCorePlugin plugin = lifecyclePlugin();
         var reads = new java.util.concurrent.atomic.AtomicInteger();
         var service = new PlayerPresenceService(worker::add, id -> {
             reads.incrementAndGet(); return PlayerPresence.JOINED;
@@ -183,14 +211,27 @@ class AdvancedCorePlayerPresenceTest {
                     assertEquals(PlayerPresence.UNKNOWN, value(pending));
                     assertEquals(PlayerPresence.UNKNOWN, value(plugin.checkPlayerPresenceAsync(USER)));
                     return null;
-                }).when(instance).shutdown())) {
+                }).when(instance).shutdown(anyLong()))) {
             plugin.onDisable();
             assertEquals(1, lifecycle.constructed().size());
-            verify(lifecycle.constructed().getFirst()).shutdown();
+            verify(lifecycle.constructed().getFirst()).shutdown(anyLong());
         }
         worker.remove().run();
         assertEquals(0, reads.get());
         assertEquals(PlayerPresence.UNKNOWN, value(pending));
+    }
+
+    @Test void presenceCleanupFailureStillRunsCoreCleanupOnce() throws Exception {
+        var plugin = lifecyclePlugin();
+        var service = mock(PlayerPresenceService.class);
+        attach(plugin, service);
+        doThrow(new IllegalStateException("synthetic cleanup failure")).when(service).close();
+        try (var lifecycle = mockConstruction(AdvancedCoreLifecycle.class)) {
+            assertThrows(IllegalStateException.class, plugin::onDisable);
+            plugin.onDisable();
+            assertEquals(1, lifecycle.constructed().size());
+            verify(lifecycle.constructed().getFirst()).shutdown(anyLong());
+        }
     }
 
     @Test void completeCapturedScopeAndPublicApiReadHistoryOnActualWorker() throws Exception {
@@ -217,7 +258,7 @@ class AdvancedCorePlayerPresenceTest {
         long requester = Thread.currentThread().threadId();
         AtomicLong historyThread = new AtomicLong(-1);
         var actualLookup = new BukkitPlayerPresenceLookup(captured);
-        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+        AdvancedCorePlugin plugin = lifecyclePlugin();
         try (var worker = Executors.newSingleThreadExecutor();
                 var service = new PlayerPresenceService(worker, id -> {
                     historyThread.set(Thread.currentThread().threadId()); return actualLookup.check(id);

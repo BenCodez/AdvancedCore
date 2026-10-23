@@ -8,8 +8,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executors;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.configuration.Configuration;
@@ -50,8 +51,47 @@ public class RewardHandler {
 
     AdvancedCorePlugin plugin;
 
+    private final Object replayAdmissionLock = new Object();
+    private final CompletableFuture<Void> replayChecksDrained = new CompletableFuture<>();
+    private boolean replayAdmissionClosed;
+    private int activeReplayChecks;
+
+    /**
+     * Admit the synchronous claim/registration part of a persisted queue check.
+     * Closing its token means every async replay tail has been registered, not
+     * that its reward or durable acknowledgement has completed.
+     */
+    public PersistedReplayCheck admitPersistedReplayCheck() {
+        synchronized (replayAdmissionLock) {
+            if (replayAdmissionClosed) return null;
+            activeReplayChecks++;
+            return new PersistedReplayCheck();
+        }
+    }
+
+    public final class PersistedReplayCheck implements AutoCloseable {
+        private boolean closed;
+        private PersistedReplayCheck() { }
+        @Override public void close() {
+            boolean drained;
+            synchronized (replayAdmissionLock) {
+                if (closed) return;
+                closed = true;
+                drained = --activeReplayChecks == 0 && replayAdmissionClosed;
+            }
+            // Completion callbacks may enter the manager. Never run them while
+            // holding the admission lock or doing blocking storage work.
+            if (drained) replayChecksDrained.complete(null);
+        }
+    }
+
+    private final CompletableFuture<Void> delayedTimerTermination = new CompletableFuture<>();
+    private final CompletionStage<Void> delayedTimerRetirement = delayedTimerTermination.minimalCompletionStage();
     @Getter
-    private ScheduledExecutorService delayedTimer = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService delayedTimer = new ScheduledThreadPoolExecutor(1,
+            com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("AdvancedCore-DelayedRewards")) {
+        @Override protected void terminated() { delayedTimerTermination.complete(null); }
+    };
 
     public RewardHandler(AdvancedCorePlugin plugin) {
         this.plugin = plugin;
@@ -291,14 +331,40 @@ public class RewardHandler {
     }
 
     public void shutdown() {
-        rewardEligibility.close();
-        delayedTimer.shutdown();
-        try {
-            delayedTimer.awaitTermination(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        shutdown(10, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Close delayed-task and persisted-replay admission without blocking.
+     * Completion means the actual worker and admitted synchronous replay checks
+     * have exited, including tasks that ignored interruption.
+     * Persisted replay callbacks can outlive that worker; the storage lifecycle
+     * separately drains their existing per-user replay tails before retiring.
+     */
+    public CompletionStage<Void> beginShutdown() {
+        boolean drained;
+        synchronized (replayAdmissionLock) {
+            replayAdmissionClosed = true;
+            drained = activeReplayChecks == 0;
         }
-        delayedTimer.shutdownNow();
+        rewardEligibility.close();
+        if (drained) replayChecksDrained.complete(null);
+        delayedTimer.shutdown();
+        return CompletableFuture.allOf(delayedTimerRetirement.toCompletableFuture(), replayChecksDrained)
+                .minimalCompletionStage();
+    }
+
+    /** Lifecycle callers share their remaining disable budget; legacy shutdown keeps its ten-second grace. */
+    public void shutdown(long timeout, TimeUnit unit) {
+        java.util.Objects.requireNonNull(unit, "unit");
+        beginShutdown();
+        try {
+            if (timeout > 0) delayedTimer.awaitTermination(timeout, unit);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            delayedTimer.shutdownNow();
+        }
     }
 
     public void sortInjectedRequirements() {

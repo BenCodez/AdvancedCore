@@ -98,7 +98,8 @@ public class AdvancedCoreUserTest {
 		userManager = mock(UserManager.class);
 		dataManager = mock(UserDataManager.class);
 		data = mock(UserData.class);
-		rewardHandler = mock(RewardHandler.class);
+		rewardHandler = mock(RewardHandler.class, org.mockito.Mockito.withSettings().useConstructor(plugin));
+		org.mockito.Mockito.doCallRealMethod().when(rewardHandler).admitPersistedReplayCheck();
 		delayedTimer = mock(ScheduledExecutorService.class);
 		MySQL mysql = mock(MySQL.class);
 
