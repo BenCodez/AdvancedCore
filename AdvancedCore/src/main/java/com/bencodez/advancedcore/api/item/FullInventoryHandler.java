@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +56,8 @@ public class FullInventoryHandler {
 	private final AdvancedCorePlugin plugin;
 	private final ReentrantReadWriteLock deliveryLock = new ReentrantReadWriteLock(true);
 	private final AtomicBoolean shuttingDown = new AtomicBoolean();
+	private final java.util.concurrent.atomic.AtomicReference<CompletionStage<Void>> shutdownPersistence =
+			new java.util.concurrent.atomic.AtomicReference<>();
 
 	@Getter
 	private ScheduledExecutorService timer;
@@ -189,6 +192,8 @@ public class FullInventoryHandler {
 					if (pendingOverflow) {
 						persistReservedOverflowAsync(reservationId).whenComplete((ignored, failure) -> {
 							if (failure == null) completeReplayOverflow(reservationId, completion);
+							else if (failure instanceof UnconfirmedOverflowPublication)
+								scheduleReservedOverflowPersistenceRetry(reservationId, completion);
 							else completeStartedOverflowWithFallback(player, deliveryPlayerId, reservationId, completion);
 						});
 					} else {
@@ -264,7 +269,8 @@ public class FullInventoryHandler {
 
 	public synchronized void loadTimer() {
 		if (timer == null || timer.isShutdown() || timer.isTerminated()) {
-			timer = Executors.newSingleThreadScheduledExecutor();
+			timer = Executors.newSingleThreadScheduledExecutor(
+					com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("AdvancedCore-FullInventory"));
 			checkTask = null;
 		}
 		if (checkTask != null && !checkTask.isDone() && !checkTask.isCancelled()) {
@@ -276,18 +282,138 @@ public class FullInventoryHandler {
 	}
 
 	public synchronized void shutdown() {
+		// Reuse the same final publication for legacy and asynchronous shutdown.
+		// A second shutdown must not retire a worker needed by an earlier save.
+		shutdownAsync(Runnable::run).whenComplete((ignored, failure) -> {
+			if (failure != null) plugin.getLogger().log(Level.WARNING,
+					"Failed to confirm pending full-inventory items", failure);
+		});
+	}
+
+	/**
+	 * Fences player delivery immediately and exposes the actual final disk save.
+	 * The caller owns the persistence executor; pending or failed saves never
+	 * acknowledge replay overflow and must keep storage retirement ordered behind it.
+	 */
+	public CompletionStage<Void> shutdownAsync(Executor persistenceExecutor) {
+		CompletableFuture<Void> completion = new CompletableFuture<>();
+		// Keep one shared observation stage; each CompletableFuture view is isolated.
+		CompletionStage<Void> observation = completion.minimalCompletionStage();
+		if (!shutdownPersistence.compareAndSet(null, observation)) return shutdownPersistence.get();
 		shuttingDown.set(true);
-		if (checkTask != null) {
-			checkTask.cancel(false);
-			checkTask = null;
+		ScheduledFuture<?> task = checkTask;
+		if (task != null) task.cancel(false);
+		// Reject new timer work immediately, but drain already accepted continuations.
+		if (timer != null) timer.shutdown();
+		ServerData serverData = plugin.getServerDataFile();
+		if (!plugin.isLoadServerData() && (serverData == null || serverData.getData() == null)) {
+			// No native file was loaded. Still fence delivery and retire its timer,
+			// but do not snapshot or acknowledge any unpublished replay overflow.
+			if (timer != null) timer.shutdownNow();
+			completion.complete(null);
+			return observation;
 		}
-		// Flush accepted replay reservations while their completion stages can still
-		// advance the outer reward checkpoint. Stopping the executor first can discard
-		// an accepted persistence task and later replay the already-inserted items.
-		saveDurably();
-		if (timer != null) {
-			timer.shutdownNow();
+		try {
+			persistenceExecutor.execute(() -> {
+				try {
+					finalSnapshot(serverData, false, persistenceExecutor).whenComplete((ignored, failure) -> {
+						if (timer != null) timer.shutdownNow();
+						if (failure == null) completion.complete(null);
+						else completion.completeExceptionally(failure);
+					});
+				} catch (Throwable failure) {
+					if (timer != null) timer.shutdownNow();
+					completion.completeExceptionally(failure);
+				}
+			});
+		} catch (Throwable failure) {
+			completion.completeExceptionally(failure);
+			if (timer != null) timer.shutdownNow();
 		}
+		return observation;
+	}
+
+	private final java.util.Map<String, Integer> overflowPublications = new HashMap<>();
+
+	private final Object overflowPublicationOrder = new Object();
+	private CompletableFuture<Void> overflowPublicationTail = CompletableFuture.completedFuture(null);
+
+	private CompletionStage<Void> finalSnapshot(ServerData serverData, boolean requireRunning) {
+		return finalSnapshot(serverData, requireRunning, timer);
+	}
+
+	private CompletionStage<Void> finalSnapshot(ServerData serverData, boolean requireRunning, Executor executor) {
+		CompletableFuture<Void> settled = new CompletableFuture<>();
+		CompletableFuture<Void> previous;
+		synchronized (overflowPublicationOrder) {
+			previous = overflowPublicationTail;
+			overflowPublicationTail = settled;
+		}
+		Runnable publish = () -> {
+			try {
+				publishSnapshot(serverData, requireRunning).whenComplete((ignored, failure) -> {
+					if (failure == null) settled.complete(null);
+					else settled.completeExceptionally(failure);
+				});
+			} catch (Throwable failure) { settled.completeExceptionally(failure); }
+		};
+		// Claim order before invoking any owner or callback. Snapshot capture belongs
+		// to that order too: an older asynchronous replacement must not publish last.
+		if (previous.isDone()) publish.run();
+		else previous.whenComplete((ignored, failure) -> {
+			// Owner completion may run on a platform thread; never start disk work there.
+			try { executor.execute(publish); }
+			catch (Throwable rejected) { settled.completeExceptionally(rejected); }
+		});
+		// A caller cancelling its view must not release the actual publication queue.
+		return settled.copy();
+	}
+
+	private CompletionStage<Void> publishSnapshot(ServerData serverData, boolean requireRunning) {
+		HashMap<String, ReservedOverflow> reservations;
+		CompletionStage<Void> publication;
+		deliveryLock.writeLock().lock();
+		try {
+			if (requireRunning && shuttingDown.get()) return CompletableFuture.failedFuture(
+					new IllegalStateException("Final inventory publication owns pending overflow"));
+			reservations = new HashMap<>(replayOverflowReservations);
+			YamlConfiguration snapshot = pendingItemsSnapshot(reservations.values());
+			YamlConfiguration replacement = copySection(snapshot, "FullInventory");
+			reservations.keySet().forEach(id -> overflowPublications.merge(id, 1, Integer::sum));
+			try { publication = serverData.mutateFinalData(data -> replaceSection(data, "FullInventory", replacement)); }
+			catch (Throwable failure) { publication = CompletableFuture.failedFuture(failure); }
+			if (publication == null) publication = CompletableFuture.failedFuture(
+					new IllegalStateException("ServerData owner returned no publication stage"));
+		} finally { deliveryLock.writeLock().unlock(); }
+		// Publication may belong to a different worker. Never join while holding
+		// delivery/YAML admission. Settle promotion and fallback ownership together.
+		return publication.whenComplete((ignored, failure) -> {
+			deliveryLock.writeLock().lock();
+			try {
+				reservations.keySet().forEach(id -> overflowPublications.computeIfPresent(id,
+						(key, count) -> count == 1 ? null : count - 1));
+				if (failure == null) reservations.forEach(this::promoteReservedOverflowLocked);
+			} finally { deliveryLock.writeLock().unlock(); }
+			if (failure == null) reservations.keySet().forEach(id -> completeReplayOverflow(id, null));
+		});
+	}
+
+	/** Caller holds delivery admission; only pending stored items are serialized. */
+	private YamlConfiguration pendingItemsSnapshot(Collection<ReservedOverflow> reservedOverflows) {
+		HashMap<UUID, ArrayList<ItemStack>> snapshotItems = new HashMap<>();
+		items.forEach((uuid, values) -> snapshotItems.put(uuid, new ArrayList<>(values)));
+		for (ReservedOverflow overflow : reservedOverflows) {
+			if (!overflow.items.isEmpty()) snapshotItems.computeIfAbsent(overflow.playerId,
+					ignored -> new ArrayList<>()).addAll(overflow.items);
+		}
+		YamlConfiguration snapshot = new YamlConfiguration();
+		long now = System.currentTimeMillis();
+		for (Entry<UUID, ArrayList<ItemStack>> entry : snapshotItems.entrySet()) {
+			String path = "FullInventory." + entry.getKey();
+			for (int i = 0; i < entry.getValue().size(); i++) snapshot.set(path + ".Items." + i, entry.getValue().get(i));
+			snapshot.set(path + ".Time", now);
+		}
+		return snapshot;
 	}
 
 	/**
@@ -303,51 +429,62 @@ public class FullInventoryHandler {
 
 	/** Saves pending items and reports whether the disk snapshot completed. */
 	public boolean saveDurably() {
-		HashMap<String, ReservedOverflow> reservations;
-		boolean saved;
-		deliveryLock.writeLock().lock();
-		try {
-			reservations = new HashMap<>(replayOverflowReservations);
-			if (!savePendingItemsLocked(reservations.values())) return false;
-			for (Entry<String, ReservedOverflow> entry : reservations.entrySet()) {
-				promoteReservedOverflowLocked(entry.getKey(), entry.getValue());
-			}
-			saved = true;
-		} finally {
-			deliveryLock.writeLock().unlock();
-		}
-		if (saved) {
-			for (String reservationId : reservations.keySet()) completeReplayOverflow(reservationId, null);
-		}
-		return true;
+		return saveDurably(plugin.getServerDataFile());
 	}
 
-	/** Persists one replay reservation before making it visible to ordinary pending checks. */
+	private boolean saveDurably(ServerData serverData) {
+		try {
+			// Native owners complete synchronously. A facade's queued save is not
+			// durable yet; do not block the caller or claim that it has completed.
+			var publication = finalSnapshot(serverData, false).toCompletableFuture();
+			if (!publication.isDone()) return false;
+			publication.join();
+			return true;
+		} catch (Throwable failure) {
+			plugin.getLogger().log(Level.WARNING, "Failed to confirm pending full-inventory items", failure);
+			return false;
+		}
+	}
+
+	/** A failed owner stage may already have replaced disk bytes; never drop/replay it. */
+	private static final class UnconfirmedOverflowPublication extends RuntimeException {
+		private static final long serialVersionUID = 1L;
+		private UnconfirmedOverflowPublication(Throwable cause) { super("Overflow publication is unconfirmed", cause); }
+	}
+
+	/** Persists replay overflow through the actual owner's acknowledged publication. */
 	private CompletionStage<Void> persistReservedOverflowAsync(String reservationId) {
 		CompletableFuture<Void> persisted = new CompletableFuture<>();
 		try {
 			timer.execute(() -> {
-				if (persistReservedOverflow(reservationId)) persisted.complete(null);
-				else persisted.completeExceptionally(
-						new IllegalStateException("Unable to persist full-inventory reward overflow"));
+				try {
+					persistReservedOverflow(reservationId).whenComplete((ignored, failure) -> {
+						if (failure == null) persisted.complete(null);
+						else persisted.completeExceptionally(new UnconfirmedOverflowPublication(failure));
+					});
+				} catch (Throwable failure) { persisted.completeExceptionally(failure); }
 			});
-		} catch (Throwable failure) {
-			persisted.completeExceptionally(failure);
-		}
+		} catch (Throwable failure) { persisted.completeExceptionally(failure); }
 		return persisted;
 	}
 
-	private boolean persistReservedOverflow(String reservationId) {
+	private CompletionStage<Void> persistReservedOverflow(String reservationId) {
 		deliveryLock.writeLock().lock();
 		try {
 			ReservedOverflow reservation = replayOverflowReservations.get(reservationId);
-			if (reservation == null || reservation.items.isEmpty()) return true;
-			if (!savePendingItemsLocked(java.util.List.of(reservation))) return false;
-			promoteReservedOverflowLocked(reservationId, reservation);
-			return true;
-		} finally {
-			deliveryLock.writeLock().unlock();
-		}
+			if (reservation == null || reservation.items.isEmpty())
+				return CompletableFuture.completedFuture(null);
+			if (shuttingDown.get()) return CompletableFuture.failedFuture(
+					new IllegalStateException("Final inventory publication owns pending overflow"));
+		} finally { deliveryLock.writeLock().unlock(); }
+		// A disabled/uninitialized native file has not admitted any publication.
+		// Keep its established safe overflow fallback instead of treating it as uncertain.
+		ServerData owner = plugin.getServerDataFile();
+		if (owner == null || owner.getData() == null)
+			throw new IllegalStateException("Full-inventory persistence owner is uninitialized");
+		// Include every unpublished reservation. Invoke completion callbacks only
+		// after releasing this caller's admission, including a synchronous owner.
+		return finalSnapshot(owner, true);
 	}
 
 	/**
@@ -380,6 +517,9 @@ public class FullInventoryHandler {
 		try {
 			ReservedOverflow reservation = replayOverflowReservations.get(reservationId);
 			if (reservation == null) return true;
+			// A pending final publication already owns these items. An older queued
+			// fallback cannot drop them while the owner's snapshot is publishing.
+			if (shuttingDown.get() || overflowPublications.containsKey(reservationId)) return false;
 			if (!playerId.equals(reservation.playerId)) return false;
 			ArrayList<ItemStack> remaining = new ArrayList<>();
 			for (ItemStack item : reservation.items) {
@@ -404,8 +544,12 @@ public class FullInventoryHandler {
 		}
 		try {
 			timer.schedule(() -> {
-				if (persistReservedOverflow(reservationId)) completeReplayOverflow(reservationId, completion);
-				else scheduleReservedOverflowPersistenceRetry(reservationId, completion);
+				try {
+					persistReservedOverflow(reservationId).whenComplete((ignored, failure) -> {
+						if (failure == null) completeReplayOverflow(reservationId, completion);
+						else scheduleReservedOverflowPersistenceRetry(reservationId, completion);
+					});
+				} catch (Throwable failure) { scheduleReservedOverflowPersistenceRetry(reservationId, completion); }
 			}, 30, TimeUnit.SECONDS);
 		} catch (Throwable ignored) {
 			// Shutdown may reject this retry. Leave the completion pending: acknowledging
@@ -419,56 +563,6 @@ public class FullInventoryHandler {
 		if (completion != null) completion.complete(null);
 	}
 
-	/** Caller holds the write lock. Includes only the reservations in this durable handoff. */
-	private boolean savePendingItemsLocked(Collection<ReservedOverflow> reservedOverflows) {
-		FileConfiguration data = null;
-		YamlConfiguration previous = null;
-		try {
-			ServerData serverData = plugin.getServerDataFile();
-			if (serverData == null || serverData.getData() == null) return false;
-
-			HashMap<UUID, ArrayList<ItemStack>> snapshotItems = new HashMap<>();
-			for (Entry<UUID, ArrayList<ItemStack>> entry : items.entrySet()) {
-				snapshotItems.put(entry.getKey(), new ArrayList<>(entry.getValue()));
-			}
-			for (ReservedOverflow reservedOverflow : reservedOverflows) {
-				if (!reservedOverflow.items.isEmpty()) {
-					snapshotItems.computeIfAbsent(reservedOverflow.playerId, ignored -> new ArrayList<>())
-						.addAll(reservedOverflow.items);
-				}
-			}
-
-			YamlConfiguration snapshot = new YamlConfiguration();
-			long now = System.currentTimeMillis();
-			for (Entry<UUID, ArrayList<ItemStack>> entry : snapshotItems.entrySet()) {
-				String basePath = "FullInventory." + entry.getKey();
-				for (int i = 0; i < entry.getValue().size(); i++) {
-					snapshot.set(basePath + ".Items." + i, entry.getValue().get(i));
-				}
-				snapshot.set(basePath + ".Time", now);
-			}
-
-			data = serverData.getData();
-			previous = copySection(data, "FullInventory");
-			data.set("FullInventory", null);
-			ConfigurationSection replacement = snapshot.getConfigurationSection("FullInventory");
-			if (replacement != null) {
-				for (String path : replacement.getKeys(true)) {
-					if (!replacement.isConfigurationSection(path)) data.set("FullInventory." + path, replacement.get(path));
-				}
-			}
-			serverData.saveData();
-			return true;
-		} catch (Exception e) {
-			if (data != null && previous != null) replaceSection(data, "FullInventory", previous);
-			try {
-				plugin.getLogger().log(Level.WARNING, "Failed to save pending full-inventory items", e);
-			} catch (Throwable ignored) {
-				// A partially initialized plugin can still retain the reservation for retry.
-			}
-			return false;
-		}
-	}
 
 	private static YamlConfiguration copySection(ConfigurationSection source, String path) {
 		YamlConfiguration copy = new YamlConfiguration();

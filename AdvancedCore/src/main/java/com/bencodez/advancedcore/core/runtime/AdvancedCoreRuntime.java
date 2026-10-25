@@ -11,6 +11,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.LongSupplier;
+import java.util.function.BiConsumer;
 
 import com.bencodez.advancedcore.core.platform.RuntimePlatform;
 import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
@@ -23,12 +25,21 @@ import com.bencodez.advancedcore.core.platform.RuntimePlatform.Cleanup;
  */
 public final class AdvancedCoreRuntime {
 	private static final long PRE_SHUTDOWN_WAIT_SECONDS = 5;
+    private static final long SHUTDOWN_BUDGET_NANOS = TimeUnit.SECONDS.toNanos(15);
     private final RuntimePlatform platform;
+    private final LongSupplier nanoTime;
+    private volatile long shutdownStartedNanos;
 	private enum CleanupState { SUCCESS, FAILURE, DEFERRED }
 	private record ExecutorGrace(ScheduledExecutorService timeTimer) { }
 
     public AdvancedCoreRuntime(RuntimePlatform platform) {
+        this(platform, System::nanoTime);
+    }
+
+    /** Clock injection keeps aggregate-deadline tests independent of wall-clock sleeps. */
+    public AdvancedCoreRuntime(RuntimePlatform platform, LongSupplier nanoTime) {
         this.platform = Objects.requireNonNull(platform, "platform");
+        this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
     }
 
     /** The same three independent executor owners used by the Bukkit plugin. */
@@ -39,8 +50,8 @@ public final class AdvancedCoreRuntime {
         ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(daemonThreads("AdvancedCore-Storage"));
         ScheduledExecutorService loginTimer = null;
         try {
-            loginTimer = Executors.newSingleThreadScheduledExecutor();
-            return new ExecutorGroup(timer, loginTimer, Executors.newSingleThreadScheduledExecutor());
+            loginTimer = Executors.newSingleThreadScheduledExecutor(daemonThreads("AdvancedCore-Login"));
+            return new ExecutorGroup(timer, loginTimer, Executors.newSingleThreadScheduledExecutor(daemonThreads("AdvancedCore-Inventory")));
         } catch (RuntimeException | Error failure) {
             timer.shutdownNow();
             if (loginTimer != null) loginTimer.shutdownNow();
@@ -48,7 +59,7 @@ public final class AdvancedCoreRuntime {
         }
     }
 
-	private static java.util.concurrent.ThreadFactory daemonThreads(String name) {
+	public static java.util.concurrent.ThreadFactory daemonThreads(String name) {
 		AtomicInteger sequence = new AtomicInteger();
 		return task -> {
 			Thread thread = new Thread(task, name + "-" + sequence.incrementAndGet());
@@ -62,6 +73,13 @@ public final class AdvancedCoreRuntime {
 	}
 
 	public void shutdown() {
+		shutdown(nanoTime.getAsLong());
+	}
+
+	/** The Bukkit facade supplies the timestamp captured at plugin-disable entry. */
+	public void shutdown(long startedNanos) {
+		shutdownStartedNanos = startedNanos;
+		platform.beginShutdown(this::remainingShutdownNanos);
 		clean(platform.beforeExecutorShutdown());
 		CompletionStage<Void> retirement = platform.beforeExecutorShutdownCompletion();
 		CleanupState retirementState = awaitCleanup(retirement, "pre-executor shutdown");
@@ -89,10 +107,10 @@ public final class AdvancedCoreRuntime {
         shutdown(platform.getInventoryTimer());
 
 		platform.info("Allowing background tasks to finish before shutdown");
-		await(platform.getLoginTimer(), 2, TimeUnit.SECONDS);
-		if (stopStorageTimer) await(platform.getTimer(), 2, TimeUnit.SECONDS);
-		await(timeTimer, 2, TimeUnit.SECONDS);
-        await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
+		awaitWithinBudget(platform.getLoginTimer(), 2, TimeUnit.SECONDS);
+		if (stopStorageTimer) awaitWithinBudget(platform.getTimer(), 2, TimeUnit.SECONDS);
+		awaitWithinBudget(timeTimer, 2, TimeUnit.SECONDS);
+        awaitWithinBudget(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
 		return new ExecutorGrace(timeTimer);
 	}
 
@@ -104,16 +122,16 @@ public final class AdvancedCoreRuntime {
 				platform::beforeForcedTimeTimerShutdown)));
 		shutdownNow(grace.timeTimer());
         shutdownNow(platform.getInventoryTimer());
-        await(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
-		await(platform.getTimer(), 1, TimeUnit.SECONDS);
-		await(grace.timeTimer(), 1, TimeUnit.SECONDS);
-        await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
+        awaitWithinBudget(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
+		awaitWithinBudget(platform.getTimer(), 1, TimeUnit.SECONDS);
+		awaitWithinBudget(grace.timeTimer(), 1, TimeUnit.SECONDS);
+        awaitWithinBudget(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
 		ScheduledExecutorService storageTimer = platform.getUserStorageTimer();
 		if (storageTimer != null && storageTimer != platform.getTimer()) {
 			shutdown(storageTimer);
-			await(storageTimer, 2, TimeUnit.SECONDS);
+			awaitWithinBudget(storageTimer, 2, TimeUnit.SECONDS);
 			if (!storageTimer.isTerminated()) shutdownNow(storageTimer);
-			await(storageTimer, 1, TimeUnit.SECONDS);
+			awaitWithinBudget(storageTimer, 1, TimeUnit.SECONDS);
 		}
 		finishTerminalStorageCleanup(storageTimer, new AtomicBoolean());
         clean(platform.afterExecutorShutdown());
@@ -143,7 +161,7 @@ public final class AdvancedCoreRuntime {
 		}
 		try {
 			if (future.isDone()) future.join();
-			else future.get(PRE_SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS);
+			else future.get(Math.min(TimeUnit.SECONDS.toNanos(PRE_SHUTDOWN_WAIT_SECONDS), remainingShutdownNanos()), TimeUnit.NANOSECONDS);
 			return CleanupState.SUCCESS;
 		} catch (TimeoutException timeout) {
 			platform.cleanupFailed(component, timeout);
@@ -174,34 +192,45 @@ public final class AdvancedCoreRuntime {
 		final ScheduledExecutorService storageTimer = timer;
 		AtomicBoolean finished = new AtomicBoolean();
 		AtomicBoolean terminalStorageCleanup = new AtomicBoolean();
+		AtomicBoolean retirementFailureReported = new AtomicBoolean();
 		if (holdTimeTimer) clean(List.of(new Cleanup("time change cancellation",
 				platform::beforeDeferredPlatformCleanup)));
 		// Thread-confined Bukkit cleanup must remain on the lifecycle thread. An
 		// active transition is first cancelled above and its lease still gates
 		// storage retirement through completion.
 		finishDeferredPlatformCleanup(grace, storageTimer, holdTimeTimer);
-		completion.whenComplete((ignored, failure) -> {
+		BiConsumer<Void, Throwable> retirementFinished = (ignored, failure) -> {
+			if (failure != null && retirementFailureReported.compareAndSet(false, true)) {
+				Throwable cause = failure instanceof CompletionException && failure.getCause() != null
+						? failure.getCause() : failure;
+				platform.cleanupFailed(component, cause);
+			}
 			if (!finished.compareAndSet(false, true)) {
 				if (failure != null) finishDeferredStorageTimer(storageTimer, true, true, terminalStorageCleanup);
 				return;
 			}
 			if (failure == null) shutdown(storageTimer);
 			else {
-				Throwable cause = failure instanceof CompletionException && failure.getCause() != null
-						? failure.getCause() : failure;
-				platform.cleanupFailed(component, cause);
 				shutdownNow(storageTimer);
 			}
 			if (holdTimeTimer) shutdownNow(grace.timeTimer());
 			finishDeferredStorageTimer(storageTimer, failure != null, failure != null, terminalStorageCleanup);
-		});
+		};
+		completion.whenComplete(retirementFinished);
 		long timeoutMillis = Math.max(1, platform.deferredShutdownTimeoutMillis());
-		Runnable timeout = () -> {
-			// Mark a still-draining transition recoverable before racing its final
-			// lease acknowledgement. Once this hook returns, it cannot advance a
-			// time marker even if the worker ignores interruption briefly.
-			if (holdTimeTimer) clean(List.of(new Cleanup("forced time transition shutdown",
-					platform::beforeForcedTimeTimerShutdown)));
+		Runnable forceRetirement = () -> {
+			if (finished.get()) return;
+			CompletionStage<Void> admitted = platform.admittedStorageRetirementCompletion();
+			if (admitted != null) {
+				platform.cleanupFailed(component, new TimeoutException(
+						"Deferred storage retirement exceeded " + timeoutMillis
+						+ " ms; retaining accepted retirement until completion"));
+				// The accepted barrier/final flush owns this daemon worker. A
+				// deadline or an interruption request cannot prove its completion,
+				// and shutting the worker down can discard a queued final task.
+				admitted.whenComplete(retirementFinished);
+				return;
+			}
 			if (!finished.compareAndSet(false, true)) return;
 			platform.cleanupFailed(component, new TimeoutException(
 					"Deferred storage retirement exceeded " + timeoutMillis + " ms"));
@@ -212,7 +241,39 @@ public final class AdvancedCoreRuntime {
 			shutdown(storageTimer);
 			finishDeferredStorageTimer(storageTimer, false, true, terminalStorageCleanup);
 		};
-		try { CompletableFuture.delayedExecutor(timeoutMillis, TimeUnit.MILLISECONDS).execute(timeout); }
+		Runnable timeout = () -> {
+			if (finished.get()) return;
+			// Mark a still-draining time transition recoverable before racing its
+			// final lease acknowledgement. This may start consumer preparation.
+			if (holdTimeTimer) {
+				clean(List.of(new Cleanup("forced time transition shutdown",
+						platform::beforeForcedTimeTimerShutdown)));
+				// Consumer preparation retains only storage ownership. Its completion
+				// must not delay interruption of the fenced calendar worker.
+				shutdownNow(grace.timeTimer());
+			}
+			CompletionStage<Void> preparation = platform.storageRetirementPreparationCompletion();
+			if (preparation != null && !preparation.toCompletableFuture().isDone()) {
+				platform.cleanupFailed(component, new TimeoutException(
+						"Consumer storage preparation exceeded " + timeoutMillis
+						+ " ms; retaining storage until preparation completes"));
+				// Keep the daemon storage worker open for the accepted checkpoint.
+				// A late admission must not immediately discard its newly queued final
+				// flush just because the caller's deadline already expired. Its actual
+				// retirement stage above still owns graceful shutdown and provider close.
+				preparation.whenComplete((ignored, failure) -> {
+					if (remainingShutdownNanos() > 0L) scheduleStorageWatchdog(timeoutMillis, forceRetirement);
+				});
+				return;
+			}
+			forceRetirement.run();
+		};
+		scheduleStorageWatchdog(timeoutMillis, timeout);
+	}
+
+	private void scheduleStorageWatchdog(long timeoutMillis, Runnable timeout) {
+		long delayNanos = Math.min(TimeUnit.MILLISECONDS.toNanos(timeoutMillis), remainingShutdownNanos());
+		try { CompletableFuture.delayedExecutor(delayNanos, TimeUnit.NANOSECONDS).execute(timeout); }
 		catch (RuntimeException | Error schedulingFailure) {
 			platform.cleanupFailed("deferred storage shutdown watchdog", schedulingFailure);
 			timeout.run();
@@ -226,17 +287,17 @@ public final class AdvancedCoreRuntime {
 		if (platform.getTimer() != storageTimer) shutdownNow(platform.getTimer());
 		if (!holdTimeTimer) shutdownNow(grace.timeTimer());
 		shutdownNow(platform.getInventoryTimer());
-		await(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
-		if (platform.getTimer() != storageTimer) await(platform.getTimer(), 1, TimeUnit.SECONDS);
-		if (!holdTimeTimer) await(grace.timeTimer(), 1, TimeUnit.SECONDS);
-		await(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
+		awaitWithinBudget(platform.getLoginTimer(), 1, TimeUnit.SECONDS);
+		if (platform.getTimer() != storageTimer) awaitWithinBudget(platform.getTimer(), 1, TimeUnit.SECONDS);
+		if (!holdTimeTimer) awaitWithinBudget(grace.timeTimer(), 1, TimeUnit.SECONDS);
+		awaitWithinBudget(platform.getInventoryTimer(), 1, TimeUnit.SECONDS);
 		clean(platform.afterExecutorShutdown());
 	}
 
 	private void finishDeferredStorageTimer(ScheduledExecutorService timer, boolean forced,
 			boolean runTerminalCleanup, AtomicBoolean terminalStorageCleanup) {
 		Runnable retirement = () -> {
-			await(timer, forced ? 1 : 2, TimeUnit.SECONDS);
+			awaitWithinBudget(timer, forced ? 1 : 2, TimeUnit.SECONDS);
 			if (!forced && timer != null && !timer.isTerminated()) shutdownNow(timer);
 			if (runTerminalCleanup) finishTerminalStorageCleanup(timer, terminalStorageCleanup);
 		};
@@ -267,6 +328,19 @@ public final class AdvancedCoreRuntime {
 
     public static void shutdown(ScheduledExecutorService executor) {
         if (executor != null && !executor.isShutdown()) executor.shutdown();
+    }
+
+    private long remainingShutdownNanos() {
+        long elapsed = Math.max(0L, nanoTime.getAsLong() - shutdownStartedNanos);
+        return elapsed >= SHUTDOWN_BUDGET_NANOS ? 0L : SHUTDOWN_BUDGET_NANOS - elapsed;
+    }
+
+    private void awaitWithinBudget(ScheduledExecutorService executor, long timeout, TimeUnit unit) {
+        if (executor == null) return;
+        long remaining = remainingShutdownNanos();
+        if (remaining == 0L) return;
+        if (remaining >= unit.toNanos(timeout)) await(executor, timeout, unit);
+        else await(executor, remaining, TimeUnit.NANOSECONDS);
     }
     public static void shutdownNow(ScheduledExecutorService executor) {
         if (executor != null && !executor.isTerminated()) executor.shutdownNow();

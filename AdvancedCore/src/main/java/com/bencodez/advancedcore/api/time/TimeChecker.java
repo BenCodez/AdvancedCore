@@ -39,6 +39,9 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	private volatile ActiveTransition activeTransition;
 	private CompletableFuture<Void> noActiveTransition = CompletableFuture.completedFuture(null);
 	private CompletableFuture<Void> noPendingManualTransitions = CompletableFuture.completedFuture(null);
+	private CompletableFuture<Void> noRequestedUpdate = CompletableFuture.completedFuture(null);
+	private boolean requestedUpdatePending;
+	private boolean requestedUpdateRunning;
 	private boolean acceptingTransitions = true;
 	private boolean abortingTransitions;
 
@@ -121,7 +124,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		synchronized (transitionLock) {
 			acceptingTransitions = false;
 			transitionLock.notifyAll();
-			return CompletableFuture.allOf(noActiveTransition, noPendingManualTransitions);
+			return CompletableFuture.allOf(noActiveTransition, noPendingManualTransitions, noRequestedUpdate);
 		}
 	}
 
@@ -275,7 +278,8 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			return;
 		}
 		timerLoaded = true;
-		timer = Executors.newSingleThreadScheduledExecutor();
+		timer = Executors.newSingleThreadScheduledExecutor(
+				com.bencodez.advancedcore.core.runtime.AdvancedCoreRuntime.daemonThreads("AdvancedCore-Time"));
 		if (plugin.getServerDataFile().getLastUpdated() > 0
 				&& System.currentTimeMillis() - plugin.getServerDataFile().getLastUpdated() > TimeUnit.DAYS.toMillis(4)) {
 			plugin.getServerDataFile().setIgnoreTime(true);
@@ -318,6 +322,61 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		plugin.debug("Local time change processing " + (value ? "enabled" : "disabled"));
 	}
 
+	/** Requests one coalesced calendar check on its existing background timer.
+	 * Reload callers may be Bukkit/Folia owners; asynchronous date events must
+	 * never be dispatched inline there. Shutdown drains an admitted check.
+	 */
+	public void requestUpdate() {
+		final ScheduledExecutorService executor;
+		final CompletableFuture<Void> drain;
+		synchronized (transitionLock) {
+			if (!acceptingTransitions || abortingTransitions || requestedUpdatePending || timer == null) return;
+			executor = timer;
+			requestedUpdatePending = true;
+			drain = new CompletableFuture<>();
+			noRequestedUpdate = drain;
+		}
+		try {
+			executor.execute(() -> {
+				boolean started = false;
+				try {
+					synchronized (transitionLock) {
+						if (!acceptingTransitions || abortingTransitions || timer != executor) return;
+						requestedUpdateRunning = true;
+						started = true;
+					}
+					if (plugin != null && plugin.isEnabled()) runRecurringTask("requested time change check", this::update);
+				} finally {
+					synchronized (transitionLock) {
+						if (started) requestedUpdateRunning = false;
+					}
+					finishRequestedUpdate(drain);
+				}
+			});
+		} catch (RejectedExecutionException rejected) {
+			finishRequestedUpdate(drain);
+			plugin.debug("Ignoring requested time check while the calendar timer is unavailable");
+		}
+	}
+
+	/** Settles an admitted request that has not started before deferred cleanup. */
+	public void cancelQueuedUpdate() {
+		CompletableFuture<Void> drain = null;
+		synchronized (transitionLock) {
+			if (!acceptingTransitions && requestedUpdatePending && !requestedUpdateRunning) {
+				drain = noRequestedUpdate;
+			}
+		}
+		if (drain != null) finishRequestedUpdate(drain);
+	}
+
+	private void finishRequestedUpdate(CompletableFuture<Void> drain) {
+		synchronized (transitionLock) {
+			if (noRequestedUpdate == drain) requestedUpdatePending = false;
+		}
+		drain.complete(null);
+	}
+
 	public void update() {
 		if (plugin == null) return;
 		if (hasTimeOffSet()) plugin.extraDebug("TimeHourOffSet: " + getTime().getHour() + ":" + getTime().getMinute());
@@ -326,7 +385,7 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 			TimeChangeTransitionState pending = plugin.getServerDataFile().getPendingTimeChangeTransition(type);
 			if (pending != null) {
 				plugin.getLogger().info("Recovering pending " + type + " time change " + pending.id());
-				startDetectedTransition(type, pending);
+				startDetectedTransition(type, pending, true);
 				return;
 			}
 		}
@@ -358,12 +417,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 		LocalDateTime current = getTime();
 		TimeChangeTransitionState persisted = plugin.getServerDataFile().beginTimeChangeTransition(type,
 				periodKey(type, current), markerValue(type, current));
-		startDetectedTransition(type, persisted);
+		startDetectedTransition(type, persisted, false);
 	}
 
-	private void startDetectedTransition(TimeType type, TimeChangeTransitionState persisted) {
+	private void startDetectedTransition(TimeType type, TimeChangeTransitionState persisted, boolean recovered) {
 		TimeChangeTransition transition = new TimeChangeTransition(this, persisted.id(), persisted.periodKey(), type);
-		startTransition(type, false, true, true, new DurableTransition(transition, persisted));
+		startTransition(type, false, true, true, new DurableTransition(transition, persisted, recovered));
 	}
 
 	private void startTransition(TimeType type, boolean fake, boolean preDate, boolean postDate, DurableTransition durable) {
@@ -411,16 +470,40 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 				if (manualReservation) releaseManualTransition();
 				return;
 			}
-			if (durable != null && !plugin.getServerDataFile().isPendingTimeChangeTransition(durable.persisted)) {
-				plugin.debug("Ignoring stale time change transition " + durable.persisted.id());
-				return;
-			}
 			CompletableFuture<Void> drain = new CompletableFuture<>();
 			active = new ActiveTransition(type, durable == null ? null : durable.transition,
 					durable == null ? null : durable.persisted, drain, Thread.currentThread(), manualReservation);
 			activeTransition = active;
 			noActiveTransition = drain;
 			activeProcessing = true;
+		}
+		if (durable != null) {
+			// Reserve the drain before entering ServerData's monitor. A checked save
+			// can hold that monitor for arbitrary filesystem I/O, while shutdown must
+			// still acquire transitionLock to close admission and fence event dispatch.
+			boolean validated = false;
+			try {
+				var serverData = plugin.getServerDataFile();
+				if (!serverData.isPendingTimeChangeTransition(durable.persisted)) {
+					plugin.debug("Ignoring stale time change transition " + durable.persisted.id());
+					return;
+				}
+				if (durable.recovered) {
+					// The read is observational. Settle publication on the existing
+					// checked owner only after reserving the shutdown drain. Recheck
+					// under that owner's monitor so reload cannot revive a stale slot.
+					synchronized (serverData.publicationMonitor()) {
+						if (!serverData.isPendingTimeChangeTransition(durable.persisted)) return;
+						serverData.beginTimeChangeTransition(type, durable.persisted.periodKey(),
+								durable.persisted.markerValue());
+					}
+				}
+				validated = true;
+			} finally {
+				// No event or lease has been published yet. Stale/failed validation
+				// releases this reservation without completing or rewriting its record.
+				if (!validated) retireTransition(active);
+			}
 		}
 		dispatchTransition(active, type, fake, preDate, postDate);
 	}
@@ -649,10 +732,12 @@ public class TimeChecker implements TimeChangeTransition.Owner {
 	private static final class DurableTransition {
 		private final TimeChangeTransition transition;
 		private final TimeChangeTransitionState persisted;
+		private final boolean recovered;
 
-		private DurableTransition(TimeChangeTransition transition, TimeChangeTransitionState persisted) {
+		private DurableTransition(TimeChangeTransition transition, TimeChangeTransitionState persisted, boolean recovered) {
 			this.transition = transition;
 			this.persisted = persisted;
+			this.recovered = recovered;
 		}
 	}
 

@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import org.bukkit.Bukkit;
 
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
@@ -156,7 +155,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
     }
 
     @Override public void requireBlockingAllowed() {
-        if ((Bukkit.getServer() != null && Bukkit.isPrimaryThread()) || manager.isPlatformOwnedThread()) {
+        if (manager.isPlatformOwnedThread()) {
             throw new IllegalStateException("Shared user storage must run on a worker; use closeAsync for shutdown");
         }
     }

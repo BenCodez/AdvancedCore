@@ -5,9 +5,13 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.LongSupplier;
 
 /** Supplies existing executor owners and platform cleanup without exposing game APIs. */
 public interface RuntimePlatform {
+    /** One shared monotonic remaining-time budget, measured from entry into disable. */
+    default void beginShutdown(LongSupplier remainingNanos) { }
+
     record Cleanup(String name, Runnable action) {
         public Cleanup {
             Objects.requireNonNull(name, "name");
@@ -39,7 +43,25 @@ public interface RuntimePlatform {
 	 */
 	default boolean canBlockForPreExecutorShutdown() { return true; }
 
-	/** Maximum time a non-blocking lifecycle waits before forcing its storage worker. */
+	/**
+	 * Consumer preparation and final-task admission that must settle before the storage worker can stop.
+	 * A watchdog may report a timeout while this stage is pending, but must retain
+	 * storage admission and the native provider for its eventual final checkpoint.
+	 * The default has no separate preparation phase.
+	 */
+	default CompletionStage<Void> storageRetirementPreparationCompletion() {
+		return CompletableFuture.completedFuture(null);
+	}
+
+	/**
+	 * Actual accepted native-storage retirement, or {@code null} when no such task
+	 * has been admitted. An incomplete stage retains its daemon storage worker and
+	 * provider until it settles, even after the caller's deadline. A pending time
+	 * transition or consumer hook alone is not native-task admission.
+	 */
+	default CompletionStage<Void> admittedStorageRetirementCompletion() { return null; }
+
+	/** Watchdog grace capped by the disable deadline; pending preparation retains its durable owner. */
 	default long deferredShutdownTimeoutMillis() { return 5_000; }
 
 	/**

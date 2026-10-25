@@ -11,6 +11,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
@@ -88,6 +89,8 @@ class CoreRuntimeTest {
 
     private RuntimePlatform platform() {
         RuntimePlatform platform = mock(RuntimePlatform.class);
+        // This optional native-admission signal defaults to null on real platforms.
+        when(platform.admittedStorageRetirementCompletion()).thenReturn(null);
         when(platform.beforeExecutorShutdown()).thenReturn(List.of());
         when(platform.afterExecutorGrace()).thenReturn(List.of());
 		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of());
@@ -161,11 +164,22 @@ class CoreRuntimeTest {
         verify(platform, times(1)).getTimeTimer();
     }
 
+    private ScheduledExecutorService terminatingExecutor(boolean gracefulTermination) {
+        ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
+        var terminated = new java.util.concurrent.atomic.AtomicBoolean();
+        when(executor.isTerminated()).thenAnswer(call -> terminated.get());
+        doAnswer(call -> { terminated.set(gracefulTermination); return null; }).when(executor).shutdown();
+        when(executor.shutdownNow()).thenAnswer(call -> { terminated.set(true); return List.of(); });
+        return executor;
+    }
+
     private ScheduledExecutorService executor(String name, List<String> events) throws Exception {
         ScheduledExecutorService executor = mock(ScheduledExecutorService.class);
+        var terminated = new java.util.concurrent.atomic.AtomicBoolean();
+        when(executor.isTerminated()).thenAnswer(call -> terminated.get());
         doAnswer(call -> { events.add(name + "-stop"); return null; }).when(executor).shutdown();
         when(executor.awaitTermination(anyLong(), any())).thenAnswer(call -> { events.add(name + "-wait"); return false; });
-        when(executor.shutdownNow()).thenAnswer(call -> { events.add(name + "-force"); return List.of(); });
+        when(executor.shutdownNow()).thenAnswer(call -> { events.add(name + "-force"); terminated.set(true); return List.of(); });
         return executor;
     }
 
@@ -222,7 +236,7 @@ class CoreRuntimeTest {
 
 	@Test void nonBlockingPlatformLeavesStorageWorkerAliveUntilRetirementCompletes() throws Exception {
 		RuntimePlatform platform = platform();
-		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledExecutorService timer = terminatingExecutor(true);
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
 		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
@@ -313,7 +327,7 @@ class CoreRuntimeTest {
 
 	@Test void deferredRetirementTimeoutForcesStorageWorkerWithoutRepeatingPlatformCleanup() {
 		RuntimePlatform platform = platform();
-		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledExecutorService timer = terminatingExecutor(false);
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
 		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
@@ -334,6 +348,117 @@ class CoreRuntimeTest {
 		assertEquals(List.of("unload"), events);
 		retiring.complete(null);
 		assertEquals(List.of("unload"), events);
+	}
+
+	@Test void pendingPreparationRetainsIdleWorkerThenAdmittedRetirementStillTimesOut() throws Exception {
+		RuntimePlatform platform = platform();
+		var timer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(task -> {
+			Thread worker = new Thread(task, "pending-preparation-test");
+			worker.setDaemon(true);
+			return worker;
+		});
+		var preparation = new CompletableFuture<Void>();
+		var retirement = new CompletableFuture<Void>();
+		CountDownLatch reported = new CountDownLatch(1);
+		CountDownLatch terminal = new CountDownLatch(1);
+		when(platform.storageRetirementPreparationCompletion()).thenReturn(preparation);
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retirement);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(20L);
+		when(platform.getUserStorageTimer()).thenReturn(timer);
+		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("native storage", terminal::countDown)));
+		doAnswer(call -> { reported.countDown(); return null; }).when(platform)
+				.cleanupFailed(eq("pre-executor shutdown"), any(java.util.concurrent.TimeoutException.class));
+		try {
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertTrue(reported.await(2, TimeUnit.SECONDS));
+			assertFalse(timer.isShutdown(), "idle storage must stay open for a separate consumer checkpoint");
+			assertEquals(1, terminal.getCount());
+			preparation.complete(null);
+			assertTrue(terminal.await(2, TimeUnit.SECONDS), "admitted retirement still has a bounded watchdog");
+			assertTrue(timer.isTerminated());
+			assertFalse(retirement.isDone(), "timeout does not fabricate a successful flush");
+			verify(platform, times(2)).cleanupFailed(eq("pre-executor shutdown"),
+					any(java.util.concurrent.TimeoutException.class));
+		} finally {
+			preparation.complete(null);
+			retirement.complete(null);
+			timer.shutdownNow();
+		}
+	}
+
+	@Test void pendingPreparationDoesNotRetainFencedNonDaemonTimeWorker() throws Exception {
+		RuntimePlatform platform = platform();
+		AtomicReference<Thread> timeWorker = new AtomicReference<>();
+		AtomicReference<Thread> storageWorker = new AtomicReference<>();
+		var timeTimer = Executors.newSingleThreadScheduledExecutor(task -> {
+			Thread worker = new Thread(task, "held-calendar-test");
+			worker.setDaemon(false);
+			timeWorker.set(worker);
+			return worker;
+		});
+		var storageTimer = Executors.newSingleThreadScheduledExecutor(task -> {
+			Thread worker = new Thread(task, "retained-storage-test");
+			worker.setDaemon(true);
+			storageWorker.set(worker);
+			return worker;
+		});
+		var preparation = new CompletableFuture<Void>();
+		var retirement = new CompletableFuture<Void>();
+		var fenced = new java.util.concurrent.atomic.AtomicBoolean();
+		var interruptedAfterFence = new java.util.concurrent.atomic.AtomicBoolean();
+		CountDownLatch started = new CountDownLatch(1);
+		CountDownLatch release = new CountDownLatch(1);
+		CountDownLatch reported = new CountDownLatch(1);
+		CountDownLatch checkpoint = new CountDownLatch(1);
+		CountDownLatch terminal = new CountDownLatch(1);
+		when(platform.getTimeTimer()).thenReturn(timeTimer);
+		when(platform.getTimer()).thenReturn(storageTimer);
+		when(platform.getUserStorageTimer()).thenReturn(storageTimer);
+		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retirement);
+		when(platform.storageRetirementPreparationCompletion()).thenReturn(preparation);
+		when(platform.canBlockForPreExecutorShutdown()).thenReturn(false);
+		when(platform.holdTimeTimerUntilPreExecutorShutdownCompletion()).thenReturn(true);
+		when(platform.deferredShutdownTimeoutMillis()).thenReturn(20L);
+		doAnswer(call -> { fenced.set(true); return null; }).when(platform).beforeForcedTimeTimerShutdown();
+		doAnswer(call -> { reported.countDown(); return null; }).when(platform)
+				.cleanupFailed(eq("pre-executor shutdown"), any(java.util.concurrent.TimeoutException.class));
+		when(platform.afterStorageExecutorShutdown()).thenReturn(List.of(
+				new Cleanup("native storage", terminal::countDown)));
+		try {
+			timeTimer.execute(() -> {
+				started.countDown();
+				try { release.await(); }
+				catch (InterruptedException interrupted) {
+					interruptedAfterFence.set(fenced.get());
+					Thread.currentThread().interrupt();
+				}
+			});
+			assertTrue(started.await(2, TimeUnit.SECONDS));
+			assertFalse(timeWorker.get().isDaemon(), "fixture must exercise the calendar's non-daemon owner");
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertTrue(reported.await(2, TimeUnit.SECONDS));
+			assertTrue(timeTimer.awaitTermination(2, TimeUnit.SECONDS),
+					"first watchdog must interrupt the held calendar without awaiting consumer preparation");
+			timeWorker.get().join(1_000L);
+			assertFalse(timeWorker.get().isAlive(), "no non-daemon calendar worker may remain");
+			assertTrue(interruptedAfterFence.get(), "recovery authority must be fenced before interruption");
+			assertFalse(preparation.isDone(), "fixture preparation remains permanently incomplete");
+			assertFalse(retirement.isDone(), "interruption does not fabricate storage completion");
+			assertFalse(storageTimer.isShutdown(), "consumer checkpoint admission must remain open");
+			storageTimer.execute(checkpoint::countDown);
+			assertTrue(checkpoint.await(2, TimeUnit.SECONDS));
+			assertTrue(storageWorker.get().isDaemon(), "only the daemon storage owner remains retained");
+			assertEquals(1, terminal.getCount(), "native storage cannot close before consumer preparation");
+			verify(platform, never()).afterStorageExecutorShutdown();
+		} finally {
+			release.countDown();
+			timeTimer.shutdownNow();
+			storageTimer.shutdownNow();
+			assertTrue(timeTimer.awaitTermination(2, TimeUnit.SECONDS));
+			assertTrue(storageTimer.awaitTermination(2, TimeUnit.SECONDS));
+		}
 	}
 
 	@Test void watchdogLetsQueuedRetirementFlushBeforeForcingStorageWorker() throws Exception {
@@ -433,7 +558,7 @@ class CoreRuntimeTest {
 
 	@Test void failedRetirementTerminatesStorageWorkerAfterReportingTheFailure() {
 		RuntimePlatform platform = platform();
-		ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
+		ScheduledExecutorService timer = terminatingExecutor(false);
 		CompletableFuture<Void> retiring = new CompletableFuture<>();
 		retiring.completeExceptionally(new IllegalStateException("write failed"));
 		when(platform.beforeExecutorShutdownCompletion()).thenReturn(retiring);
@@ -476,12 +601,14 @@ class CoreRuntimeTest {
         assertDoesNotThrow(() -> new AdvancedCoreLifecycle(null).shutdown());
     }
 
-	@Test void bukkitAdapterFlushesFullInventoryBeforeExecutorShutdown() {
+	@Test void bukkitAdapterRetainsStorageUntilFinalInventorySnapshotCompletes() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		FullInventoryHandler handler = mock(FullInventoryHandler.class);
 		MySQL mysql = mock(MySQL.class);
 		AdvancedCoreConfigOptions options = mock(AdvancedCoreConfigOptions.class);
 		when(plugin.getFullInventoryHandler()).thenReturn(handler);
+		CompletableFuture<Void> inventoryPersistence = new CompletableFuture<>();
+		when(handler.shutdownAsync(any())).thenReturn(inventoryPersistence);
 		when(plugin.isLoadUserData()).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(options);
 		when(options.getStorageType()).thenReturn(UserStorage.MYSQL);
@@ -492,16 +619,59 @@ class CoreRuntimeTest {
 				.filter(cleanup -> cleanup.name().equals("full inventory handler"))
 				.findFirst().orElseThrow().action().run();
 
-		verify(handler).shutdown();
+		verify(handler).shutdownAsync(any());
 		assertTrue(platform.beforeExecutorShutdown().stream()
 				.noneMatch(cleanup -> cleanup.name().equals("MySQL")));
 		platform.beforeExecutorShutdown().stream()
 				.filter(cleanup -> cleanup.name().equals("user storage"))
 				.findFirst().orElseThrow().action().run();
-		verify(mysql).close();
+		verify(mysql, never()).close();
+		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
+		inventoryPersistence.complete(null);
+		verify(mysql, timeout(2_000)).close();
 		assertTrue(platform.afterExecutorShutdown().stream()
 				.noneMatch(cleanup -> cleanup.name().equals("full inventory handler")
 						|| cleanup.name().equals("MySQL")));
+	}
+
+	@Test void failedConsumerHookCannotOvertakePendingInventoryPersistence() {
+		for (String mode : List.of("throwing", "failed", "cancelled")) {
+			AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+			FullInventoryHandler inventory = mock(FullInventoryHandler.class);
+			UserManager users = mock(UserManager.class);
+			UserDataManager manager = mock(UserDataManager.class);
+			CompletableFuture<Void> inventoryPersistence = new CompletableFuture<>();
+			CompletableFuture<Void> hook = new CompletableFuture<>();
+			IllegalStateException failure = new IllegalStateException("consumer preparation failed");
+			if (mode.equals("throwing")) when(plugin.onBeforeStorageShutdown()).thenThrow(failure);
+			else {
+				if (mode.equals("failed")) hook.completeExceptionally(failure);
+				else hook.cancel(false);
+				when(plugin.onBeforeStorageShutdown()).thenReturn(hook);
+			}
+			when(plugin.getFullInventoryHandler()).thenReturn(inventory);
+			when(inventory.shutdownAsync(any())).thenReturn(inventoryPersistence);
+			when(plugin.isLoadUserData()).thenReturn(true);
+			when(plugin.getLoadedUserManager()).thenReturn(users);
+			when(users.getDataManager()).thenReturn(manager);
+			var tasks = queuedStorageWorker(manager);
+			when(manager.closeSharedRuntimeAsyncCompletion(any(Runnable.class)))
+					.thenReturn(CompletableFuture.completedFuture(null));
+			BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+			platform.beforeExecutorShutdown().stream().filter(cleanup -> cleanup.name().equals("full inventory handler"))
+					.findFirst().orElseThrow().action().run();
+			platform.beforeExecutorShutdown().stream().filter(cleanup -> cleanup.name().equals("user storage"))
+					.findFirst().orElseThrow().action().run();
+			assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
+			verify(manager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+			inventoryPersistence.complete(null);
+			tasks.remove().run();
+			CompletionException reported = assertThrows(CompletionException.class,
+					() -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
+			if (mode.equals("cancelled")) assertInstanceOf(java.util.concurrent.CancellationException.class, reported.getCause());
+			else assertSame(failure, reported.getCause());
+			verify(manager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		}
 	}
 
 	@Test void bukkitAdapterDefersMysqlCloseUntilSharedStorageRetires() {
@@ -535,6 +705,275 @@ class CoreRuntimeTest {
 		verify(mysql).close();
 	}
 
+	@Test void bukkitAdapterWaitsForPluginAdmissionHookBeforeRetiringStorage() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager dataManager = mock(UserDataManager.class);
+		var workerTasks = queuedStorageWorker(dataManager);
+		CompletableFuture<Void> hook = new CompletableFuture<>();
+		CompletableFuture<Void> retirement = new CompletableFuture<>();
+		when(plugin.onBeforeStorageShutdown()).thenReturn(hook);
+		when(plugin.isLoadUserData()).thenReturn(true);
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(dataManager);
+		when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(retirement);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		platform.beforeExecutorShutdown().stream()
+				.filter(cleanup -> cleanup.name().equals("user storage"))
+				.findFirst().orElseThrow().action().run();
+
+		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
+		hook.complete(null);
+		verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		workerTasks.remove().run();
+		verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		hook.complete(null);
+		retirement.complete(null);
+		assertDoesNotThrow(() -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
+	}
+
+	@Test void bukkitAdapterRetainsAdmittedStorageAcrossDeferredUnload() throws Exception {
+		for (boolean heldCalendar : List.of(false, true)) {
+			for (String outcome : List.of("success", "failure", "cancelled")) {
+				assertAdmittedStorageSurvivesUnload(heldCalendar, outcome);
+			}
+		}
+	}
+
+	private void assertAdmittedStorageSurvivesUnload(boolean heldCalendar, String outcome) throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		UserManager successorUsers = mock(UserManager.class);
+		UserDataManager successorManager = mock(UserDataManager.class);
+		when(successorUsers.getDataManager()).thenReturn(successorManager);
+		AtomicReference<UserManager> currentUsers = new AtomicReference<>(users);
+		var loadUserData = new java.util.concurrent.atomic.AtomicBoolean(true);
+		var worker = Executors.newSingleThreadScheduledExecutor(task -> {
+			Thread thread = new Thread(task, "admitted-storage-test");
+			thread.setDaemon(true);
+			return thread;
+		});
+		var hook = new CompletableFuture<Void>();
+		var calendar = new CompletableFuture<Void>();
+		var preparationFailure = new IllegalStateException("consumer preparation failed");
+		List<String> events = new java.util.concurrent.CopyOnWriteArrayList<>();
+		MySQL mysql = mock(MySQL.class);
+		when(plugin.getLogger()).thenReturn(mock(java.util.logging.Logger.class));
+		when(plugin.isLoadUserData()).thenAnswer(ignored -> loadUserData.get());
+		when(plugin.getLoadedUserManager()).thenAnswer(ignored -> currentUsers.get());
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.getTimer()).thenReturn(worker);
+		when(plugin.getNativeUserStorageOwner()).thenReturn(
+				new AdvancedCorePlugin.UserStorageOwner(UserStorage.MYSQL, mysql, null));
+		when(plugin.onBeforeStorageShutdown()).thenReturn(hook);
+		if (heldCalendar) {
+			TimeChecker checker = mock(TimeChecker.class);
+			when(plugin.getTimeChecker()).thenReturn(checker);
+			when(checker.beginShutdown()).thenReturn(calendar);
+		}
+		doAnswer(ignored -> {
+			events.add("unload");
+			loadUserData.set(false);
+			if (heldCalendar) currentUsers.set(successorUsers);
+			return null;
+		}).when(plugin).onUnLoad();
+		doAnswer(ignored -> { events.add("provider close"); return null; }).when(mysql).close();
+		doAnswer(ignored -> { events.add("pending owner cleanup"); return null; })
+				.when(plugin).closePendingNativeUserStorageOwners();
+		when(manager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenAnswer(call -> {
+			assertSame(worker, manager.getTimer());
+			events.add("shared flush");
+			call.getArgument(0, Runnable.class).run();
+			return CompletableFuture.completedFuture(null);
+		});
+		BukkitRuntimePlatform platform = spy(new BukkitRuntimePlatform(plugin));
+		doReturn(false).when(platform).canBlockForPreExecutorShutdown();
+		try {
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertFalse(loadUserData.get(), "actual deferred unload must change the admission flag");
+			assertSame(heldCalendar ? successorUsers : users, plugin.getLoadedUserManager());
+			assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
+			assertFalse(worker.isShutdown(), "admitted storage remains open during preparation");
+			verify(manager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+			verify(mysql, never()).close();
+			if (heldCalendar) calendar.complete(null);
+			assertSame(worker, platform.getUserStorageTimer(), "unload cannot replace the admitted worker");
+			if (outcome.equals("success")) hook.complete(null);
+			else if (outcome.equals("failure")) hook.completeExceptionally(preparationFailure);
+			else hook.cancel(false);
+			var completed = platform.beforeExecutorShutdownCompletion().toCompletableFuture();
+			try { completed.get(2, TimeUnit.SECONDS); }
+			catch (java.util.concurrent.ExecutionException failure) {
+				if (outcome.equals("success")) throw failure;
+			}
+			if (outcome.equals("success")) assertDoesNotThrow(completed::join);
+			else {
+				CompletionException failure = assertThrows(CompletionException.class, completed::join);
+				if (outcome.equals("failure")) assertSame(preparationFailure, failure.getCause());
+				else assertInstanceOf(java.util.concurrent.CancellationException.class, failure.getCause());
+			}
+			assertTrue(worker.awaitTermination(2, TimeUnit.SECONDS), "the admitted worker retires after cleanup");
+			assertEquals(List.of("unload", "shared flush", "provider close", "pending owner cleanup"), events);
+			verify(manager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+			verify(successorManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+			verify(mysql, times(1)).close();
+			verify(plugin, times(1)).closePendingNativeUserStorageOwners();
+			verify(plugin, times(1)).onBeforeStorageShutdown();
+		} finally {
+			worker.shutdownNow();
+			assertTrue(worker.awaitTermination(2, TimeUnit.SECONDS));
+		}
+	}
+
+	@Test void disabledUserLoadingStillRetiresItsExistingManagerWorker() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		var worker = Executors.newSingleThreadScheduledExecutor();
+		when(plugin.getLogger()).thenReturn(mock(java.util.logging.Logger.class));
+		when(plugin.getLoadedUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(manager);
+		when(manager.getTimer()).thenReturn(worker);
+		try {
+			BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+			new AdvancedCoreRuntime(platform).shutdown();
+			assertTrue(worker.isTerminated());
+			assertSame(worker, platform.getUserStorageTimer());
+			verify(manager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+		} finally {
+			worker.shutdownNow();
+			assertTrue(worker.awaitTermination(2, TimeUnit.SECONDS));
+		}
+	}
+
+	@Test void bukkitAdapterRetiresStorageAfterEachPreparationFailureAndWaitsForItsCompletion() {
+        for (String mode : List.of("failed", "cancelled", "throwing", "late-failed", "late-cancelled")) {
+            AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+            UserManager users = mock(UserManager.class);
+            UserDataManager dataManager = mock(UserDataManager.class);
+            var workerTasks = queuedStorageWorker(dataManager);
+            var hook = new CompletableFuture<Void>(); var retirement = new CompletableFuture<Void>();
+            var failure = new IllegalStateException("admission hook failed");
+            if (mode.equals("failed")) hook.completeExceptionally(failure);
+            if (mode.equals("cancelled")) hook.cancel(false);
+            if (mode.equals("throwing")) when(plugin.onBeforeStorageShutdown()).thenThrow(failure);
+            else when(plugin.onBeforeStorageShutdown()).thenReturn(hook);
+            when(plugin.isLoadUserData()).thenReturn(true);
+            when(plugin.getLoadedUserManager()).thenReturn(users);
+            when(users.getDataManager()).thenReturn(dataManager);
+            when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(retirement);
+            BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+            Runnable shutdown = platform.beforeExecutorShutdown().stream().filter(cleanup -> cleanup.name().equals("user storage"))
+                    .findFirst().orElseThrow().action();
+            assertDoesNotThrow(shutdown::run, mode);
+            if (mode.startsWith("late")) {
+                verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+                if (mode.equals("late-failed")) hook.completeExceptionally(failure); else hook.cancel(false);
+                verify(dataManager, never()).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+                workerTasks.remove().run();
+            }
+            verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+            assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone(), mode);
+            retirement.complete(null);
+            CompletionException reported = assertThrows(CompletionException.class,
+                    () -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
+            if (mode.contains("cancelled")) assertInstanceOf(java.util.concurrent.CancellationException.class, reported.getCause());
+            else assertSame(failure, reported.getCause());
+            shutdown.run(); verify(dataManager, times(1)).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+            verify(plugin, times(1)).onBeforeStorageShutdown();
+        }
+    }
+
+    @Test void bukkitAdapterRetainsBothPreparationAndStorageFailures() {
+        AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+        UserManager users = mock(UserManager.class); UserDataManager dataManager = mock(UserDataManager.class);
+        var preparation = new IllegalStateException("preparation failed"); var storage = new IllegalStateException("flush failed");
+        when(plugin.onBeforeStorageShutdown()).thenReturn(CompletableFuture.failedFuture(preparation));
+        when(plugin.isLoadUserData()).thenReturn(true); when(plugin.getLoadedUserManager()).thenReturn(users);
+        when(users.getDataManager()).thenReturn(dataManager);
+        when(dataManager.closeSharedRuntimeAsyncCompletion(any(Runnable.class))).thenReturn(CompletableFuture.failedFuture(storage));
+        BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+        platform.beforeExecutorShutdown().stream().filter(cleanup -> cleanup.name().equals("user storage"))
+                .findFirst().orElseThrow().action().run();
+        CompletionException reported = assertThrows(CompletionException.class,
+                () -> platform.beforeExecutorShutdownCompletion().toCompletableFuture().join());
+        assertSame(preparation, reported.getCause()); assertArrayEquals(new Throwable[] {storage}, reported.getSuppressed());
+        verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
+    }
+
+    private static java.util.Queue<Runnable> queuedStorageWorker(UserDataManager manager) {
+        var tasks = new java.util.ArrayDeque<Runnable>();
+        ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+        when(manager.getTimer()).thenReturn(worker);
+        doAnswer(call -> { tasks.add(call.getArgument(0, Runnable.class)); return null; })
+                .when(worker).execute(any(Runnable.class));
+        return tasks;
+    }
+
+	@Test void defaultAdmissionHookCompletesForExistingSubclasses() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
+		assertDoesNotThrow(() -> plugin.onBeforeStorageShutdown().toCompletableFuture().join());
+	}
+
+	@Test void bukkitAdapterRunsShutdownCompletionHookAfterNativeCleanup() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		List<String> order = new ArrayList<>();
+		Thread lifecycleThread = Thread.currentThread();
+		doCallRealMethod().when(plugin).onShutdownComplete(any(CompletionStage.class));
+		doAnswer(invocation -> { order.add("unload"); return null; }).when(plugin).onUnLoad();
+		doAnswer(invocation -> { assertSame(lifecycleThread, Thread.currentThread()); order.add("complete"); return null; }).when(plugin).onShutdownComplete();
+		when(plugin.getSkullCacheHandler()).thenReturn(null);
+		when(plugin.getHologramHandler()).thenReturn(null);
+		when(plugin.getPermissionHandler()).thenReturn(null);
+		when(plugin.getDialogService()).thenReturn(null);
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+
+		List<RuntimePlatform.Cleanup> cleanups = platform.afterExecutorShutdown();
+		assertEquals("plugin shutdown completion hook", cleanups.get(cleanups.size() - 1).name());
+		cleanups.forEach(cleanup -> cleanup.action().run());
+		assertEquals(List.of("unload", "complete"), order);
+		verify(plugin).onShutdownComplete();
+	}
+
+	@Test void shutdownHookReceivesActualFinalStagesAndRetainsExceptionalSettlement() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		when(plugin.isLoadServerData()).thenReturn(true);
+		var inventory = mock(FullInventoryHandler.class);
+		var permissions = mock(com.bencodez.advancedcore.api.permissions.PermissionHandler.class);
+		var data = mock(com.bencodez.advancedcore.data.ServerData.class);
+		var inventorySave = new CompletableFuture<Void>(); var timestampSave = new CompletableFuture<Void>();
+		var permissionSave = new CompletableFuture<Void>();
+		when(plugin.getFullInventoryHandler()).thenReturn(inventory);
+		when(plugin.getPermissionHandler()).thenReturn(permissions);
+		when(plugin.getServerDataFile()).thenReturn(data);
+		when(plugin.getLogger()).thenReturn(java.util.logging.Logger.getLogger("test"));
+		when(inventory.shutdownAsync(any())).thenReturn(inventorySave);
+		when(permissions.shutDownAsync(any())).thenReturn(permissionSave);
+		CountDownLatch admitted = new CountDownLatch(1);
+		when(data.mutateFinalData(any())).thenAnswer(call -> { admitted.countDown(); return timestampSave; });
+		AtomicReference<CompletionStage<Void>> files = new AtomicReference<>();
+		Thread lifecycleThread = Thread.currentThread();
+		doAnswer(call -> {
+			assertSame(lifecycleThread, Thread.currentThread()); files.set(call.getArgument(0)); return null;
+		}).when(plugin).onShutdownComplete(any(CompletionStage.class));
+		BukkitRuntimePlatform platform = new BukkitRuntimePlatform(plugin);
+		platform.beforeExecutorShutdown().stream().filter(cleanup -> cleanup.name().equals("full inventory handler")
+				|| cleanup.name().equals("server data timestamp")).forEach(cleanup -> cleanup.action().run());
+		inventorySave.complete(null);
+		assertTrue(admitted.await(2, TimeUnit.SECONDS));
+		platform.afterExecutorShutdown().forEach(cleanup -> cleanup.action().run());
+		assertNotNull(files.get()); assertFalse(files.get().toCompletableFuture().isDone());
+		var failedPermission = new IllegalStateException("permission publication failed");
+		permissionSave.completeExceptionally(failedPermission);
+		assertFalse(files.get().toCompletableFuture().isDone(), "aggregate waits for every owner settlement");
+		timestampSave.complete(null);
+		assertSame(failedPermission, assertThrows(CompletionException.class,
+				() -> files.get().toCompletableFuture().join()).getCause());
+	}
+
 	@Test void bukkitAdapterDoesNotRetireStorageBeforeAnAdmittedTimeTransitionDrains() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		TimeChecker checker = mock(TimeChecker.class);
@@ -561,6 +1000,7 @@ class CoreRuntimeTest {
 		assertTrue(platform.holdTimeTimerUntilPreExecutorShutdownCompletion());
 		platform.beforeDeferredPlatformCleanup();
 		verify(checker).cancelActiveTransitionsAndClosePersistence();
+		verify(checker).cancelQueuedUpdate();
 		transitionDrain.complete(null);
 		verify(dataManager).closeSharedRuntimeAsyncCompletion(any(Runnable.class));
 		assertFalse(platform.beforeExecutorShutdownCompletion().toCompletableFuture().isDone());
@@ -650,8 +1090,8 @@ class CoreRuntimeTest {
 		verify(mysql, never()).close();
 
 		platform.afterStorageExecutorShutdown().get(0).action().run();
-		verify(mysql).close();
-		verify(plugin).closePendingNativeUserStorageOwners();
+		verify(mysql, timeout(2_000)).close();
+		verify(plugin, timeout(2_000)).closePendingNativeUserStorageOwners();
 	}
 
 	@Test void bukkitAdapterClosesOwnerAfterWatchdogCancelsQueuedRetirement() {
@@ -676,8 +1116,8 @@ class CoreRuntimeTest {
 				.findFirst().orElseThrow().action().run();
 
 		platform.afterStorageExecutorShutdown().get(0).action().run();
-		verify(mysql).close();
-		verify(plugin).closePendingNativeUserStorageOwners();
+		verify(mysql, timeout(2_000)).close();
+		verify(plugin, timeout(2_000)).closePendingNativeUserStorageOwners();
 		assertFalse(retirement.isDone());
 		lateCompletion.get().run();
 		verify(mysql, times(1)).close();
@@ -705,8 +1145,8 @@ class CoreRuntimeTest {
 		retirement.completeExceptionally(new IllegalStateException("final flush failed"));
 		platform.afterStorageExecutorShutdown().get(0).action().run();
 
-		verify(sqlite).closeConnection();
-		verify(plugin).closePendingNativeUserStorageOwners();
+		verify(sqlite, timeout(2_000)).closeConnection();
+		verify(plugin, timeout(2_000)).closePendingNativeUserStorageOwners();
 	}
 
 	@Test void bukkitAdapterClosesMysqlOwnerInstalledWhileSharedReplacementCompletes() {
