@@ -332,9 +332,17 @@ public class PermissionHandler {
 
 	void removePermissionIfEmpty(UUID uuid, PlayerPermissionHandler expected, boolean attachmentIsOffline) {
 		synchronized (stateLock(uuid)) {
-			if (!expected.isHandlerEmpty(attachmentIsOffline)) return;
-			perms.remove(uuid, expected);
-			permsToAdd.remove(uuid, expected);
+			synchronized (expected) {
+				if (!expected.isHandlerEmpty(attachmentIsOffline)) return;
+				boolean removedOnline = perms.remove(uuid, expected);
+				permsToAdd.remove(uuid, expected);
+				if (removedOnline && !attachmentIsOffline) {
+					PermissionAttachment attachment = expected.getAttachment();
+					expected.setAttachment(null);
+					// Retire the old owner before Bukkit callbacks can grant a replacement.
+					if (attachment != null) attachment.remove();
+				}
+			}
 		}
 	}
 
