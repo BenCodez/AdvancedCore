@@ -248,8 +248,7 @@ public class PlayerPermissionHandler {
 			if (permsToAdd != null) permsToAdd.remove(perm);
 
 			if (attachment != null) {
-				attachment.setPermission(perm, false);
-				attachment.getPermissions().remove(perm);
+				attachment.unsetPermission(perm);
 			}
 
 			removeHandler = isHandlerEmpty(false);
