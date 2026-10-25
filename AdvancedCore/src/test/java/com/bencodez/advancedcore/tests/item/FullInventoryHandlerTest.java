@@ -1107,10 +1107,10 @@ public class FullInventoryHandlerTest {
             publications.add(java.util.Map.entry(snapshot, control));
             return installed;
         }).when(f.serverData).mutateFinalData(any());
-        var permissionsStarted = new AtomicBoolean();
+        var permissionsStarted = new CountDownLatch(1);
         var permissionSave = new java.util.concurrent.CompletableFuture<Void>();
         when(permissions.shutDownAsync(any())).thenAnswer(call -> {
-            call.getArgument(0, java.util.concurrent.Executor.class).execute(() -> permissionsStarted.set(true));
+            call.getArgument(0, java.util.concurrent.Executor.class).execute(permissionsStarted::countDown);
             return permissionSave;
         });
         var finalFiles = new AtomicReference<CompletionStage<Void>>();
@@ -1139,7 +1139,7 @@ public class FullInventoryHandlerTest {
                     .forEach(cleanup -> cleanup.action().run());
             worker.submit(() -> {}).get(3, TimeUnit.SECONDS);
             assertTrue(publications.isEmpty(), "timestamp must await the actual inventory owner after caller completion");
-            assertFalse(permissionsStarted.get());
+            assertEquals(1L, permissionsStarted.getCount());
             var lifecycleObservation = f.handler.shutdownAsync(Runnable::run).toCompletableFuture();
             assertFalse(lifecycleObservation.isDone());
             inventory.getValue().complete(null);
@@ -1147,10 +1147,10 @@ public class FullInventoryHandlerTest {
             var timestamp = publications.poll(3, TimeUnit.SECONDS); assertNotNull(timestamp);
             assertTrue(timestamp.getKey().contains("LastUpdated"));
             assertEquals(item, timestamp.getKey().getItemStack("FullInventory." + owner + ".Items.0"));
-            assertFalse(permissionsStarted.get());
+            assertEquals(1L, permissionsStarted.getCount());
             timestamp.getValue().complete(null);
-            worker.submit(() -> {}).get(3, TimeUnit.SECONDS);
-            assertTrue(permissionsStarted.get());
+            assertTrue(permissionsStarted.await(3, TimeUnit.SECONDS),
+                    "permission publication must start after the timestamp owner settles");
             platform.afterExecutorShutdown().stream()
                     .filter(cleanup -> cleanup.name().equals("shutdown persistence worker")
                             || cleanup.name().equals("plugin shutdown completion hook"))
