@@ -926,6 +926,40 @@ public class FullInventoryHandlerTest {
         }
     }
 
+    @Test void deferredFixturePublishesControlOnlyAfterOwnerCallbackRegistration() throws Exception {
+        Fixture f = createFixture();
+        var registering = new CountDownLatch(1);
+        var allowRegistration = new CountDownLatch(1);
+        var control = new java.util.concurrent.CompletableFuture<Void>() {
+            @Override public java.util.concurrent.CompletableFuture<Void> thenRun(Runnable action) {
+                registering.countDown();
+                try { assertTrue(allowRegistration.await(3, TimeUnit.SECONDS)); }
+                catch (InterruptedException failure) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(failure);
+                }
+                return super.thenRun(action);
+            }
+        };
+        var submissions = deferredPublications(f, null, () -> control);
+        UUID owner = UUID.randomUUID(); var item = mock(ItemStack.class);
+        f.handler.add(owner, item);
+        var worker = java.util.concurrent.Executors.newSingleThreadExecutor();
+        var save = worker.submit(f.handler::saveDurably);
+        try {
+            assertTrue(registering.await(3, TimeUnit.SECONDS));
+            assertTrue(submissions.isEmpty(), "raw completion must not precede its owner installation callback");
+            allowRegistration.countDown();
+            assertFalse(save.get(3, TimeUnit.SECONDS));
+            var publication = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(publication);
+            publication.getValue().complete(null);
+            assertEquals(item, f.data.getItemStack("FullInventory." + owner + ".Items.0"));
+        } finally {
+            allowRegistration.countDown(); control.complete(null);
+            worker.shutdown(); assertTrue(worker.awaitTermination(3, TimeUnit.SECONDS));
+        }
+    }
+
     @Test void reversedOwnerCompletionsCannotEraseLaterSavedItems() throws Exception {
         Fixture f = createFixture();
         var submissions = deferredPublications(f);
@@ -1068,21 +1102,30 @@ public class FullInventoryHandlerTest {
     private java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration,
             java.util.concurrent.CompletableFuture<Void>>> deferredPublications(Fixture f,
                     java.util.Queue<Thread> threads) {
+        return deferredPublications(f, threads, java.util.concurrent.CompletableFuture::new);
+    }
+
+    private java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration,
+            java.util.concurrent.CompletableFuture<Void>>> deferredPublications(Fixture f,
+                    java.util.Queue<Thread> threads,
+                    java.util.function.Supplier<java.util.concurrent.CompletableFuture<Void>> controls) {
         var submissions = new java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration,
                 java.util.concurrent.CompletableFuture<Void>>>();
         doAnswer(call -> {
             if (threads != null) threads.add(Thread.currentThread());
             var candidate = new YamlConfiguration();
             call.getArgument(0, java.util.function.Consumer.class).accept(candidate);
-            var confirmed = new java.util.concurrent.CompletableFuture<Void>();
-            submissions.add(java.util.Map.entry(candidate, confirmed));
-            return confirmed.thenRun(() -> {
+            var confirmed = controls.get();
+            var publication = confirmed.thenRun(() -> {
                 synchronized (f.serverData.publicationMonitor()) {
                     f.data.set("FullInventory", null);
                     for (String path : candidate.getKeys(true))
                         if (!candidate.isConfigurationSection(path)) f.data.set(path, candidate.get(path));
                 }
             });
+            // Completion is observable only after its installation callback exists.
+            submissions.add(java.util.Map.entry(candidate, confirmed));
+            return publication;
         }).when(f.serverData).mutateFinalData(any());
         return submissions;
     }
@@ -1101,20 +1144,7 @@ public class FullInventoryHandlerTest {
     }
     private void overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(boolean failFirst, boolean shutdown) throws Exception {
         Fixture f = createFixture();
-        var submissions = new java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration, java.util.concurrent.CompletableFuture<Void>>>();
-        doAnswer(call -> {
-            var candidate = new YamlConfiguration();
-            call.getArgument(0, java.util.function.Consumer.class).accept(candidate);
-            var confirmed = new java.util.concurrent.CompletableFuture<Void>();
-            submissions.add(java.util.Map.entry(candidate, confirmed));
-            return confirmed.thenRun(() -> {
-                synchronized (f.serverData.publicationMonitor()) {
-                    f.data.set("FullInventory", null);
-                    for (String path : candidate.getKeys(true))
-                        if (!candidate.isConfigurationSection(path)) f.data.set(path, candidate.get(path));
-                }
-            });
-        }).when(f.serverData).mutateFinalData(any());
+        var submissions = deferredPublications(f);
         var ownerTasks = new java.util.concurrent.LinkedBlockingQueue<Runnable>();
         doAnswer(call -> { ownerTasks.add(call.getArgument(1)); return null; })
                 .when(f.bukkitScheduler).runTask(eq(f.plugin), any(Runnable.class), any(Player.class));
