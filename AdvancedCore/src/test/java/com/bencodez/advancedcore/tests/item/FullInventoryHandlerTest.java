@@ -926,13 +926,180 @@ public class FullInventoryHandlerTest {
         }
     }
 
+    @Test void reversedOwnerCompletionsCannotEraseLaterSavedItems() throws Exception {
+        Fixture f = createFixture();
+        var submissions = deferredPublications(f);
+        UUID first = UUID.randomUUID(), second = UUID.randomUUID();
+        var item = mock(ItemStack.class);
+        f.handler.add(first, item); assertFalse(f.handler.saveDurably());
+        var publicationA = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(publicationA);
+        f.handler.add(second, item); assertFalse(f.handler.saveDurably());
+        var publicationB = submissions.poll();
+        if (publicationB != null) {
+            // An owner is allowed to finish concurrent submissions in reverse order.
+            publicationB.getValue().complete(null); publicationA.getValue().complete(null);
+        } else {
+            publicationA.getValue().complete(null);
+            publicationB = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(publicationB);
+            publicationB.getValue().complete(null);
+        }
+        assertEquals(item, f.data.getItemStack("FullInventory." + first + ".Items.0"));
+        assertEquals(item, f.data.getItemStack("FullInventory." + second + ".Items.0"),
+                "an older snapshot must never erase a later completed save");
+    }
+
+    @Test void laterSaveWaitsForEarlierOwnerAndCapturesLatestItems() throws Exception {
+        Fixture f = createFixture();
+        var submissions = deferredPublications(f);
+        UUID first = UUID.randomUUID(), second = UUID.randomUUID(), latest = UUID.randomUUID();
+        var item = mock(ItemStack.class);
+        f.handler.add(first, item);
+        assertFalse(f.handler.saveDurably());
+        var publicationA = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(publicationA);
+        f.handler.add(second, item);
+        assertFalse(f.handler.saveDurably());
+        // This addition must be captured when B can actually publish, not when B queues.
+        f.handler.add(latest, item);
+        assertTrue(submissions.isEmpty(), "a later owner stage must not overtake the pending stage");
+        publicationA.getValue().complete(null);
+        var publicationB = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(publicationB);
+        assertTrue(publicationB.getKey().contains("FullInventory." + latest));
+        publicationB.getValue().complete(null);
+        assertEquals(item, f.data.getItemStack("FullInventory." + first + ".Items.0"));
+        assertEquals(item, f.data.getItemStack("FullInventory." + second + ".Items.0"));
+        assertEquals(item, f.data.getItemStack("FullInventory." + latest + ".Items.0"));
+    }
+
+    @Test void shutdownWaitsForPendingOrdinaryOwnerSave() throws Exception {
+        Fixture f = createFixture();
+        var submissions = deferredPublications(f);
+        UUID first = UUID.randomUUID(), second = UUID.randomUUID();
+        var item = mock(ItemStack.class);
+        f.handler.add(first, item); assertFalse(f.handler.saveDurably());
+        var publicationA = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(publicationA);
+        f.handler.add(second, item);
+        var shutdown = f.handler.shutdownAsync(Runnable::run).toCompletableFuture();
+        assertFalse(shutdown.isDone());
+        assertTrue(submissions.isEmpty(), "shutdown must wait for the outstanding owner stage");
+        publicationA.getValue().complete(null);
+        var finalPublication = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(finalPublication);
+        finalPublication.getValue().complete(null); shutdown.get(3, TimeUnit.SECONDS);
+        assertEquals(item, f.data.getItemStack("FullInventory." + first + ".Items.0"));
+        assertEquals(item, f.data.getItemStack("FullInventory." + second + ".Items.0"));
+        assertTrue(f.handler.getTimer().isShutdown());
+    }
+
+    @Test void repeatedLegacyShutdownReusesPendingAndCompletedPublication() throws Exception {
+        Fixture f = createFixture(); var submissions = deferredPublications(f);
+        f.handler.add(UUID.randomUUID(), mock(ItemStack.class));
+        f.handler.shutdown(); var last = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(last);
+        f.handler.shutdown();
+        var finalStage = f.handler.shutdownAsync(Runnable::run).toCompletableFuture();
+        last.getValue().complete(null);
+        finalStage.get(3, TimeUnit.SECONDS);
+        assertTrue(f.handler.getTimer().isShutdown());
+        f.handler.shutdown();
+        assertTrue(submissions.isEmpty(), "repeated shutdown must not submit stale final writes");
+        verify(f.serverData, times(1)).mutateFinalData(any());
+    }
+
+    @Test void shutdownDrainsAcceptedSnapshotContinuationBeforeFinalPublication() throws Exception {
+        Fixture f = createFixture(); var submissions = deferredPublications(f);
+        UUID first = UUID.randomUUID(), second = UUID.randomUUID(); var item = mock(ItemStack.class);
+        f.handler.add(first, item); assertFalse(f.handler.saveDurably());
+        var a = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(a);
+        var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+        var interrupted = new AtomicBoolean();
+        f.handler.getTimer().execute(() -> {
+            entered.countDown();
+            try { release.await(5, TimeUnit.SECONDS); }
+            catch (InterruptedException failure) { interrupted.set(true); }
+        });
+        assertTrue(entered.await(3, TimeUnit.SECONDS));
+        try {
+            f.handler.add(second, item); assertFalse(f.handler.saveDurably());
+            // B is accepted by the timer but cannot run until the blocked task drains.
+            a.getValue().complete(null);
+            var shutdown = f.handler.shutdownAsync(Runnable::run).toCompletableFuture();
+            assertTrue(f.handler.getTimer().isShutdown()); assertFalse(shutdown.isDone());
+            release.countDown();
+            var b = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(b);
+            assertFalse(interrupted.get()); assertFalse(shutdown.isDone());
+            b.getValue().complete(null);
+            var last = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(last);
+            assertFalse(shutdown.isDone()); last.getValue().complete(null); shutdown.get(3, TimeUnit.SECONDS);
+            assertEquals(item, f.data.getItemStack("FullInventory." + first + ".Items.0"));
+            assertEquals(item, f.data.getItemStack("FullInventory." + second + ".Items.0"));
+        } finally { release.countDown(); }
+    }
+
+    @Test void cancellingShutdownViewCannotReleasePendingOwner() throws Exception {
+        Fixture f = createFixture(); var submissions = deferredPublications(f);
+        UUID owner = UUID.randomUUID(); var item = mock(ItemStack.class);
+        f.handler.add(owner, item); assertFalse(f.handler.saveDurably());
+        var a = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(a);
+        var shutdown = f.handler.shutdownAsync(Runnable::run).toCompletableFuture();
+        assertTrue(shutdown.cancel(false)); assertTrue(submissions.isEmpty());
+        assertTrue(f.handler.getTimer().isShutdown());
+        a.getValue().complete(null);
+        var last = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(last);
+        last.getValue().complete(null);
+        assertEquals(item, f.data.getItemStack("FullInventory." + owner + ".Items.0"));
+    }
+
+    @Test void deferredSnapshotRunsOnWorkerInsteadOfOwnerCompletionThread() throws Exception {
+        Fixture f = createFixture();
+        var calls = new java.util.concurrent.LinkedBlockingQueue<Thread>();
+        var submissions = deferredPublications(f, calls);
+        f.handler.add(UUID.randomUUID(), mock(ItemStack.class)); assertFalse(f.handler.saveDurably());
+        var a = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(a); calls.take();
+        assertFalse(f.handler.saveDurably()); a.getValue().complete(null);
+        var b = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(b);
+        Thread worker = calls.poll(3, TimeUnit.SECONDS); assertNotNull(worker);
+        assertNotSame(Thread.currentThread(), worker); assertTrue(worker.isDaemon());
+        b.getValue().complete(null);
+    }
+
+    private java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration,
+            java.util.concurrent.CompletableFuture<Void>>> deferredPublications(Fixture f) {
+        return deferredPublications(f, null);
+    }
+
+    private java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration,
+            java.util.concurrent.CompletableFuture<Void>>> deferredPublications(Fixture f,
+                    java.util.Queue<Thread> threads) {
+        var submissions = new java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration,
+                java.util.concurrent.CompletableFuture<Void>>>();
+        doAnswer(call -> {
+            if (threads != null) threads.add(Thread.currentThread());
+            var candidate = new YamlConfiguration();
+            call.getArgument(0, java.util.function.Consumer.class).accept(candidate);
+            var confirmed = new java.util.concurrent.CompletableFuture<Void>();
+            submissions.add(java.util.Map.entry(candidate, confirmed));
+            return confirmed.thenRun(() -> {
+                synchronized (f.serverData.publicationMonitor()) {
+                    f.data.set("FullInventory", null);
+                    for (String path : candidate.getKeys(true))
+                        if (!candidate.isConfigurationSection(path)) f.data.set(path, candidate.get(path));
+                }
+            });
+        }).when(f.serverData).mutateFinalData(any());
+        return submissions;
+    }
+
     @Test void overlappingSuccessfulAsyncOwnerSavesRetainEveryUnpublishedOverflow() throws Exception {
         overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(false);
     }
     @Test void failedEarlierSaveCannotDropOverflowOwnedByAnotherPendingPublication() throws Exception {
         overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(true);
     }
+    @Test void shutdownConfirmsQueuedOverflowOnlyAfterItsOrderedFinalSave() throws Exception {
+        overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(false, true);
+    }
     private void overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(boolean failFirst) throws Exception {
+        overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(failFirst, false);
+    }
+    private void overlappingAsyncOwnerSavesRetainEveryUnpublishedOverflow(boolean failFirst, boolean shutdown) throws Exception {
         Fixture f = createFixture();
         var submissions = new java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration, java.util.concurrent.CompletableFuture<Void>>>();
         doAnswer(call -> {
@@ -964,11 +1131,12 @@ public class FullInventoryHandlerTest {
             var receiptA = f.handler.giveItemAsync(a, item).toCompletableFuture();
             ownerTasks.poll(3, TimeUnit.SECONDS).run(); var publicationA = submissions.poll(3, TimeUnit.SECONDS);
             var receiptB = f.handler.giveItemAsync(b, item).toCompletableFuture();
-            ownerTasks.poll(3, TimeUnit.SECONDS).run(); var publicationB = submissions.poll(3, TimeUnit.SECONDS);
-            assertNotNull(publicationA); assertNotNull(publicationB);
+            ownerTasks.poll(3, TimeUnit.SECONDS).run();
+            f.handler.getTimer().submit(() -> {}).get(3, TimeUnit.SECONDS);
+            assertNotNull(publicationA);
+            assertTrue(submissions.isEmpty(), "the second snapshot must await the first owner");
             assertFalse(receiptA.isDone()); assertFalse(receiptB.isDone()); assertTrue(f.handler.getItems().isEmpty());
-            assertTrue(publicationB.getKey().contains("FullInventory." + first));
-            assertTrue(publicationB.getKey().contains("FullInventory." + second));
+            var finalFiles = shutdown ? f.handler.shutdownAsync(Runnable::run).toCompletableFuture() : null;
             if (failFirst) {
                 publicationA.getValue().completeExceptionally(new IllegalStateException("first publication rejected"));
                 // An unconfirmed owner save can already be visible on disk.
@@ -976,7 +1144,12 @@ public class FullInventoryHandlerTest {
                 f.handler.getTimer().submit(() -> {}).get(3, TimeUnit.SECONDS);
                 assertTrue(ownerTasks.isEmpty()); verify(a, never()).getWorld(); assertFalse(receiptA.isDone());
             } else publicationA.getValue().complete(null);
+            var publicationB = submissions.poll(3, TimeUnit.SECONDS); assertNotNull(publicationB);
+            assertTrue(publicationB.getKey().contains("FullInventory." + first));
+            assertTrue(publicationB.getKey().contains("FullInventory." + second));
+            assertFalse(receiptB.isDone());
             publicationB.getValue().complete(null);
+            if (finalFiles != null) finalFiles.get(3, TimeUnit.SECONDS);
             receiptA.get(3, TimeUnit.SECONDS); receiptB.get(3, TimeUnit.SECONDS);
             assertEquals(List.of(item), f.handler.getItems().get(first));
             assertEquals(List.of(item), f.handler.getItems().get(second));

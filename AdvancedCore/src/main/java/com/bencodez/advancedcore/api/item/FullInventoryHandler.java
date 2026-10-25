@@ -282,18 +282,12 @@ public class FullInventoryHandler {
 	}
 
 	public synchronized void shutdown() {
-		shuttingDown.set(true);
-		if (checkTask != null) {
-			checkTask.cancel(false);
-			checkTask = null;
-		}
-		// Flush accepted replay reservations while their completion stages can still
-		// advance the outer reward checkpoint. Stopping the executor first can discard
-		// an accepted persistence task and later replay the already-inserted items.
-		saveDurably();
-		if (timer != null) {
-			timer.shutdownNow();
-		}
+		// Reuse the same final publication for legacy and asynchronous shutdown.
+		// A second shutdown must not retire a worker needed by an earlier save.
+		shutdownAsync(Runnable::run).whenComplete((ignored, failure) -> {
+			if (failure != null) plugin.getLogger().log(Level.WARNING,
+					"Failed to confirm pending full-inventory items", failure);
+		});
 	}
 
 	/**
@@ -307,6 +301,8 @@ public class FullInventoryHandler {
 		shuttingDown.set(true);
 		ScheduledFuture<?> task = checkTask;
 		if (task != null) task.cancel(false);
+		// Reject new timer work immediately, but drain already accepted continuations.
+		if (timer != null) timer.shutdown();
 		ServerData serverData = plugin.getServerDataFile();
 		if (!plugin.isLoadServerData() && (serverData == null || serverData.getData() == null)) {
 			// No native file was loaded. Still fence delivery and retire its timer,
@@ -318,14 +314,14 @@ public class FullInventoryHandler {
 		try {
 			persistenceExecutor.execute(() -> {
 				try {
-					finalSnapshot(serverData, false).whenComplete((ignored, failure) -> {
+					finalSnapshot(serverData, false, persistenceExecutor).whenComplete((ignored, failure) -> {
+						if (timer != null) timer.shutdownNow();
 						if (failure == null) completion.complete(null);
 						else completion.completeExceptionally(failure);
 					});
 				} catch (Throwable failure) {
-					completion.completeExceptionally(failure);
-				} finally {
 					if (timer != null) timer.shutdownNow();
+					completion.completeExceptionally(failure);
 				}
 			});
 		} catch (Throwable failure) {
@@ -337,7 +333,41 @@ public class FullInventoryHandler {
 
 	private final java.util.Map<String, Integer> overflowPublications = new HashMap<>();
 
+	private final Object overflowPublicationOrder = new Object();
+	private CompletableFuture<Void> overflowPublicationTail = CompletableFuture.completedFuture(null);
+
 	private CompletionStage<Void> finalSnapshot(ServerData serverData, boolean requireRunning) {
+		return finalSnapshot(serverData, requireRunning, timer);
+	}
+
+	private CompletionStage<Void> finalSnapshot(ServerData serverData, boolean requireRunning, Executor executor) {
+		CompletableFuture<Void> settled = new CompletableFuture<>();
+		CompletableFuture<Void> previous;
+		synchronized (overflowPublicationOrder) {
+			previous = overflowPublicationTail;
+			overflowPublicationTail = settled;
+		}
+		Runnable publish = () -> {
+			try {
+				publishSnapshot(serverData, requireRunning).whenComplete((ignored, failure) -> {
+					if (failure == null) settled.complete(null);
+					else settled.completeExceptionally(failure);
+				});
+			} catch (Throwable failure) { settled.completeExceptionally(failure); }
+		};
+		// Claim order before invoking any owner or callback. Snapshot capture belongs
+		// to that order too: an older asynchronous replacement must not publish last.
+		if (previous.isDone()) publish.run();
+		else previous.whenComplete((ignored, failure) -> {
+			// Owner completion may run on a platform thread; never start disk work there.
+			try { executor.execute(publish); }
+			catch (Throwable rejected) { settled.completeExceptionally(rejected); }
+		});
+		// A caller cancelling its view must not release the actual publication queue.
+		return settled.copy();
+	}
+
+	private CompletionStage<Void> publishSnapshot(ServerData serverData, boolean requireRunning) {
 		HashMap<String, ReservedOverflow> reservations;
 		CompletionStage<Void> publication;
 		deliveryLock.writeLock().lock();
