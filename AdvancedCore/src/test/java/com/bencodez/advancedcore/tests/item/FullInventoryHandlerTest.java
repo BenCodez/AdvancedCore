@@ -1067,6 +1067,106 @@ public class FullInventoryHandlerTest {
         } finally { release.countDown(); }
     }
 
+    @Test void cancelledShutdownObservationCannotAdvanceActualLifecyclePublications() throws Exception {
+        verifyShutdownObservationCannotAdvanceActualLifecyclePublications("cancel");
+    }
+    @Test void completedShutdownObservationCannotAdvanceActualLifecyclePublications() throws Exception {
+        verifyShutdownObservationCannotAdvanceActualLifecyclePublications("complete");
+    }
+    @Test void failedShutdownObservationCannotAdvanceActualLifecyclePublications() throws Exception {
+        verifyShutdownObservationCannotAdvanceActualLifecyclePublications("fail");
+    }
+    @Test void untouchedShutdownObservationRetainsActualLifecycleOrder() throws Exception {
+        verifyShutdownObservationCannotAdvanceActualLifecyclePublications("untouched");
+    }
+    private void verifyShutdownObservationCannotAdvanceActualLifecyclePublications(String action) throws Exception {
+        Fixture f = createFixture();
+        when(f.plugin.isLoadServerData()).thenReturn(true);
+        when(f.plugin.getFullInventoryHandler()).thenReturn(f.handler);
+        var permissions = mock(com.bencodez.advancedcore.api.permissions.PermissionHandler.class);
+        when(f.plugin.getPermissionHandler()).thenReturn(permissions);
+        var publications = new java.util.concurrent.LinkedBlockingQueue<java.util.Map.Entry<YamlConfiguration,
+                java.util.concurrent.CompletableFuture<Void>>>();
+        var controls = new java.util.concurrent.CopyOnWriteArrayList<java.util.concurrent.CompletableFuture<Void>>();
+        doAnswer(call -> {
+            var snapshot = new YamlConfiguration();
+            synchronized (f.serverData.publicationMonitor()) {
+                for (String path : f.data.getKeys(true))
+                    if (!f.data.isConfigurationSection(path)) snapshot.set(path, f.data.get(path));
+                call.getArgument(0, java.util.function.Consumer.class).accept(snapshot);
+            }
+            var control = new java.util.concurrent.CompletableFuture<Void>();
+            controls.add(control);
+            var installed = control.thenRun(() -> {
+                synchronized (f.serverData.publicationMonitor()) {
+                    for (String key : new ArrayList<>(f.data.getKeys(false))) f.data.set(key, null);
+                    for (String path : snapshot.getKeys(true))
+                        if (!snapshot.isConfigurationSection(path)) f.data.set(path, snapshot.get(path));
+                }
+            });
+            publications.add(java.util.Map.entry(snapshot, control));
+            return installed;
+        }).when(f.serverData).mutateFinalData(any());
+        var permissionsStarted = new AtomicBoolean();
+        var permissionSave = new java.util.concurrent.CompletableFuture<Void>();
+        when(permissions.shutDownAsync(any())).thenAnswer(call -> {
+            call.getArgument(0, java.util.concurrent.Executor.class).execute(() -> permissionsStarted.set(true));
+            return permissionSave;
+        });
+        var finalFiles = new AtomicReference<CompletionStage<Void>>();
+        doAnswer(call -> { finalFiles.set(call.getArgument(0)); return null; })
+                .when(f.plugin).onShutdownComplete(any(CompletionStage.class));
+        UUID owner = UUID.randomUUID(); var item = mock(ItemStack.class);
+        f.handler.add(owner, item);
+        var caller = f.handler.shutdownAsync(Runnable::run).toCompletableFuture();
+        var inventory = publications.poll(3, TimeUnit.SECONDS); assertNotNull(inventory);
+        switch (action) {
+            case "cancel" -> assertTrue(caller.cancel(false));
+            case "complete" -> assertTrue(caller.complete(null));
+            case "fail" -> assertTrue(caller.completeExceptionally(new IllegalStateException("synthetic caller failure")));
+            default -> assertFalse(caller.isDone());
+        }
+        var platform = new com.bencodez.advancedcore.bukkit.runtime.BukkitRuntimePlatform(f.plugin);
+        var workerField = platform.getClass().getDeclaredField("persistenceWorker"); workerField.setAccessible(true);
+        var worker = (java.util.concurrent.ThreadPoolExecutor) workerField.get(platform);
+        try {
+            platform.beforeExecutorShutdown().stream()
+                    .filter(cleanup -> cleanup.name().equals("full inventory handler")
+                            || cleanup.name().equals("server data timestamp"))
+                    .forEach(cleanup -> cleanup.action().run());
+            platform.afterExecutorShutdown().stream()
+                    .filter(cleanup -> cleanup.name().equals("permission handler"))
+                    .forEach(cleanup -> cleanup.action().run());
+            worker.submit(() -> {}).get(3, TimeUnit.SECONDS);
+            assertTrue(publications.isEmpty(), "timestamp must await the actual inventory owner after caller completion");
+            assertFalse(permissionsStarted.get());
+            var lifecycleObservation = f.handler.shutdownAsync(Runnable::run).toCompletableFuture();
+            assertFalse(lifecycleObservation.isDone());
+            inventory.getValue().complete(null);
+            lifecycleObservation.get(3, TimeUnit.SECONDS);
+            var timestamp = publications.poll(3, TimeUnit.SECONDS); assertNotNull(timestamp);
+            assertTrue(timestamp.getKey().contains("LastUpdated"));
+            assertEquals(item, timestamp.getKey().getItemStack("FullInventory." + owner + ".Items.0"));
+            assertFalse(permissionsStarted.get());
+            timestamp.getValue().complete(null);
+            worker.submit(() -> {}).get(3, TimeUnit.SECONDS);
+            assertTrue(permissionsStarted.get());
+            platform.afterExecutorShutdown().stream()
+                    .filter(cleanup -> cleanup.name().equals("shutdown persistence worker")
+                            || cleanup.name().equals("plugin shutdown completion hook"))
+                    .forEach(cleanup -> cleanup.action().run());
+            assertFalse(finalFiles.get().toCompletableFuture().isDone());
+            permissionSave.complete(null);
+            finalFiles.get().toCompletableFuture().get(3, TimeUnit.SECONDS);
+            assertTrue(worker.awaitTermination(3, TimeUnit.SECONDS));
+            assertEquals(item, f.data.getItemStack("FullInventory." + owner + ".Items.0"));
+            assertTrue(f.data.contains("LastUpdated"));
+        } finally {
+            controls.forEach(control -> control.complete(null)); permissionSave.complete(null);
+            worker.shutdownNow(); assertTrue(worker.awaitTermination(3, TimeUnit.SECONDS));
+        }
+    }
+
     @Test void cancellingShutdownViewCannotReleasePendingOwner() throws Exception {
         Fixture f = createFixture(); var submissions = deferredPublications(f);
         UUID owner = UUID.randomUUID(); var item = mock(ItemStack.class);

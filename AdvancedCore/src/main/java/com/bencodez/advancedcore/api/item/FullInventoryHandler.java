@@ -56,7 +56,7 @@ public class FullInventoryHandler {
 	private final AdvancedCorePlugin plugin;
 	private final ReentrantReadWriteLock deliveryLock = new ReentrantReadWriteLock(true);
 	private final AtomicBoolean shuttingDown = new AtomicBoolean();
-	private final java.util.concurrent.atomic.AtomicReference<CompletableFuture<Void>> shutdownPersistence =
+	private final java.util.concurrent.atomic.AtomicReference<CompletionStage<Void>> shutdownPersistence =
 			new java.util.concurrent.atomic.AtomicReference<>();
 
 	@Getter
@@ -297,7 +297,9 @@ public class FullInventoryHandler {
 	 */
 	public CompletionStage<Void> shutdownAsync(Executor persistenceExecutor) {
 		CompletableFuture<Void> completion = new CompletableFuture<>();
-		if (!shutdownPersistence.compareAndSet(null, completion)) return shutdownPersistence.get();
+		// Keep one shared observation stage; each CompletableFuture view is isolated.
+		CompletionStage<Void> observation = completion.minimalCompletionStage();
+		if (!shutdownPersistence.compareAndSet(null, observation)) return shutdownPersistence.get();
 		shuttingDown.set(true);
 		ScheduledFuture<?> task = checkTask;
 		if (task != null) task.cancel(false);
@@ -309,7 +311,7 @@ public class FullInventoryHandler {
 			// but do not snapshot or acknowledge any unpublished replay overflow.
 			if (timer != null) timer.shutdownNow();
 			completion.complete(null);
-			return completion;
+			return observation;
 		}
 		try {
 			persistenceExecutor.execute(() -> {
@@ -328,7 +330,7 @@ public class FullInventoryHandler {
 			completion.completeExceptionally(failure);
 			if (timer != null) timer.shutdownNow();
 		}
-		return completion;
+		return observation;
 	}
 
 	private final java.util.Map<String, Integer> overflowPublications = new HashMap<>();
