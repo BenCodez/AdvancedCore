@@ -138,6 +138,102 @@ public class UserDataCache {
 		return true;
 	}
 
+	/** Supported arithmetic for a bounded, conditional cached integer mutation. */
+	public enum IntegerMutation { SET, ADD, ADD_FLOOR_ZERO, DEBIT_POSITIVE }
+
+	/** Previous values are returned so a caller can compensate precisely. */
+	public record IntegerMutationResult(boolean applied, java.util.Map<String, Integer> previous) { }
+
+	/**
+	 * Atomically compute and enqueue a bounded set of integer changes on a published
+	 * shared cache. Returns null when the cache is cold, retiring, or not bound; a
+	 * DEBIT_POSITIVE result with applied=false means no requested balance was positive.
+	 * No user callback or storage operation is run while the cache monitor is held.
+	 * The notification is staged behind an admitted exclusive flush, just like a
+	 * normal shared change. This is local cache atomicity, not a cross-process transaction.
+	 * If notification submission is rejected after acceptance, the manager records
+	 * the failure and the result still reports the already accepted mutation.
+	 */
+	public IntegerMutationResult tryMutateIntegers(java.util.Map<String, Integer> operands,
+			IntegerMutation operation, java.util.function.Consumer<java.util.Set<String>> notification) {
+		Objects.requireNonNull(operands, "operands"); Objects.requireNonNull(operation, "operation");
+		if (operands.isEmpty() || operands.size() > 64) throw new IllegalArgumentException("Invalid integer mutation size");
+		var ordered = new java.util.LinkedHashMap<String, Integer>();
+		int copied = 0;
+		for (var entry : operands.entrySet()) {
+			if (++copied > 64) throw new IllegalArgumentException("Invalid integer mutation size");
+			String key = entry.getKey(); Integer value = entry.getValue();
+			if (key == null || key.isEmpty() || value == null) throw new IllegalArgumentException("Invalid integer mutation");
+			if (operation == IntegerMutation.DEBIT_POSITIVE && value != -1)
+				throw new IllegalArgumentException("Positive debit must decrement by one");
+			ordered.put(key, value);
+		}
+		if (ordered.isEmpty()) throw new IllegalArgumentException("Invalid integer mutation size");
+		Runnable notify = null;
+		IntegerMutationResult result;
+		synchronized (this) {
+			if (sharedFlushGate == null || removing || uuid == null || cache == null || cachedChanges == null
+					|| !storageSnapshotPublished) return null;
+			var previous = new java.util.LinkedHashMap<String, Integer>();
+			for (String key : ordered.keySet()) {
+				if (!cache.containsKey(key) || cache.get(key) == null) return null;
+				DataValue value = cache.get(key);
+				// Direct snapshot replacement intentionally remains visible to legacy
+				// readers. It must not let arithmetic forget an accepted write whose
+				// batch is still in flight. A newer local mutation retains changedAt.
+				if (!changedAt.containsKey(key) && inFlightValues.containsKey(key))
+					value = inFlightValues.get(key);
+				int number;
+				if (value.isInt()) number = value.getInt();
+				else if (value.isString()) {
+					try { number = Integer.parseInt(value.getString()); }
+					catch (NumberFormatException invalid) { number = 0; }
+				} else number = 0;
+				previous.put(key, number);
+			}
+			var changes = new java.util.ArrayList<UserDataChange>();
+			var changed = new java.util.LinkedHashSet<String>();
+			ordered.forEach((key, operand) -> {
+				int old = previous.get(key);
+				if (operation == IntegerMutation.DEBIT_POSITIVE && old <= 0) return;
+				int updated = switch (operation) {
+					case SET -> operand;
+					case ADD, DEBIT_POSITIVE -> old + operand;
+					case ADD_FLOOR_ZERO -> Math.max(0, old + operand);
+				};
+				changes.add(new com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt(key, updated));
+				changed.add(key);
+			});
+			result = new IntegerMutationResult(!changes.isEmpty(), java.util.Map.copyOf(previous));
+			if (changes.isEmpty()) return result;
+			if (exclusiveFlushesPending != 0) {
+				for (UserDataChange change : changes) { publishChangeInternal(change); changesAfterExclusiveFlush.add(change); }
+				if (notification != null) {
+					var snapshot = java.util.Set.copyOf(changed);
+					Runnable raw = () -> notification.accept(snapshot);
+					Runnable captured = manager.captureSharedUserDataNotification(raw);
+					notificationsAfterExclusiveFlush.add(captured == null ? raw : captured);
+				}
+				return result;
+			}
+			for (UserDataChange change : changes) addChangeInternal(change, true);
+			if (notification != null) {
+				var snapshot = java.util.Set.copyOf(changed);
+				Runnable raw = () -> notification.accept(snapshot);
+				Runnable captured = manager.captureSharedUserDataNotification(raw);
+				notify = captured == null ? raw : captured;
+			}
+		}
+		if (notify != null) {
+			try { manager.dispatchSharedUserDataNotification(notify); }
+			catch (RejectedExecutionException rejected) {
+				// The manager records submission failures. Returning the accepted
+				// result prevents callers from retrying an already-applied debit.
+			}
+		}
+		return result;
+	}
+
 	private synchronized void addChangeInternal(UserDataChange change, boolean queue) {
 		if (change != null && sharedStorageWriter != null && (cache == null || cachedChanges == null)) {
 			throw new IllegalStateException("Shared user cache is retired");
@@ -319,7 +415,9 @@ public class UserDataCache {
 				// A checkpoint action may replace the visible cache snapshot. Re-publish
 				// mutations ordered after that checkpoint as they cross back into the
 				// normal queue so read-after-write visibility survives the replacement.
+				boolean unavailable = !storageSnapshotPublished && cache != null && !cache.containsKey(deferred.getKey());
 				publishChangeInternal(deferred);
+				if (unavailable && cache != null) cache.remove(deferred.getKey());
 				cachedChanges.add(deferred);
 			}
 			Runnable deferredNotification;
@@ -600,14 +698,20 @@ public class UserDataCache {
 						// rather than another mutation. It clears changedAt(), so reconcile
 						// that stale snapshot with this completed write instead of leaving a
 						// value visible which will never be persisted.
-						if (queuedVersion == null || Objects.equals(persistedVersion, queuedVersion)) {
+						if ((storageSnapshotPublished || cache.containsKey(persistedChange.getKey()))
+								&& (queuedVersion == null || Objects.equals(persistedVersion, queuedVersion))) {
 							cache.put(persistedChange.getKey(), persistedChange.toUserDataValue());
 						}
 					}
 				}
 				// The in-memory values now represent the successful write. Mark that
 				// replacement so an older in-flight read cannot overwrite them.
-				persistedMutationVersions.forEach((key, version) -> persistedAt.put(key, version));
+				// Fence reads that began before this write completed, even if the
+				// key's original mutation predates a later mutation of another key.
+				if (!values.isEmpty()) {
+					long completedVersion = ++snapshotVersion;
+					values.keySet().forEach(key -> persistedAt.put(key, completedVersion));
+				}
 				persistedMutationVersions.forEach((key, version) -> {
 					if (version.equals(changedAt.get(key))) changedAt.remove(key);
 				});
@@ -615,7 +719,12 @@ public class UserDataCache {
 			changedUser = user;
 			changedKeys = ArrayUtils.convert(keys);
 		} catch (RuntimeException | Error e) {
-			if (!persisted) requeueChanges(changes);
+			if (!persisted) {
+				try { requeueChanges(changes); }
+				catch (RuntimeException | Error recoveryFailure) {
+					if (recoveryFailure != e) e.addSuppressed(recoveryFailure);
+				}
+			}
 			throw e;
 		} finally {
 			finishInFlightBatch();
@@ -641,6 +750,19 @@ public class UserDataCache {
 		if (changes == null || changes.isEmpty() || cachedChanges == null) return;
 		Queue<UserDataChange> restored = new ConcurrentLinkedQueue<>();
 		restored.addAll(changes); restored.addAll(cachedChanges); cachedChanges = restored;
+		// A direct replacement may have temporarily exposed an older value while
+		// this batch was in flight. Once requeued, restore the ordered pending view
+		// before another arithmetic operation can observe that stale snapshot.
+		if (!inFlightValues.isEmpty()) {
+			try { recordSnapshotReplacement(); }
+			catch (RuntimeException | Error recoveryFailure) {
+				// A malformed change must not leave a partly rebuilt visible snapshot.
+				if (cache != null) cache.clear();
+				storageSnapshotPublished = false;
+				replacementVersion = ++snapshotVersion;
+				throw recoveryFailure;
+			}
+		}
 	}
 
 	private synchronized void finishInFlightBatch() {
@@ -706,8 +828,14 @@ public class UserDataCache {
 		if (replacementVersion > expectedVersion) return new HashMap<>(cache);
 		storedDataPresent = snapshotStoredDataPresent;
 		HashMap<String, DataValue> merged = values == null ? new HashMap<>() : new HashMap<>(values);
+		// A flush may have claimed pending writes after the read started, removing
+		// them from the queue before the storage snapshot can observe them.
+		merged.putAll(inFlightValues);
 		changedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
-		persistedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
+		persistedAt.forEach((key, version) -> {
+			if ((version > expectedVersion || (!storageSnapshotPublished && version == expectedVersion))
+					&& cache.containsKey(key)) merged.put(key, cache.get(key));
+		});
 		cache = merged;
 		storageSnapshotPublished = true;
 		recordSnapshotReplacement();
@@ -721,12 +849,17 @@ public class UserDataCache {
 		// not erase the version fence for a mutation that is still waiting in the
 		// write queue. Otherwise an older in-flight batch can overwrite that newer
 		// visible value when it completes.
-		changedAt.keySet().removeIf(key -> cachedChanges == null
-				|| cachedChanges.stream().noneMatch(change -> key.equals(change.getKey())));
-		if (cache != null && cachedChanges != null) {
-			for (UserDataChange change : cachedChanges) {
-				cache.put(change.getKey(), change.toUserDataValue());
-			}
+		changedAt.keySet().removeIf(key -> (cachedChanges == null || cachedChanges.stream().noneMatch(change -> key.equals(change.getKey())))
+				&& changesAfterExclusiveFlush.stream().noneMatch(change -> key.equals(change.getKey())));
+		if (cache != null) {
+			// Queued writes precede changes accepted during an exclusive checkpoint.
+			// Keep that ordering when a storage snapshot replaces the visible cache.
+			if (cachedChanges != null) for (UserDataChange change : cachedChanges)
+				if (storageSnapshotPublished || cache.containsKey(change.getKey()))
+					cache.put(change.getKey(), change.toUserDataValue());
+			for (UserDataChange change : changesAfterExclusiveFlush)
+				if (storageSnapshotPublished || cache.containsKey(change.getKey()))
+					cache.put(change.getKey(), change.toUserDataValue());
 		}
 	}
 }
