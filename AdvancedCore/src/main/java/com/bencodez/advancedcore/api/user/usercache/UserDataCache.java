@@ -198,8 +198,8 @@ public class UserDataCache {
 				if (operation == IntegerMutation.DEBIT_POSITIVE && old <= 0) return;
 				int updated = switch (operation) {
 					case SET -> operand;
-					case ADD, DEBIT_POSITIVE -> old + operand;
-					case ADD_FLOOR_ZERO -> Math.max(0, old + operand);
+					case ADD, DEBIT_POSITIVE -> Math.addExact(old, operand);
+					case ADD_FLOOR_ZERO -> Math.max(0, Math.addExact(old, operand));
 				};
 				changes.add(new com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt(key, updated));
 				changed.add(key);

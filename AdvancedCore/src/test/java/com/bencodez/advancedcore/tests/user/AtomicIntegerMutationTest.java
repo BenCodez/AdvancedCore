@@ -436,6 +436,37 @@ class AtomicIntegerMutationTest {
         assertEquals(0,cache.getIfPresent("a").getInt());
     }
 
+    @Test void overflowRejectsWholeBatchBeforeCacheQueueOrNotification() {
+        for (var operation : List.of(IntegerMutation.ADD, IntegerMutation.ADD_FLOOR_ZERO)) {
+            for (var boundary : List.of(Integer.MAX_VALUE, Integer.MIN_VALUE)) {
+                var cache = cache();
+                cache.updateCache(new HashMap<>(Map.of("a", new DataValueInt(2), "b", new DataValueInt(boundary))));
+                var operands = new LinkedHashMap<String, Integer>();
+                operands.put("a", 1);
+                operands.put("b", boundary == Integer.MAX_VALUE ? 1 : -1);
+                var notifications = new AtomicInteger();
+                assertFalse(cache.hasChangesToProcess());
+                assertThrows(ArithmeticException.class, () -> cache.tryMutateIntegers(operands, operation,
+                        keys -> notifications.incrementAndGet()));
+                assertEquals(2, cache.getIfPresent("a").getInt());
+                assertEquals(boundary, cache.getIfPresent("b").getInt());
+                assertFalse(cache.hasChangesToProcess());
+                assertEquals(0, notifications.get());
+            }
+        }
+    }
+
+    @Test void validBoundarySetDebitAndFloorOperationsRemainSupported() {
+        var cache = cache();
+        assertTrue(cache.tryMutateIntegers(Map.of("a", Integer.MAX_VALUE), IntegerMutation.SET, null).applied());
+        assertTrue(cache.tryMutateIntegers(Map.of("a", -1), IntegerMutation.DEBIT_POSITIVE, null).applied());
+        assertEquals(Integer.MAX_VALUE - 1, cache.getIfPresent("a").getInt());
+        assertTrue(cache.tryMutateIntegers(Map.of("a", 1), IntegerMutation.ADD, null).applied());
+        assertEquals(Integer.MAX_VALUE, cache.getIfPresent("a").getInt());
+        assertTrue(cache.tryMutateIntegers(Map.of("b", -3), IntegerMutation.ADD_FLOOR_ZERO, null).applied());
+        assertEquals(0, cache.getIfPresent("b").getInt());
+    }
+
     @Test void conditionalDebitsAndAwardsAcrossBothFieldsCannotLoseUpdates() throws Exception {
         var cache=cache(); var executor=Executors.newFixedThreadPool(2); var start=new CountDownLatch(1);
         try {
