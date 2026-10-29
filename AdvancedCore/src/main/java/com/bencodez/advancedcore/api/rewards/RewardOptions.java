@@ -100,6 +100,12 @@ public class RewardOptions {
 	@Setter
 	private Consumer<Reward.ReplayCheckpoint> asyncReplayCheckpointConsumer;
 
+	/** Optional best-effort observer for a legacy fire-and-forget terminal failure.
+	 * Invoked on the completion thread; it must not block or assume Bukkit ownership. */
+	@Getter
+	@Setter
+	private Consumer<Throwable> asyncFailureObserver;
+
 	/** True while replaying an entry that must remain in the timed queue on deferral. */
 	@Getter
 	@Setter
@@ -273,6 +279,7 @@ public class RewardOptions {
 		copy.setAsyncReplayRegistryFingerprints(new HashMap<>(asyncReplayRegistryFingerprints));
 		copy.setLegacyAsyncReplayCheckpoint(legacyAsyncReplayCheckpoint);
 		copy.setAsyncReplayCheckpointConsumer(asyncReplayCheckpointConsumer);
+		copy.setAsyncFailureObserver(asyncFailureObserver);
 		copy.setAsyncReplayKey(asyncReplayKey);
 		copy.setAsyncReplayOccurrenceId(asyncReplayOccurrenceId);
 		copy.setTimedQueueReplay(timedQueueReplay);

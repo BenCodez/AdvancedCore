@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -144,6 +145,114 @@ class RewardAsyncInjectionTest {
 	void tearDown() {
 		handler.getDelayedTimer().shutdownNow();
 		AdvancedCorePlugin.setInstance(null);
+	}
+
+	@Test
+	void legacyFailureObserverRunsOnceForEligibilityBranchAndDoesNotMaskFailure() {
+		data.set("GameModes", List.of("SURVIVAL"));
+		Reward target = org.mockito.Mockito.spy(reward);
+		RuntimeException original = new RuntimeException("original");
+		RewardOptions options = new RewardOptions();
+		AtomicInteger calls = new AtomicInteger();
+		AtomicReference<Throwable> seen = new AtomicReference<>();
+		options.setAsyncFailureObserver(failure -> { calls.incrementAndGet(); seen.set(failure); throw new IllegalStateException("observer"); });
+		doReturn(CompletableFuture.failedFuture(original)).when(target).giveRewardAsync(user, options);
+		target.giveReward(user, options);
+		assertEquals(1, calls.get());
+		assertSame(original, seen.get());
+		verify(plugin.getLogger()).log(eq(java.util.logging.Level.WARNING), any(String.class), eq(original));
+	}
+
+	@Test
+	void legacyInjectionFailureObserverDoesNotChangeExplicitAsyncFailure() {
+		RewardInject async = mock(RewardInject.class);
+		when(async.supportsAsyncRequest()).thenReturn(true);
+		handler.getInjectedRewards().add(async);
+		Reward target = org.mockito.Mockito.spy(reward);
+		RuntimeException original = new RuntimeException("original");
+		RewardOptions options = new RewardOptions();
+		AtomicInteger calls = new AtomicInteger();
+		options.setAsyncFailureObserver(failure -> { assertSame(original, failure); calls.incrementAndGet(); });
+		doReturn(CompletableFuture.failedFuture(original)).when(target).giveRewardUserAsync(eq(user), any(HashMap.class), eq(options));
+		assertThrows(CompletionException.class, () -> target.giveRewardUserAsync(user, new HashMap<>(), options).toCompletableFuture().join());
+		assertEquals(0, calls.get());
+		target.giveRewardUser(user, new HashMap<>(), options);
+		assertEquals(1, calls.get());
+		verify(plugin.getLogger()).log(eq(java.util.logging.Level.WARNING), any(String.class), eq(original));
+	}
+
+	@Test
+	void legacyNestedAsyncFailureNotifiesOnlyAtParentTerminalBoundary() {
+		RewardInject async = mock(RewardInject.class);
+		when(async.supportsAsyncRequest()).thenReturn(true);
+		handler.getInjectedRewards().add(async);
+		Reward target = org.mockito.Mockito.spy(reward);
+		Reward child = mock(Reward.class);
+		RuntimeException original = new RuntimeException("nested");
+		RewardOptions options = new RewardOptions(); AtomicInteger calls = new AtomicInteger();
+		options.setAsyncFailureObserver(failure -> { assertSame(original, failure); calls.incrementAndGet(); });
+		when(child.giveRewardAsync(user, options)).thenReturn(CompletableFuture.failedFuture(original));
+		doAnswer(invocation -> child.giveRewardAsync(user, options))
+				.when(target).giveRewardUserAsync(eq(user), any(HashMap.class), eq(options));
+		target.giveRewardUser(user, new HashMap<>(), options);
+		verify(child).giveRewardAsync(user, options);
+		assertEquals(1, calls.get());
+		verify(plugin.getLogger()).log(eq(java.util.logging.Level.WARNING), any(String.class), eq(original));
+	}
+
+	@Test
+	void pendingLegacyFailuresKeepTheObserverCapturedAtDispatch() {
+		RewardInject async = mock(RewardInject.class);
+		when(async.supportsAsyncRequest()).thenReturn(true);
+		handler.getInjectedRewards().add(async);
+		Reward target = org.mockito.Mockito.spy(reward);
+		RewardOptions options = new RewardOptions();
+		AtomicInteger originalCalls = new AtomicInteger(), replacementCalls = new AtomicInteger();
+		options.setAsyncFailureObserver(failure -> originalCalls.incrementAndGet());
+		CompletableFuture<Void> pending = new CompletableFuture<>();
+		doReturn(pending).when(target).giveRewardUserAsync(eq(user), any(HashMap.class), eq(options));
+		target.giveRewardUser(user, new HashMap<>(), options);
+		options.setAsyncFailureObserver(failure -> replacementCalls.incrementAndGet());
+		pending.completeExceptionally(new IllegalStateException("failure"));
+		assertEquals(1, originalCalls.get());
+		assertEquals(0, replacementCalls.get());
+	}
+
+	@Test
+	void failureObserverSurvivesDispatchAndNestedOptionCopies() throws Exception {
+		RewardOptions options = new RewardOptions();
+		java.util.function.Consumer<Throwable> observer = failure -> { };
+		options.setAsyncFailureObserver(observer);
+		var dispatch = RewardOptions.class.getDeclaredMethod("copyForDispatch"); dispatch.setAccessible(true);
+		var nested = RewardOptions.class.getDeclaredMethod("copyForNestedDispatch", String.class); nested.setAccessible(true);
+		RewardOptions dispatchCopy = (RewardOptions) dispatch.invoke(options);
+		RewardOptions nestedCopy = (RewardOptions) nested.invoke(options, "parent/child");
+		assertSame(observer, dispatchCopy.getAsyncFailureObserver());
+		assertSame(observer, nestedCopy.getAsyncFailureObserver());
+		assertNull(new RewardOptions().getAsyncFailureObserver());
+	}
+
+	@Test
+	void legacyListFanoutNotifiesOncePerConcreteFailure() {
+		data.set("GameModes", List.of("SURVIVAL"));
+		Reward first = org.mockito.Mockito.spy(reward);
+		Reward second = org.mockito.Mockito.spy(new Reward("Second", data));
+		var firstFailure = new IllegalStateException("first");
+		var secondFailure = new IllegalStateException("second");
+		doReturn(CompletableFuture.failedFuture(firstFailure)).when(first).giveRewardAsync(eq(user), any(RewardOptions.class));
+		doReturn(CompletableFuture.failedFuture(secondFailure)).when(second).giveRewardAsync(eq(user), any(RewardOptions.class));
+		RewardHandler lookup = mock(RewardHandler.class);
+		when(lookup.getReward("First")).thenReturn(first);
+		when(lookup.getReward("Second")).thenReturn(second);
+		var executor = new com.bencodez.advancedcore.api.rewards.RewardExecutor(lookup, plugin);
+		var config = new YamlConfiguration(); config.set("Rewards", new ArrayList<>(List.of("First", "Second")));
+		RewardOptions options = new RewardOptions(); List<Throwable> failures = new ArrayList<>();
+		options.setAsyncFailureObserver(failures::add);
+		try (var bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			executor.giveReward(user, config, "Rewards", options);
+		}
+		assertEquals(List.of(firstFailure, secondFailure), failures);
 	}
 
 	@Test
