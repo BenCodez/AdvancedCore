@@ -1928,11 +1928,12 @@ public class AdvancedCoreUser {
 	 */
 	@SuppressWarnings("deprecation")
 	public OfflinePlayer getOfflinePlayer() {
-		if (getPlayerName().isBlank()) {
+		String name = getPlayerName();
+		if (name == null || name.isBlank()) {
 			return null;
 		}
 		if (!plugin.getOptions().isOnlineMode()) {
-			return Bukkit.getOfflinePlayer(getPlayerName());
+			return Bukkit.getOfflinePlayer(name);
 		}
 		if (uuid != null && !uuid.equals("")) {
 			return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
@@ -1956,7 +1957,8 @@ public class AdvancedCoreUser {
 	 */
 	public Player getPlayer() {
 		if (!plugin.getOptions().isOnlineMode()) {
-			return Bukkit.getPlayer(getPlayerName());
+			String name = getPlayerName();
+			return name == null || name.isBlank() ? null : Bukkit.getPlayer(name);
 		}
 		if (uuid != null && !uuid.isEmpty()) {
 			return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
