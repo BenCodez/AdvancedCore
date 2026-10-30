@@ -1485,9 +1485,10 @@ public class Reward {
 		// player owner. Unconfigured legacy definitions retain their established path.
 		if (RewardEligibility.isConfigured(plugin, getConfig().getConfigData())
 				&& (rewardOptions == null || !rewardOptions.isIgnoreRequirements())) {
-			Consumer<Throwable> observer = rewardOptions == null ? null : rewardOptions.getAsyncFailureObserver();
-			giveRewardAsync(user, rewardOptions).exceptionally(failure -> {
-				logRewardUserFailure(failure, observer);
+			RewardOptions tracked = (rewardOptions == null ? new RewardOptions() : rewardOptions)
+					.captureLegacyFailureObserver();
+			giveRewardAsync(user, tracked).exceptionally(failure -> {
+				logRewardUserFailure(failure, tracked.legacyFailureObserverCapture().get());
 				return null;
 			});
 			return;
@@ -1617,6 +1618,11 @@ public class Reward {
 	 * @return completion stage for the complete reward injection chain
 	 */
 	public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, RewardOptions rewardOptions) {
+		// A retained event options object can be used for a separate explicit dispatch.
+		// Only the original legacy invocation may update its terminal observer capture.
+		if (rewardOptions != null && !rewardOptions.claimLegacyFailureObserverCapture()) {
+			rewardOptions = rewardOptions.withoutLegacyFailureObserverCapture();
+		}
 		boolean primaryThread = false;
 		try {
 			primaryThread = Bukkit.isPrimaryThread();
@@ -1682,6 +1688,7 @@ public class Reward {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user, rewardOptions);
 		Bukkit.getPluginManager().callEvent(event);
+		rewardOptions.updateLegacyFailureObserverCapture();
 		if (event.isCancelled()) {
 			plugin.debug("Reward " + name + " was cancelled for " + user.getPlayerName());
 			return CompletableFuture.completedFuture(null);

@@ -156,11 +156,115 @@ class RewardAsyncInjectionTest {
 		AtomicInteger calls = new AtomicInteger();
 		AtomicReference<Throwable> seen = new AtomicReference<>();
 		options.setAsyncFailureObserver(failure -> { calls.incrementAndGet(); seen.set(failure); throw new IllegalStateException("observer"); });
-		doReturn(CompletableFuture.failedFuture(original)).when(target).giveRewardAsync(user, options);
+		doReturn(CompletableFuture.failedFuture(original)).when(target).giveRewardAsync(eq(user), any(RewardOptions.class));
 		target.giveReward(user, options);
 		assertEquals(1, calls.get());
 		assertSame(original, seen.get());
 		verify(plugin.getLogger()).log(eq(java.util.logging.Level.WARNING), any(String.class), eq(original));
+	}
+
+	@Test
+	void eventObserverOverridesCallerForOnlyThatLegacyDispatch() {
+		data.set("GameModes", List.of("SURVIVAL"));
+		var config = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getOptions()).thenReturn(config);
+		when(config.isProcessRewards()).thenReturn(true);
+		var manager = mock(org.bukkit.plugin.PluginManager.class);
+		AtomicInteger originalCalls = new AtomicInteger(), listenerCalls = new AtomicInteger();
+		RewardOptions options = new RewardOptions().setCheckTimed(false).addPlaceholder("date", "fixed");
+		options.setAsyncFailureObserver(failure -> originalCalls.incrementAndGet());
+		doAnswer(invocation -> {
+			var event = invocation.getArgument(0, com.bencodez.advancedcore.listeners.PlayerRewardEvent.class);
+			event.getRewardOptions().setAsyncFailureObserver(failure -> listenerCalls.incrementAndGet());
+			enabled.set(false);
+			return null;
+		}).when(manager).callEvent(any(com.bencodez.advancedcore.listeners.PlayerRewardEvent.class));
+		try (var bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(manager);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			reward.giveReward(user, options);
+		}
+		assertEquals(0, originalCalls.get());
+		assertEquals(1, listenerCalls.get());
+		assertNotNull(options.getAsyncFailureObserver(), "caller options remain unchanged");
+	}
+
+	@Test
+	void eventObserverIsCapturedBeforeTheDeferredDispatchContinues() {
+		data.set("GameModes", List.of("SURVIVAL"));
+		var config = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getOptions()).thenReturn(config);
+		when(config.isProcessRewards()).thenReturn(true);
+		var manager = mock(org.bukkit.plugin.PluginManager.class);
+		List<Runnable> queued = new ArrayList<>();
+		doAnswer(invocation -> { queued.add(invocation.getArgument(1)); return null; })
+				.when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		AtomicInteger callerCalls = new AtomicInteger(), eventCalls = new AtomicInteger(), lateCalls = new AtomicInteger();
+		AtomicReference<RewardOptions> eventOptions = new AtomicReference<>();
+		RewardOptions options = new RewardOptions().setCheckTimed(false).addPlaceholder("date", "fixed");
+		options.setAsyncFailureObserver(failure -> callerCalls.incrementAndGet());
+		doAnswer(invocation -> {
+			var event = invocation.getArgument(0, com.bencodez.advancedcore.listeners.PlayerRewardEvent.class);
+			eventOptions.set(event.getRewardOptions());
+			event.getRewardOptions().setAsyncFailureObserver(failure -> eventCalls.incrementAndGet());
+			return null;
+		}).when(manager).callEvent(any(com.bencodez.advancedcore.listeners.PlayerRewardEvent.class));
+		try (var bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(manager);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			reward.giveReward(user, options);
+			assertEquals(1, queued.size());
+			options.setAsyncFailureObserver(failure -> lateCalls.incrementAndGet());
+			eventOptions.get().setAsyncFailureObserver(failure -> lateCalls.incrementAndGet());
+			enabled.set(false);
+			queued.get(0).run();
+		}
+		assertEquals(0, callerCalls.get());
+		assertEquals(1, eventCalls.get());
+		assertEquals(0, lateCalls.get());
+	}
+
+	@Test
+	void explicitChildUsingRetainedEventOptionsCannotReplacePendingParentObserver() throws Exception {
+		data.set("GameModes", List.of("SURVIVAL"));
+		var config = mock(AdvancedCoreConfigOptions.class);
+		when(plugin.getOptions()).thenReturn(config);
+		when(config.isProcessRewards()).thenReturn(true);
+		Reward child = new Reward("Child", data);
+		var pluginField = Reward.class.getDeclaredField("plugin");
+		pluginField.setAccessible(true);
+		pluginField.set(child, plugin);
+		var manager = mock(org.bukkit.plugin.PluginManager.class);
+		List<Runnable> queued = new ArrayList<>();
+		doAnswer(invocation -> { queued.add(invocation.getArgument(1)); return null; })
+				.when(scheduler).executeOrScheduleSync(eq(plugin), any(Runnable.class));
+		AtomicInteger parentCalls = new AtomicInteger(), childCalls = new AtomicInteger();
+		AtomicReference<RewardOptions> retained = new AtomicReference<>();
+		RewardOptions options = new RewardOptions().setCheckTimed(false).addPlaceholder("date", "fixed");
+		doAnswer(invocation -> {
+			var event = invocation.getArgument(0, com.bencodez.advancedcore.listeners.PlayerRewardEvent.class);
+			if (event.getReward() == reward) {
+				retained.set(event.getRewardOptions());
+				event.getRewardOptions().setAsyncFailureObserver(failure -> parentCalls.incrementAndGet());
+			} else if (event.getReward() == child) {
+				event.getRewardOptions().setAsyncFailureObserver(failure -> childCalls.incrementAndGet());
+			}
+			return null;
+		}).when(manager).callEvent(any(com.bencodez.advancedcore.listeners.PlayerRewardEvent.class));
+		try (var bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getPluginManager).thenReturn(manager);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(false);
+			reward.giveReward(user, options);
+			assertEquals(1, queued.size());
+			CompletionStage<Void> childResult = child.giveRewardAsync(user, retained.get());
+			assertEquals(2, queued.size());
+			enabled.set(false);
+			queued.get(0).run();
+			queued.get(1).run();
+			assertThrows(CompletionException.class, () -> childResult.toCompletableFuture().join());
+		}
+		assertEquals(1, parentCalls.get());
+		assertEquals(0, childCalls.get());
 	}
 
 	@Test
@@ -230,13 +334,25 @@ class RewardAsyncInjectionTest {
 		assertSame(observer, dispatchCopy.getAsyncFailureObserver());
 		assertSame(observer, nestedCopy.getAsyncFailureObserver());
 		assertNull(new RewardOptions().getAsyncFailureObserver());
+		var capture = RewardOptions.class.getDeclaredMethod("captureLegacyFailureObserver"); capture.setAccessible(true);
+		var holder = RewardOptions.class.getDeclaredMethod("legacyFailureObserverCapture"); holder.setAccessible(true);
+		var update = RewardOptions.class.getDeclaredMethod("updateLegacyFailureObserverCapture"); update.setAccessible(true);
+		RewardOptions tracked = (RewardOptions) capture.invoke(options);
+		RewardOptions child = (RewardOptions) nested.invoke(tracked, "parent/child");
+		child.setAsyncFailureObserver(failure -> { });
+		update.invoke(child);
+		assertSame(observer, ((AtomicReference<?>) holder.invoke(tracked)).get(),
+				"nested options must not replace the parent's terminal observer");
 	}
 
 	@Test
-	void legacyListFanoutNotifiesOncePerConcreteFailure() {
+	void legacyListFanoutNotifiesOncePerConcreteFailure() throws Exception {
 		data.set("GameModes", List.of("SURVIVAL"));
 		Reward first = org.mockito.Mockito.spy(reward);
 		Reward second = org.mockito.Mockito.spy(new Reward("Second", data));
+		var pluginField = Reward.class.getDeclaredField("plugin");
+		pluginField.setAccessible(true);
+		pluginField.set(second, plugin);
 		var firstFailure = new IllegalStateException("first");
 		var secondFailure = new IllegalStateException("second");
 		doReturn(CompletableFuture.failedFuture(firstFailure)).when(first).giveRewardAsync(eq(user), any(RewardOptions.class));
