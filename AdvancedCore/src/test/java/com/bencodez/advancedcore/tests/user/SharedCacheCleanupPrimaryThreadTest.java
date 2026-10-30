@@ -892,6 +892,45 @@ class SharedCacheCleanupPrimaryThreadTest {
 	}
 
 	@Test
+	void invalidatedCompletedCacheQueuesOneWorkerRefillOnPrimaryThreadAccess() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		UserDataCache cache = new UserDataCache(manager, uuid);
+		cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(38))));
+		manager.getUserDataCache().put(uuid, cache);
+		Field completed = UserDataManager.class.getDeclaredField("completedSharedCachePopulations");
+		completed.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		Set<UUID> completedPopulations = (Set<UUID>) completed.get(manager);
+		completedPopulations.add(uuid);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedSqlBackend(backend, (user, operation) -> {
+			throw new AssertionError("primary thread must not admit cache storage work");
+		});
+		Server server = mock(Server.class);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			assertSame(cache, manager.getCache(uuid));
+			verify(worker, never()).execute(any(Runnable.class));
+			cache.invalidateStorageSnapshot("Points");
+			assertSame(cache, manager.getCache(uuid));
+			verify(worker, times(1)).execute(any(Runnable.class));
+			// The queued refill is still pending, so repeated reads must not pile up work.
+			assertSame(cache, manager.getCache(uuid));
+			verify(worker, times(1)).execute(any(Runnable.class));
+			assertFalse(cache.hasPublishedStorageSnapshot());
+		}
+	}
+
+	@Test
 	void removingCompletedPlaceholderAllowsAReplacementPopulation() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		UserDataManager manager = new UserDataManager(plugin);
