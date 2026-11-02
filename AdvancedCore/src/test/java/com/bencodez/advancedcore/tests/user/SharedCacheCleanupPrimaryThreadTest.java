@@ -910,9 +910,26 @@ class SharedCacheCleanupPrimaryThreadTest {
 		Set<UUID> completedPopulations = (Set<UUID>) completed.get(manager);
 		completedPopulations.add(uuid);
 		SqlUserBackend backend = mock(SqlUserBackend.class);
+		com.bencodez.advancedcore.core.user.storage.SqlUserStorage storage =
+				mock(com.bencodez.advancedcore.core.user.storage.SqlUserStorage.class);
+		UserManager users = mock(UserManager.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(users.getDataManager()).thenReturn(manager);
+		when(users.getUser(uuid, false)).thenReturn(user);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getUUID()).thenReturn(uuid.toString());
+		when(user.getUserData()).thenReturn(new UserData(user));
 		when(backend.isOpen()).thenReturn(true);
-		manager.bindSharedSqlBackend(backend, (user, operation) -> {
-			throw new AssertionError("primary thread must not admit cache storage work");
+		when(backend.storageType()).thenReturn(UserStorage.MYSQL);
+		when(backend.user(uuid)).thenReturn(storage);
+		when(storage.readRow(UserStorage.MYSQL)).thenReturn(java.util.List.of(
+				new com.bencodez.simpleapi.sql.Column("Points", new DataValueInt(57))));
+		Thread primary = Thread.currentThread();
+		manager.bindSharedSqlBackend(backend, (id, operation) -> {
+			assertTrue(Thread.currentThread() != primary, "storage admission must not run on the primary thread");
+			operation.run();
 		});
 		Server server = mock(Server.class);
 		try (var bukkit = mockStatic(Bukkit.class)) {
@@ -927,6 +944,57 @@ class SharedCacheCleanupPrimaryThreadTest {
 			assertSame(cache, manager.getCache(uuid));
 			verify(worker, times(1)).execute(any(Runnable.class));
 			assertFalse(cache.hasPublishedStorageSnapshot());
+			verify(backend, never()).user(any());
+			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(task.capture());
+			ExecutorService executor = Executors.newSingleThreadExecutor();
+			try {
+				executor.submit(task.getValue()).get(5, TimeUnit.SECONDS);
+			} finally {
+				executor.shutdownNow();
+			}
+			verify(storage, times(2)).readRow(UserStorage.MYSQL);
+			assertTrue(cache.hasPublishedStorageSnapshot());
+			assertEquals(57, cache.getIfPresent("Points").getInt());
+			// The second worker task delivers the refresh notification, not another refill.
+			verify(worker, times(2)).execute(any(Runnable.class));
+			assertSame(cache, manager.getCache(uuid));
+			verify(worker, times(2)).execute(any(Runnable.class));
+
+			// A second invalidation during an older read must fence that read's snapshot.
+			org.mockito.Mockito.clearInvocations(worker);
+			cache.invalidateStorageSnapshot("Points");
+			AtomicInteger reads = new AtomicInteger();
+			when(storage.readRow(UserStorage.MYSQL)).thenAnswer(invocation -> {
+				if (reads.incrementAndGet() == 2) cache.invalidateStorageSnapshot("Points");
+				return java.util.List.of(new com.bencodez.simpleapi.sql.Column("Points", new DataValueInt(31)));
+			});
+			manager.getCache(uuid);
+			ArgumentCaptor<Runnable> staleTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(staleTask.capture());
+			ExecutorService staleExecutor = Executors.newSingleThreadExecutor();
+			try {
+				staleExecutor.submit(staleTask.getValue()).get(5, TimeUnit.SECONDS);
+			} finally {
+				staleExecutor.shutdownNow();
+			}
+			assertFalse(cache.hasPublishedStorageSnapshot());
+			assertNull(cache.getIfPresent("Points"));
+			org.mockito.Mockito.clearInvocations(worker);
+			org.mockito.Mockito.doReturn(java.util.List.of(
+					new com.bencodez.simpleapi.sql.Column("Points", new DataValueInt(72))))
+					.when(storage).readRow(UserStorage.MYSQL);
+			manager.getCache(uuid);
+			ArgumentCaptor<Runnable> freshTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(freshTask.capture());
+			ExecutorService freshExecutor = Executors.newSingleThreadExecutor();
+			try {
+				freshExecutor.submit(freshTask.getValue()).get(5, TimeUnit.SECONDS);
+			} finally {
+				freshExecutor.shutdownNow();
+			}
+			assertTrue(cache.hasPublishedStorageSnapshot());
+			assertEquals(72, cache.getIfPresent("Points").getInt());
 		}
 	}
 
