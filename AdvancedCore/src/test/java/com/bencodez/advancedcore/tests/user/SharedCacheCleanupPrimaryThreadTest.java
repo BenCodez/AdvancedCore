@@ -892,6 +892,148 @@ class SharedCacheCleanupPrimaryThreadTest {
 	}
 
 	@Test
+	void invalidatedCompletedCacheQueuesOneWorkerRefillOnPrimaryThreadAccess() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		manager.getTimer().shutdownNow();
+		ScheduledExecutorService worker = mock(ScheduledExecutorService.class);
+		Field timer = UserDataManager.class.getDeclaredField("timer");
+		timer.setAccessible(true);
+		timer.set(manager, worker);
+		UUID uuid = UUID.randomUUID();
+		UserDataCache cache = new UserDataCache(manager, uuid);
+		cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(38),
+				"Rating", new DataValueInt(38), "Coins", new DataValueInt(4))));
+		manager.getUserDataCache().put(uuid, cache);
+		Field completed = UserDataManager.class.getDeclaredField("completedSharedCachePopulations");
+		completed.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		Set<UUID> completedPopulations = (Set<UUID>) completed.get(manager);
+		completedPopulations.add(uuid);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		com.bencodez.advancedcore.core.user.storage.SqlUserStorage storage =
+				mock(com.bencodez.advancedcore.core.user.storage.SqlUserStorage.class);
+		UserManager users = mock(UserManager.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		when(plugin.getUserManager()).thenReturn(users);
+		when(plugin.getStorageType()).thenReturn(UserStorage.MYSQL);
+		when(users.getDataManager()).thenReturn(manager);
+		when(users.getUser(uuid, false)).thenReturn(user);
+		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getUUID()).thenReturn(uuid.toString());
+		when(user.getUserData()).thenReturn(new UserData(user));
+		when(backend.isOpen()).thenReturn(true);
+		when(backend.storageType()).thenReturn(UserStorage.MYSQL);
+		when(backend.user(uuid)).thenReturn(storage);
+		AtomicInteger initialReads = new AtomicInteger();
+		when(storage.readRow(UserStorage.MYSQL)).thenAnswer(invocation -> {
+			// The second read occurs after the refresh's initial pending-write flush.
+			// Queue a new write while the authoritative read is in flight.
+			if (initialReads.incrementAndGet() == 2) {
+				assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Coins", 9)));
+			}
+			return java.util.List.of(
+					new com.bencodez.simpleapi.sql.Column("Points", new DataValueInt(57)),
+					new com.bencodez.simpleapi.sql.Column("Rating", new DataValueInt(57)),
+					new com.bencodez.simpleapi.sql.Column("Coins", new DataValueInt(4)));
+		});
+		Thread primary = Thread.currentThread();
+		manager.bindSharedSqlBackend(backend, (id, operation) -> {
+			assertTrue(Thread.currentThread() != primary, "storage admission must not run on the primary thread");
+			operation.run();
+		});
+		cache.configureSharedStorage(values -> storage.writeValues(UserStorage.MYSQL, values), Runnable::run);
+		Server server = mock(Server.class);
+		try (var bukkit = mockStatic(Bukkit.class)) {
+			bukkit.when(Bukkit::getServer).thenReturn(server);
+			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
+			assertSame(cache, manager.getCache(uuid));
+			verify(worker, never()).execute(any(Runnable.class));
+			// A queued Points write is flushed before the refill reads storage.
+			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 57)));
+			assertTrue(cache.hasChangesToProcess());
+			cache.invalidateStorageSnapshot("Points");
+			assertSame(cache, manager.getCache(uuid));
+			verify(worker, times(1)).execute(any(Runnable.class));
+			// The queued refill is still pending, so repeated reads must not pile up work.
+			assertSame(cache, manager.getCache(uuid));
+			verify(worker, times(1)).execute(any(Runnable.class));
+			assertFalse(cache.hasPublishedStorageSnapshot());
+			verify(backend, never()).user(any());
+			ArgumentCaptor<Runnable> task = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(task.capture());
+			ExecutorService executor = Executors.newSingleThreadExecutor();
+			try {
+				executor.submit(task.getValue()).get(5, TimeUnit.SECONDS);
+			} finally {
+				executor.shutdownNow();
+			}
+			verify(storage, times(2)).readRow(UserStorage.MYSQL);
+			assertNull(manager.getLastDeferredStorageFailure());
+			assertTrue(cache.hasPublishedStorageSnapshot());
+			assertEquals(57, cache.getIfPresent("Points").getInt());
+			assertEquals(9, cache.getIfPresent("Coins").getInt());
+			assertTrue(cache.hasChangesToProcess());
+			@SuppressWarnings("unchecked")
+			ArgumentCaptor<HashMap<String, com.bencodez.simpleapi.sql.data.DataValue>> flushed =
+					ArgumentCaptor.forClass(HashMap.class);
+			verify(storage).writeValues(eq(UserStorage.MYSQL), flushed.capture());
+			assertEquals(Set.of("Points"), flushed.getValue().keySet());
+			assertEquals(57, flushed.getValue().get("Points").getInt());
+			// The second task delivers the refresh notification after lifecycle admission.
+			ArgumentCaptor<Runnable> notifications = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker, times(2)).execute(notifications.capture());
+			ExecutorService notifier = Executors.newSingleThreadExecutor();
+			try {
+				notifier.submit(notifications.getAllValues().get(1)).get(5, TimeUnit.SECONDS);
+			} finally {
+				notifier.shutdownNow();
+			}
+			verify(users).onChange(user, "Points");
+			ArgumentCaptor<String[]> changed = ArgumentCaptor.forClass(String[].class);
+			verify(users, times(2)).onChange(eq(user), changed.capture());
+			assertEquals(Set.of("Rating", "Coins"), Set.of(changed.getAllValues().get(1)));
+			assertSame(cache, manager.getCache(uuid));
+			verify(worker, times(2)).execute(any(Runnable.class));
+
+			// A second invalidation during an older read must fence that read's snapshot.
+			org.mockito.Mockito.clearInvocations(worker);
+			cache.invalidateStorageSnapshot("Points");
+			AtomicInteger reads = new AtomicInteger();
+			when(storage.readRow(UserStorage.MYSQL)).thenAnswer(invocation -> {
+				if (reads.incrementAndGet() == 2) cache.invalidateStorageSnapshot("Points");
+				return java.util.List.of(new com.bencodez.simpleapi.sql.Column("Points", new DataValueInt(31)));
+			});
+			manager.getCache(uuid);
+			ArgumentCaptor<Runnable> staleTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(staleTask.capture());
+			ExecutorService staleExecutor = Executors.newSingleThreadExecutor();
+			try {
+				staleExecutor.submit(staleTask.getValue()).get(5, TimeUnit.SECONDS);
+			} finally {
+				staleExecutor.shutdownNow();
+			}
+			assertFalse(cache.hasPublishedStorageSnapshot());
+			assertNull(cache.getIfPresent("Points"));
+			org.mockito.Mockito.clearInvocations(worker);
+			org.mockito.Mockito.doReturn(java.util.List.of(
+					new com.bencodez.simpleapi.sql.Column("Points", new DataValueInt(72))))
+					.when(storage).readRow(UserStorage.MYSQL);
+			manager.getCache(uuid);
+			ArgumentCaptor<Runnable> freshTask = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker).execute(freshTask.capture());
+			ExecutorService freshExecutor = Executors.newSingleThreadExecutor();
+			try {
+				freshExecutor.submit(freshTask.getValue()).get(5, TimeUnit.SECONDS);
+			} finally {
+				freshExecutor.shutdownNow();
+			}
+			assertTrue(cache.hasPublishedStorageSnapshot());
+			assertEquals(72, cache.getIfPresent("Points").getInt());
+		}
+	}
+
+	@Test
 	void removingCompletedPlaceholderAllowsAReplacementPopulation() throws Exception {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
 		UserDataManager manager = new UserDataManager(plugin);

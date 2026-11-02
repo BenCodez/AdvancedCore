@@ -46,6 +46,8 @@ import org.bukkit.potion.PotionEffectType;
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.rewards.Reward;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
+import com.bencodez.advancedcore.api.javascript.JavascriptPlaceholderValue;
+import com.bencodez.advancedcore.api.javascript.JavascriptTextTemplate;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.user.AdvancedCoreUser;
 import com.bencodez.advancedcore.bukkit.platform.BukkitPlatformServices;
@@ -244,16 +246,7 @@ public class MiscUtils {
 	public void executeConsoleCommands(final String playerName, final ArrayList<String> cmds,
 			final HashMap<String, String> placeholders, boolean stagger) {
 		if (cmds != null && !cmds.isEmpty()) {
-			placeholders.put("player", playerName);
-			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
-			ArrayList<String> commands = cmds;
-			if (p != null) {
-				commands = PlaceholderUtils.replaceJavascriptOnly(p, commands);
-			}
-			commands = PlaceholderUtils.replacePlaceHolder(commands, placeholders);
-			if (p != null) {
-				commands = PlaceholderUtils.replacePlaceHolders(p, commands);
-			}
+			ArrayList<String> commands = expandConsoleCommands(playerName, cmds, placeholders, true);
 			int tick = 0;
 			for (final String cmd : commands) {
 				plugin.debug("Executing console command: " + cmd);
@@ -264,6 +257,10 @@ public class MiscUtils {
 	}
 
 	public void executeConsoleCommands(String playerName, String command, HashMap<String, String> placeholders) {
+		if ((playerName == null || playerName.isBlank()) && !Reward.hasReplayCommandSnapshot(placeholders, "console")) {
+			expandConsoleCommands(playerName, command == null || command.isEmpty()
+					? new ArrayList<>() : new ArrayList<>(java.util.List.of(command)), placeholders, false);
+		}
 		executeConsoleCommandsAsync(playerName, command, placeholders);
 	}
 
@@ -284,15 +281,8 @@ public class MiscUtils {
 		try {
 			ArrayList<String> templates = command == null || command.isEmpty()
 					? new ArrayList<>() : new ArrayList<>(java.util.List.of(command));
-			String expanded = command;
-			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
-			if (expanded != null && !expanded.isEmpty()) {
-				if (p != null) expanded = PlaceholderUtils.replaceJavascriptOnly(p, expanded);
-				expanded = PlaceholderUtils.replacePlaceHolder(expanded, placeholders);
-				if (p != null) expanded = PlaceholderUtils.replacePlaceHolders(p, expanded);
-			}
-			ArrayList<String> commands = command == null || command.isEmpty()
-					? new ArrayList<>() : new ArrayList<>(java.util.List.of(expanded == null ? "" : expanded));
+			ArrayList<String> commands = Reward.hasReplayCommandSnapshot(placeholders, "console")
+					? new ArrayList<>() : expandConsoleCommands(playerName, templates, placeholders, false);
 			return Reward.replayCommandSequence(plugin, placeholders, "console", templates, commands,
 					(cmd, ignoredIndex) -> {
 						plugin.debug("Executing console command: " + cmd);
@@ -319,16 +309,20 @@ public class MiscUtils {
 	public CompletionStage<Void> executeConsoleCommandsAsync(final String playerName, final ArrayList<String> cmds,
 			final HashMap<String, String> placeholders, final boolean stagger,
 			AdvancedCoreUser.PlayerEligibilityGuard eligibilityGuard) {
-		try {
-			placeholders.put("player", playerName);
-			OfflinePlayer p = Bukkit.getOfflinePlayer(playerName);
-			ArrayList<String> templates = cmds == null ? new ArrayList<>() : new ArrayList<>(cmds);
-			ArrayList<String> commands = new ArrayList<>(templates);
-			if (p != null) commands = PlaceholderUtils.replaceJavascriptOnly(p, commands);
-			commands = PlaceholderUtils.replacePlaceHolder(commands, placeholders);
-			if (p != null) commands = PlaceholderUtils.replacePlaceHolders(p, commands);
+		return executeConsoleCommandsAsync(playerName, cmds, placeholders, stagger, eligibilityGuard,
+				Reward.currentReplayState(), Reward.currentReplayKey());
+	}
 
-			return Reward.replayCommandSequence(plugin, placeholders, "console", templates, commands,
+	/** Carries the replay context across asynchronous availability checks. */
+	public CompletionStage<Void> executeConsoleCommandsAsync(final String playerName, final ArrayList<String> cmds,
+			final HashMap<String, String> placeholders, final boolean stagger,
+			AdvancedCoreUser.PlayerEligibilityGuard eligibilityGuard, Reward.ReplayState replayState, String replayKey) {
+		try {
+			ArrayList<String> templates = cmds == null ? new ArrayList<>() : new ArrayList<>(cmds);
+			ArrayList<String> commands = Reward.hasReplayCommandSnapshot(placeholders, "console", replayState, replayKey)
+					? new ArrayList<>() : expandConsoleCommands(playerName, templates, placeholders, true);
+
+			return Reward.replayCommandSequence(plugin, placeholders, "console", templates, commands, replayState, replayKey,
 					(command, index) -> {
 						plugin.debug("Executing console command: " + command);
 						return runConsoleCommandAsync(stripLeadingSlash(command), index > 0 ? 1 : 0,
@@ -337,6 +331,92 @@ public class MiscUtils {
 		} catch (Throwable failure) {
 			return CompletableFuture.failedFuture(failure);
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private ArrayList<String> expandConsoleCommands(String playerName, List<String> templates,
+			HashMap<String, String> placeholders, boolean addPlayer) {
+		ArrayList<String> commands = new ArrayList<>(templates);
+		if (commands.isEmpty()) return commands;
+		boolean hasName = playerName != null && !playerName.isBlank();
+		if (hasName) {
+			if (addPlayer) placeholders.put("player", playerName);
+			OfflinePlayer player = Bukkit.getOfflinePlayer(playerName);
+			if (player != null) commands = PlaceholderUtils.replaceJavascriptOnly(player, commands);
+			commands = PlaceholderUtils.replacePlaceHolder(commands, placeholders);
+			if (player != null) commands = PlaceholderUtils.replacePlaceHolders(player, commands);
+			return commands;
+		}
+		for (String command : commands) {
+			if (command != null && (containsPlayerNamePlaceholder(command)
+					|| (plugin.getOptions().isJavascriptEngineEnabled()
+							&& containsJavascriptSegment(command)))) {
+				throw new IllegalStateException("Console command requires an unavailable player identity");
+			}
+		}
+		// Trace identity aliases through map substitutions before an empty value can
+		// erase them. Other map entries may themselves introduce an alias.
+		String marker = "__advancedcore_missing_name_" + java.util.UUID.randomUUID() + "__";
+		HashMap<String, String> guarded = placeholders == null ? new LinkedHashMap<>() : new LinkedHashMap<>(placeholders);
+		guarded.replaceAll((key, value) -> key != null && (key.equalsIgnoreCase("player") || key.equalsIgnoreCase("@p"))
+				? marker : value);
+		guarded.put("player", marker);
+		guarded.put("@p", marker);
+		String encodedMarker = JavascriptPlaceholderValue.encode(marker);
+		for (String command : PlaceholderUtils.replacePlaceHolder(commands, guarded)) {
+			if (command != null && (command.contains(marker) || command.contains(encodedMarker)
+					|| containsPlayerNamePlaceholder(command))) {
+				throw new IllegalStateException("Console command requires an unavailable player identity");
+			}
+		}
+		commands = PlaceholderUtils.replacePlaceHolder(commands, placeholders);
+		for (String command : commands) {
+			if (command != null && (containsPlayerNamePlaceholder(command)
+					|| (plugin.isPlaceHolderAPIEnabled() && containsProcessedExternalPlaceholder(command)))) {
+				throw new IllegalStateException("Console command placeholders require an unavailable player identity");
+			}
+		}
+		return commands;
+	}
+
+	private static boolean containsPlayerNamePlaceholder(String command) {
+		return Pattern.compile("(?i)%(?:player|@p)%|\\{(?:player|@p)\\}").matcher(command).find();
+	}
+
+	private static boolean containsJavascriptSegment(String command) {
+		AtomicBoolean found = new AtomicBoolean();
+		JavascriptTextTemplate.parse(command).transform(Function.identity(), script -> {
+			found.set(true);
+			return script;
+		});
+		return found.get();
+	}
+
+	/** PlaceholderAPI processes literal segments, not authored JavaScript bodies. */
+	private static boolean containsProcessedExternalPlaceholder(String command) {
+		AtomicBoolean found = new AtomicBoolean();
+		JavascriptTextTemplate.parse(command).transform(text -> {
+			if (containsExternalPlaceholder(text)) found.set(true);
+			return text;
+		}, Function.identity());
+		return found.get();
+	}
+
+	/** Matches the percent-delimited expansion boundaries used by PlaceholderAPI. */
+	private static boolean containsExternalPlaceholder(String text) {
+		int start = text.indexOf('%');
+		while (start >= 0) {
+			int end = text.indexOf('%', start + 1);
+			if (end < 0) return false;
+			boolean abandoned = false;
+			for (int index = start + 1; index < end; index++) {
+				char c = text.charAt(index);
+				if (c == '_') return true;
+				if (c == ' ') { abandoned = true; break; }
+			}
+			start = text.indexOf('%', abandoned ? start + 1 : end + 1);
+		}
+		return false;
 	}
 
 	public Object getBlockMeta(Block block, String str) {

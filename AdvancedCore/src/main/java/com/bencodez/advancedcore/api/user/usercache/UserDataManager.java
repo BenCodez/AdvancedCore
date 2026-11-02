@@ -1349,7 +1349,12 @@ public class UserDataManager {
 		if (hasSharedSqlBackend() && isPlatformOwnedThread()) {
 			UserDataCache cache = userDataCache.get(uuid);
 			if (cache == null) cache = ensureSharedCachePlaceholder(uuid);
-			if (!completedSharedCachePopulations.contains(uuid)) cacheUser(uuid, false);
+			// A completed population can later be unpublished by invalidateStorageSnapshot().
+			// Queue a worker refill so the cache heals even if no caller arranged one;
+			// deferred populations are deduplicated per user, so this stays bounded.
+			if (!completedSharedCachePopulations.contains(uuid) || !cache.hasPublishedStorageSnapshot()) {
+				cacheUser(uuid, false);
+			}
 			return cache;
 		}
 		cacheUserIfNeeded(uuid);
@@ -1381,23 +1386,51 @@ public class UserDataManager {
 	static boolean isFoliaTickThread(Object server) {
 		if (server == null) return false;
 		try {
-			java.lang.reflect.Method global = server.getClass().getMethod("isGlobalTickThread");
-			if (Boolean.TRUE.equals(global.invoke(server))) return true;
+			java.lang.reflect.Method global = GLOBAL_TICK_METHODS.get(server.getClass());
+			if (global != null && Boolean.TRUE.equals(global.invoke(server))) return true;
 		} catch (ReflectiveOperationException | RuntimeException ignored) { }
-		if (reflectiveStaticBoolean("ca.spottedleaf.moonrise.common.util.TickThread", "isTickThread")) return true;
-		if (reflectiveStaticBoolean("io.papermc.paper.threadedregions.RegionizedServer", "isGlobalTickThread")) return true;
+		if (invokeStaticBoolean(FoliaProbes.MOONRISE_IS_TICK_THREAD)) return true;
+		if (invokeStaticBoolean(FoliaProbes.REGIONIZED_IS_GLOBAL_TICK_THREAD)) return true;
 		try {
-			Class<?> scheduler = Class.forName("io.papermc.paper.threadedregions.TickRegionScheduler");
-			java.lang.reflect.Method current = scheduler.getMethod("getCurrentRegion");
-			if (current.invoke(null) != null) return true;
+			java.lang.reflect.Method current = FoliaProbes.TICK_REGION_CURRENT_REGION;
+			if (current != null && current.invoke(null) != null) return true;
 		} catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) { }
 		return false;
 	}
 
-	private static boolean reflectiveStaticBoolean(String className, String methodName) {
+	/**
+	 * Lookups are resolved once. Resolving them on every call threw and filled a
+	 * NoSuchMethodException/ClassNotFoundException per user data access on non-Folia servers.
+	 */
+	private static final ClassValue<java.lang.reflect.Method> GLOBAL_TICK_METHODS = new ClassValue<java.lang.reflect.Method>() {
+		@Override
+		protected java.lang.reflect.Method computeValue(Class<?> type) {
+			try {
+				return type.getMethod("isGlobalTickThread");
+			} catch (ReflectiveOperationException | RuntimeException e) {
+				return null;
+			}
+		}
+	};
+
+	private static final class FoliaProbes {
+		static final java.lang.reflect.Method MOONRISE_IS_TICK_THREAD = staticMethod("ca.spottedleaf.moonrise.common.util.TickThread", "isTickThread");
+		static final java.lang.reflect.Method REGIONIZED_IS_GLOBAL_TICK_THREAD = staticMethod("io.papermc.paper.threadedregions.RegionizedServer", "isGlobalTickThread");
+		static final java.lang.reflect.Method TICK_REGION_CURRENT_REGION = staticMethod("io.papermc.paper.threadedregions.TickRegionScheduler", "getCurrentRegion");
+
+		private static java.lang.reflect.Method staticMethod(String className, String methodName) {
+			try {
+				return Class.forName(className).getMethod(methodName);
+			} catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+				return null;
+			}
+		}
+	}
+
+	private static boolean invokeStaticBoolean(java.lang.reflect.Method method) {
+		if (method == null) return false;
 		try {
-			Class<?> type = Class.forName(className);
-			return Boolean.TRUE.equals(type.getMethod(methodName).invoke(null));
+			return Boolean.TRUE.equals(method.invoke(null));
 		} catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
 			return false;
 		}

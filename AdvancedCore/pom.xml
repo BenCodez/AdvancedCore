@@ -296,7 +296,7 @@
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.14.0</version>
+            <version>2.15.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -343,7 +343,7 @@
         <dependency>
             <groupId>com.velocitypowered</groupId>
             <artifactId>velocity-api</artifactId>
-            <version>4.3.0</version>
+            <version>3.4.0</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
@@ -391,7 +391,7 @@
         <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
-            <version>3.53.4.0</version>
+            <version>3.54.1.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
