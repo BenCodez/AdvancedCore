@@ -902,7 +902,8 @@ class SharedCacheCleanupPrimaryThreadTest {
 		timer.set(manager, worker);
 		UUID uuid = UUID.randomUUID();
 		UserDataCache cache = new UserDataCache(manager, uuid);
-		cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(38))));
+		cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(38),
+				"Rating", new DataValueInt(38), "Coins", new DataValueInt(4))));
 		manager.getUserDataCache().put(uuid, cache);
 		Field completed = UserDataManager.class.getDeclaredField("completedSharedCachePopulations");
 		completed.setAccessible(true);
@@ -924,19 +925,33 @@ class SharedCacheCleanupPrimaryThreadTest {
 		when(backend.isOpen()).thenReturn(true);
 		when(backend.storageType()).thenReturn(UserStorage.MYSQL);
 		when(backend.user(uuid)).thenReturn(storage);
-		when(storage.readRow(UserStorage.MYSQL)).thenReturn(java.util.List.of(
-				new com.bencodez.simpleapi.sql.Column("Points", new DataValueInt(57))));
+		AtomicInteger initialReads = new AtomicInteger();
+		when(storage.readRow(UserStorage.MYSQL)).thenAnswer(invocation -> {
+			// The second read occurs after the refresh's initial pending-write flush.
+			// Queue a new write while the authoritative read is in flight.
+			if (initialReads.incrementAndGet() == 2) {
+				assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Coins", 9)));
+			}
+			return java.util.List.of(
+					new com.bencodez.simpleapi.sql.Column("Points", new DataValueInt(57)),
+					new com.bencodez.simpleapi.sql.Column("Rating", new DataValueInt(57)),
+					new com.bencodez.simpleapi.sql.Column("Coins", new DataValueInt(4)));
+		});
 		Thread primary = Thread.currentThread();
 		manager.bindSharedSqlBackend(backend, (id, operation) -> {
 			assertTrue(Thread.currentThread() != primary, "storage admission must not run on the primary thread");
 			operation.run();
 		});
+		cache.configureSharedStorage(values -> storage.writeValues(UserStorage.MYSQL, values), Runnable::run);
 		Server server = mock(Server.class);
 		try (var bukkit = mockStatic(Bukkit.class)) {
 			bukkit.when(Bukkit::getServer).thenReturn(server);
 			bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
 			assertSame(cache, manager.getCache(uuid));
 			verify(worker, never()).execute(any(Runnable.class));
+			// A queued Points write is flushed before the refill reads storage.
+			assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new UserDataChangeInt("Points", 57)));
+			assertTrue(cache.hasChangesToProcess());
 			cache.invalidateStorageSnapshot("Points");
 			assertSame(cache, manager.getCache(uuid));
 			verify(worker, times(1)).execute(any(Runnable.class));
@@ -954,10 +969,30 @@ class SharedCacheCleanupPrimaryThreadTest {
 				executor.shutdownNow();
 			}
 			verify(storage, times(2)).readRow(UserStorage.MYSQL);
+			assertNull(manager.getLastDeferredStorageFailure());
 			assertTrue(cache.hasPublishedStorageSnapshot());
 			assertEquals(57, cache.getIfPresent("Points").getInt());
-			// The second worker task delivers the refresh notification, not another refill.
-			verify(worker, times(2)).execute(any(Runnable.class));
+			assertEquals(9, cache.getIfPresent("Coins").getInt());
+			assertTrue(cache.hasChangesToProcess());
+			@SuppressWarnings("unchecked")
+			ArgumentCaptor<HashMap<String, com.bencodez.simpleapi.sql.data.DataValue>> flushed =
+					ArgumentCaptor.forClass(HashMap.class);
+			verify(storage).writeValues(eq(UserStorage.MYSQL), flushed.capture());
+			assertEquals(Set.of("Points"), flushed.getValue().keySet());
+			assertEquals(57, flushed.getValue().get("Points").getInt());
+			// The second task delivers the refresh notification after lifecycle admission.
+			ArgumentCaptor<Runnable> notifications = ArgumentCaptor.forClass(Runnable.class);
+			verify(worker, times(2)).execute(notifications.capture());
+			ExecutorService notifier = Executors.newSingleThreadExecutor();
+			try {
+				notifier.submit(notifications.getAllValues().get(1)).get(5, TimeUnit.SECONDS);
+			} finally {
+				notifier.shutdownNow();
+			}
+			verify(users).onChange(user, "Points");
+			ArgumentCaptor<String[]> changed = ArgumentCaptor.forClass(String[].class);
+			verify(users, times(2)).onChange(eq(user), changed.capture());
+			assertEquals(Set.of("Rating", "Coins"), Set.of(changed.getAllValues().get(1)));
 			assertSame(cache, manager.getCache(uuid));
 			verify(worker, times(2)).execute(any(Runnable.class));
 
