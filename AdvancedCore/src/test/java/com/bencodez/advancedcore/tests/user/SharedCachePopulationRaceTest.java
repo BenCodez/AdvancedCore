@@ -135,6 +135,19 @@ class SharedCachePopulationRaceTest {
         }
     }
 
+    @Test void nullRowNeverAuthorizesMissingKeyDefaultInActualCacheOwner() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            fixture.backend.holdFirstRead.set(false);
+            fixture.backend.nullRow = true;
+            fixture.runtime.populate(fixture.uuid);
+            assertFalse(fixture.cache.seedMissingIntegerFromCompleteSnapshot("missing"));
+            fixture.backend.nullRow = false; fixture.backend.rows.clear();
+            fixture.runtime.populate(fixture.uuid);
+            assertTrue(fixture.cache.seedMissingIntegerFromCompleteSnapshot("missing"));
+            assertEquals(0, fixture.cache.getIfPresent("missing").getInt());
+        }
+    }
+
     @Test void populationTokenCannotBeAppliedToAnotherUser() throws Exception {
         try (Fixture fixture = new Fixture()) {
             var token = fixture.owner.beginPopulation(fixture.uuid);
@@ -190,11 +203,13 @@ class SharedCachePopulationRaceTest {
     }
 
     private static final class MemoryBackend implements SqlUserBackend {
+		@Override public boolean hasAuthoritativeRowReads() { return true; }
         final UUID uuid;
         final Map<String, DataValue> rows = new ConcurrentHashMap<>(values(1, 2));
         final CountDownLatch snapshotRead = new CountDownLatch(1), releaseRead = new CountDownLatch(1);
         final AtomicBoolean holdFirstRead = new AtomicBoolean(true);
         volatile RuntimeException readFailure;
+        volatile boolean nullRow;
         boolean open = true;
         MemoryBackend(UUID uuid) { this.uuid = uuid; }
         public UserStorage storageType() { return UserStorage.SQLITE; }
@@ -205,6 +220,7 @@ class SharedCachePopulationRaceTest {
             assertEquals(uuid, id);
             return new SqlUserStorage() {
                 public List<Column> readRow(UserStorage type) {
+                    if (nullRow) return null;
                     List<Column> snapshot = new ArrayList<>();
                     rows.forEach((key, value) -> snapshot.add(new Column(key, value)));
                     if (holdFirstRead.compareAndSet(true, false)) {

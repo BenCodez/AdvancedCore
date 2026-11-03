@@ -19,6 +19,17 @@ import com.bencodez.simpleapi.sql.data.DataValueString;
 
 /** Adapts the existing SQL providers and the shared-runtime replacement route. */
 public final class BukkitSqlUserStorage implements SqlUserStorage {
+    private record StrictOwnerScope(AdvancedCorePlugin plugin, AdvancedCorePlugin.UserStorageOwner owner) { }
+    private static final ThreadLocal<StrictOwnerScope> STRICT_OWNER = new ThreadLocal<>();
+
+    /** Bind a strict legacy read to the already captured native provider for this call. */
+    public static <T> T withStrictOwner(AdvancedCorePlugin plugin, AdvancedCorePlugin.UserStorageOwner owner, Supplier<T> operation) {
+        Objects.requireNonNull(operation, "operation");
+        StrictOwnerScope previous = STRICT_OWNER.get();
+        STRICT_OWNER.set(new StrictOwnerScope(plugin, owner));
+        try { return operation.get(); }
+        finally { if (previous == null) STRICT_OWNER.remove(); else STRICT_OWNER.set(previous); }
+    }
     private final Supplier<AdvancedCorePlugin> plugin;
     private final Supplier<String> uuid;
 
@@ -61,6 +72,60 @@ public final class BukkitSqlUserStorage implements SqlUserStorage {
                 ? owner().getMysql().getExact(uuid.get()) : owner().getSQLiteUserTable().getExact(primary()));
     }
 
+    /** Read a complete row without treating a failed legacy query as defaults. */
+    public List<Column> readRowStrict(UserStorage storage) {
+        Objects.requireNonNull(storage, "storage");
+        return routed(storage, (type, target) -> target.readRow(type), () -> {
+            try {
+                StrictOwnerScope scope = STRICT_OWNER.get();
+                AdvancedCorePlugin pluginOwner = owner();
+                AdvancedCorePlugin.UserStorageOwner captured = scope != null && scope.plugin() == pluginOwner ? scope.owner() : null;
+                if (captured != null && captured.storageType() != storage) throw new IllegalStateException("Strict legacy storage changed while reading");
+                if (storage == UserStorage.MYSQL) {
+                    com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL table = captured == null ? pluginOwner.getMysql() : captured.mysql();
+                    if (table.getClass().getMethod("getExact", String.class).getDeclaringClass()
+                            != com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL.class
+                            || table.getClass().getMethod("getExactQuery", Column.class).getDeclaringClass()
+                            != com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL.class
+                            || table.getClass().getMethod("getExactStrict", String.class).getDeclaringClass()
+                            != com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL.class) return null;
+                    return table.getExactStrict(uuid.get());
+                }
+                com.bencodez.advancedcore.api.user.userstorage.sql.UserTable table = captured == null ? pluginOwner.getSQLiteUserTable() : captured.table();
+                if (table.getClass().getMethod("getExact", Column.class).getDeclaringClass()
+                        != com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class
+                        || table.getClass().getMethod("getExactStrict", Column.class).getDeclaringClass()
+                        != com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class) return null;
+                return table.getExactStrict(primary());
+            } catch (NoSuchMethodException unavailable) { return null; }
+        });
+    }
+
+    /** Inspect legacy reader capability without issuing a query. Missing providers are failures. */
+    public boolean supportsStrictLegacyRowReads(UserStorage storage) {
+        Objects.requireNonNull(storage, "storage");
+        StrictOwnerScope scope = STRICT_OWNER.get();
+        AdvancedCorePlugin pluginOwner = owner();
+        AdvancedCorePlugin.UserStorageOwner captured = scope != null && scope.plugin() == pluginOwner
+                ? scope.owner() : pluginOwner.getNativeUserStorageOwner();
+        if (captured == null) throw new IllegalStateException("Native user storage owner is unavailable");
+        if (captured.storageType() != storage)
+            throw new IllegalStateException("Strict legacy storage changed while inspecting capability");
+        try {
+            if (storage == UserStorage.MYSQL) {
+                com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL table = Objects.requireNonNull(captured.mysql(), "MySQL user storage is unavailable");
+                Class<?> type = table.getClass();
+                return type.getMethod("getExact", String.class).getDeclaringClass() == com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL.class
+                        && type.getMethod("getExactQuery", Column.class).getDeclaringClass() == com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL.class
+                        && type.getMethod("getExactStrict", String.class).getDeclaringClass() == com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL.class;
+            }
+            com.bencodez.advancedcore.api.user.userstorage.sql.UserTable table = Objects.requireNonNull(captured.table(), "SQLite user storage is unavailable");
+            Class<?> type = table.getClass();
+            return type.getMethod("getExact", Column.class).getDeclaringClass() == com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class
+                    && type.getMethod("getExactStrict", Column.class).getDeclaringClass() == com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class;
+        } catch (NoSuchMethodException | SecurityException unavailable) { return false; }
+    }
+
     @Override
     public boolean contains(UserStorage storage) {
         Objects.requireNonNull(storage, "storage");
@@ -85,10 +150,17 @@ public final class BukkitSqlUserStorage implements SqlUserStorage {
             if (storage == UserStorage.SQLITE) {
                 ArrayList<Column> columns = new ArrayList<>();
                 Column primary = primary();
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.bindLegacyDirectRow(primary.getValue().getString(), true);
                 columns.add(primary);
                 columns.add(new Column(key, value));
-                owner().getSQLiteUserTable().update(primary, columns);
-            } else owner().getMysql().update(uuid.get(), key, value);
+                com.bencodez.advancedcore.api.user.userstorage.sql.UserTable captured = com.bencodez.advancedcore.api.user.usercache.UserDataCache.capturedNestedSqlite();
+                (captured == null ? owner().getSQLiteUserTable() : captured).update(primary, columns);
+            } else {
+				String row = uuid.get();
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.bindLegacyDirectRow(row, false);
+				com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL captured = com.bencodez.advancedcore.api.user.usercache.UserDataCache.capturedNestedMysql();
+				(captured == null ? owner().getMysql() : captured).update(row, key, value);
+			}
             return null;
         });
     }
@@ -103,14 +175,20 @@ public final class BukkitSqlUserStorage implements SqlUserStorage {
                     for (Entry<String, DataValue> entry : values.entrySet()) {
                         if (!entry.getKey().equals("uuid")) columns.add(new Column(entry.getKey(), entry.getValue()));
                     }
-                    owner().getMysql().update(uuid.get(), columns, false);
+					String row = uuid.get();
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.bindLegacyDirectRow(row, false);
+                    owner().getMysql().update(row, columns, false);
                 }
             } else {
                 ArrayList<Column> columns = new ArrayList<>();
                 for (Entry<String, DataValue> entry : values.entrySet()) {
                     if (!entry.getKey().equals("uuid")) columns.add(new Column(entry.getKey(), entry.getValue()));
                 }
-                if (!columns.isEmpty()) owner().getSQLiteUserTable().update(primary(), columns);
+				if (!columns.isEmpty()) {
+					Column primary = primary();
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.bindLegacyDirectRow(primary.getValue().getString(), true);
+					owner().getSQLiteUserTable().update(primary, columns);
+				}
             }
             return null;
         });

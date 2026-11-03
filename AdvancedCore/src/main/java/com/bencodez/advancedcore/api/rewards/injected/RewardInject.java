@@ -180,6 +180,16 @@ public abstract class RewardInject extends Inject {
 		return CompletableFuture.completedFuture(null);
 	}
 
+	/**
+	 * Notifies an injection with the authoritative selection state for this exact
+	 * replay path. The default preserves existing four-argument overrides.
+	 * A false value means no accepted replay selection exists for this injection.
+	 */
+	public CompletionStage<Void> onReplayCheckpointPersisted(Reward reward, AdvancedCoreUser user, String occurrenceId,
+			String injectionKey, boolean selectionPresent) {
+		return onReplayCheckpointPersisted(reward, user, occurrenceId, injectionKey);
+	}
+
 	/** Serializes a synchronized asynchronous injection through completion, not just invocation. */
 	public synchronized CompletionStage<Object> runSynchronizedAsync(Supplier<CompletionStage<Object>> request) {
 		CompletableFuture<Object> result = new CompletableFuture<>();

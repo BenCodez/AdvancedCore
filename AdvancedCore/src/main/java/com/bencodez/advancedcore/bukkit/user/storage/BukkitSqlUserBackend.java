@@ -69,6 +69,23 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
 	}
 
     @Override public UserStorage storageType() { return storageType; }
+	@Override public boolean supportsAtomicUserTransactions() {
+		return storageType == UserStorage.MYSQL ? mysql().supportsAtomicReplayTransactions() : table().supportsAtomicReplayTransactions();
+	}
+
+	@Override public boolean hasAuthoritativeRowReads() {
+		try {
+			if (storageType == UserStorage.MYSQL) {
+				Class<?> type = mysql().getClass();
+				return type.getMethod("getExact", String.class).getDeclaringClass() == MySQL.class
+						&& type.getMethod("getExactQuery", Column.class).getDeclaringClass() == MySQL.class
+						&& type.getMethod("getExactStrict", String.class).getDeclaringClass() == MySQL.class;
+			}
+			Class<?> type = table().getClass();
+			return type.getMethod("getExact", Column.class).getDeclaringClass() == UserTable.class
+					&& type.getMethod("getExactStrict", Column.class).getDeclaringClass() == UserTable.class;
+		} catch (ReflectiveOperationException | SecurityException unavailable) { return false; }
+	}
 
     @Override
     public SqlUserStorage user(UUID uuid) {
@@ -134,7 +151,7 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
         requireOpen();
         requireStorage(storage);
         if (storage == UserStorage.MYSQL) return mysql().getExactStrict(uuid.toString());
-        synchronized (sqliteOperations) { return table().getExact(primary(uuid)); }
+        synchronized (sqliteOperations) { return table().getExactStrict(primary(uuid)); }
     }
 
     private boolean contains(UserStorage storage, UUID uuid) {

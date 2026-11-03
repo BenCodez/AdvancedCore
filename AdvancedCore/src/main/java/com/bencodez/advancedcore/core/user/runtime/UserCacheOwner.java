@@ -19,6 +19,11 @@ public interface UserCacheOwner {
     DataValue getIfPresent(UUID uuid, String key);
     void populate(UUID uuid, HashMap<String, DataValue> values);
 
+    /** An absent provider row is ambiguous; only a non-null full row can prove missing keys. */
+    default void populate(UUID uuid, HashMap<String, DataValue> values, boolean completeRow) {
+        populate(uuid, values);
+    }
+
     interface PopulationToken {}
 
     default PopulationToken beginPopulation(UUID uuid) { return null; }
@@ -27,6 +32,11 @@ public interface UserCacheOwner {
             PopulationToken token) {
         populate(uuid, values);
         return values;
+    }
+
+    default HashMap<String, DataValue> completePopulation(UUID uuid, HashMap<String, DataValue> values,
+            PopulationToken token, boolean completeRow) {
+        return completePopulation(uuid, values, token);
     }
 
     void queueChange(UUID uuid, String key, DataValue value);

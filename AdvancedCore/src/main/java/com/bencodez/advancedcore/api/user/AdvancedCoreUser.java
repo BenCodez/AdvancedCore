@@ -776,6 +776,10 @@ public class AdvancedCoreUser {
 			HashMap<String, String> savedPlaceholders = placeholders == null ? new HashMap<>()
 					: new HashMap<>(placeholders);
 			if (options != null) savedPlaceholders.putAll(options.getPlaceholders());
+			// The caller may supply a separate map. Filter it against the same
+			// replay state after merging, before it becomes a durable queue entry.
+			if (options != null && options.getAsyncReplayState() != null)
+				options.getAsyncReplayState().mergeReplayMetadataInto(savedPlaceholders);
 			if (options != null && options.getAsyncReplayKey() != null)
 				savedPlaceholders.put(ASYNC_REPLAY_KEY_PLACEHOLDER, options.getAsyncReplayKey());
 			String queued = queuedRewardReference(reward, options) + "%placeholders%"

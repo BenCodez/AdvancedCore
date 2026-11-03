@@ -52,6 +52,8 @@ public final class MysqlUserBackend implements SqlUserBackend {
     }
 
     @Override public UserStorage storageType() { return UserStorage.MYSQL; }
+	@Override public boolean hasAuthoritativeRowReads() { return true; }
+	@Override public boolean supportsAtomicUserTransactions() { return true; }
 
     @Override
     public SqlUserStorage user(UUID uuid) {

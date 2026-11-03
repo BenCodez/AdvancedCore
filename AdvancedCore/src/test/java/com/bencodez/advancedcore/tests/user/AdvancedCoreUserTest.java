@@ -427,6 +427,21 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void deferredReplayDoesNotExportStaleSelectionFromSeparateCallerPlaceholders() {
+		ArrayList<String> persisted = new ArrayList<>();
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> { persisted.clear(); persisted.addAll(invocation.getArgument(1)); return null; })
+				.when(data).setStringList(eq("offlineRewardsPath"), any());
+		Reward reward = mock(Reward.class); when(reward.getRewardName()).thenReturn("VoteReward");
+		RewardOptions options = new RewardOptions().addPlaceholder("Server", "server-a");
+		options.setAsyncReplayState(Reward.replayStateFor(new RewardOptions()));
+		var raw = new HashMap<String, String>(); raw.put("__advancedcore_replay_selection_c3RhbGU", "c3RhbGU");
+		user.addOfflineRewards(reward, raw, options);
+		assertEquals(1, persisted.size()); assertFalse(persisted.get(0).contains("__advancedcore_replay_selection_"));
+		assertTrue(persisted.get(0).contains("Server%pair%server-a"));
+	}
+
+	@Test
 	void deferredReplayAtomicallyReplacesItsExistingOccurrence() {
 		String occurrence = UUID.randomUUID().toString();
 		ArrayList<String> persisted = new ArrayList<>(List.of(

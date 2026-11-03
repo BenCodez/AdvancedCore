@@ -158,11 +158,14 @@ public class UserDataTest {
 		UserManager users = mock(UserManager.class);
 		UserDataManager manager = mock(UserDataManager.class);
 		UserDataCache cache = mock(UserDataCache.class);
+		UUID uuid = UUID.randomUUID();
 		when(user.getPlugin()).thenReturn(plugin);
+		when(user.getUUID()).thenReturn(uuid.toString());
 		when(user.getCache()).thenReturn(cache);
 		when(plugin.getUserManager()).thenReturn(users);
 		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
 		when(users.getDataManager()).thenReturn(manager);
+		when(manager.getUserDataCache()).thenReturn(new java.util.concurrent.ConcurrentHashMap<>(java.util.Map.of(uuid, cache)));
 		when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
 		when(cache.getIfPresent("Points")).thenReturn(new DataValueInt(23));
 		when(cache.getEntryIfPresent("PlayerName")).thenReturn(

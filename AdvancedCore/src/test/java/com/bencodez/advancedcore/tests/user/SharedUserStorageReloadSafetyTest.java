@@ -59,6 +59,89 @@ import com.bencodez.simpleapi.sql.sqlite.db.SQLite;
 
 class SharedUserStorageReloadSafetyTest {
 	@Test
+	void shutdownWaitsForLastMutationInsideLifecycleCallback() throws Exception {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		UserDataManager manager = new UserDataManager(plugin);
+		SqlUserBackend backend = mock(SqlUserBackend.class);
+		UserCacheOwner owner = mock(UserCacheOwner.class);
+		UUID uuid = UUID.randomUUID();
+		when(backend.storageType()).thenReturn(UserStorage.MYSQL);
+		when(backend.isOpen()).thenReturn(true);
+		when(backend.user(uuid)).thenReturn(mock(SqlUserStorage.class));
+		when(owner.cachedUsers()).thenReturn(Set.of(uuid));
+		SharedUserDataRuntime runtime = new SharedUserDataRuntime(backend, owner);
+		manager.bindSharedRuntime(runtime);
+		Method begin = UserDataManager.class.getDeclaredMethod("beginSharedSynchronousIntegerMutation", UUID.class);
+		Method end = UserDataManager.class.getDeclaredMethod("endSharedSynchronousIntegerMutation", UUID.class);
+		begin.setAccessible(true); end.setAccessible(true);
+		CountDownLatch admitted = new CountDownLatch(1), release = new CountDownLatch(1);
+		var worker = java.util.concurrent.Executors.newSingleThreadExecutor();
+		java.util.concurrent.atomic.AtomicInteger closes = new java.util.concurrent.atomic.AtomicInteger();
+		try {
+			var mutation = worker.submit(() -> runtime.withStorageReadAdmission(() -> {
+				try {
+					assertEquals(true, begin.invoke(manager, uuid));
+					admitted.countDown();
+					assertTrue(release.await(5, TimeUnit.SECONDS));
+					end.invoke(manager, uuid);
+					return null;
+				} catch (ReflectiveOperationException | InterruptedException e) { throw new RuntimeException(e); }
+			}));
+			assertTrue(admitted.await(5, TimeUnit.SECONDS));
+			CompletionStage<Void> close = manager.closeSharedRuntimeAsyncCompletion(closes::incrementAndGet);
+			assertFalse(close.toCompletableFuture().isDone());
+			release.countDown();
+			mutation.get(5, TimeUnit.SECONDS);
+			close.toCompletableFuture().get(5, TimeUnit.SECONDS);
+			verify(owner).flush(eq(uuid), eq(UserStorage.MYSQL), any());
+			verify(backend).close();
+			assertEquals(1, closes.get());
+			assertFalse(manager.hasSharedRuntimeLifecycle());
+		} finally { release.countDown(); worker.shutdownNow(); manager.getTimer().shutdownNow(); }
+	}
+
+	@Test
+	void synchronousCloseRejectionRestoresRuntimeForRetry() {
+		UserDataManager manager = new UserDataManager(mock(AdvancedCorePlugin.class));
+		SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
+		when(runtime.closeAsync(any())).thenThrow(new IllegalStateException("reentrant"))
+				.thenReturn(CompletableFuture.completedFuture(null));
+		manager.bindSharedRuntime(runtime);
+		try {
+			assertThrows(java.util.concurrent.CompletionException.class,
+					() -> manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().join());
+			assertTrue(manager.hasSharedRuntimeLifecycle());
+			manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().join();
+			assertFalse(manager.hasSharedRuntimeLifecycle());
+		} finally { manager.getTimer().shutdownNow(); }
+	}
+
+	@Test
+	void rejectedDrainContinuationKeepsOwnerAvailableForRetry() throws Exception {
+		UserDataManager manager = new UserDataManager(mock(AdvancedCorePlugin.class));
+		SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
+		when(runtime.closeAsync(any())).thenReturn(CompletableFuture.completedFuture(null));
+		manager.bindSharedRuntime(runtime);
+		var original = manager.getTimer();
+		var rejected = mock(java.util.concurrent.ScheduledExecutorService.class);
+		doThrow(new java.util.concurrent.RejectedExecutionException("synthetic rejection")).when(rejected).execute(any());
+		Field timerField = UserDataManager.class.getDeclaredField("timer"); timerField.setAccessible(true); timerField.set(manager, rejected);
+		Method begin = UserDataManager.class.getDeclaredMethod("beginSharedSynchronousIntegerMutation", UUID.class);
+		Method end = UserDataManager.class.getDeclaredMethod("endSharedSynchronousIntegerMutation", UUID.class);
+		begin.setAccessible(true); end.setAccessible(true); UUID uuid = UUID.randomUUID();
+		var caller = java.util.concurrent.Executors.newSingleThreadExecutor();
+		try {
+			assertEquals(true, begin.invoke(manager, uuid));
+			var shutdown = caller.submit(() -> manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture()).get(5, TimeUnit.SECONDS);
+			end.invoke(manager, uuid);
+			assertThrows(java.util.concurrent.CompletionException.class, shutdown::join);
+			assertTrue(manager.hasSharedRuntimeLifecycle());
+			timerField.set(manager, original);
+			manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().get(5, TimeUnit.SECONDS);
+			verify(runtime).closeAsync(any());
+		} finally { caller.shutdownNow(); timerField.set(manager, original); original.shutdownNow(); }
+	}
+	@Test
 	void primaryThreadCompatibilityConversionDelegatesToTheAsyncEntryPoint() {
 		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class, CALLS_REAL_METHODS);
 		var scheduler = mock(com.bencodez.simpleapi.scheduler.BukkitScheduler.class);

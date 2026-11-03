@@ -366,7 +366,7 @@ public class Reward {
 			final String injectionKey = replayKey + "/" + index;
 			if (index < resumeAfter) {
 				sequence = sequence.thenCompose(ignored -> notifyReplayCheckpointPersisted(inject, user, occurrenceId,
-						injectionKey));
+						injectionKey, replayState, placeholders));
 				continue;
 			}
 			sequence = sequence.thenCompose(ignored -> {
@@ -383,7 +383,7 @@ public class Reward {
 						replayState.setRegistryFingerprint(replayKey, registryFingerprint);
 						return replayState.persistCheckpointAsync(plugin, placeholders)
 								.thenCompose(ignored -> notifyReplayCheckpointPersisted(inject, user, occurrenceId,
-										injectionKey))
+										injectionKey, replayState, placeholders))
 								.thenApply(ignored -> result);
 					}).thenCompose(ignored -> resumeOnServerThread(user));
 		}
@@ -397,11 +397,13 @@ public class Reward {
 	}
 
 	private CompletionStage<Void> notifyReplayCheckpointPersisted(RewardInject inject, AdvancedCoreUser user,
-			String occurrenceId,
-			String injectionKey) {
+			String occurrenceId, String injectionKey, ReplayState replayState, HashMap<String, String> placeholders) {
 		try {
+			String selectionKey = REPLAY_SELECTION_PREFIX + Base64.getUrlEncoder().withoutPadding()
+					.encodeToString(injectionKey.getBytes(StandardCharsets.UTF_8));
+			boolean selectionPresent = replaySelectionMetadata(placeholders, replayState, selectionKey) != null;
 			CompletionStage<Void> notification = inject.onReplayCheckpointPersisted(this, user, occurrenceId,
-					injectionKey);
+					injectionKey, selectionPresent);
 			return notification == null ? CompletableFuture.failedFuture(new IllegalStateException(
 					"Reward injection returned a null replay-checkpoint result: " + inject.getPath())) : notification;
 		} catch (Throwable failure) {
@@ -593,7 +595,7 @@ public class Reward {
 		String storageKey = REPLAY_SELECTION_PREFIX + Base64.getUrlEncoder().withoutPadding()
 				.encodeToString(scopedKey.getBytes(StandardCharsets.UTF_8));
 		ReplayState replayState = ACTIVE_REPLAY_STATE.get();
-		String stored = replayMetadata(placeholders, replayState, storageKey);
+		String stored = replaySelectionMetadata(placeholders, replayState, storageKey);
 		if (stored != null) {
 			if (replayState != null) replayState.recordReplayMetadata(storageKey, stored);
 			return stored.isEmpty() ? null : new String(Base64.getUrlDecoder().decode(stored), StandardCharsets.UTF_8);
@@ -611,7 +613,16 @@ public class Reward {
 		if (activeKey == null) return false;
 		String storageKey = REPLAY_SELECTION_PREFIX + Base64.getUrlEncoder().withoutPadding()
 				.encodeToString(activeKey.getBytes(StandardCharsets.UTF_8));
-		return replayMetadata(placeholders, ACTIVE_REPLAY_STATE.get(), storageKey) != null;
+		return replaySelectionMetadata(placeholders, ACTIVE_REPLAY_STATE.get(), storageKey) != null;
+	}
+
+	private static String replaySelectionMetadata(HashMap<String, String> placeholders, ReplayState replayState, String key) {
+		// A fresh execution can have a checkpoint writer, but that alone does not
+		// make caller-supplied selection metadata authoritative. Newly selected
+		// values are held in this execution's replay state; only restored state
+		// can accept persisted selections from incoming placeholders.
+		if (replayState != null && !replayState.restoredCheckpoint) return replayState.replayMetadata(key);
+		return replayMetadata(placeholders, replayState, key);
 	}
 
 	/** Durably records replay metadata before dispatching its selected side effect. */
@@ -1147,6 +1158,8 @@ public class Reward {
 			if (isReplayMetadataKey(key)) replayMetadata.put(key, value);
 		}
 		public synchronized void mergeReplayMetadataInto(HashMap<String, String> target) {
+			if (!restoredCheckpoint) target.keySet().removeIf(key ->
+					key != null && key.startsWith(REPLAY_SELECTION_PREFIX) && !replayMetadata.containsKey(key));
 			Reward.mergeReplayMetadata(target, replayMetadata);
 		}
 		public synchronized String replayMetadata(String key) { return replayMetadata.get(key); }
@@ -1211,7 +1224,9 @@ public class Reward {
 			Consumer<ReplayCheckpoint> consumer;
 			synchronized (this) { consumer = checkpointConsumer; }
 			if (consumer == null) return CompletableFuture.completedFuture(null);
-			ReplayCheckpoint checkpoint = new ReplayCheckpoint(copyProgress(), copyRegistryFingerprints(), placeholders);
+			HashMap<String, String> checkpointPlaceholders = new HashMap<>(placeholders);
+			mergeReplayMetadataInto(checkpointPlaceholders);
+			ReplayCheckpoint checkpoint = new ReplayCheckpoint(copyProgress(), copyRegistryFingerprints(), checkpointPlaceholders);
 			CompletableFuture<Void> persisted = new CompletableFuture<>();
 			AtomicBoolean claimed = new AtomicBoolean();
 			try {

@@ -1746,6 +1746,123 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void checkpointContextUsesTheExactSelectionAndIgnoresStaleFreshPlaceholders() {
+		List<Boolean> contexts = new ArrayList<>();
+		handler.getInjectedRewards().add(new RewardInject("Selected") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) {
+				Reward.replaySelection(p, () -> "chosen"); return CompletableFuture.completedFuture(null);
+			}
+			@Override public CompletionStage<Void> onReplayCheckpointPersisted(Reward r, AdvancedCoreUser u, String occurrence, String key, boolean selected) {
+				contexts.add(selected); return CompletableFuture.completedFuture(null);
+			}
+		});
+		handler.getInjectedRewards().add(new RewardInject("Absent") {
+			@Override public Object onRewardRequest(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) { return null; }
+			@Override public CompletionStage<Void> onReplayCheckpointPersisted(Reward r, AdvancedCoreUser u, String occurrence, String key, boolean selected) {
+				contexts.add(selected); return CompletableFuture.completedFuture(null);
+			}
+		});
+		var placeholders = new HashMap<String, String>();
+		String staleKey = "__advancedcore_replay_selection_" + java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString("AsyncReward/1".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		placeholders.put(staleKey, "c3RhbGU");
+		reward.giveInjectedRewardsAsync(user, placeholders).toCompletableFuture().join();
+		assertEquals(List.of(true, false), contexts);
+	}
+
+	@Test
+	void freshDurableCheckpointDoesNotAcceptStaleCallerSelection() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> { invocation.getArgument(0, Runnable.class).run(); return null; }).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor); List<Boolean> observed = new ArrayList<>();
+		handler.getInjectedRewards().add(new RewardInject("Absent") {
+			@Override public Object onRewardRequest(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) { return null; }
+			@Override public CompletionStage<Void> onReplayCheckpointPersisted(Reward r, AdvancedCoreUser u, String occurrence, String key, boolean selected) {
+				observed.add(selected); return CompletableFuture.completedFuture(null);
+			}
+		});
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		var constructor = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class); constructor.setAccessible(true);
+		Object state = constructor.newInstance(null, null, false);
+		var setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer", java.util.function.Consumer.class); setConsumer.setAccessible(true);
+		var persisted = new java.util.concurrent.atomic.AtomicReference<Reward.ReplayCheckpoint>();
+		setConsumer.invoke(state, (java.util.function.Consumer<Reward.ReplayCheckpoint>) persisted::set);
+		var placeholders = new HashMap<String, String>();
+		String key = "__advancedcore_replay_selection_" + java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString("AsyncReward/0".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		placeholders.put(key, "c3RhbGU");
+		var replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync", AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class); replay.setAccessible(true);
+		@SuppressWarnings("unchecked") CompletionStage<Void> delivery = (CompletionStage<Void>) replay.invoke(reward, user, placeholders, 0, state, "AsyncReward", "fresh");
+		delivery.toCompletableFuture().join(); assertEquals(List.of(false), observed);
+		var checkpoint = persisted.get(); assertNotNull(checkpoint);
+		Object restored = constructor.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false);
+		@SuppressWarnings("unchecked") CompletionStage<Void> resumed = (CompletionStage<Void>) replay.invoke(reward, user,
+				checkpoint.getPlaceholders(), 0, restored, "AsyncReward", "fresh");
+		resumed.toCompletableFuture().join(); assertEquals(List.of(false, false), observed);
+	}
+
+	@Test
+	void freshFailureDoesNotExportStaleFutureSelectionIntoRetry() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> { invocation.getArgument(0, Runnable.class).run(); return null; }).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		handler.getInjectedRewards().add(new RewardInject("First") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) { return null; }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) {
+				return CompletableFuture.failedFuture(new IllegalStateException("synthetic failure"));
+			}
+		});
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		var constructor = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class); constructor.setAccessible(true);
+		Object state = constructor.newInstance(null, null, false);
+		var setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer", java.util.function.Consumer.class); setConsumer.setAccessible(true);
+		setConsumer.invoke(state, (java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoint -> {});
+		var placeholders = new HashMap<String, String>();
+		String staleKey = "__advancedcore_replay_selection_" + java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString("AsyncReward/1".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		placeholders.put(staleKey, "c3RhbGU");
+		var replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync", AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class); replay.setAccessible(true);
+		@SuppressWarnings("unchecked") CompletionStage<Void> delivery = (CompletionStage<Void>) replay.invoke(reward, user, placeholders, 0, state, "AsyncReward", "fresh");
+		var failure = assertThrows(java.util.concurrent.CompletionException.class, () -> delivery.toCompletableFuture().join());
+		assertTrue(failure.getCause() instanceof Reward.RewardReplayFailure);
+		assertFalse(((Reward.RewardReplayFailure) failure.getCause()).getReplayPlaceholders().containsKey(staleKey));
+	}
+
+	@Test
+	void selectedCheckpointRetryReceivesSameContextWithoutRepeatingTheInjection() throws Exception {
+		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
+		doAnswer(invocation -> { invocation.getArgument(0, Runnable.class).run(); return null; }).when(storageExecutor).execute(any(Runnable.class));
+		when(plugin.getTimer()).thenReturn(storageExecutor);
+		AtomicInteger injections = new AtomicInteger(); List<Boolean> observed = new ArrayList<>();
+		handler.getInjectedRewards().add(new RewardInject("Selected") {
+			@Override public boolean supportsAsyncRequest() { return true; }
+			@Override public Object onRewardRequest(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) { throw new AssertionError(); }
+			@Override public CompletionStage<Object> onRewardRequestAsync(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) {
+				injections.incrementAndGet(); Reward.replaySelection(p, () -> "value"); return CompletableFuture.completedFuture(null);
+			}
+			@Override public CompletionStage<Void> onReplayCheckpointPersisted(Reward r, AdvancedCoreUser u, String occurrence, String key, boolean selected) {
+				observed.add(selected); return observed.size() == 1 ? CompletableFuture.failedFuture(new IllegalStateException("retry")) : CompletableFuture.completedFuture(null);
+			}
+		});
+		Class<?> stateType = Class.forName("com.bencodez.advancedcore.api.rewards.Reward$ReplayState");
+		var constructor = stateType.getDeclaredConstructor(Map.class, Map.class, boolean.class); constructor.setAccessible(true);
+		Object replayState = constructor.newInstance(null, null, false);
+		var setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer", java.util.function.Consumer.class); setConsumer.setAccessible(true);
+		var persisted = new java.util.concurrent.atomic.AtomicReference<Reward.ReplayCheckpoint>();
+		setConsumer.invoke(replayState, (java.util.function.Consumer<Reward.ReplayCheckpoint>) persisted::set);
+		var replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync", AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class); replay.setAccessible(true);
+		@SuppressWarnings("unchecked") CompletionStage<Void> first = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0, replayState, "AsyncReward", "one");
+		assertThrows(java.util.concurrent.CompletionException.class, () -> first.toCompletableFuture().join());
+		var checkpoint = persisted.get(); assertNotNull(checkpoint);
+		Object restored = constructor.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false);
+		@SuppressWarnings("unchecked") CompletionStage<Void> retry = (CompletionStage<Void>) replay.invoke(reward, user, checkpoint.getPlaceholders(), 0, restored, "AsyncReward", "one");
+		retry.toCompletableFuture().join(); assertEquals(1, injections.get()); assertEquals(List.of(true, true), observed);
+	}
+
+	@Test
 	void checkpointWriteRunsOffServerThreadAndGatesTheNextInjection() throws Exception {
 		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
 		when(plugin.getTimer()).thenReturn(storageExecutor);
