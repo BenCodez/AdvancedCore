@@ -2,9 +2,11 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
-guide="$repo_root/AGENTS.md"
+api="$repo_root/AdvancedCore/src/main/java/com/bencodez/advancedcore/api"
 
-grep -Fq '`api/inventory/` contains GUI/editor behavior' "$guide"
-grep -Fq '`api/item/` owns item construction and compatibility-sensitive item serialization' "$guide"
+test -f "$api/inventory/BInventory.java"
+test -d "$api/inventory/editgui"
+test -f "$api/item/ItemBuilder.java"
+test -f "$api/item/FullInventoryHandler.java"
 
-echo "architecture map guidance: ok"
+echo "inventory and item architecture: ok"
