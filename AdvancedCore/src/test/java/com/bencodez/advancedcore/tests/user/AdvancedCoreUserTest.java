@@ -427,6 +427,78 @@ public class AdvancedCoreUserTest {
 	}
 
 	@Test
+	void freshOfflineQueueDiscardsCallerReplayMetadataAndMarksProvenance() {
+		ArrayList<String> persisted = new ArrayList<>();
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> { persisted.clear(); persisted.addAll(invocation.getArgument(1)); return null; })
+				.when(data).setStringList(eq("offlineRewardsPath"), any());
+		Reward reward = mock(Reward.class); when(reward.getRewardName()).thenReturn("VoteReward");
+		var raw = new HashMap<String, String>(); raw.put("__advancedcore_replay_commands_stale_snapshot", "v1:c3RhbGU");
+		raw.put("__AdvancedCoreReplayProvenance", "checkpoint"); raw.put("ordinary", "kept");
+		user.addOfflineRewards(reward, raw);
+		assertEquals(1, persisted.size()); assertFalse(persisted.get(0).contains("__advancedcore_replay_commands_stale_snapshot"));
+		assertTrue(persisted.get(0).contains("__AdvancedCoreReplayProvenance%pair%trusted"));
+		assertTrue(persisted.get(0).contains("ordinary%pair%kept"));
+	}
+
+	@Test
+	void restoredZeroProgressReplayRetainsProvenanceWhenDeferredAgain() {
+		ArrayList<String> persisted = new ArrayList<>();
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> { persisted.clear(); persisted.addAll(invocation.getArgument(1)); return null; })
+				.when(data).setStringList(eq("offlineRewardsPath"), any());
+		Reward reward = mock(Reward.class); when(reward.getRewardName()).thenReturn("VoteReward");
+		String key = "__advancedcore_replay_selection_c2VsZWN0aW9u";
+		RewardOptions restored = new RewardOptions().addPlaceholder(key, "Y2hvc2Vu");
+		restored.setRestoredAsyncReplayEntry(true);
+		user.addOfflineRewards(reward, restored.getPlaceholders(), restored);
+		assertTrue(persisted.get(0).contains("__AdvancedCoreReplayProvenance%pair%trusted"));
+		AdvancedCoreUser restarted = new AdvancedCoreUser(plugin, UUID.randomUUID(), "Test");
+		restarted.setData(data);
+		when(rewardHandler.givePersistedQueueRewardAsync(eq(restarted), any(PersistedQueueReference.class), any(RewardOptions.class)))
+				.thenReturn(CompletableFuture.completedFuture(null));
+		ArgumentCaptor<RewardOptions> resumed = ArgumentCaptor.forClass(RewardOptions.class);
+		restarted.checkOfflineRewards();
+		verify(rewardHandler).givePersistedQueueRewardAsync(eq(restarted), any(PersistedQueueReference.class), resumed.capture());
+		assertTrue(resumed.getValue().isRestoredAsyncReplayEntry());
+		assertEquals("Y2hvc2Vu", resumed.getValue().getPlaceholders().get(key));
+	}
+
+	@Test
+	void deferredReplayDoesNotExportStaleSelectionFromSeparateCallerPlaceholders() {
+		ArrayList<String> persisted = new ArrayList<>();
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> { persisted.clear(); persisted.addAll(invocation.getArgument(1)); return null; })
+				.when(data).setStringList(eq("offlineRewardsPath"), any());
+		Reward reward = mock(Reward.class); when(reward.getRewardName()).thenReturn("VoteReward");
+		RewardOptions options = new RewardOptions().addPlaceholder("Server", "server-a");
+		options.setAsyncReplayState(Reward.replayStateFor(new RewardOptions()));
+		var raw = new HashMap<String, String>(); raw.put("__advancedcore_replay_selection_c3RhbGU", "c3RhbGU");
+		user.addOfflineRewards(reward, raw, options);
+		assertEquals(1, persisted.size()); assertFalse(persisted.get(0).contains("__advancedcore_replay_selection_"));
+		assertTrue(persisted.get(0).contains("Server%pair%server-a"));
+	}
+
+	@Test
+	void deferredReplayPreservesSelectionRecordedByCurrentState() {
+		ArrayList<String> persisted = new ArrayList<>();
+		when(data.getStringList("offlineRewardsPath", UserDataFetchMode.DEFAULT)).thenAnswer(ignored -> new ArrayList<>(persisted));
+		org.mockito.Mockito.doAnswer(invocation -> { persisted.clear(); persisted.addAll(invocation.getArgument(1)); return null; })
+				.when(data).setStringList(eq("offlineRewardsPath"), any());
+		Reward reward = mock(Reward.class); when(reward.getRewardName()).thenReturn("VoteReward");
+		RewardOptions options = new RewardOptions();
+		Reward.ReplayState state = Reward.replayStateFor(options);
+		String key = "__advancedcore_replay_selection_" + java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString("root/0".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		state.recordReplayMetadata(key, "Y2hvc2Vu");
+		options.setAsyncReplayState(state);
+		user.addOfflineRewards(reward, new HashMap<>(), options);
+		assertEquals(1, persisted.size());
+		assertTrue(persisted.get(0).contains(key));
+		assertTrue(persisted.get(0).contains("Y2hvc2Vu"));
+	}
+
+	@Test
 	void deferredReplayAtomicallyReplacesItsExistingOccurrence() {
 		String occurrence = UUID.randomUUID().toString();
 		ArrayList<String> persisted = new ArrayList<>(List.of(

@@ -74,6 +74,7 @@ public class AdvancedCoreUser {
 	private static final String ASYNC_RETRY_DELIMITER = "%asyncretry%";
 	private static final String ASYNC_OCCURRENCE_DELIMITER = "%asyncoccurrence%";
 	private static final String ASYNC_REPLAY_KEY_PLACEHOLDER = "__AdvancedCoreAsyncReplayKey";
+	private static final String ASYNC_REPLAY_PROVENANCE = "__AdvancedCoreReplayProvenance";
 	private static final String CHOICE_OCCURRENCE_PREFIX = "\\AdvancedCoreChoice/1/";
 	private static final String CHECKPOINTED_CHOICE_OCCURRENCE_PREFIX = "\\AdvancedCoreChoice/2/";
 	private static final String CONSUMED_CHOICE_OCCURRENCE_PREFIX = "\\AdvancedCoreChoice/3/";
@@ -776,6 +777,21 @@ public class AdvancedCoreUser {
 			HashMap<String, String> savedPlaceholders = placeholders == null ? new HashMap<>()
 					: new HashMap<>(placeholders);
 			if (options != null) savedPlaceholders.putAll(options.getPlaceholders());
+			if (options == null || options.isFreshAsyncReplayEntry()) {
+				Reward.clearReplayMetadata(savedPlaceholders);
+				if (options != null && options.getAsyncReplayState() != null)
+					options.getAsyncReplayState().mergeReplayMetadataInto(savedPlaceholders);
+				savedPlaceholders.put(ASYNC_REPLAY_PROVENANCE, "trusted");
+			} else {
+				// An externally supplied marker cannot claim queue provenance.
+				savedPlaceholders.remove(ASYNC_REPLAY_PROVENANCE);
+				if (options.isRestoredAsyncReplayEntry())
+					savedPlaceholders.put(ASYNC_REPLAY_PROVENANCE, "trusted");
+			}
+			// The caller may supply a separate map. Filter it against the same
+			// replay state after merging, before it becomes a durable queue entry.
+			if (options != null && options.getAsyncReplayState() != null)
+				options.getAsyncReplayState().mergeReplayMetadataInto(savedPlaceholders);
 			if (options != null && options.getAsyncReplayKey() != null)
 				savedPlaceholders.put(ASYNC_REPLAY_KEY_PLACEHOLDER, options.getAsyncReplayKey());
 			String queued = queuedRewardReference(reward, options) + "%placeholders%"
@@ -831,8 +847,10 @@ public class AdvancedCoreUser {
 			HashMap<String, Long> timed = new HashMap<>(getTimedRewards());
 			String rewardName = queuedRewardReference(reward);
 			rewardName += "%extime%" + System.currentTimeMillis();
-
-			timed.put(rewardName + "%placeholders%" + ArrayUtils.makeString(placeholders), epochMilli);
+			HashMap<String, String> fresh = placeholders == null ? new HashMap<>() : new HashMap<>(placeholders);
+			Reward.clearReplayMetadata(fresh);
+			fresh.put(ASYNC_REPLAY_PROVENANCE, "trusted");
+			timed.put(rewardName + "%placeholders%" + ArrayUtils.makeString(fresh), epochMilli);
 			setTimedRewards(timed);
 		}
 		loadTimedDelayedTimer(epochMilli);
@@ -1054,7 +1072,11 @@ public class AdvancedCoreUser {
 		int placeholders = rewardEntry.indexOf("%placeholders%");
 		String storedReference = placeholders < 0 ? rewardEntry : rewardEntry.substring(0, placeholders);
 		String suffix = placeholders < 0 ? "" : rewardEntry.substring(placeholders);
-		if (replayFailure != null) suffix = "%placeholders%" + ArrayUtils.makeString(replayFailure.getReplayPlaceholders());
+		if (replayFailure != null) {
+			HashMap<String, String> saved = new HashMap<>(replayFailure.getReplayPlaceholders());
+			saved.put(ASYNC_REPLAY_PROVENANCE, "checkpoint");
+			suffix = "%placeholders%" + ArrayUtils.makeString(saved);
+		}
 		// A nondeterministic decision may be durable work before the first effect.
 		// Preserve its snapshot without inventing a completed-stage marker.
 		if (completed <= 0 && serializedProgress.isEmpty()) return replayFailure == null
@@ -1071,8 +1093,10 @@ public class AdvancedCoreUser {
 		String reference = marker < 0 ? rewardEntry : rewardEntry.substring(0, marker);
 		QueuedReplay queuedReplay = parseQueuedReplay(stripAsyncRetryMarker(reference));
 		String serialized = encodeAsyncReplayProgress(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints());
+		HashMap<String, String> checkpointPlaceholders = new HashMap<>(checkpoint.getPlaceholders());
+		checkpointPlaceholders.put(ASYNC_REPLAY_PROVENANCE, "checkpoint");
 		return queuedReference(queuedReplay) + (serialized.isEmpty() ? "" : ASYNC_PROGRESS_DELIMITER + serialized)
-				+ "%placeholders%" + ArrayUtils.makeString(checkpoint.getPlaceholders());
+				+ "%placeholders%" + ArrayUtils.makeString(checkpointPlaceholders);
 	}
 
 	private static int completedAsyncInjections(Throwable failure) {
@@ -1255,6 +1279,8 @@ public class AdvancedCoreUser {
 					replayOptions.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
 					replayOptions.setAsyncReplayRegistryFingerprints(queuedReplay.asyncReplayRegistryFingerprints);
 					replayOptions.setLegacyAsyncReplayCheckpoint(queuedReplay.legacyAsyncReplayCheckpoint);
+					String provenance = replayOptions.getPlaceholders().remove(ASYNC_REPLAY_PROVENANCE);
+					replayOptions.setRestoredAsyncReplayEntry("trusted".equals(provenance) || "checkpoint".equals(provenance));
 					replayOptions.setAsyncReplayOccurrenceId(queuedReplay.asyncReplayOccurrenceId);
 					replayOptions.setTimedQueueReplay(true);
 					replayOptions.addPlaceholder("date",
@@ -1436,6 +1462,8 @@ public class AdvancedCoreUser {
 			options.setAsyncReplayProgress(queuedReplay.asyncReplayProgress);
 			options.setAsyncReplayRegistryFingerprints(queuedReplay.asyncReplayRegistryFingerprints);
 			options.setLegacyAsyncReplayCheckpoint(queuedReplay.legacyAsyncReplayCheckpoint);
+			String provenance = options.getPlaceholders().remove(ASYNC_REPLAY_PROVENANCE);
+			options.setRestoredAsyncReplayEntry("trusted".equals(provenance) || "checkpoint".equals(provenance));
 			options.setAsyncReplayOccurrenceId(queuedReplay.asyncReplayOccurrenceId);
 			AtomicReference<String> currentEntry = new AtomicReference<>(rewardEntry);
 			options.setAsyncReplayCheckpointConsumer(checkpoint -> checkpointOfflineReward(currentEntry, checkpoint));
@@ -1928,11 +1956,12 @@ public class AdvancedCoreUser {
 	 */
 	@SuppressWarnings("deprecation")
 	public OfflinePlayer getOfflinePlayer() {
-		if (getPlayerName().isBlank()) {
+		String name = getPlayerName();
+		if (name == null || name.isBlank()) {
 			return null;
 		}
 		if (!plugin.getOptions().isOnlineMode()) {
-			return Bukkit.getOfflinePlayer(getPlayerName());
+			return Bukkit.getOfflinePlayer(name);
 		}
 		if (uuid != null && !uuid.equals("")) {
 			return Bukkit.getOfflinePlayer(java.util.UUID.fromString(uuid));
@@ -1956,7 +1985,8 @@ public class AdvancedCoreUser {
 	 */
 	public Player getPlayer() {
 		if (!plugin.getOptions().isOnlineMode()) {
-			return Bukkit.getPlayer(getPlayerName());
+			String name = getPlayerName();
+			return name == null || name.isBlank() ? null : Bukkit.getPlayer(name);
 		}
 		if (uuid != null && !uuid.isEmpty()) {
 			return Bukkit.getPlayer(java.util.UUID.fromString(uuid));

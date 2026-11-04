@@ -624,6 +624,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void convertDataStorageNow(UserStorage from, UserStorage to) {
+		withLegacyIntegerOwnerReplacement(() -> convertDataStorageNowAdmitted(from, to));
+	}
+
+	private void convertDataStorageNowAdmitted(UserStorage from, UserStorage to) {
 		debug("Starting convert process");
 		if (to == null) {
 			throw new RuntimeException("Invalid Storage Method");
@@ -1196,6 +1200,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * @param storageType the storage type to load
 	 */
 	public void loadUserAPI(UserStorage storageType) {
+		withLegacyIntegerOwnerReplacement(() -> loadUserAPIAdmitted(storageType));
+	}
+
+	private void loadUserAPIAdmitted(UserStorage storageType) {
 		if (storageType == null) {
 			throw new IllegalArgumentException("User storage must be SQLITE or MYSQL");
 		}
@@ -1774,6 +1782,10 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	}
 
 	private void installUserStorageReplacement(UserStorageReplacement replacement) {
+		withLegacyIntegerOwnerReplacement(() -> installUserStorageReplacementAdmitted(replacement));
+	}
+
+	private void installUserStorageReplacementAdmitted(UserStorageReplacement replacement) {
 		retryPendingNativeUserStorageCloses();
 		MySQL previousMysql = mysql;
 		Database previousDatabase = database;
@@ -1926,7 +1938,17 @@ public abstract class AdvancedCorePlugin extends JavaPlugin {
 	 * 
 	 * @param mysql the mysql connection to set
 	 */
+	private void withLegacyIntegerOwnerReplacement(Runnable action) {
+		UserManager loaded = getLoadedUserManager();
+		if (loaded == null || loaded.getDataManager() == null) { action.run(); return; }
+		loaded.getDataManager().withLegacyIntegerOwnerReplacement(action);
+	}
+
 	public void setMysql(MySQL mysql) {
+		withLegacyIntegerOwnerReplacement(() -> setMysqlAdmitted(mysql));
+	}
+
+	private void setMysqlAdmitted(MySQL mysql) {
 		if (this.mysql != null) {
 			this.mysql.close();
 			this.mysql = null;

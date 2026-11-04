@@ -87,8 +87,9 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     private HashMap<String, DataValue> populateInternal(UUID uuid) {
         UserCacheOwner.PopulationToken token = cacheOwner.beginPopulation(uuid);
         if (cacheOwner.isCached(uuid)) flushInternal(uuid);
-        HashMap<String, DataValue> values = SqlUserDataAccess.convert(readStorageRow(uuid));
-        return cacheOwner.completePopulation(uuid, values, token);
+        List<Column> row = readStorageRow(uuid);
+        HashMap<String, DataValue> values = SqlUserDataAccess.convert(row);
+        return cacheOwner.completePopulation(uuid, values, token, row != null && backend.hasAuthoritativeRowReads());
     }
 
     public int startupForEach(BiConsumer<UUID, HashMap<String, DataValue>> consumer, boolean populateCache) {
@@ -189,7 +190,8 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                     cacheOwner.remove(uuid);
                 } catch (RuntimeException | Error failure) {
                     try {
-                        cacheOwner.populate(uuid, SqlUserDataAccess.convert(readStorageRow(uuid)));
+                        List<Column> row = readStorageRow(uuid);
+                        cacheOwner.populate(uuid, SqlUserDataAccess.convert(row), row != null && backend.hasAuthoritativeRowReads());
                     } catch (RuntimeException | Error recoveryFailure) {
                         failure.addSuppressed(recoveryFailure);
                     } finally {

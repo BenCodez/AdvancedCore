@@ -33,6 +33,15 @@ import com.bencodez.simpleapi.sql.mysql.queries.Query;
 import lombok.Getter;
 
 public class MySQL extends AbstractSqlTable {
+	/** Subclasses must explicitly opt in before replay transactions bypass their overrides. */
+	public boolean supportsAtomicReplayTransactions() { return getClass() == MySQL.class; }
+	/** Native identifier rules; null leaves unknown dialects unresolved. */
+	public Boolean caseInsensitiveColumnNames() {
+		if ((dbType == DbType.MYSQL || dbType == DbType.MARIADB)) return Boolean.TRUE;
+		if (dbType == DbType.POSTGRESQL) return Boolean.FALSE;
+		return null;
+	}
+	private static final ThreadLocal<Boolean> STRICT_ROW_READ = new ThreadLocal<>();
 
 	private final AdvancedCorePlugin plugin;
 
@@ -699,11 +708,14 @@ public class MySQL extends AbstractSqlTable {
 
 	/** Read for shared storage: never publish a schema-only snapshot after SQL failure. */
 	public ArrayList<Column> getExactStrict(String uuid) {
-		return getExactQuery(new Column("uuid", new DataValueString(uuid)), true);
+		Boolean previous = STRICT_ROW_READ.get();
+		STRICT_ROW_READ.set(Boolean.TRUE);
+		try { return getExact(uuid); }
+		finally { if (previous == null) STRICT_ROW_READ.remove(); else STRICT_ROW_READ.set(previous); }
 	}
 
 	public ArrayList<Column> getExactQuery(Column column) {
-		return getExactQuery(column, false);
+		return getExactQuery(column, Boolean.TRUE.equals(STRICT_ROW_READ.get()));
 	}
 
 	private ArrayList<Column> getExactQuery(Column column, boolean strict) {
@@ -808,15 +820,26 @@ public class MySQL extends AbstractSqlTable {
 			plugin.devDebug("DB QUERY: " + query);
 
 			try {
-				Query prepared = new Query(mysql, query);
-				prepared.setParameter(1, UUID.fromString(index));
-				for (int i = 0; i < cols.size(); i++) {
-					prepared.setParameter(i + 2, toSqlValue(cols.get(i).getValue()));
+				if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyBatchPersistence(index)
+						|| com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence(index)) {
+					try (Connection connection = mysql.getConnectionManager().getConnectionChecked();
+							PreparedStatement statement = connection.prepareStatement(query)) {
+						statement.setObject(1, UUID.fromString(index));
+						for (int i = 0; i < cols.size(); i++) statement.setObject(i + 2, toSqlValue(cols.get(i).getValue()));
+						statement.executeUpdate();
+					}
+				} else {
+					Query prepared = new Query(mysql, query);
+					prepared.setParameter(1, UUID.fromString(index));
+					for (int i = 0; i < cols.size(); i++) prepared.setParameter(i + 2, toSqlValue(cols.get(i).getValue()));
+					prepared.executeUpdate();
 				}
-				prepared.executeUpdate();
 			} catch (Exception e) {
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.propagateLegacyBatchWriteFailure(index, e);
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(index, e);
 				debug(e);
 				plugin.debug("Failed to insert/upsert player " + index);
+				if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence(index)) return;
 			}
 		} else {
 			StringBuilder query = new StringBuilder("INSERT IGNORE INTO ").append(qi(tableName)).append(" (")
@@ -833,15 +856,30 @@ public class MySQL extends AbstractSqlTable {
 			plugin.devDebug("DB QUERY: " + query.toString());
 
 			try {
-				Query prepared = new Query(mysql, query.toString());
-				prepared.setParameter(1, index);
-				for (int i = 0; i < cols.size(); i++) {
-					prepared.setParameter(i + 2, toSqlValue(cols.get(i).getValue()));
+				if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyBatchPersistence(index)
+						|| com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence(index)) {
+					try (Connection connection = mysql.getConnectionManager().getConnectionChecked();
+							PreparedStatement statement = connection.prepareStatement(query.toString())) {
+						statement.setObject(1, index);
+						for (int i = 0; i < cols.size(); i++) statement.setObject(i + 2, toSqlValue(cols.get(i).getValue()));
+						if (statement.executeUpdate() == 0) {
+							com.bencodez.advancedcore.api.user.usercache.UserDataCache.rejectLegacyBatchInsertConflict(index);
+							if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence(index))
+								throw new SQLException("Direct insert did not write a row");
+						}
+					}
+				} else {
+					Query prepared = new Query(mysql, query.toString());
+					prepared.setParameter(1, index);
+					for (int i = 0; i < cols.size(); i++) prepared.setParameter(i + 2, toSqlValue(cols.get(i).getValue()));
+					prepared.executeUpdate();
 				}
-				prepared.executeUpdate();
 			} catch (Exception e) {
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.propagateLegacyBatchWriteFailure(index, e);
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(index, e);
 				debug(e);
 				plugin.debug("Failed to insert player " + index);
+				if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence(index)) return;
 			}
 		}
 
@@ -871,6 +909,18 @@ public class MySQL extends AbstractSqlTable {
 		}
 
 		synchronized (updateLock) {
+			cols = com.bencodez.advancedcore.api.user.usercache.UserDataCache.filterConfirmedLegacyBatchColumns(index, cols, this);
+			com.bencodez.advancedcore.api.user.usercache.UserDataCache.rejectStaleLegacyBatch(index);
+			if (cols.isEmpty()) return;
+			boolean direct = !runAsync && com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence(index);
+			boolean superseded = false;
+			if (direct) {
+				ArrayList<Column> current = new ArrayList<Column>();
+				for (Column col : cols) if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.isCurrentLegacyProviderKey(index, col.getName(), com.bencodez.advancedcore.api.user.UserStorage.MYSQL, (dbType == DbType.MYSQL || dbType == DbType.MARIADB))) current.add(col);
+				superseded = current.size() != cols.size();
+				if (current.isEmpty()) return;
+				cols = current;
+			}
 			if (getUuids().contains(index) || containsKeyQuery(index)) {
 				StringBuilder sb = new StringBuilder();
 				sb.append("UPDATE ").append(qi(tableName)).append(" SET ");
@@ -888,21 +938,36 @@ public class MySQL extends AbstractSqlTable {
 				plugin.devDebug("DB QUERY: " + query);
 
 				try {
-					Query q = new Query(mysql, query);
-					for (int i = 0; i < cols.size(); i++) {
-						q.setParameter(i + 1, toSqlValue(cols.get(i).getValue()));
-					}
-					q.setParameter(cols.size() + 1, toUuidValue(index));
-					if (runAsync) {
-						q.executeUpdateAsync();
+					if ((com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyBatchPersistence(index)
+							|| com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence(index)) && !runAsync) {
+						try (Connection connection = mysql.getConnectionManager().getConnectionChecked();
+								PreparedStatement statement = connection.prepareStatement(query)) {
+							for (int i = 0; i < cols.size(); i++) statement.setObject(i + 1, toSqlValue(cols.get(i).getValue()));
+							statement.setObject(cols.size() + 1, toUuidValue(index));
+							if (statement.executeUpdate() == 0) requireExistingUpdateTarget(connection, index);
+						}
+						if (direct) com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyProviderCommit(index, cols.stream().map(Column::getName).toList(), com.bencodez.advancedcore.api.user.UserStorage.MYSQL, (dbType == DbType.MYSQL || dbType == DbType.MARIADB), this);
+						else com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyBatchProviderCommit(index, cols.stream().map(Column::getName).toList(), com.bencodez.advancedcore.api.user.UserStorage.MYSQL, (dbType == DbType.MYSQL || dbType == DbType.MARIADB));
 					} else {
-						q.executeUpdate();
+						Query q = new Query(mysql, query);
+						for (int i = 0; i < cols.size(); i++) q.setParameter(i + 1, toSqlValue(cols.get(i).getValue()));
+						q.setParameter(cols.size() + 1, toUuidValue(index));
+						if (runAsync) q.executeUpdateAsync(); else q.executeUpdate();
 					}
 				} catch (SQLException e) {
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.propagateLegacyBatchWriteFailure(index, e);
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(index, e);
 					debug(e);
 				}
 			} else {
+				if (superseded) {
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(index, new IllegalStateException("Cannot recreate a partially superseded row"));
+					return;
+				}
 				insertQuery(index, cols);
+				if (direct) com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyProviderCommit(index, cols.stream().map(Column::getName).toList(), com.bencodez.advancedcore.api.user.UserStorage.MYSQL, (dbType == DbType.MYSQL || dbType == DbType.MARIADB), this);
+				else if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyBatchPersistence(index))
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyBatchProviderCommit(index, cols.stream().map(Column::getName).toList(), com.bencodez.advancedcore.api.user.UserStorage.MYSQL, (dbType == DbType.MYSQL || dbType == DbType.MARIADB));
 			}
 		}
 	}
@@ -916,21 +981,45 @@ public class MySQL extends AbstractSqlTable {
 		checkColumn(column, value.getType());
 
 		synchronized (updateLock) {
+			com.bencodez.advancedcore.api.user.usercache.UserDataCache.rejectStaleLegacyBatch(index);
+			if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence(index)
+					&& !com.bencodez.advancedcore.api.user.usercache.UserDataCache.isCurrentLegacyProviderKey(index, column, com.bencodez.advancedcore.api.user.UserStorage.MYSQL, (dbType == DbType.MYSQL || dbType == DbType.MARIADB))) return;
 			if (getUuids().contains(index) || containsKeyQuery(index)) {
 				String query = "UPDATE " + qi(tableName) + " SET " + qi(column) + "=? WHERE " + qi("uuid") + "=?;";
 
 				plugin.devDebug("DB QUERY: " + query);
 
 				try {
-					Query prepared = new Query(mysql, query);
-					prepared.setParameter(1, toSqlValue(value));
-					prepared.setParameter(2, toUuidValue(index));
-					prepared.executeUpdate();
+					if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence(index)) {
+						try (Connection connection = mysql.getConnectionManager().getConnectionChecked();
+								PreparedStatement statement = connection.prepareStatement(query)) {
+							statement.setObject(1, toSqlValue(value)); statement.setObject(2, toUuidValue(index));
+							if (statement.executeUpdate() == 0) requireExistingUpdateTarget(connection, index);
+						}
+						com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyProviderCommit(index, java.util.List.of(column), com.bencodez.advancedcore.api.user.UserStorage.MYSQL, (dbType == DbType.MYSQL || dbType == DbType.MARIADB), this);
+					} else {
+						Query prepared = new Query(mysql, query);
+						prepared.setParameter(1, toSqlValue(value));
+						prepared.setParameter(2, toUuidValue(index));
+						prepared.executeUpdate();
+					}
 				} catch (SQLException e) {
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(index, e);
 					debug(e);
 				}
 			} else {
 				insert(index, column, value);
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyProviderCommit(index, java.util.List.of(column), com.bencodez.advancedcore.api.user.UserStorage.MYSQL, (dbType == DbType.MYSQL || dbType == DbType.MARIADB), this);
+			}
+		}
+	}
+
+	private void requireExistingUpdateTarget(Connection connection, String index) throws SQLException {
+		String query = "SELECT 1 FROM " + qi(tableName) + " WHERE " + qi("uuid") + "=?";
+		try (PreparedStatement check = connection.prepareStatement(query)) {
+			check.setObject(1, toUuidValue(index));
+			try (ResultSet result = check.executeQuery()) {
+				if (!result.next()) throw new SQLException("Update target no longer exists");
 			}
 		}
 	}
