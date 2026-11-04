@@ -48,6 +48,7 @@ public class UserDataCache {
 	private int inFlightBatches = 0;
 	private volatile Consumer<HashMap<String, DataValue>> sharedStorageWriter;
 	private com.bencodez.advancedcore.api.user.UserStorage sharedStorageType;
+	private Boolean sharedMysqlFold;
 	private Thread sharedBatchThread;
 	private volatile Consumer<Runnable> sharedFlushGate;
 	private volatile Consumer<Runnable> sharedExclusiveFlushGate;
@@ -716,12 +717,21 @@ public class UserDataCache {
 		UUID identity = uuid;
 		boolean admission = manager != null && identity != null && manager.hasSharedRuntimeLifecycle();
 		if (admission && !manager.beginSharedSynchronousIntegerMutation(identity)) return null;
-		try { return tryMutateIntegersAdmitted(operands, operation, notification); }
+		java.util.List<Runnable> notifications = new java.util.ArrayList<>(1);
+		IntegerMutationResult result;
+		try { result = tryMutateIntegersAdmitted(operands, operation, notification, notifications); }
 		finally { if (admission) manager.endSharedSynchronousIntegerMutation(identity); }
+		for (Runnable notify : notifications) {
+			try { manager.dispatchSharedMutationNotification(notify); }
+			catch (RuntimeException | Error failure) {
+				try { manager.recordSharedStorageFailure(failure); } catch (RuntimeException | Error ignored) { }
+			}
+		}
+		return result;
 	}
 
 	private IntegerMutationResult tryMutateIntegersAdmitted(java.util.Map<String, Integer> operands,
-			IntegerMutation operation, java.util.function.Consumer<java.util.Set<String>> notification) {
+			IntegerMutation operation, java.util.function.Consumer<java.util.Set<String>> notification, java.util.List<Runnable> notifications) {
 		Objects.requireNonNull(operands, "operands"); Objects.requireNonNull(operation, "operation");
 		if (operands.isEmpty() || operands.size() > 64) throw new IllegalArgumentException("Invalid integer mutation size");
 		java.util.LinkedHashMap<String, Integer> ordered = new java.util.LinkedHashMap<String, Integer>();
@@ -745,9 +755,11 @@ public class UserDataCache {
 			java.util.HashSet<String> identities = new java.util.HashSet<String>();
 			for (String key : ordered.keySet()) {
 				if (sqlite && !identities.add(sqliteDirectKey(key))) throw new IllegalArgumentException("Duplicate SQLite column identity");
-				if (sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && hasAmbiguousMysqlKey(key)) return null;
-				String actual = sqlite ? resolveSharedSqliteKey(key) : key;
+				boolean mysql = sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL;
+				if (mysql && sharedMysqlFold == null && hasAmbiguousMysqlKey(key)) return null;
+				String actual = sqlite ? resolveSharedSqliteKey(key) : mysql && Boolean.TRUE.equals(sharedMysqlFold) ? resolveSharedMysqlKey(key) : key;
 				if (actual == null) return null;
+				if (mysql && Boolean.TRUE.equals(sharedMysqlFold) && !identities.add(actual)) throw new IllegalArgumentException("Duplicate MySQL column identity");
 				actualKeys.put(key, actual);
 			}
 			var previous = new java.util.LinkedHashMap<String, Integer>();
@@ -808,15 +820,7 @@ public class UserDataCache {
 				}
 			}
 		}
-		if (notify != null) {
-			try { manager.dispatchSharedUserDataNotification(notify); }
-			catch (RuntimeException | Error failure) {
-				// The mutation is already accepted; a failed notification cannot
-				// turn it into a retryable failure.
-				try { manager.recordSharedStorageFailure(failure); }
-				catch (RuntimeException | Error ignored) { }
-			}
-		}
+		if (notify != null) notifications.add(notify);
 		return result;
 	}
 
@@ -921,7 +925,13 @@ public class UserDataCache {
 				result = new IntegerMutationResult(!changed.isEmpty(), java.util.Map.copyOf(previous));
 			}
 		} finally { legacyMutationOrder.readLock().unlock(); }
-		if (!changed.isEmpty() && notification != null) notification.accept(java.util.Set.copyOf(changed));
+		if (!changed.isEmpty() && notification != null) {
+			try { notification.accept(java.util.Set.copyOf(changed)); }
+			catch (RuntimeException | Error failure) {
+				try { if (manager != null) manager.recordSharedStorageFailure(failure); }
+				catch (RuntimeException | Error ignored) { }
+			}
+		}
 		return result;
 	}
 
@@ -956,7 +966,8 @@ public class UserDataCache {
 			legacyDirectPublicationSequences.put(identity, sequence);
 		}
 		String mysqlAlias = null;
-		if (change.getKey() != null && sharedFlushGate == null && legacyMysqlFoldsColumns()) {
+		if (change.getKey() != null && ((sharedFlushGate == null && legacyMysqlFoldsColumns())
+				|| (sharedFlushGate != null && sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && Boolean.TRUE.equals(sharedMysqlFold)))) {
 			mysqlAlias = resolveSharedMysqlKey(change.getKey());
 			if (mysqlAlias == null) throw new IllegalStateException("MySQL column identity is ambiguous");
 		}
@@ -1332,8 +1343,9 @@ public class UserDataCache {
 		if (key.isEmpty() || !completeStorageSnapshot || !storageSnapshotPublished || removing
 				|| uuid == null || cache == null || cachedChanges == null || sharedFlushGate == null) return false;
 		boolean sqlite = sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.SQLITE;
-		if (sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && hasAmbiguousMysqlKey(key)) return false;
-		String actual = sqlite ? resolveSharedSqliteKey(key) : key;
+		boolean mysql = sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL;
+		if (mysql && sharedMysqlFold == null && hasAmbiguousMysqlKey(key)) return false;
+		String actual = sqlite ? resolveSharedSqliteKey(key) : mysql && Boolean.TRUE.equals(sharedMysqlFold) ? resolveSharedMysqlKey(key) : key;
 		if (actual == null) return false;
 		if (!cache.containsKey(actual)) {
 			if (sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL) {
@@ -1367,10 +1379,16 @@ public class UserDataCache {
 			if (found != null && !found.equals(candidate) && !samePublishedMysqlAlias(found, candidate)) return null;
 			found = candidate;
 		}
+		if (sharedFlushGate != null && Boolean.TRUE.equals(sharedMysqlFold)) {
+			if (cachedChanges != null) for (UserDataChange pending : cachedChanges)
+				if (pending.getKey() != null && pending.getKey().equalsIgnoreCase(key)) return pending.getKey();
+			for (String pending : inFlightValues.keySet()) if (pending != null && pending.equalsIgnoreCase(key)) return pending;
+		}
 		return found == null ? key : found;
 	}
 	private boolean samePublishedMysqlAlias(String first, String second) {
 		if (!cache.containsKey(first) || !cache.containsKey(second) || cache.get(first) != cache.get(second)) return false;
+		if (sharedFlushGate != null && Boolean.TRUE.equals(sharedMysqlFold)) return true;
 		Long firstVersion = changedAt.get(first), secondVersion = changedAt.get(second);
 		if (firstVersion != null && firstVersion.equals(secondVersion)) return true;
 		if (firstVersion == null && secondVersion != null) return persistedAt.getOrDefault(first, 0L) > secondVersion;
@@ -1425,12 +1443,17 @@ public class UserDataCache {
 	}
 	public synchronized void configureSharedStorage(Consumer<HashMap<String, DataValue>> writer, Consumer<Runnable> gate,
 			Consumer<Runnable> exclusiveGate, com.bencodez.advancedcore.api.user.UserStorage storageType) {
+		configureSharedStorage(writer, gate, exclusiveGate, storageType, null);
+	}
+	public synchronized void configureSharedStorage(Consumer<HashMap<String, DataValue>> writer, Consumer<Runnable> gate,
+			Consumer<Runnable> exclusiveGate, com.bencodez.advancedcore.api.user.UserStorage storageType, Boolean mysqlFold) {
 		if (sharedFlushGate != null && sharedFlushGate != gate) throw new IllegalStateException("Shared user cache already belongs to another runtime");
 		if (sharedExclusiveFlushGate != null && sharedExclusiveFlushGate != exclusiveGate) throw new IllegalStateException("Shared user cache already belongs to another runtime");
 		if (sharedStorageType != null && storageType != null && sharedStorageType != storageType) throw new IllegalStateException("Shared user cache belongs to another storage generation");
 		if (sharedFlushGate == null && gate != null && inFlightBatches != 0) throw new IllegalStateException("Cannot attach shared storage during an active legacy batch");
 		setSharedStorageWriter(writer);
 		if (storageType != null) sharedStorageType = storageType;
+		sharedMysqlFold = mysqlFold;
 		sharedFlushGate = gate;
 		sharedExclusiveFlushGate = exclusiveGate;
 	}
@@ -1569,7 +1592,7 @@ public class UserDataCache {
 							value = resolveLegacyBulkValue(key, value, queuedVersion);
 							physicalCandidateVersions.merge(key, effectiveLegacyQueuedVersion(key, queuedVersion), Math::max);
 						}
-						inFlightValues.put(key, value);
+						putSnapshotValue(inFlightValues, key, value);
 					}
 				} catch (RuntimeException | Error preparationFailure) {
 					inFlightValues.clear();
@@ -1600,11 +1623,17 @@ public class UserDataCache {
 				String key = change.getKey();
 				boolean legacyChange = writer == null || legacyBatchChanges.contains(change);
 				String physical = null;
-				if (legacyChange && key != null) {
-					if (legacyStorageType == com.bencodez.advancedcore.api.user.UserStorage.SQLITE) physical = sqliteDirectKey(key);
+				boolean sharedMysql = writer != null && sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && Boolean.TRUE.equals(sharedMysqlFold);
+				if ((legacyChange || sharedMysql) && key != null) {
+					if (sharedMysql) physical = key.toLowerCase(java.util.Locale.ROOT);
+					else if (legacyStorageType == com.bencodez.advancedcore.api.user.UserStorage.SQLITE) physical = sqliteDirectKey(key);
 					else if (legacyMysqlFoldsColumns()) physical = key.toLowerCase(java.util.Locale.ROOT);
 				}
 				if (physical == null) values.put(key, legacyChange ? inFlightValues.get(key) : change.toUserDataValue());
+				else if (sharedMysql && !legacyChange) {
+					String canonical = physicalKeys.computeIfAbsent(physical, ignored -> key);
+					values.put(canonical, change.toUserDataValue());
+				}
 				else {
 					long version = physicalCandidateVersions.getOrDefault(key, 0L);
 					if (version >= physicalVersions.getOrDefault(physical, Long.MIN_VALUE)) {
@@ -1659,12 +1688,19 @@ public class UserDataCache {
 								&& (queuedVersion == null || Objects.equals(persistedVersion, queuedVersion))) {
 							String key = persistedChange.getKey();
 							String physical = null;
-							if ((writer == null || legacyBatchChanges.contains(persistedChange)) && key != null) {
-								if (legacyStorageType == com.bencodez.advancedcore.api.user.UserStorage.SQLITE) physical = sqliteDirectKey(key);
+							boolean sharedMysql = writer != null && sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && Boolean.TRUE.equals(sharedMysqlFold);
+							if ((writer == null || legacyBatchChanges.contains(persistedChange) || sharedMysql) && key != null) {
+								if (sharedMysql) physical = key.toLowerCase(java.util.Locale.ROOT);
+								else if (legacyStorageType == com.bencodez.advancedcore.api.user.UserStorage.SQLITE) physical = sqliteDirectKey(key);
 								else if (legacyMysqlFoldsColumns()) physical = key.toLowerCase(java.util.Locale.ROOT);
 							}
 							String winningKey = physical == null ? key : physicalKeys.getOrDefault(physical, key);
-							cache.put(key, values.get(winningKey));
+							DataValue committedValue = values.get(winningKey);
+							cache.put(key, committedValue);
+							if (writer != null && sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && Boolean.TRUE.equals(sharedMysqlFold)) {
+								for (String alias : cache.keySet()) if (alias != null && !alias.equals(key) && alias.equalsIgnoreCase(key)
+										&& (changedAt.get(alias) == null || (persistedVersion != null && Objects.equals(persistedVersion, changedAt.get(alias))))) cache.put(alias, committedValue);
+							}
 						}
 					}
 				}
@@ -1784,6 +1820,10 @@ public class UserDataCache {
 
 	public synchronized void updateCache(HashMap<String, DataValue> tempCache) {
 		cache = tempCache == null ? new HashMap<>() : new HashMap<>(tempCache);
+		if (sharedFlushGate != null && sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && Boolean.TRUE.equals(sharedMysqlFold)) {
+			inFlightValues.forEach((key, value) -> putSnapshotValue(cache, key, value));
+			if (cachedChanges != null) for (UserDataChange change : cachedChanges) putSnapshotValue(cache, change.getKey(), change.toUserDataValue());
+		}
 		completeStorageSnapshot = false;
 		storageSnapshotPublished = true; hasEverPublishedStorageSnapshot = true;
 		hasPublishedStorageSnapshot = true;
@@ -1802,8 +1842,8 @@ public class UserDataCache {
 	private void updateCachePreservingPending(HashMap<String, DataValue> storageValues, boolean complete) {
 		HashMap<String, DataValue> refreshed = storageValues == null ? new HashMap<>() : new HashMap<>(storageValues);
 		storedDataPresent = !refreshed.isEmpty();
-		refreshed.putAll(inFlightValues);
-		if (cachedChanges != null) for (UserDataChange change : cachedChanges) refreshed.put(change.getKey(), change.toUserDataValue());
+		inFlightValues.forEach((key, value) -> putSnapshotValue(refreshed, key, value));
+		if (cachedChanges != null) for (UserDataChange change : cachedChanges) putSnapshotValue(refreshed, change.getKey(), change.toUserDataValue());
 		cache = refreshed;
 		completeStorageSnapshot = complete;
 		storageSnapshotPublished = true; hasEverPublishedStorageSnapshot = true;
@@ -1844,7 +1884,8 @@ public class UserDataCache {
 		// them from the queue before the storage snapshot can observe them.
 		boolean sqliteAliases = sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.SQLITE
 				|| (sharedStorageType == null && legacyStorageType == com.bencodez.advancedcore.api.user.UserStorage.SQLITE);
-		boolean mysqlAliases = sharedFlushGate == null && legacyMysqlFoldsColumns();
+		boolean mysqlAliases = (sharedFlushGate == null && legacyMysqlFoldsColumns())
+				|| (sharedFlushGate != null && sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && Boolean.TRUE.equals(sharedMysqlFold));
 		persistedAt.entrySet().stream().sorted(java.util.Map.Entry.comparingByValue()).forEach(entry -> {
 			String key = entry.getKey(); long version = entry.getValue();
 			if ((version > expectedVersion || (!hasPublishedStorageSnapshot && version == expectedVersion && cache.containsKey(key)))
@@ -1855,8 +1896,8 @@ public class UserDataCache {
 				merged.put(key, persisted);
 			}
 		});
-		inFlightValues.forEach((key, value) -> merged.put(key, resolveLegacyBulkValue(key, value)));
-		if (cachedChanges != null) for (UserDataChange pending : cachedChanges) merged.put(pending.getKey(), resolveLegacyBulkValue(pending.getKey(), pending.toUserDataValue(), legacyChangeVersions.get(pending)));
+		inFlightValues.forEach((key, value) -> putSnapshotValue(merged, key, resolveLegacyBulkValue(key, value)));
+		if (cachedChanges != null) for (UserDataChange pending : cachedChanges) putSnapshotValue(merged, pending.getKey(), resolveLegacyBulkValue(pending.getKey(), pending.toUserDataValue(), legacyChangeVersions.get(pending)));
 		changedAt.forEach((key, version) -> { if (version >= expectedVersion && cache.containsKey(key)) merged.put(key, cache.get(key)); });
 		cache = merged;
 		completeStorageSnapshot = complete;
@@ -1875,7 +1916,7 @@ public class UserDataCache {
 		// not erase the version fence for a mutation that is still waiting in the
 		// write queue. Otherwise an older in-flight batch can overwrite that newer
 		// visible value when it completes.
-		changedAt.keySet().removeIf(key -> (cachedChanges == null || cachedChanges.stream().noneMatch(change -> key.equals(change.getKey())))
+		changedAt.keySet().removeIf(key -> !hasSharedFoldedPendingAlias(key) && (cachedChanges == null || cachedChanges.stream().noneMatch(change -> key.equals(change.getKey())))
 				&& changesAfterExclusiveFlush.stream().noneMatch(change -> key.equals(change.getKey()))
 				&& legacyChangesAfterCheckpoint.stream().noneMatch(change -> key.equals(change.getKey())));
 		if (cache != null) {
@@ -1886,7 +1927,7 @@ public class UserDataCache {
 					overlayLegacyPendingChange(change);
 			for (UserDataChange change : changesAfterExclusiveFlush)
 				if (storageSnapshotPublished || cache.containsKey(change.getKey()))
-					cache.put(change.getKey(), resolveLegacyBulkValue(change.getKey(), change.toUserDataValue()));
+					putSnapshotValue(cache, change.getKey(), resolveLegacyBulkValue(change.getKey(), change.toUserDataValue()));
 			for (UserDataChange change : legacyChangesAfterCheckpoint)
 				if (storageSnapshotPublished || cache.containsKey(change.getKey()))
 					overlayLegacyPendingChange(change);
@@ -1908,9 +1949,23 @@ public class UserDataCache {
 			}
 		}
 	}
+	private boolean hasSharedFoldedPendingAlias(String key) {
+		if (key == null || sharedFlushGate == null || sharedStorageType != com.bencodez.advancedcore.api.user.UserStorage.MYSQL || !Boolean.TRUE.equals(sharedMysqlFold)) return false;
+		return cachedChanges != null && cachedChanges.stream().anyMatch(change -> change.getKey() != null && key.equalsIgnoreCase(change.getKey()));
+	}
+	private void putSnapshotValue(HashMap<String, DataValue> target, String key, DataValue value) {
+		if (key != null && sharedFlushGate != null && sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && Boolean.TRUE.equals(sharedMysqlFold)) {
+			for (String alias : target.keySet()) if (alias != null && alias.equalsIgnoreCase(key)) target.put(alias, value);
+		}
+		target.put(key, value);
+	}
 	private void overlayLegacyPendingChange(UserDataChange change) {
 		String key = change.getKey();
 		DataValue value = resolveLegacyBulkValue(key, change.toUserDataValue(), legacyChangeVersions.get(change));
+		if (sharedFlushGate != null && sharedStorageType == com.bencodez.advancedcore.api.user.UserStorage.MYSQL && Boolean.TRUE.equals(sharedMysqlFold)) {
+			putSnapshotValue(cache, key, value);
+			return;
+		}
 		cache.put(key, value);
 		if (key == null || sharedFlushGate != null) return;
 		boolean sqlite = legacyStorageType == com.bencodez.advancedcore.api.user.UserStorage.SQLITE;

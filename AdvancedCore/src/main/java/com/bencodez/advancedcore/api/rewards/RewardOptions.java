@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.simpleapi.array.ArrayUtils;
@@ -75,6 +77,16 @@ public class RewardOptions {
 	@Setter
 	private boolean legacyAsyncReplayCheckpoint;
 
+	/** True only when loading an existing durable queue entry. */
+	@Getter
+	@Setter
+	private boolean restoredAsyncReplayEntry;
+
+	/** Explicit provenance for a newly created internal queue occurrence. */
+	@Getter
+	@Setter
+	private boolean freshAsyncReplayEntry;
+
 	@Getter
 	@Setter
 	private Reward.ReplayState asyncReplayState;
@@ -99,6 +111,35 @@ public class RewardOptions {
 	@Getter
 	@Setter
 	private Consumer<Reward.ReplayCheckpoint> asyncReplayCheckpointConsumer;
+
+	/** Optional best-effort observer for a legacy fire-and-forget terminal failure.
+	 * Invoked on the completion thread; it must not block or assume Bukkit ownership. */
+	@Getter
+	@Setter
+	private Consumer<Throwable> asyncFailureObserver;
+	private LegacyFailureObserverCapture legacyFailureObserverCapture;
+	private static final class LegacyFailureObserverCapture {
+		private final AtomicReference<Consumer<Throwable>> observer;
+		private final AtomicBoolean claimed = new AtomicBoolean();
+		private LegacyFailureObserverCapture(Consumer<Throwable> observer) { this.observer = new AtomicReference<>(observer); }
+	}
+	RewardOptions captureLegacyFailureObserver() {
+		RewardOptions copy = copyForDispatch();
+		copy.legacyFailureObserverCapture = new LegacyFailureObserverCapture(copy.asyncFailureObserver);
+		return copy;
+	}
+	AtomicReference<Consumer<Throwable>> legacyFailureObserverCapture() {
+		return legacyFailureObserverCapture == null ? null : legacyFailureObserverCapture.observer;
+	}
+	boolean claimLegacyFailureObserverCapture() {
+		return legacyFailureObserverCapture == null || legacyFailureObserverCapture.claimed.compareAndSet(false, true);
+	}
+	RewardOptions withoutLegacyFailureObserverCapture() {
+		RewardOptions copy = copyForDispatch(); copy.legacyFailureObserverCapture = null; return copy;
+	}
+	void updateLegacyFailureObserverCapture() {
+		if (legacyFailureObserverCapture != null) legacyFailureObserverCapture.observer.set(asyncFailureObserver);
+	}
 
 	/** True while replaying an entry that must remain in the timed queue on deferral. */
 	@Getter
@@ -272,7 +313,11 @@ public class RewardOptions {
 		copy.setAsyncReplayProgress(new HashMap<>(asyncReplayProgress));
 		copy.setAsyncReplayRegistryFingerprints(new HashMap<>(asyncReplayRegistryFingerprints));
 		copy.setLegacyAsyncReplayCheckpoint(legacyAsyncReplayCheckpoint);
+		copy.setRestoredAsyncReplayEntry(restoredAsyncReplayEntry);
+		copy.setFreshAsyncReplayEntry(freshAsyncReplayEntry);
 		copy.setAsyncReplayCheckpointConsumer(asyncReplayCheckpointConsumer);
+		copy.setAsyncFailureObserver(asyncFailureObserver);
+		copy.legacyFailureObserverCapture = legacyFailureObserverCapture;
 		copy.setAsyncReplayKey(asyncReplayKey);
 		copy.setAsyncReplayOccurrenceId(asyncReplayOccurrenceId);
 		copy.setTimedQueueReplay(timedQueueReplay);
@@ -286,6 +331,7 @@ public class RewardOptions {
 	 */
 	RewardOptions copyForNestedDispatch(String replayKey) {
 		RewardOptions copy = copyForDispatch();
+		copy.legacyFailureObserverCapture = null;
 		copy.setCompletedAsyncInjections(0);
 		copy.setAsyncReplayProgress(new HashMap<>());
 		// The checkpoint consumer belongs to the queued parent occurrence. Nested

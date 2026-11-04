@@ -215,7 +215,7 @@ public class PlayerManager {
 	 * @return true, if successful
 	 */
 	public boolean hasPermission(String playerName, String perm) {
-		if (playerName == null) {
+		if (playerName == null || playerName.isBlank()) {
 			return false;
 		}
 		Player player = Bukkit.getPlayer(playerName);
@@ -233,7 +233,7 @@ public class PlayerManager {
 	 * @return true, if successful
 	 */
 	public boolean hasServerPermission(String playerName, String perm) {
-		if (playerName == null) {
+		if (playerName == null || playerName.isBlank()) {
 			return false;
 		}
 		Player player = Bukkit.getPlayer(playerName);
@@ -258,7 +258,7 @@ public class PlayerManager {
 		Player player = Bukkit.getPlayer(playerUUID);
 		if (player != null) {
 			return player.hasPermission(perm);
-		} else {
+		} else if (playername != null && !playername.isBlank()) {
 			player = Bukkit.getPlayer(playername);
 			if (player != null && playerUUID.equals(player.getUniqueId())) {
 				return player.hasPermission(perm);

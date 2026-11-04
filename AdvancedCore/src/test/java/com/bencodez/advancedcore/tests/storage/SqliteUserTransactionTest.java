@@ -72,13 +72,13 @@ class SqliteUserTransactionTest {
         var owner = mock(UserCacheOwner.class); var runtime = new SharedUserDataRuntime(backend, owner); manager.bindSharedRuntime(runtime);
         try {
             var initial = Map.<String, DataValue>of("Points", new DataValueInt(0));
-            var receipt = manager.submitSharedReplayTransaction(uuid, TYPE, initial, scope -> {
+            var receipt = manager.submitSharedReplayTransaction(uuid, TYPE, "event-one", initial, scope -> {
                 if (receipt(scope.connection(), "event-one")) return false;
                 var row = scope.readRow(); int previous = value(row, "Points");
                 scope.writeValues(Map.of("Points", new DataValueInt(previous + 1))); insert(scope.connection(), "event-one"); return true;
             }).toCompletableFuture();
             assertTrue(committed.await(5, TimeUnit.SECONDS));
-            var next = manager.submitSharedReplayTransaction(uuid, TYPE, initial, scope -> {
+            var next = manager.submitSharedReplayTransaction(uuid, TYPE, "event-two", initial, scope -> {
                 if (receipt(scope.connection(), "event-two")) return false;
                 var row = scope.readRow(); int previous = value(row, "Points");
                 scope.writeValues(Map.of("Points", new DataValueInt(previous + 1))); insert(scope.connection(), "event-two"); return true;
@@ -96,10 +96,10 @@ class SqliteUserTransactionTest {
         var owner = mock(UserCacheOwner.class); var runtime = new SharedUserDataRuntime(backend, owner); manager.bindSharedRuntime(runtime);
         try {
             var initial = Map.<String, DataValue>of("Points", new DataValueInt(0));
-            var rejected = manager.submitSharedReplayTransaction(uuid, TYPE, initial, scope -> {
+            var rejected = manager.submitSharedReplayTransaction(uuid, TYPE, "fixture-operation", initial, scope -> {
                 throw new SqlUserStorage.ReplayPreconditionException("invalid intent");
             }).toCompletableFuture();
-            var next = manager.submitSharedReplayTransaction(uuid, TYPE, initial, scope -> {
+            var next = manager.submitSharedReplayTransaction(uuid, TYPE, "fixture-operation", initial, scope -> {
                 scope.writeValues(Map.of("Points", new DataValueInt(2))); return true;
             }).toCompletableFuture();
             var failure = assertThrows(java.util.concurrent.ExecutionException.class, () -> rejected.get(5, TimeUnit.SECONDS));
@@ -116,7 +116,7 @@ class SqliteUserTransactionTest {
         var entered = new CountDownLatch(1); var continueTransaction = new CountDownLatch(1);
         var callbackEntered = new CountDownLatch(1); var continueCallback = new CountDownLatch(1);
         try {
-            var operation = manager.submitSharedReplayTransaction(uuid, TYPE,
+            var operation = manager.submitSharedReplayTransaction(uuid, TYPE, "fixture-operation",
                     Map.of("Points", new DataValueInt(0)), scope -> {
                         entered.countDown();
                         try { assertTrue(continueTransaction.await(5, TimeUnit.SECONDS)); }
@@ -152,7 +152,7 @@ class SqliteUserTransactionTest {
                 manager.settleSharedReplayLease(uuid, identity, true, false);
             }
             assertThrows(java.util.concurrent.RejectedExecutionException.class, () -> manager.acquireSharedReplayLease(uuid, "new-award"));
-            assertThrows(java.util.concurrent.RejectedExecutionException.class, () -> manager.submitSharedReplayTransaction(uuid, TYPE,
+            assertThrows(java.util.concurrent.RejectedExecutionException.class, () -> manager.submitSharedReplayTransaction(uuid, TYPE, "fixture-operation",
                     Map.of("Points", new DataValueInt(0)), scope -> null));
             manager.acquireSharedReplayCheckpointLease(uuid, "award-0");
             var cleanup = assertDoesNotThrow(() -> manager.submitSharedReplayCheckpoint(uuid, TYPE, "award-0",

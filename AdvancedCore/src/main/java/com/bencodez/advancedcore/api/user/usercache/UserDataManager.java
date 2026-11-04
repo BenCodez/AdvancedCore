@@ -70,17 +70,26 @@ public class UserDataManager {
 	private CompletableFuture<Void> sharedIntegerDrain = CompletableFuture.completedFuture(null);
 	private CompletableFuture<Void> sharedIntegerRetirement;
 	private final ThreadLocal<Boolean> sharedIntegerCompletion = new ThreadLocal<>();
+	private final ThreadLocal<Boolean> sharedNotificationCallback = new ThreadLocal<>();
 	private final ThreadLocal<Integer> sharedIntegerSynchronousDepth = ThreadLocal.withInitial(() -> 0);
 	private final ThreadLocal<UUID> sharedIntegerWorker = new ThreadLocal<>();
 	private final Map<UUID, Integer> sharedIntegerQueuedUsers = new java.util.HashMap<>();
 	private final Map<UUID, Integer> sharedIntegerActiveUsers = new java.util.HashMap<>();
 	private record SharedReplayLease(UUID uuid, String identity) { }
 	private static final class SharedReplayLeaseState {
-		final SharedUserDataRuntime runtime; int attempts; boolean committed; boolean checkpointed;
+		final SharedUserDataRuntime runtime; int attempts; int checkpointReservations; boolean committed; boolean checkpointed;
 		SharedReplayLeaseState(SharedUserDataRuntime runtime) { this.runtime = runtime; }
 	}
 	private final Map<SharedReplayLease, SharedReplayLeaseState> sharedReplayLeases = new java.util.HashMap<>();
+	/** An observation of uncertain work, never a transaction settlement. */
+	public record IndeterminateReplay(UUID user, String identity, boolean checkpoint) { }
+	private final Map<MutationReceipt<?>, IndeterminateReplay> indeterminateReplays = new java.util.HashMap<>();
+	/** Snapshot only: these operations and their owner admissions remain pending. */
+	public synchronized java.util.List<IndeterminateReplay> indeterminateSharedReplays() {
+		return java.util.List.copyOf(indeterminateReplays.values());
+	}
 	private final Set<UUID> sharedIntegerCompletingUsers = new java.util.HashSet<>();
+	private final Map<UUID, Set<MutationReceipt<?>>> sharedCallbackReceipts = new java.util.HashMap<>();
 	private record DeferredSharedInteger(Runnable action, Consumer<Throwable> reject,
 			MutationReceipt<?> receipt) { }
 	private final Map<UUID, java.util.ArrayDeque<DeferredSharedInteger>> sharedIntegerDeferred = new java.util.HashMap<>();
@@ -102,20 +111,49 @@ public class UserDataManager {
 			java.util.stream.IntStream.range(0, 64).mapToObj(ignored -> new java.util.concurrent.locks.ReentrantLock())
 					.toArray(java.util.concurrent.locks.ReentrantLock[]::new);
 	private final Map<UUID, java.util.ArrayDeque<PendingLegacyIntegerMutation>> pendingLegacyIntegers = new java.util.HashMap<>();
+	private final Map<UUID, Set<PendingLegacyIntegerMutation>> legacyCallbackReceipts = new java.util.HashMap<>();
 	private final Set<UUID> legacyIntegerCacheRetirements = new java.util.HashSet<>();
 	private final ThreadLocal<Boolean> legacyIntegerNotification = new ThreadLocal<>();
+	private final ThreadLocal<Boolean> legacyIntegerCompletion = new ThreadLocal<>();
 	private int pendingLegacyIntegerCount;
 	private static final int MAX_PENDING_LEGACY_INTEGERS = 256;
+	/* Admissions bound the number of outstanding callback deliveries. Never run
+	 * rejected callbacks on the SQL worker: retain their admissions instead. */
+	private final java.util.concurrent.ThreadPoolExecutor mutationCallbacks = new java.util.concurrent.ThreadPoolExecutor(
+			4, 4, 1, TimeUnit.SECONDS, new java.util.concurrent.ArrayBlockingQueue<>(768), task -> {
+				Thread thread = new Thread(task, "AdvancedCore-mutation-completion-" + WORKER_SEQUENCE.incrementAndGet());
+				thread.setDaemon(true); return thread;
+			});
 	private static final int MAX_LEGACY_MUTATION_ATTEMPTS = 200;
 	private java.util.concurrent.locks.ReentrantLock legacyMutationStripe(UUID uuid) {
 		return legacyMutationStripes[(uuid.hashCode() & Integer.MAX_VALUE) % legacyMutationStripes.length];
 	}
 	/** The accepted mutation owns its outcome; observers cannot cancel or settle it. */
-	private static final class MutationReceipt<T> extends CompletableFuture<T> {
-		private final CompletableFuture<Void> finalized = new CompletableFuture<>();
+	private static class GuardedMutationFuture<T> extends CompletableFuture<T> {
+		private final UserDataManager owner;
+		GuardedMutationFuture(UserDataManager owner) { this.owner = owner; }
+		private void rejectCompletionThreadWait() {
+			if (!isDone() && owner != null && (Boolean.TRUE.equals(owner.sharedIntegerCompletion.get())
+					|| Boolean.TRUE.equals(owner.legacyIntegerCompletion.get())))
+				throw new IllegalStateException("A completion callback cannot await its own lifecycle drain");
+		}
+		@Override public T join() { rejectCompletionThreadWait(); return super.join(); }
+		@Override public T get() throws InterruptedException, java.util.concurrent.ExecutionException { rejectCompletionThreadWait(); return super.get(); }
+		@Override public T get(long timeout, TimeUnit unit) throws InterruptedException, java.util.concurrent.ExecutionException, java.util.concurrent.TimeoutException {
+			if (timeout > 0) rejectCompletionThreadWait(); return super.get(timeout, unit);
+		}
+		@Override public <U> CompletableFuture<U> newIncompleteFuture() { return new GuardedMutationFuture<>(owner); }
+		@Override public CompletionStage<T> minimalCompletionStage() {
+			GuardedMutationFuture<T> view = new GuardedMutationFuture<>(owner);
+			super.whenComplete((value, failure) -> { if (failure == null) view.complete(value); else view.completeExceptionally(failure); });
+			return view;
+		}
+	}
+	private static final class MutationReceipt<T> extends GuardedMutationFuture<T> {
+		private final GuardedMutationFuture<Void> finalized;
 		private final UserDataManager sharedOwner;
-		private MutationReceipt() { this.sharedOwner = null; }
-		private MutationReceipt(UserDataManager sharedOwner) { this.sharedOwner = sharedOwner; }
+		private MutationReceipt(UserDataManager owner, boolean shared) { super(null); this.sharedOwner = shared ? owner : null; this.finalized = new GuardedMutationFuture<>(owner); }
+		private MutationReceipt(UserDataManager sharedOwner) { this(sharedOwner, true); }
 		@Override public boolean cancel(boolean mayInterruptIfRunning) { return false; }
 		@Override public boolean complete(T value) { return false; }
 		@Override public boolean completeExceptionally(Throwable failure) { return false; }
@@ -134,12 +172,13 @@ public class UserDataManager {
 		final Map<String, Integer> values;
 		final UserDataCache.IntegerMutation operation;
 		final Consumer<Set<String>> notification;
-		final MutationReceipt<UserDataCache.IntegerMutationResult> completion = new MutationReceipt<>();
+		final MutationReceipt<UserDataCache.IntegerMutationResult> completion;
 		int attempts;
-		PendingLegacyIntegerMutation(UUID uuid, AdvancedCorePlugin.UserStorageOwner owner, Map<String, Integer> values,
+		PendingLegacyIntegerMutation(UserDataManager manager, UUID uuid, AdvancedCorePlugin.UserStorageOwner owner, Map<String, Integer> values,
 				UserDataCache.IntegerMutation operation, Consumer<Set<String>> notification) {
 			this.uuid = uuid; this.owner = owner; this.values = Map.copyOf(values);
 			this.operation = operation; this.notification = notification;
+			this.completion = new MutationReceipt<>(manager, false);
 		}
 	}
 	private final Object legacyRetirementAdmission = new Object();
@@ -610,7 +649,7 @@ public class UserDataManager {
 	 */
 	public final CompletionStage<Void> closeSharedRuntimeAsyncCompletion(Runnable afterRetirement) {
 		Objects.requireNonNull(afterRetirement, "afterRetirement");
-		if (Boolean.TRUE.equals(sharedIntegerCompletion.get()) || sharedIntegerSynchronousDepth.get() != 0)
+		if (Boolean.TRUE.equals(sharedIntegerCompletion.get()) || Boolean.TRUE.equals(sharedNotificationCallback.get()) || sharedIntegerSynchronousDepth.get() != 0)
 			return CompletableFuture.failedFuture(new IllegalStateException("Shared retirement cannot await its own mutation completion"));
 		SharedUserDataRuntime runtime;
 		CompletableFuture<Void> completion;
@@ -850,6 +889,7 @@ public class UserDataManager {
 
 	public UserDataManager(AdvancedCorePlugin plugin) {
 		this.plugin = plugin;
+		mutationCallbacks.allowCoreThreadTimeOut(true);
 		userDataCache = new ConcurrentHashMap<>();
 		keys = new ArrayList<>();
 		intColumns = new ArrayList<>();
@@ -950,7 +990,13 @@ public class UserDataManager {
 			} else {
 				UserDataCache data = new UserDataCache(this, uuid);
 				refresh.changed = data.refreshInternal(false, true);
-				if (data.hasCache()) userDataCache.putIfAbsent(uuid, data);
+				if (data.hasCache()) {
+					UserDataCache winner = userDataCache.putIfAbsent(uuid, data);
+					if (winner != null) {
+						refresh.flushNotification = winner.clearChangesForRefresh();
+						refresh.changed = winner.refreshInternal(false, true);
+					}
+				}
 			}
 			return;
 		}
@@ -1142,6 +1188,13 @@ public class UserDataManager {
 	 * The expected instance prevents an old owner from retiring a replacement.
 	 */
 	public final boolean retireSharedCache(UUID uuid, UserDataCache expected) {
+		return retireSharedCache(uuid, expected, false);
+	}
+	/** Atomically verify retirement admission before invalidating the flushed cache. */
+	public final boolean retireSharedCacheAfterFlush(UUID uuid, UserDataCache expected) {
+		return retireSharedCache(uuid, expected, true);
+	}
+	private boolean retireSharedCache(UUID uuid, UserDataCache expected, boolean retireContents) {
 		Objects.requireNonNull(uuid, "uuid");
 		synchronized (legacyMutationAdmission) {
 			if (pendingLegacyIntegers.containsKey(uuid)) return false;
@@ -1149,6 +1202,7 @@ public class UserDataManager {
 				ignored -> new SharedCachePopulationState());
 		synchronized (state) {
 			if (userDataCache.get(uuid) != expected) return false;
+			if (retireContents && expected != null) expected.retireAfterSharedFlush();
 			if (expected != null) userDataCache.remove(uuid, expected);
 			sharedCachePopulations.remove(uuid);
 			completedSharedCachePopulations.remove(uuid);
@@ -1349,21 +1403,36 @@ public class UserDataManager {
 	 * cache and per-user admission before a listener can re-enter storage APIs.
 	 */
 	public final void dispatchSharedUserDataNotification(Runnable notification) {
-		dispatchSharedUserDataNotification(notification, sharedNotificationGeneration.get());
+		dispatchSharedUserDataNotification(notification, sharedNotificationGeneration.get(), timer);
 	}
 
+	/** Mutation listeners use the completion lane so they cannot stall storage work. */
+	public final void dispatchSharedMutationNotification(Runnable notification) {
+		long generation = sharedNotificationGeneration.get();
+		// The bridge runs after the current storage operation has left admission.
+		// It queues only delivery, leaving the storage worker free for successors.
+		timer.execute(() -> {
+			try { dispatchSharedUserDataNotification(notification, generation, mutationCallbacks); }
+			catch (RuntimeException | Error failure) { try { reportDeferredStorageFailure(failure); } catch (RuntimeException | Error ignored) { } }
+		});
+	}
 	private void dispatchSharedUserDataNotification(Runnable notification, long generation) {
+		dispatchSharedUserDataNotification(notification, generation, timer);
+	}
+
+	private void dispatchSharedUserDataNotification(Runnable notification, long generation, java.util.concurrent.Executor executor) {
 		Objects.requireNonNull(notification, "notification");
 		if (sharedNotificationsClosed) return;
 		SharedSqlRoute admission = sharedSqlRoute;
 		try {
-			timer.execute(() -> {
+			executor.execute(() -> {
 				if (sharedNotificationsClosed || generation != sharedNotificationGeneration.get()) return;
 				try {
 					Runnable admittedNotification = () -> {
 						if (sharedNotificationsClosed || generation != sharedNotificationGeneration.get()) return;
-						try { notification.run(); }
+						try { sharedNotificationCallback.set(true); notification.run(); }
 						catch (RuntimeException | Error failure) { reportDeferredStorageFailure(failure); }
+						finally { sharedNotificationCallback.remove(); }
 					};
 					// Keep the producing runtime alive for the complete callback. A backend
 					// replacement or shutdown takes the matching write admission and must
@@ -1430,7 +1499,8 @@ public class UserDataManager {
 	 * completes fails exceptionally; the caller may retry after the callback returns.
 	 */
 	public CompletionStage<Void> clearCacheAsyncCompletion() {
-		if (UserDataCache.hasLiveLegacyCallback(this) || Boolean.TRUE.equals(legacyIntegerNotification.get()))
+		if (UserDataCache.hasLiveLegacyCallback(this) || Boolean.TRUE.equals(legacyIntegerNotification.get())
+				|| Boolean.TRUE.equals(legacyIntegerCompletion.get()))
 			return CompletableFuture.failedFuture(new IllegalStateException("Cache retirement cannot await its own direct-write callback"));
 		CompletableFuture<Void> pending;
 		CompletableFuture<Void> waiting;
@@ -1441,7 +1511,9 @@ public class UserDataManager {
 			if (activeLegacyIntegerApplications != 0) dependencies.add(legacyIntegerApplicationDrain);
 			synchronized (legacyMutationAdmission) {
 				for (java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation> queue : pendingLegacyIntegers.values())
-					for (com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation mutation : queue) dependencies.add(mutation.completion);
+					for (com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation mutation : queue) dependencies.add(mutation.completion.finalized);
+				for (Set<PendingLegacyIntegerMutation> callbacks : legacyCallbackReceipts.values())
+					for (PendingLegacyIntegerMutation mutation : callbacks) dependencies.add(mutation.completion.finalized);
 			}
 			pending = dependencies.isEmpty() ? null : CompletableFuture.allOf(dependencies.toArray(CompletableFuture[]::new));
 			if (pending != null) {
@@ -1521,14 +1593,16 @@ public class UserDataManager {
 		// Do not retain this map lock while flushing through a shared runtime gate.
 		// A population already admitted by that runtime needs the map read lock to
 		// publish, while a queued lifecycle writer would otherwise block this flush.
-		// Mark the current generation as retiring under the map lock, then perform
-		// its storage work without that lock and finally detach only those instances.
+		// Capture the current generations under the map lock. Shared generations
+		// are marked only after their per-user admission drains, so already-admitted
+		// setters can complete before retirement starts.
 		java.util.HashMap<UUID, UserDataCache> retiring = new java.util.HashMap<>();
+		boolean shared = sharedSqlRoute != null;
 		cacheMapLifecycle.writeLock().lock();
 		try {
 			plugin.debug("Clearing cache: " + userDataCache.keySet().size());
 			retiring.putAll(userDataCache);
-			for (UserDataCache cache : retiring.values()) cache.beginRemoval();
+			if (!shared) for (UserDataCache cache : retiring.values()) cache.beginRemoval();
 		} finally { cacheMapLifecycle.writeLock().unlock(); }
 		try {
 			for (Entry<UUID, UserDataCache> entry : retiring.entrySet()) {
@@ -1538,13 +1612,23 @@ public class UserDataManager {
 				// must also exclude the normal per-user read admission used by
 				// addChange(), otherwise a queued setter can observe this mapped cache
 				// after beginRemoval() and have its mutation silently discarded.
-				withSharedSqlBackendExclusive(uuid, () -> clearCacheExclusively(uuid, cache));
+				withSharedSqlBackendExclusive(uuid, () -> {
+					if (shared) {
+						if (userDataCache.get(uuid) != cache) return;
+						cache.beginRemoval();
+					}
+					try { clearCacheExclusively(uuid, cache); }
+					catch (RuntimeException | Error failure) {
+						if (shared && userDataCache.get(uuid) == cache) cache.cancelRemoval();
+						throw failure;
+					}
+				});
 			}
 		} catch (RuntimeException | Error failure) {
 			// All not-yet-detached caches were marked before flushing began. Reopen
 			// each surviving cache so one user's failed write cannot discard later
 			// updates for another cache that has not been flushed yet.
-			for (UserDataCache cache : retiring.values()) cache.cancelRemoval();
+			if (!shared) for (UserDataCache cache : retiring.values()) cache.cancelRemoval();
 			throw failure;
 		}
 	}
@@ -1798,13 +1882,17 @@ public class UserDataManager {
 	 * completed; callers must retain and observe it for the actual operation outcome.
 	 * Cancelling a dependent stage only cancels that observation, not this receipt
 	 * or the mutation, and must not be treated as a reason to retry the mutation.
+	 * Completion callbacks registered before settlement run on a bounded lane,
+	 * independently of the serialized storage worker; callbacks registered after
+	 * settlement may run on the registering thread. Delivery can be out of order.
+	 * Blocking callbacks can exhaust that lane and delay completion and shutdown.
 	 */
 	public CompletionStage<UserDataCache.IntegerMutationResult> submitLegacyIntegerMutation(UUID uuid,
 			Map<String, Integer> values, UserDataCache.IntegerMutation operation, Consumer<Set<String>> notification) {
 		Objects.requireNonNull(uuid, "uuid"); Objects.requireNonNull(values, "values"); Objects.requireNonNull(operation, "operation");
 		if (values.isEmpty() || values.size() > 64) throw new IllegalArgumentException("Invalid integer mutation size");
 		com.bencodez.advancedcore.AdvancedCorePlugin.UserStorageOwner owner = Objects.requireNonNull(plugin.getNativeUserStorageOwner(), "Native user storage owner is unavailable");
-		PendingLegacyIntegerMutation pending = new PendingLegacyIntegerMutation(uuid, owner, values, operation, notification);
+		PendingLegacyIntegerMutation pending = new PendingLegacyIntegerMutation(this, uuid, owner, values, operation, notification);
 		boolean start;
 		java.util.concurrent.locks.ReentrantLock stripe = legacyMutationStripe(uuid);
 		if (!stripe.tryLock()) throw new RejectedExecutionException("Legacy integer mutation admission is busy");
@@ -1825,7 +1913,10 @@ public class UserDataManager {
 		return pending.completion;
 	}
 
-	/** Submit one shared-cache mutation and retain its receipt through lifecycle retirement. */
+	/** Submit one shared-cache mutation and retain its receipt through lifecycle retirement.
+	 * Completion callbacks registered before settlement run on a bounded lane and can
+	 * arrive out of order; callbacks attached afterward may run on the attaching thread.
+	 * Blocking callbacks can exhaust the lane and delay completion and shutdown. */
 	public CompletionStage<UserDataCache.IntegerMutationResult> submitSharedIntegerMutation(UUID uuid,
 			Map<String, Integer> values, UserDataCache.IntegerMutation operation, Consumer<Set<String>> notification) {
 		Objects.requireNonNull(uuid, "uuid"); Objects.requireNonNull(values, "values"); Objects.requireNonNull(operation, "operation");
@@ -1876,31 +1967,41 @@ public class UserDataManager {
 	}
 
 	private <T> void finishSharedIntegerMutation(UUID uuid, MutationReceipt<T> receipt, T result, Throwable failure) {
+		DeferredSharedInteger failedTask = null; Throwable schedulingFailure = null;
 		synchronized (this) {
 			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger> queue = sharedIntegerDeferred.get(uuid);
 			if (queue == null || queue.isEmpty() || queue.peekFirst().receipt() != receipt)
 				throw new IllegalStateException("Shared integer completion is out of order");
 			queue.removeFirst();
 			if (queue.isEmpty()) sharedIntegerDeferred.remove(uuid);
-			sharedIntegerCompletingUsers.add(uuid);
+			sharedCallbackReceipts.computeIfAbsent(uuid, ignored -> new java.util.HashSet<>()).add(receipt);
 			sharedIntegerQueuedUsers.computeIfPresent(uuid, (key, count) -> count == 1 ? null : count - 1);
-		}
-		sharedIntegerCompletion.set(true);
-		try { if (failure == null) receipt.succeed(result); else receipt.fail(failure); }
-		finally { sharedIntegerCompletion.remove(); }
-		DeferredSharedInteger failedTask = null; Throwable schedulingFailure = null;
-		synchronized (this) {
-			sharedIntegerCompletingUsers.remove(uuid);
-			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger> queue = sharedIntegerDeferred.get(uuid);
+			queue = sharedIntegerDeferred.get(uuid);
 			if (queue != null && !queue.isEmpty() && !sharedIntegerActiveUsers.containsKey(uuid)) {
-				com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger next = queue.peekFirst();
+				DeferredSharedInteger next = queue.peekFirst();
 				try { timer.execute(next.action()); }
 				catch (RuntimeException | Error error) { failedTask = next; schedulingFailure = error; }
 			}
-			if (--sharedIntegerAdmissions == 0) sharedIntegerDrain.complete(null);
 		}
 		if (failedTask != null) failedTask.reject().accept(schedulingFailure);
-		receipt.finalized.complete(null);
+		try {
+			mutationCallbacks.execute(() -> {
+				sharedIntegerCompletion.set(true);
+				try { if (failure == null) receipt.succeed(result); else receipt.fail(failure); }
+				finally {
+					sharedIntegerCompletion.remove();
+					synchronized (this) {
+						Set<MutationReceipt<?>> callbacks = sharedCallbackReceipts.get(uuid);
+						callbacks.remove(receipt); if (callbacks.isEmpty()) sharedCallbackReceipts.remove(uuid);
+						if (--sharedIntegerAdmissions == 0) sharedIntegerDrain.complete(null);
+					}
+					sharedIntegerCompletion.set(true);
+					try { receipt.finalized.complete(null); } finally { sharedIntegerCompletion.remove(); }
+				}
+			});
+		} catch (RuntimeException | Error rejected) {
+			try { reportDeferredStorageFailure(rejected); } catch (RuntimeException | Error ignored) { }
+		}
 	}
 
 	/** Observe when a shared mutation's completion callbacks and admission have settled. */
@@ -1919,19 +2020,20 @@ public class UserDataManager {
 	 * {@link SqlUserStorage.ReplayPreconditionException} only before any write or
 	 * external effect to report a definite rejection without retry.
 	 */
-	public <T> CompletionStage<T> submitSharedReplayTransaction(UUID uuid, UserStorage storage,
+	/** Submit an award with its durable identity for indeterminate diagnostics. */
+	public <T> CompletionStage<T> submitSharedReplayTransaction(UUID uuid, UserStorage storage, String identity,
 			Map<String, DataValue> initialValues, SqlUserStorage.TransactionWork<T> work) {
-		return submitSharedReplayTransaction(uuid, storage, initialValues, work, null);
+		return submitSharedReplayTransaction(uuid, storage, initialValues, work, null, Objects.requireNonNull(identity, "identity"));
 	}
 
 	/** Submit checkpoint cleanup for an existing lease even while shutdown is draining it. */
 	public <T> CompletionStage<T> submitSharedReplayCheckpoint(UUID uuid, UserStorage storage, String identity,
 			Map<String, DataValue> initialValues, SqlUserStorage.TransactionWork<T> work) {
-		return submitSharedReplayTransaction(uuid, storage, initialValues, work, Objects.requireNonNull(identity, "identity"));
+		return submitSharedReplayTransaction(uuid, storage, initialValues, work, Objects.requireNonNull(identity, "identity"), identity);
 	}
 
 	private <T> CompletionStage<T> submitSharedReplayTransaction(UUID uuid, UserStorage storage,
-			Map<String, DataValue> initialValues, SqlUserStorage.TransactionWork<T> work, String checkpointIdentity) {
+			Map<String, DataValue> initialValues, SqlUserStorage.TransactionWork<T> work, String checkpointIdentity, String diagnosticIdentity) {
 		Objects.requireNonNull(uuid, "uuid"); Objects.requireNonNull(storage, "storage");
 		Objects.requireNonNull(work, "work"); java.util.Map<java.lang.String,com.bencodez.simpleapi.sql.data.DataValue> initial = Map.copyOf(initialValues);
 		MutationReceipt<T> receipt = new MutationReceipt<T>(this); SharedUserDataRuntime runtime; Throwable schedulingFailure = null;
@@ -1939,6 +2041,8 @@ public class UserDataManager {
 			runtime = sharedRuntime;
 			com.bencodez.advancedcore.api.user.usercache.UserDataManager.SharedReplayLeaseState checkpointLease = checkpointIdentity == null ? null : sharedReplayLeases.get(new SharedReplayLease(uuid, checkpointIdentity));
 			boolean drainingCheckpoint = checkpointLease != null && runtime != null && checkpointLease.runtime == runtime;
+			if (checkpointIdentity != null && (!drainingCheckpoint || checkpointLease.checkpointReservations == 0))
+				throw new IllegalStateException("Replay checkpoint requires an active lease for its storage owner");
 			if (runtime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || (sharedIntegerClosing && !drainingCheckpoint) || sharedIntegerOwnerReplacement)
 				throw new RejectedExecutionException("Shared user storage is unavailable or retiring");
 			if (!runtime.backend().supportsAtomicUserTransactions())
@@ -1947,10 +2051,11 @@ public class UserDataManager {
 			// leases cannot prevent the checkpoints that release those leases.
 			int limit = drainingCheckpoint ? MAX_PENDING_LEGACY_INTEGERS * 2 : MAX_PENDING_LEGACY_INTEGERS;
 			if (sharedIntegerAdmissions >= limit) throw new RejectedExecutionException("Shared mutation queue is full");
+			if (checkpointIdentity != null) checkpointLease.checkpointReservations--;
 			if (sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
 			sharedIntegerQueuedUsers.merge(uuid, 1, Integer::sum);
 			DeferredSharedInteger deferred = new DeferredSharedInteger(
-					() -> runSharedReplayTransaction(runtime, uuid, storage, initial, work, receipt, 0),
+					() -> runSharedReplayTransaction(runtime, uuid, storage, initial, work, receipt, 0, diagnosticIdentity, checkpointIdentity != null),
 					failure -> finishSharedIntegerMutation(uuid, receipt, null, failure), receipt);
 			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger> queue = sharedIntegerDeferred.computeIfAbsent(uuid, ignored -> new java.util.ArrayDeque<>());
 			queue.addLast(deferred);
@@ -1977,14 +2082,28 @@ public class UserDataManager {
 		if (existing != null) {
 			if (existing.runtime != sharedRuntime) throw new IllegalStateException("Replay owner changed");
 			if (existing.checkpointed && !checkpoint) throw new IllegalStateException("Replay award is already checkpointed");
-			existing.attempts++;
+			existing.attempts++; if (checkpoint) existing.checkpointReservations++;
 			return;
 		}
 		if (sharedRuntime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement)
 			throw new RejectedExecutionException("Shared user storage is unavailable or retiring");
 		if (sharedIntegerAdmissions >= MAX_PENDING_LEGACY_INTEGERS) throw new RejectedExecutionException("Shared mutation queue is full");
 		if (sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
-		SharedReplayLeaseState state = new SharedReplayLeaseState(sharedRuntime); state.attempts = 1; sharedReplayLeases.put(key, state);
+		SharedReplayLeaseState state = new SharedReplayLeaseState(sharedRuntime); state.attempts = 1;
+		if (checkpoint) state.checkpointReservations = 1; sharedReplayLeases.put(key, state);
+	}
+
+	/** Release a checkpoint reservation only when submission did not admit work. */
+	public synchronized void cancelSharedReplayCheckpointReservation(UUID uuid, String identity) {
+		SharedReplayLease key = new SharedReplayLease(Objects.requireNonNull(uuid), Objects.requireNonNull(identity));
+		SharedReplayLeaseState state = sharedReplayLeases.get(key);
+		if (state == null || state.checkpointReservations == 0 || state.attempts == 0)
+			throw new IllegalStateException("Replay checkpoint reservation is not active");
+		state.checkpointReservations--; state.attempts--;
+		if (state.attempts == 0 && (!state.committed || state.checkpointed)) {
+			sharedReplayLeases.remove(key);
+			if (--sharedIntegerAdmissions == 0) sharedIntegerDrain.complete(null);
+		}
 	}
 
 	/** Settle one lease attempt; a committed award retains the owner until checkpoint cleanup. */
@@ -2002,11 +2121,22 @@ public class UserDataManager {
 	}
 
 	private <T> void runSharedReplayTransaction(SharedUserDataRuntime runtime, UUID uuid, UserStorage storage,
-			Map<String, DataValue> initial, SqlUserStorage.TransactionWork<T> work, MutationReceipt<T> receipt, int attempts) {
+			Map<String, DataValue> initial, SqlUserStorage.TransactionWork<T> work, MutationReceipt<T> receipt, int attempts,
+			String identity, boolean checkpoint) {
 		T result;
 		try {
 			if (sharedRuntime != runtime) throw new IllegalStateException("Shared storage owner changed");
 			result = runtime.transaction(uuid, storage, initial, work);
+			if (checkpoint) {
+				// The durable deletion is confirmed. Fence previously admitted awards
+				// before releasing the per-user queue, independent of user callbacks.
+				synchronized (this) {
+					SharedReplayLeaseState lease = sharedReplayLeases.get(new SharedReplayLease(uuid, identity));
+					if (lease == null || lease.runtime != runtime)
+						throw new IllegalStateException("Confirmed checkpoint lost its storage lease");
+					lease.checkpointed = true;
+				}
+			}
 		} catch (SqlUserStorage.ReplayPreconditionException rejected) {
 			finishSharedIntegerMutation(uuid, receipt, null, rejected);
 			return;
@@ -2015,10 +2145,16 @@ public class UserDataManager {
 				try { reportDeferredStorageFailure(failure); } catch (RuntimeException | Error ignored) { }
 			int next = attempts == Integer.MAX_VALUE ? attempts : attempts + 1;
 			long delay = Math.min(30000L, 250L << Math.min(attempts, 7));
-			try { timer.schedule(() -> runSharedReplayTransaction(runtime, uuid, storage, initial, work, receipt, next), delay, TimeUnit.MILLISECONDS); }
-			catch (RuntimeException | Error rejected) { try { reportDeferredStorageFailure(rejected); } catch (RuntimeException | Error ignored) { } }
+			try { timer.schedule(() -> runSharedReplayTransaction(runtime, uuid, storage, initial, work, receipt, next, identity, checkpoint), delay, TimeUnit.MILLISECONDS); }
+			catch (RuntimeException | Error rejected) {
+				synchronized (this) { indeterminateReplays.put(receipt, new IndeterminateReplay(uuid, identity, checkpoint)); }
+				try { reportDeferredStorageFailure(rejected); } catch (RuntimeException | Error ignored) { }
+			}
 			return;
-		} catch (Error uncertain) { try { reportDeferredStorageFailure(uncertain); } catch (RuntimeException | Error ignored) { } return; }
+		} catch (Error uncertain) {
+			synchronized (this) { indeterminateReplays.put(receipt, new IndeterminateReplay(uuid, identity, checkpoint)); }
+			try { reportDeferredStorageFailure(uncertain); } catch (RuntimeException | Error ignored) { } return;
+		}
 		finishSharedIntegerMutation(uuid, receipt, result, null);
 	}
 
@@ -2085,8 +2221,11 @@ public class UserDataManager {
 		Objects.requireNonNull(uuid, "uuid");
 		synchronized (legacyMutationAdmission) {
 			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation> queue = pendingLegacyIntegers.get(uuid);
-			if (queue == null) return CompletableFuture.completedFuture(null);
-			return CompletableFuture.allOf(queue.stream().map(item -> item.completion).toArray(CompletableFuture[]::new)).minimalCompletionStage();
+			java.util.ArrayList<CompletableFuture<?>> pending = new java.util.ArrayList<>();
+			if (queue != null) for (PendingLegacyIntegerMutation item : queue) pending.add(item.completion.finalized);
+			Set<PendingLegacyIntegerMutation> callbacks = legacyCallbackReceipts.get(uuid);
+			if (callbacks != null) for (PendingLegacyIntegerMutation item : callbacks) pending.add(item.completion.finalized);
+			return guardedObservation(CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new)));
 		}
 	}
 
@@ -2095,16 +2234,27 @@ public class UserDataManager {
 		Objects.requireNonNull(uuid, "uuid");
 		synchronized (this) {
 			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger> queue = sharedIntegerDeferred.get(uuid);
-			if (queue == null || queue.isEmpty()) return CompletableFuture.<Void>completedFuture(null).minimalCompletionStage();
-			return CompletableFuture.allOf(queue.stream().map(DeferredSharedInteger::receipt).toArray(CompletableFuture[]::new)).minimalCompletionStage();
+			java.util.ArrayList<CompletableFuture<?>> pending = new java.util.ArrayList<>();
+			if (queue != null) for (DeferredSharedInteger item : queue) {
+				pending.add(item.receipt()); pending.add(item.receipt().finalized);
+			}
+			Set<MutationReceipt<?>> callbacks = sharedCallbackReceipts.get(uuid);
+			if (callbacks != null) for (MutationReceipt<?> item : callbacks) { pending.add(item); pending.add(item.finalized); }
+			return guardedObservation(CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new)));
 		}
+	}
+	private CompletionStage<Void> guardedObservation(CompletableFuture<Void> source) {
+		GuardedMutationFuture<Void> view = new GuardedMutationFuture<>(this);
+		source.whenComplete((value, failure) -> { if (failure == null) view.complete(value); else view.completeExceptionally(failure); });
+		return view;
 	}
 
 	/** Close new legacy arithmetic admission before the storage owner is shut down. */
 	public CompletionStage<Void> shutdownLegacyIntegerMutations() {
-		closeLegacyIntegerAdmissionForShutdown();
-		if (UserDataCache.hasLiveLegacyCallback(this) || Boolean.TRUE.equals(legacyIntegerNotification.get()))
+		if (UserDataCache.hasLiveLegacyCallback(this) || Boolean.TRUE.equals(legacyIntegerNotification.get())
+				|| Boolean.TRUE.equals(legacyIntegerCompletion.get()))
 			return CompletableFuture.failedFuture(new IllegalStateException("Cache retirement cannot await its own direct-write callback"));
+		closeLegacyIntegerAdmissionForShutdown();
 		CompletableFuture<Void> completion = new CompletableFuture<>();
 		try {
 			timer.execute(() -> {
@@ -2188,29 +2338,43 @@ public class UserDataManager {
 
 	private void finishLegacyIntegerMutation(PendingLegacyIntegerMutation pending,
 			UserDataCache.IntegerMutationResult result, Throwable failure) {
-		if (failure == null) {
-			// Keep the ticket admitted until its one notification attempt finishes.
-			// A listener that requests retirement sees the pending ticket and fails
-			// rather than detaching its cache before notification completes.
-			legacyIntegerNotification.set(true);
-			try { notifyLegacyIntegerMutation(result, pending.operation, pending.notification); }
-			catch (RuntimeException | Error notificationFailure) {
-				try { reportDeferredStorageFailure(notificationFailure); } catch (RuntimeException | Error ignored) { }
-			}
-			finally { legacyIntegerNotification.remove(); }
-		}
 		PendingLegacyIntegerMutation next;
 		synchronized (legacyMutationAdmission) {
 			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation> queue = pendingLegacyIntegers.get(pending.uuid);
 			if (queue == null || queue.peekFirst() != pending) return;
-			queue.removeFirst(); pendingLegacyIntegerCount--;
+			queue.removeFirst();
+			legacyCallbackReceipts.computeIfAbsent(pending.uuid, ignored -> new java.util.HashSet<>()).add(pending);
 			next = queue.peekFirst(); if (next == null) pendingLegacyIntegers.remove(pending.uuid);
 		}
-		endLegacyCacheBatch();
-		if (failure == null) {
-			pending.completion.succeed(result);
-		} else pending.completion.fail(failure);
 		if (next != null) scheduleLegacyIntegerMutation(next, 0);
+		try {
+			mutationCallbacks.execute(() -> {
+				legacyIntegerCompletion.set(true);
+				try {
+					if (failure == null) {
+						legacyIntegerNotification.set(true);
+						try { notifyLegacyIntegerMutation(result, pending.operation, pending.notification); }
+						catch (RuntimeException | Error notificationFailure) {
+							try { reportDeferredStorageFailure(notificationFailure); } catch (RuntimeException | Error ignored) { }
+						} finally { legacyIntegerNotification.remove(); }
+						pending.completion.succeed(result);
+					} else pending.completion.fail(failure);
+				}
+				finally {
+					legacyIntegerCompletion.remove();
+					endLegacyCacheBatch();
+					synchronized (legacyMutationAdmission) {
+						Set<PendingLegacyIntegerMutation> callbacks = legacyCallbackReceipts.get(pending.uuid);
+						callbacks.remove(pending); if (callbacks.isEmpty()) legacyCallbackReceipts.remove(pending.uuid);
+						pendingLegacyIntegerCount--;
+					}
+					if (failure == null) pending.completion.finalized.complete(null);
+					else pending.completion.finalized.completeExceptionally(failure);
+				}
+			});
+		} catch (RuntimeException | Error rejected) {
+			try { reportDeferredStorageFailure(rejected); } catch (RuntimeException | Error ignored) { }
+		}
 	}
 
 	/** Fence a direct legacy writer against stale row publication. */

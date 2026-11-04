@@ -37,6 +37,46 @@ import com.bencodez.simpleapi.sql.data.DataValueInt;
 /** Real cache/queue and runtime; controlled in-memory provider, no live server/database. */
 @Timeout(15)
 class SharedCachePopulationRaceTest {
+    @Test void placeholderWinningDuringSynchronousPopulationIsRefreshed() throws Exception {
+        var plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        var users = mock(com.bencodez.advancedcore.api.user.UserManager.class);
+        var user = mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class);
+        var data = mock(com.bencodez.advancedcore.api.user.UserData.class);
+        var backend = mock(SqlUserBackend.class); UUID uuid = UUID.randomUUID();
+        var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        when(plugin.getUserManager()).thenReturn(users); when(users.getUser(uuid, false)).thenReturn(user);
+        when(user.getUserData()).thenReturn(data); when(data.getKeys()).thenAnswer(call -> new ArrayList<String>());
+        when(data.getValues()).thenAnswer(call -> { if (calls.getAndIncrement() == 0) { entered.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS)); } return values(7, 2); });
+        when(data.getValuesIfComplete()).thenAnswer(call -> { if (calls.getAndIncrement() == 0) { entered.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS)); } return values(7, 2); });
+        when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+        when(backend.storageType()).thenReturn(UserStorage.SQLITE); when(backend.isOpen()).thenReturn(true);
+        doReturn(null).when(plugin).getNativeUserStorageOwner();
+        UserDataManager manager = new UserDataManager(plugin);
+        manager.bindSharedSqlBackend(backend, (id, operation) -> operation.run());
+        var worker = Executors.newSingleThreadExecutor();
+        try {
+            var population = worker.submit(() -> manager.cacheUser(uuid));
+            if (!entered.await(5, TimeUnit.SECONDS)) { population.get(1, TimeUnit.SECONDS); fail("population did not read"); }
+            UserDataCache placeholder = new UserDataCache(manager, uuid);
+            manager.getUserDataCache().put(uuid, placeholder);
+            release.countDown(); population.get(5, TimeUnit.SECONDS);
+            assertSame(placeholder, manager.getUserDataCache().get(uuid));
+            assertEquals(7, placeholder.getIfPresent("Points").getInt());
+        } finally { release.countDown(); worker.shutdownNow(); manager.getTimer().shutdownNow(); }
+    }
+    @Test void refusedRetirementDoesNotDestroyTheStillMappedCache() {
+        UserDataManager manager = mock(UserDataManager.class);
+        UUID uuid = UUID.randomUUID();
+        UserDataCache cache = mock(UserDataCache.class);
+        var caches = new ConcurrentHashMap<UUID, UserDataCache>(); caches.put(uuid, cache);
+        when(manager.getUserDataCache()).thenReturn(caches);
+        when(manager.retireSharedCacheAfterFlush(uuid, cache)).thenReturn(false);
+        var owner = new BukkitUserCacheOwner(manager);
+        assertThrows(IllegalStateException.class, () -> owner.remove(uuid));
+        assertSame(cache, caches.get(uuid));
+        verify(cache, never()).retireAfterSharedFlush();
+    }
     @Test void pendingWriteWinsOverAnOlderDatabaseSnapshot() throws Exception { queuedWrite(false); }
     @Test void writeFlushedBeforePublicationStillWinsOverAnOlderSnapshot() throws Exception { queuedWrite(true); }
 
@@ -179,6 +219,12 @@ class SharedCachePopulationRaceTest {
         Fixture() {
             when(manager.getPlugin()).thenReturn(plugin);
             when(manager.getUserDataCache()).thenReturn(caches);
+            when(manager.retireSharedCacheAfterFlush(any(UUID.class), any(UserDataCache.class))).thenAnswer(call -> {
+                UUID id = call.getArgument(0); UserDataCache expected = call.getArgument(1);
+                if (caches.get(id) != expected) return false;
+                expected.retireAfterSharedFlush();
+                return caches.remove(id, expected);
+            });
             when(manager.isCached(any(UUID.class))).thenAnswer(call -> {
                 UserDataCache current = caches.get(call.getArgument(0, UUID.class));
                 return current != null && current.hasCache();

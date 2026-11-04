@@ -18,6 +18,9 @@ public interface SqlUserBackend extends AutoCloseable {
     /** Explicit opt-in: user transactions atomically commit caller-owned SQL and user values. */
     default boolean supportsAtomicUserTransactions() { return false; }
 
+    /** Column identifier folding, or null when this provider cannot guarantee it. */
+    default Boolean caseInsensitiveColumnNames() { return null; }
+
     UserStorage storageType();
 
     SqlUserStorage user(UUID uuid);

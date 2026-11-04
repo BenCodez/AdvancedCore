@@ -247,7 +247,7 @@ public class Reward {
 	public void giveInjectedRewards(AdvancedCoreUser user, HashMap<String, String> placeholders) {
 		if (RewardEligibility.isConfigured(plugin, getConfig().getConfigData())) {
 			giveRewardUserAsync(user, placeholders, new RewardOptions().setCheckTimed(false)).exceptionally(failure -> {
-				logRewardUserFailure(failure);
+				logRewardUserFailure(failure, null);
 				return null;
 			});
 			return;
@@ -543,7 +543,8 @@ public class Reward {
 				// fresh top-level execution state local to this dispatch so completed
 				// stages cannot leak into the next send.
 				replayState = new ReplayState(options.getAsyncReplayProgress(),
-						options.getAsyncReplayRegistryFingerprints(), options.isLegacyAsyncReplayCheckpoint());
+						options.getAsyncReplayRegistryFingerprints(), options.isLegacyAsyncReplayCheckpoint(),
+						options.isRestoredAsyncReplayEntry(), options.isFreshAsyncReplayEntry());
 			} else {
 				// Deferred/nested options must retain their explicitly inherited parent
 				// state after the current thread-local scope ends.
@@ -869,8 +870,12 @@ public class Reward {
 
 	/** Returns whether the active replay already froze this logical command lane. */
 	public static boolean hasReplayCommandSnapshot(HashMap<String, String> placeholders, String lane) {
-		ReplayState replayState = currentReplayState();
-		String activeKey = currentReplayKey();
+		return hasReplayCommandSnapshot(placeholders, lane, currentReplayState(), currentReplayKey());
+	}
+
+	/** Checks a captured replay context after an asynchronous continuation. */
+	public static boolean hasReplayCommandSnapshot(HashMap<String, String> placeholders, String lane,
+			ReplayState replayState, String activeKey) {
 		if (replayState == null || activeKey == null) return false;
 		String storageKey = replaySequenceKey(REPLAY_COMMAND_PREFIX, activeKey,
 				lane == null ? "commands" : lane);
@@ -1037,6 +1042,11 @@ public class Reward {
 				|| key.startsWith(REPLAY_LEGACY_ACTION_PREFIX) || key.startsWith(REPLAY_CHANCE_PREFIX));
 	}
 
+	/** Remove reserved replay metadata from untrusted fresh queue input. */
+	public static void clearReplayMetadata(HashMap<String, String> placeholders) {
+		if (placeholders != null) placeholders.keySet().removeIf(Reward::isReplayMetadataKey);
+	}
+
 	/** Stable metadata key for the individual legacy actions produced by one injector. */
 	public static String legacyActionReplayKey(String injectionKey) {
 		String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(
@@ -1128,6 +1138,7 @@ public class Reward {
 		private final HashMap<String, String> replayMetadata = new HashMap<>();
 		private final boolean legacyCheckpoint;
 		private final boolean restoredCheckpoint;
+		private final boolean freshEntry;
 		private boolean livePlayerStateSet;
 		private boolean livePlayerOnline;
 		private boolean livePlayerVanished;
@@ -1136,10 +1147,15 @@ public class Reward {
 		private ReplayState(Map<String, Integer> initial) { this(initial, null, false); }
 		private ReplayState(Map<String, Integer> initial, Map<String, String> initialFingerprints,
 				boolean legacyCheckpoint) {
+			this(initial, initialFingerprints, legacyCheckpoint, false, false);
+		}
+		private ReplayState(Map<String, Integer> initial, Map<String, String> initialFingerprints,
+				boolean legacyCheckpoint, boolean restoredEntry, boolean freshEntry) {
 			if (initial != null) completed.putAll(initial);
 			if (initialFingerprints != null) registryFingerprints.putAll(initialFingerprints);
 			this.legacyCheckpoint = legacyCheckpoint;
-			this.restoredCheckpoint = legacyCheckpoint || (initial != null && !initial.isEmpty())
+			this.freshEntry = freshEntry;
+			this.restoredCheckpoint = restoredEntry || legacyCheckpoint || (initial != null && !initial.isEmpty())
 					|| (initialFingerprints != null && !initialFingerprints.isEmpty());
 		}
 		private synchronized int getCompleted(String rewardName, int fallback) {
@@ -1159,7 +1175,8 @@ public class Reward {
 		}
 		public synchronized void mergeReplayMetadataInto(HashMap<String, String> target) {
 			if (!restoredCheckpoint) target.keySet().removeIf(key ->
-					key != null && key.startsWith(REPLAY_SELECTION_PREFIX) && !replayMetadata.containsKey(key));
+					(freshEntry ? isReplayMetadataKey(key) : key != null && key.startsWith(REPLAY_SELECTION_PREFIX))
+							&& !replayMetadata.containsKey(key));
 			Reward.mergeReplayMetadata(target, replayMetadata);
 		}
 		public synchronized String replayMetadata(String key) { return replayMetadata.get(key); }
@@ -1212,7 +1229,7 @@ public class Reward {
 			return checkpointConsumer != null && queueReplayKey != null ? queueReplayKey : executionKey;
 		}
 		private synchronized boolean acceptsPersistedMetadata() {
-			return restoredCheckpoint || checkpointConsumer != null;
+			return restoredCheckpoint || (!freshEntry && checkpointConsumer != null);
 		}
 		public CompletionStage<Void> persistCheckpointAsync(AdvancedCorePlugin plugin,
 				HashMap<String, String> placeholders) {
@@ -1496,8 +1513,9 @@ public class Reward {
 		// player owner. Unconfigured legacy definitions retain their established path.
 		if (RewardEligibility.isConfigured(plugin, getConfig().getConfigData())
 				&& (rewardOptions == null || !rewardOptions.isIgnoreRequirements())) {
-			giveRewardAsync(user, rewardOptions).exceptionally(failure -> {
-				logRewardUserFailure(failure);
+			RewardOptions tracked = (rewardOptions == null ? new RewardOptions() : rewardOptions).captureLegacyFailureObserver();
+			giveRewardAsync(user, tracked).exceptionally(failure -> {
+				logRewardUserFailure(failure, tracked.legacyFailureObserverCapture().get());
 				return null;
 			});
 			return;
@@ -1627,6 +1645,9 @@ public class Reward {
 	 * @return completion stage for the complete reward injection chain
 	 */
 	public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, RewardOptions rewardOptions) {
+		if (rewardOptions != null && !rewardOptions.claimLegacyFailureObserverCapture()) {
+			rewardOptions = rewardOptions.withoutLegacyFailureObserverCapture();
+		}
 		boolean primaryThread = false;
 		try {
 			primaryThread = Bukkit.isPrimaryThread();
@@ -1676,6 +1697,12 @@ public class Reward {
 		}
 
 		rewardOptions = rewardOptions == null ? new RewardOptions() : rewardOptions.copyForDispatch();
+		if (rewardOptions.getAsyncReplayState() == null && rewardOptions.getAsyncReplayCheckpointConsumer() == null
+				&& !rewardOptions.isRestoredAsyncReplayEntry() && !rewardOptions.isLegacyAsyncReplayCheckpoint()
+				&& rewardOptions.getAsyncReplayProgress().isEmpty()
+				&& rewardOptions.getAsyncReplayRegistryFingerprints().isEmpty()) {
+			rewardOptions.setFreshAsyncReplayEntry(true);
+		}
 		if (!rewardOptions.getPlaceholders().containsKey("ExecDate")) {
 			rewardOptions.addPlaceholder("ExecDate", "" + System.currentTimeMillis());
 		}
@@ -1692,6 +1719,7 @@ public class Reward {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user, rewardOptions);
 		Bukkit.getPluginManager().callEvent(event);
+		rewardOptions.updateLegacyFailureObserverCapture();
 		if (event.isCancelled()) {
 			plugin.debug("Reward " + name + " was cancelled for " + user.getPlayerName());
 			return CompletableFuture.completedFuture(null);
@@ -1792,7 +1820,9 @@ public class Reward {
 								&& RewardEligibility.isConfigured(plugin, getConfig().getConfigData())) {
 							String key = chanceReplayKey(options);
 							options.addPlaceholder(key, "1");
-							if (options.getAsyncReplayState() != null) options.getAsyncReplayState().recordReplayMetadata(key, "1");
+							ReplayState state = options.getAsyncReplayState();
+							if (state == null) { state = replayStateFor(options); options.setAsyncReplayState(state); }
+							state.recordReplayMetadata(key, "1");
 						}
 						return current;
 					});
@@ -1928,8 +1958,9 @@ public class Reward {
 	public void giveRewardUser(AdvancedCoreUser user, HashMap<String, String> phs, RewardOptions rewardOptions) {
 		RewardOptions effectiveOptions = rewardOptions == null ? new RewardOptions() : rewardOptions;
 		if (requiresAwaitedDelivery(effectiveOptions)) {
+			Consumer<Throwable> observer = effectiveOptions.getAsyncFailureObserver();
 			giveRewardUserAsync(user, phs, effectiveOptions).exceptionally(failure -> {
-				logRewardUserFailure(failure);
+				logRewardUserFailure(failure, observer);
 				return null;
 			});
 			return;
@@ -2048,7 +2079,8 @@ public class Reward {
 
 		Player player = user.getPlayer();
 		if (player == null) {
-			player = Bukkit.getPlayer(user.getPlayerName());
+			String playerName = user.getPlayerName();
+			if (playerName != null && !playerName.isBlank()) player = Bukkit.getPlayer(playerName);
 		}
 		if (player != null || isForceOffline()) {
 
@@ -2081,7 +2113,11 @@ public class Reward {
 		}
 	}
 
-	private void logRewardUserFailure(Throwable failure) {
+	private void logRewardUserFailure(Throwable failure, Consumer<Throwable> observer) {
+		if (observer != null) {
+			try { observer.accept(failure); }
+			catch (Throwable ignored) { /* Diagnostics must not replace the original failure. */ }
+		}
 		if (plugin.getLogger() != null) {
 			plugin.getLogger().log(Level.WARNING, "Failed to give reward " + getRewardName(), failure);
 		} else {

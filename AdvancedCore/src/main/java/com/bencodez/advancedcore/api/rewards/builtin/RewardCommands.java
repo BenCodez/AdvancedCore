@@ -261,14 +261,14 @@ public final class RewardCommands {
 				// Validate the player before any mixed-section side effect, then preserve
 				// the established console-before-player command order.
 				return availability.thenCompose(ignored -> consoleCommands.isEmpty()
-						&& !Reward.hasReplayCommandSnapshot(placeholders, "console")
+						&& !Reward.hasReplayCommandSnapshot(placeholders, "console", replayState, replayKey)
 						? CompletableFuture.completedFuture(null)
-						: eligibilityGuard == null
+						: replayState == null && eligibilityGuard == null
 								? MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
 										placeholders, stagger)
 								: MiscUtils.getInstance().executeConsoleCommandsAsync(user.getPlayerName(), consoleCommands,
-										placeholders, stagger, eligibilityGuard))
-						.thenCompose(ignored -> eligibilityGuard == null
+										placeholders, stagger, eligibilityGuard, replayState, replayKey))
+						.thenCompose(ignored -> replayState == null && eligibilityGuard == null
 								? user.preformCommandAsync(userCommands, placeholders)
 								: user.preformCommandAsync(userCommands, placeholders, eligibilityGuard, replayState, replayKey))
                         .thenApply(ignored -> null);

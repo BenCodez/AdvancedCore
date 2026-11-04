@@ -32,6 +32,21 @@ import com.bencodez.simpleapi.sql.data.DataValueString;
  * </p>
  */
 public class UserDataTest {
+	@Test
+	public void queuedSettersRejectRetiredCacheWithoutClaimingSuccess() {
+		AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
+		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
+		UserManager users = mock(UserManager.class);
+		UserDataManager manager = mock(UserDataManager.class);
+		when(user.getPlugin()).thenReturn(plugin); when(user.getUUID()).thenReturn(UUID.randomUUID().toString());
+		when(user.isCached()).thenReturn(true); when(plugin.getUserManager()).thenReturn(users);
+		when(users.getDataManager()).thenReturn(manager); when(manager.getUserDataCache()).thenReturn(new java.util.concurrent.ConcurrentHashMap<>());
+		when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+		UserData data = new UserData(user);
+		assertThrows(IllegalStateException.class, () -> data.setInt(UserStorage.SQLITE, "Points", 1, true));
+		assertThrows(IllegalStateException.class, () -> data.setString(UserStorage.SQLITE, "Name", "value", true));
+		verify(users, never()).onChange(any(), anyString());
+	}
 
 	@Test
 	public void testClearTempCache_nullSafe() {

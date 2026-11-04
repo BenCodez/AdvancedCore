@@ -15,6 +15,177 @@ import com.bencodez.simpleapi.sql.data.DataValue;
 import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 class AtomicIntegerMutationTest {
+    @Test void foldedSharedProviderResolvesUniqueAliasWithoutCreatingZero() {
+        var manager = mock(UserDataManager.class);
+        when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        var cache = new UserDataCache(manager, UUID.randomUUID());
+        cache.configureSharedStorage(v -> {}, Runnable::run, Runnable::run,
+                com.bencodez.advancedcore.api.user.UserStorage.MYSQL, true);
+        cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+        assertTrue(cache.seedMissingIntegerFromCompleteSnapshot("points"));
+        assertEquals(4, cache.tryMutateIntegers(Map.of("points", 1), IntegerMutation.ADD, null).previous().get("points"));
+        assertEquals(5, cache.getIfPresent("Points").getInt());
+        assertNull(cache.getIfPresent("points"));
+    }
+    @Test void retainedFoldedAliasesStayConsistentAcrossSharedMutations() {
+        var plugin = mock(AdvancedCorePlugin.class); var manager = mock(UserDataManager.class);
+        var mysql = mock(com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL.class);
+        var users = mock(com.bencodez.advancedcore.api.user.UserManager.class);
+        var user = mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class);
+        when(plugin.getUserManager()).thenReturn(users); when(users.getUser(any(UUID.class), eq(false))).thenReturn(user);
+        when(manager.getPlugin()).thenReturn(plugin); when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        when(plugin.getStorageType()).thenReturn(com.bencodez.advancedcore.api.user.UserStorage.MYSQL);
+        when(plugin.getMysql()).thenReturn(mysql); when(mysql.caseInsensitiveColumnNames()).thenReturn(true);
+        var cache = new UserDataCache(manager, UUID.randomUUID());
+        cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+        cache.addChange(new com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt("points", 4), false);
+        cache.configureSharedStorage(v -> {}, Runnable::run, Runnable::run,
+                com.bencodez.advancedcore.api.user.UserStorage.MYSQL, true);
+        assertTrue(cache.tryMutateIntegers(Map.of("points", 1), IntegerMutation.ADD, null).applied());
+        cache.processChangesForSharedRuntime();
+        assertTrue(cache.tryMutateIntegers(Map.of("Points", 1), IntegerMutation.ADD, null).applied());
+        cache.processChangesForSharedRuntime();
+        cache.updateCompleteCachePreservingPending(cache.snapshot());
+        assertTrue(cache.tryMutateIntegers(Map.of("points", 1), IntegerMutation.ADD, null).applied());
+        assertEquals(7, cache.getIfPresent("Points").getInt());
+        assertEquals(7, cache.getIfPresent("points").getInt());
+    }
+    @Test void olderFoldedAliasFlushCannotOverwriteNewerMutation() throws Exception {
+        var plugin = mock(AdvancedCorePlugin.class); var manager = mock(UserDataManager.class);
+        var mysql = mock(com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL.class);
+        var users = mock(com.bencodez.advancedcore.api.user.UserManager.class);
+        var user = mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class);
+        when(plugin.getUserManager()).thenReturn(users); when(users.getUser(any(UUID.class), eq(false))).thenReturn(user);
+        when(manager.getPlugin()).thenReturn(plugin); when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        when(plugin.getStorageType()).thenReturn(com.bencodez.advancedcore.api.user.UserStorage.MYSQL);
+        when(plugin.getMysql()).thenReturn(mysql); when(mysql.caseInsensitiveColumnNames()).thenReturn(true);
+        var cache = new UserDataCache(manager, UUID.randomUUID());
+        cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+        cache.addChange(new com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt("points", 4), false);
+        var entered = new CountDownLatch(1); var release = new CountDownLatch(1); var worker = Executors.newSingleThreadExecutor();
+        cache.configureSharedStorage(v -> { entered.countDown(); await(release); }, Runnable::run, Runnable::run,
+                com.bencodez.advancedcore.api.user.UserStorage.MYSQL, true);
+        try {
+            assertTrue(cache.tryMutateIntegers(Map.of("points", 1), IntegerMutation.ADD, null).applied());
+            var flush = worker.submit(cache::processChangesForSharedRuntime); assertTrue(entered.await(5, TimeUnit.SECONDS));
+            cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+            assertEquals(5, cache.getIfPresent("Points").getInt()); assertEquals(5, cache.getIfPresent("points").getInt());
+            assertTrue(cache.tryMutateIntegers(Map.of("Points", 1), IntegerMutation.ADD, null).applied());
+            release.countDown(); flush.get(5, TimeUnit.SECONDS);
+            assertEquals(6, cache.getIfPresent("Points").getInt()); assertEquals(6, cache.getIfPresent("points").getInt());
+            assertTrue(cache.hasChangesToProcess());
+        } finally { release.countDown(); worker.shutdownNow(); }
+    }
+    @Test void caseSensitiveSharedProviderKeepsBothKeysDistinct() {
+        var manager = mock(UserDataManager.class);
+        when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        var cache = new UserDataCache(manager, UUID.randomUUID());
+        cache.configureSharedStorage(v -> {}, Runnable::run, Runnable::run,
+                com.bencodez.advancedcore.api.user.UserStorage.MYSQL, false);
+        cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(4), "points", new DataValueInt(9))));
+        assertTrue(cache.tryMutateIntegers(Map.of("points", 1), IntegerMutation.ADD, null).applied());
+        assertEquals(4, cache.getIfPresent("Points").getInt());
+        assertEquals(10, cache.getIfPresent("points").getInt());
+    }
+    @Test void foldedQueuedMutationSurvivesDifferentlyCasedDirectSnapshot() {
+        var manager = mock(UserDataManager.class); var plugin = mock(AdvancedCorePlugin.class);
+        var users = mock(com.bencodez.advancedcore.api.user.UserManager.class); var user = mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class);
+        when(manager.getPlugin()).thenReturn(plugin); when(plugin.getUserManager()).thenReturn(users);
+        when(users.getUser(any(UUID.class), eq(false))).thenReturn(user); when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        var cache = new UserDataCache(manager, UUID.randomUUID());
+        var written = new AtomicReference<HashMap<String, DataValue>>();
+        cache.configureSharedStorage(written::set, Runnable::run, Runnable::run,
+                com.bencodez.advancedcore.api.user.UserStorage.MYSQL, true);
+        cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+        assertTrue(cache.tryMutateIntegers(Map.of("Points", 1), IntegerMutation.ADD, null).applied());
+        cache.updateCache(new HashMap<>(Map.of("points", new DataValueInt(4))));
+        assertEquals(5, cache.getIfPresent("points").getInt());
+        assertTrue(cache.tryMutateIntegers(Map.of("Points", 1), IntegerMutation.ADD, null).applied());
+        assertEquals(6, cache.getIfPresent("points").getInt());
+        cache.processChangesForSharedRuntime();
+        assertEquals(1, written.get().size());
+        assertEquals(6, written.get().values().iterator().next().getInt());
+    }
+    @Test void foldedQueuedSetterAndArithmeticFlushOnePhysicalColumn() {
+        var manager = mock(UserDataManager.class); var plugin = mock(AdvancedCorePlugin.class);
+        var users = mock(com.bencodez.advancedcore.api.user.UserManager.class); var user = mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class);
+        when(manager.getPlugin()).thenReturn(plugin); when(plugin.getUserManager()).thenReturn(users);
+        when(users.getUser(any(UUID.class), eq(false))).thenReturn(user); when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        var cache = new UserDataCache(manager, UUID.randomUUID()); var written = new AtomicReference<HashMap<String, DataValue>>();
+        cache.configureSharedStorage(written::set, Runnable::run, Runnable::run,
+                com.bencodez.advancedcore.api.user.UserStorage.MYSQL, true);
+        cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+        assertTrue(cache.tryMutateIntegers(Map.of("points", 1), IntegerMutation.ADD, null).applied());
+        cache.addChange(new com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt("points", 6), true);
+        cache.processChangesForSharedRuntime();
+        assertEquals(1, written.get().size()); assertEquals(6, written.get().values().iterator().next().getInt());
+    }
+    @Test void foldedMixedBatchUsesLastAcceptedValueDuringInflightSnapshot() throws Exception {
+        var manager = mock(UserDataManager.class); var plugin = mock(AdvancedCorePlugin.class);
+        var users = mock(com.bencodez.advancedcore.api.user.UserManager.class); var user = mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class);
+        when(manager.getPlugin()).thenReturn(plugin); when(plugin.getUserManager()).thenReturn(users);
+        when(users.getUser(any(UUID.class), eq(false))).thenReturn(user); when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        var cache = new UserDataCache(manager, UUID.randomUUID()); var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+        var writes = new java.util.concurrent.CopyOnWriteArrayList<HashMap<String, DataValue>>();
+        var worker = Executors.newSingleThreadExecutor();
+        cache.configureSharedStorage(v -> { writes.add(new HashMap<>(v)); if (writes.size() == 1) { entered.countDown(); await(release); } },
+                Runnable::run, Runnable::run, com.bencodez.advancedcore.api.user.UserStorage.MYSQL, true);
+        cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+        try {
+            assertTrue(cache.tryMutateIntegers(Map.of("Points", 1), IntegerMutation.ADD, null).applied());
+            cache.addChange(new com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt("points", 6), true);
+            var first = worker.submit(cache::processChangesForSharedRuntime); assertTrue(entered.await(5, TimeUnit.SECONDS));
+            cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+            assertEquals(6, cache.tryMutateIntegers(Map.of("points", 1), IntegerMutation.ADD, null).previous().get("points"));
+            release.countDown(); first.get(5, TimeUnit.SECONDS); cache.processChangesForSharedRuntime();
+            assertEquals(1, writes.get(1).size()); assertEquals(7, writes.get(1).values().iterator().next().getInt());
+        } finally { release.countDown(); worker.shutdownNow(); }
+    }
+    @Test void foldedStagedSetterSurvivesCheckpointSnapshotReplacement() throws Exception {
+        var manager = mock(UserDataManager.class); var plugin = mock(AdvancedCorePlugin.class);
+        var users = mock(com.bencodez.advancedcore.api.user.UserManager.class); var user = mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class);
+        when(manager.getPlugin()).thenReturn(plugin); when(plugin.getUserManager()).thenReturn(users);
+        when(users.getUser(any(UUID.class), eq(false))).thenReturn(user); when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        var cache = new UserDataCache(manager, UUID.randomUUID()); var written = new AtomicReference<HashMap<String, DataValue>>();
+        cache.configureSharedStorage(written::set, Runnable::run, Runnable::run,
+                com.bencodez.advancedcore.api.user.UserStorage.MYSQL, true);
+        cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+        var entered = new CountDownLatch(1); var release = new CountDownLatch(1); var worker = Executors.newSingleThreadExecutor();
+        try {
+            var checkpoint = worker.submit(() -> cache.flushChangesAndRun(() -> {
+                entered.countDown(); await(release); cache.updateCache(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+            }));
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            assertTrue(cache.tryAddChangeBeforeDeferredSharedFlush(new com.bencodez.advancedcore.api.user.usercache.change.UserDataChangeInt("points", 6)));
+            release.countDown(); checkpoint.get(5, TimeUnit.SECONDS);
+            assertTrue(cache.hasChangesToProcess()); cache.processChangesForSharedRuntime();
+            assertEquals(1, written.get().size()); assertEquals(6, written.get().values().iterator().next().getInt());
+        } finally { release.countDown(); worker.shutdownNow(); }
+    }
+    @Test void unknownSharedProviderStillRefusesAmbiguousAlias() {
+        var manager = mock(UserDataManager.class);
+        var cache = new UserDataCache(manager, UUID.randomUUID());
+        cache.configureSharedStorage(v -> {}, Runnable::run, Runnable::run,
+                com.bencodez.advancedcore.api.user.UserStorage.MYSQL);
+        cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(4))));
+        assertNull(cache.tryMutateIntegers(Map.of("points", 1), IntegerMutation.ADD, null));
+        assertFalse(cache.seedMissingIntegerFromCompleteSnapshot("points"));
+    }
+    @Test void appliedLegacyMutationSurvivesNotificationFailure() {
+        var manager = mock(UserDataManager.class);
+        var plugin = mock(AdvancedCorePlugin.class);
+        when(manager.getPlugin()).thenReturn(plugin);
+        when(plugin.getStorageType()).thenReturn(com.bencodez.advancedcore.api.user.UserStorage.SQLITE);
+        when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        var cache = new UserDataCache(manager, UUID.randomUUID());
+        cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("a", new DataValueInt(1))));
+        var error = new IllegalStateException("synthetic notification failure");
+        var result = cache.tryMutateLegacyIntegers(Map.of("a", 1), IntegerMutation.ADD, keys -> { throw error; });
+        assertTrue(result.applied());
+        assertEquals(2, cache.getIfPresent("a").getInt());
+        assertTrue(cache.hasChangesToProcess());
+        verify(manager).recordSharedStorageFailure(error);
+    }
     @Test void legacyBatchProviderGuardDoesNotAffectAnotherUser() {
         var plugin = mock(AdvancedCorePlugin.class); var users = mock(com.bencodez.advancedcore.api.user.UserManager.class);
         var user = mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class);
@@ -311,7 +482,7 @@ class AtomicIntegerMutationTest {
     @Test void sharedAwardDoesNotReportFailureAfterNotificationDispatchThrows() {
         var plugin = mock(AdvancedCorePlugin.class); var manager = mock(UserDataManager.class);
         when(manager.getPlugin()).thenReturn(plugin); when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
-        doThrow(new IllegalStateException("notification failed")).when(manager).dispatchSharedUserDataNotification(any(Runnable.class));
+        doThrow(new IllegalStateException("notification failed")).when(manager).dispatchSharedMutationNotification(any(Runnable.class));
         var cache = new UserDataCache(manager, UUID.randomUUID()); cache.configureSharedStorage(values -> {}, Runnable::run);
         cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("a", new DataValueInt(1))));
         assertTrue(cache.tryMutateIntegers(Map.of("a", 1), IntegerMutation.ADD, keys -> {}).applied());
@@ -445,6 +616,33 @@ class AtomicIntegerMutationTest {
                 if (failFirst) { assertThrows(ExecutionException.class, () -> flush.get(5, TimeUnit.SECONDS)); cache.processChangesForSharedRuntime(); }
                 else flush.get(5, TimeUnit.SECONDS);
                 assertEquals(0, stored.get("a").getInt()); assertEquals(0, cache.getIfPresent("a").getInt());
+            } finally { release.countDown(); executor.shutdownNow(); }
+        }
+    }
+
+    @Test void foldedSnapshotReplacementCannotAuthorizeASecondInFlightDebit() throws Exception {
+        for (boolean failFirst : new boolean[] { false, true }) {
+            var plugin = mock(AdvancedCorePlugin.class); var manager = mock(UserDataManager.class);
+            when(plugin.getUserManager()).thenReturn(mock(com.bencodez.advancedcore.api.user.UserManager.class));
+            when(manager.getPlugin()).thenReturn(plugin); when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+            var entered = new CountDownLatch(1); var release = new CountDownLatch(1); var attempts = new AtomicInteger();
+            var stored = new ConcurrentHashMap<String, DataValue>(); stored.put("Points", new DataValueInt(1));
+            var cache = new UserDataCache(manager, UUID.randomUUID());
+            cache.configureSharedStorage(values -> {
+                if (attempts.getAndIncrement() == 0) { entered.countDown(); await(release); if (failFirst) throw new IllegalStateException("write failure"); }
+                stored.putAll(values);
+            }, Runnable::run, Runnable::run, com.bencodez.advancedcore.api.user.UserStorage.MYSQL, true);
+            cache.updateCache(new HashMap<>(stored)); var executor = Executors.newSingleThreadExecutor();
+            try {
+                assertTrue(cache.tryMutateIntegers(Map.of("Points", -1), IntegerMutation.DEBIT_POSITIVE, null).applied());
+                var flush = executor.submit(cache::processChangesForSharedRuntime); assertTrue(entered.await(5, TimeUnit.SECONDS));
+                cache.updateCache(new HashMap<>(Map.of("points", new DataValueInt(1))));
+                assertFalse(cache.tryMutateIntegers(Map.of("Points", -1), IntegerMutation.DEBIT_POSITIVE, null).applied());
+                release.countDown();
+                if (failFirst) { assertThrows(ExecutionException.class, () -> flush.get(5, TimeUnit.SECONDS)); cache.processChangesForSharedRuntime(); }
+                else flush.get(5, TimeUnit.SECONDS);
+                assertEquals(0, stored.get("Points").getInt()); assertEquals(0, cache.getIfPresent("Points").getInt());
+                assertEquals(0, cache.getIfPresent("points").getInt());
             } finally { release.countDown(); executor.shutdownNow(); }
         }
     }
@@ -597,7 +795,7 @@ class AtomicIntegerMutationTest {
         var plugin = mock(AdvancedCorePlugin.class); var manager = mock(UserDataManager.class);
         when(manager.getPlugin()).thenReturn(plugin); when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
         doThrow(new RejectedExecutionException("notification executor unavailable"))
-                .when(manager).dispatchSharedUserDataNotification(any());
+                .when(manager).dispatchSharedMutationNotification(any());
         var cache = new UserDataCache(manager, UUID.randomUUID());
         cache.configureSharedStorage(values -> {}, Runnable::run);
         cache.updateCache(new HashMap<>(Map.of("a", new DataValueInt(1))));
@@ -781,7 +979,7 @@ class AtomicIntegerMutationTest {
         var plugin = mock(AdvancedCorePlugin.class); var manager = mock(UserDataManager.class);
         var timer = mock(ScheduledExecutorService.class);
         when(manager.getPlugin()).thenReturn(plugin); when(manager.getTimer()).thenReturn(timer);
-        doAnswer(call -> { call.<Runnable>getArgument(0).run(); return null; }).when(manager).dispatchSharedUserDataNotification(any());
+        doAnswer(call -> { call.<Runnable>getArgument(0).run(); return null; }).when(manager).dispatchSharedMutationNotification(any());
         var cache = new UserDataCache(manager, UUID.randomUUID());
         cache.configureSharedStorage(values -> {}, Runnable::run);
         var values = new HashMap<String,DataValue>(); values.put("a", new DataValueInt(1)); values.put("b", new DataValueInt(2));

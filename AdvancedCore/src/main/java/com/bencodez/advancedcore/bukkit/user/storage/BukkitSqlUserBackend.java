@@ -69,6 +69,13 @@ public final class BukkitSqlUserBackend implements SqlUserBackend {
 	}
 
     @Override public UserStorage storageType() { return storageType; }
+	@Override public Boolean caseInsensitiveColumnNames() {
+		if (storageType != UserStorage.MYSQL) return null;
+		Boolean folded = mysql.caseInsensitiveColumnNames();
+		// Registered-schema lookup folds names even when PostgreSQL's physical
+		// identifiers are case sensitive; leave the mixed rule unresolved.
+		return Boolean.TRUE.equals(folded) ? Boolean.TRUE : null;
+	}
 	@Override public boolean supportsAtomicUserTransactions() {
 		return storageType == UserStorage.MYSQL ? mysql().supportsAtomicReplayTransactions() : table().supportsAtomicReplayTransactions();
 	}

@@ -152,7 +152,7 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
                 throw new IllegalStateException("Shared SQL backend is unavailable");
             }
             selected.user(uuid).writeValues(selected.storageType(), values);
-		}, cacheGate(uuid), exclusiveCacheGate(uuid), binding.storageType());
+		}, cacheGate(uuid), exclusiveCacheGate(uuid), binding.storageType(), binding.caseInsensitiveColumnNames());
     }
 
     @Override public void requireBlockingAllowed() {
@@ -318,13 +318,10 @@ public final class BukkitUserCacheOwner implements UserCacheOwner {
 
     @Override public void remove(UUID uuid) {
         UserDataCache cache = manager.getUserDataCache().get(uuid);
-        if (cache != null) {
-            cache.retireAfterSharedFlush();
-        }
-        if (manager.retireSharedCache(uuid, cache)) {
+        if (manager.retireSharedCacheAfterFlush(uuid, cache)) {
             cacheGates.remove(uuid);
             exclusiveCacheGates.remove(uuid);
-        }
+        } else throw new IllegalStateException("Shared cache could not be retired");
     }
 
     @Override public void clearAfterFlush() { for (UUID uuid : cachedUsers()) remove(uuid); }

@@ -129,6 +129,13 @@ public class UserData {
 				UserDataFetchMode.fromBooleans(useCache, waitForCache));
 	}
 
+	/**
+	 * Read an integer using the requested cache and storage policy. When the
+	 * policy permits storage lookup, a cold legacy cache can perform synchronous
+	 * storage access on the calling thread. Callers that must not block a
+	 * platform thread must use a cache-only policy or perform the read on a
+	 * worker; preloading alone cannot guarantee a later cache hit.
+	 */
 	public int getInt(UserStorage storage, String key, int def, UserDataFetchMode mode) {
 		if (key == null || key.isEmpty()) {
 			return def;
@@ -549,6 +556,7 @@ public class UserData {
 					.usesSharedSqlStorage(storage);
 			if (queue || storage == effectiveStorageType()) {
 				UserDataCache target = queue ? cacheForRead(UserDataFetchMode.CACHE_ONLY) : user.getCache();
+				if (target == null) throw new IllegalStateException("User cache was removed before the queued change was admitted");
 				if (queue || flushImmediately || target.matchesLegacyStorage(storage)) {
 					if (!queue && !flushImmediately) UserDataCache.runWithLegacyDirectPublication(directManager, captured, target, () -> target.addChange(change, false));
 					else target.addChange(change, true);
@@ -712,6 +720,7 @@ public class UserData {
 					.usesSharedSqlStorage(storage);
 			if (queue || storage == effectiveStorageType()) {
 				UserDataCache target = queue ? cacheForRead(UserDataFetchMode.CACHE_ONLY) : user.getCache();
+				if (target == null) throw new IllegalStateException("User cache was removed before the queued change was admitted");
 				if (queue || flushImmediately || target.matchesLegacyStorage(storage)) {
 					if (!queue && !flushImmediately) UserDataCache.runWithLegacyDirectPublication(directManager, captured, target, () -> target.addChange(change, false));
 					else target.addChange(change, true);

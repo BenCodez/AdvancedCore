@@ -44,6 +44,12 @@ import com.bencodez.simpleapi.sql.data.DataValueInt;
 
 @Timeout(15)
 class SharedCacheBindingRegressionTest {
+	@Test void bukkitPostgresUsesConservativeSchemaIdentity() {
+		var plugin = mock(AdvancedCorePlugin.class); var table = mock(com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL.class);
+		when(table.caseInsensitiveColumnNames()).thenReturn(false);
+		var backend = new com.bencodez.advancedcore.bukkit.user.storage.BukkitSqlUserBackend(plugin, UserStorage.MYSQL, table, null);
+		assertNull(backend.caseInsensitiveColumnNames());
+	}
 	@Test void mariaNativeScalarRejectsOlderAliasAfterNewerCommit() throws Exception { nativeAliasOrdering(com.bencodez.simpleapi.sql.mysql.DbType.MARIADB, false, 10); }
 	@Test void mariaNativeBulkRejectsOlderAliasAfterNewerCommit() throws Exception { nativeAliasOrdering(com.bencodez.simpleapi.sql.mysql.DbType.MARIADB, true, 10); }
 	@Test void postgresNativeScalarKeepsDistinctAliases() throws Exception { nativeAliasOrdering(com.bencodez.simpleapi.sql.mysql.DbType.POSTGRESQL, false, 2); }
@@ -1408,7 +1414,9 @@ class SharedCacheBindingRegressionTest {
 		manager.getUserDataCache().put(uuid, cache); var direct = manager.beginLegacyDirectWrite(uuid);
 		try {
 			var pending = manager.submitLegacyIntegerMutation(uuid, Map.of("Activations", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+			var drained = manager.pendingLegacyIntegerMutations(uuid).toCompletableFuture();
 			assertThrows(java.util.concurrent.ExecutionException.class, () -> pending.get(8, TimeUnit.SECONDS));
+			assertThrows(java.util.concurrent.ExecutionException.class, () -> drained.get(5, TimeUnit.SECONDS));
 			manager.endLegacyDirectWrite(direct); direct = null;
 			assertEquals(1, cache.getIfPresent("Activations").getInt());
 			assertTrue(manager.pendingLegacyIntegerMutations(uuid).toCompletableFuture().isDone());
@@ -1467,6 +1475,41 @@ class SharedCacheBindingRegressionTest {
 			assertEquals(2, cache.getIfPresent("Activations").getInt());
 		} finally { if (direct != null) manager.endLegacyDirectWrite(direct); manager.getTimer().shutdownNow(); }
 	}
+	@Test void legacyCompletionCannotBlockTheOnlyWorkerWaitingForLaterReceipt() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var users = mock(com.bencodez.advancedcore.api.user.UserManager.class);
+		var table = mock(com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class);
+		var user = mock(AdvancedCoreUser.class); var data = mock(UserData.class);
+		when(plugin.getUserManager()).thenReturn(users); when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+		when(plugin.getSQLiteUserTable()).thenReturn(table);
+		when(plugin.getNativeUserStorageOwner()).thenReturn(new AdvancedCorePlugin.UserStorageOwner(UserStorage.SQLITE, null, table));
+		var manager = new UserDataManager(plugin); UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid);
+		when(users.getUser(uuid, false)).thenReturn(user); when(user.getUserData()).thenReturn(data);
+		when(data.supportsStrictCompleteValues()).thenReturn(true);
+		when(data.getValuesIfStrictComplete()).thenReturn(new HashMap<>(Map.of("Points", new DataValueInt(1))));
+		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(1)))); manager.getUserDataCache().put(uuid, cache);
+		var direct = manager.beginLegacyDirectWrite(uuid);
+		try {
+			var successor = new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.CompletableFuture<?>>();
+			var notified = new java.util.concurrent.CompletableFuture<Void>();
+			var first = manager.submitLegacyIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, keys -> {
+				try { java.util.concurrent.CompletableFuture.allOf(successor.get()).get(3, TimeUnit.SECONDS); notified.complete(null); }
+				catch (Exception e) { notified.completeExceptionally(e); }
+			}).toCompletableFuture();
+			var second = manager.submitLegacyIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+			successor.set(second);
+			var observer = first.whenComplete((value, failure) -> {
+				assertTrue(second.thenApply(result -> result).join().applied());
+				assertTrue(second.minimalCompletionStage().toCompletableFuture().join().applied());
+				assertThrows(IllegalStateException.class, () -> manager.pendingLegacyIntegerMutations(uuid).toCompletableFuture().join());
+				assertThrows(java.util.concurrent.CompletionException.class, () -> manager.shutdownLegacyIntegerMutations().toCompletableFuture().join());
+			});
+			manager.endLegacyDirectWrite(direct); direct = null;
+			notified.get(5, TimeUnit.SECONDS); observer.get(5, TimeUnit.SECONDS); second.get(5, TimeUnit.SECONDS);
+			assertEquals(3, cache.getIfPresent("Points").getInt());
+			assertTrue(manager.submitLegacyIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture().get(5, TimeUnit.SECONDS).applied());
+			assertEquals(4, cache.getIfPresent("Points").getInt());
+		} finally { if (direct != null) manager.endLegacyDirectWrite(direct); manager.getTimer().shutdownNow(); }
+	}
 	@Test void sharedAwardReceiptDrainsBeforeRuntimeOwnerCloses() throws Exception {
 		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
 		var backend = mock(com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend.class);
@@ -1490,6 +1533,93 @@ class SharedCacheBindingRegressionTest {
 			shutdown.get(5, TimeUnit.SECONDS); assertEquals(2, cache.getIfPresent("Activations").getInt()); verify(backend).close();
 		} finally { release.countDown(); manager.getTimer().shutdownNow(); }
 	}
+	@Test void sharedCompletionCannotBlockTheOnlyWorkerWaitingForLaterReceipt() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+		var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedRuntime(new SharedUserDataRuntime(backend, mock(UserCacheOwner.class)));
+		UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid); cache.configureSharedStorage(values -> {}, Runnable::run);
+		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(1)))); manager.getUserDataCache().put(uuid, cache);
+		var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+		manager.getTimer().execute(() -> { entered.countDown(); try { release.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } });
+		try {
+			assertTrue(entered.await(5, TimeUnit.SECONDS));
+			var first = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+			var second = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+			var finalized = manager.afterSharedMutationFinalization(first).whenComplete((value, failure) ->
+					assertTrue(second.join().applied())).toCompletableFuture();
+			var observer = first.whenComplete((value, failure) -> {
+				assertTrue(second.thenApply(result -> result).join().applied());
+				assertTrue(second.minimalCompletionStage().toCompletableFuture().join().applied());
+				assertThrows(IllegalStateException.class, () -> manager.pendingSharedIntegerMutations(uuid).toCompletableFuture().join());
+				assertThrows(IllegalStateException.class, () -> manager.afterSharedMutationFinalization(first).toCompletableFuture().join());
+			});
+			release.countDown(); observer.get(5, TimeUnit.SECONDS); finalized.get(5, TimeUnit.SECONDS); second.get(5, TimeUnit.SECONDS);
+			assertEquals(3, cache.getIfPresent("Points").getInt());
+		} finally { release.countDown(); manager.getTimer().shutdownNow(); }
+	}
+	@Test void rejectedReplayRetryRemainsUncertainAndDoesNotInventAnOutcome() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+		var backend = mock(SqlUserBackend.class); when(backend.supportsAtomicUserTransactions()).thenReturn(true);
+		var runtime = mock(SharedUserDataRuntime.class); when(runtime.backend()).thenReturn(backend);
+		when(runtime.transaction(any(UUID.class), eq(UserStorage.SQLITE), anyMap(), any()))
+				.thenThrow(new IllegalStateException("synthetic uncertain commit"));
+		manager.bindSharedRuntime(runtime);
+		var original = manager.getTimer(); var executor = mock(ScheduledExecutorService.class);
+		var task = new java.util.concurrent.atomic.AtomicReference<Runnable>();
+		doAnswer(call -> { task.set(call.getArgument(0)); return null; }).when(executor).execute(any(Runnable.class));
+		doThrow(new java.util.concurrent.RejectedExecutionException("synthetic retry rejection"))
+				.when(executor).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
+		Field timer = UserDataManager.class.getDeclaredField("timer"); timer.setAccessible(true); timer.set(manager, executor);
+		try {
+			UUID uuid = UUID.randomUUID(); String identity = "award:diagnostic";
+			manager.acquireSharedReplayLease(uuid, identity);
+			var receipt = manager.submitSharedReplayTransaction(uuid, UserStorage.SQLITE, identity, Map.of(), scope -> null).toCompletableFuture();
+			var callback = new java.util.concurrent.atomic.AtomicBoolean(); receipt.whenComplete((value, failure) -> callback.set(true));
+			assertNotNull(task.get()); task.get().run();
+			assertFalse(receipt.isDone(), "an unknown commit is not a definite failure or success");
+			assertFalse(callback.get(), "diagnosis must not trigger lease settlement callbacks");
+			assertEquals(java.util.List.of(new UserDataManager.IndeterminateReplay(uuid, identity, false)), manager.indeterminateSharedReplays());
+			UUID other = UUID.randomUUID(); String checkpoint = "award:checkpoint";
+			manager.acquireSharedReplayCheckpointLease(other, checkpoint);
+			var cleanup = manager.submitSharedReplayCheckpoint(other, UserStorage.SQLITE, checkpoint, Map.of(), scope -> null).toCompletableFuture();
+			task.get().run(); assertFalse(cleanup.isDone());
+			assertTrue(manager.indeterminateSharedReplays().contains(new UserDataManager.IndeterminateReplay(other, checkpoint, true)));
+			assertDoesNotThrow(() -> manager.requireSharedReplayAwardActive(other, checkpoint), "uncertain cleanup must not mark its lease checkpointed");
+			assertFalse(manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().isDone());
+			verify(runtime, times(2)).transaction(any(UUID.class), eq(UserStorage.SQLITE), anyMap(), any());
+			verify(runtime, never()).closeAsync(any());
+		} finally { timer.set(manager, original); original.shutdownNow(); }
+	}
+	@Test void rejectedCheckpointDoesNotFenceAwardAsCleanedUp() throws Exception {
+		var manager = new UserDataManager(mock(AdvancedCorePlugin.class));
+		var backend = mock(SqlUserBackend.class); when(backend.supportsAtomicUserTransactions()).thenReturn(true);
+		var runtime = mock(SharedUserDataRuntime.class); when(runtime.backend()).thenReturn(backend);
+		when(runtime.transaction(any(UUID.class), eq(UserStorage.SQLITE), anyMap(), any()))
+				.thenThrow(new com.bencodez.advancedcore.core.user.storage.SqlUserStorage.ReplayPreconditionException("checkpoint rejected"));
+		manager.bindSharedRuntime(runtime); UUID uuid = UUID.randomUUID(); String identity = "checkpoint-rejection";
+		try {
+			manager.acquireSharedReplayLease(uuid, identity);
+			manager.acquireSharedReplayCheckpointLease(uuid, identity);
+			var receipt = manager.submitSharedReplayCheckpoint(uuid, UserStorage.SQLITE, identity, Map.of(), scope -> null).toCompletableFuture();
+			assertThrows(java.util.concurrent.ExecutionException.class, () -> receipt.get(5, TimeUnit.SECONDS));
+			assertDoesNotThrow(() -> manager.requireSharedReplayAwardActive(uuid, identity));
+		} finally { manager.getTimer().shutdownNow(); }
+	}
+	@Test void checkpointCannotConsumeAnAwardAttemptWithoutItsOwnReservation() {
+		var manager = new UserDataManager(mock(AdvancedCorePlugin.class));
+		var backend = mock(SqlUserBackend.class); when(backend.supportsAtomicUserTransactions()).thenReturn(true);
+		var runtime = mock(SharedUserDataRuntime.class); when(runtime.backend()).thenReturn(backend);
+		manager.bindSharedRuntime(runtime); UUID uuid = UUID.randomUUID(); String identity = "paired-checkpoint";
+		try {
+			manager.acquireSharedReplayLease(uuid, identity);
+			assertThrows(IllegalStateException.class, () -> manager.submitSharedReplayCheckpoint(uuid, UserStorage.SQLITE, identity, Map.of(), scope -> null));
+			assertDoesNotThrow(() -> manager.requireSharedReplayAwardActive(uuid, identity));
+			manager.acquireSharedReplayCheckpointLease(uuid, identity);
+			manager.cancelSharedReplayCheckpointReservation(uuid, identity);
+			assertDoesNotThrow(() -> manager.requireSharedReplayAwardActive(uuid, identity));
+			verify(runtime, never()).transaction(any(UUID.class), any(), anyMap(), any());
+		} finally { manager.getTimer().shutdownNow(); }
+	}
 	@Test void sharedAwardShutdownFlushesToActualBackendBeforeClose() throws Exception {
 		try (Fixture fixture = new Fixture()) {
 			var runtime = fixture.runtime(); fixture.manager.bindSharedRuntime(runtime);
@@ -1499,6 +1629,7 @@ class SharedCacheBindingRegressionTest {
 			var shutdown = fixture.manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture();
 			assertFalse(shutdown.isDone()); fixture.tasks.remove(0).run();
 			assertTrue(receipt.get(5, TimeUnit.SECONDS).applied()); assertFalse(shutdown.isDone());
+			fixture.manager.afterSharedMutationFinalization(receipt).toCompletableFuture().get(5, TimeUnit.SECONDS);
 			fixture.tasks.remove(fixture.tasks.size() - 1).run();
 			assertFalse(shutdown.isDone(), "retirement must wait for the separately scheduled final flush");
 			fixture.tasks.remove(fixture.tasks.size() - 1).run(); shutdown.get(5, TimeUnit.SECONDS);
@@ -1590,6 +1721,135 @@ class SharedCacheBindingRegressionTest {
 			assertEquals(3, cache.getIfPresent("Points").getInt());
 		} finally { release.countDown(); manager.getTimer().shutdownNow(); }
 	}
+	@Test void sharedCompletionCanAwaitSameUserSuccessorThroughAllOf() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+		var backend = mock(com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedRuntime(new com.bencodez.advancedcore.core.user.runtime.SharedUserDataRuntime(backend, mock(com.bencodez.advancedcore.core.user.runtime.UserCacheOwner.class)));
+		UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid); cache.configureSharedStorage(values -> {}, Runnable::run);
+		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(1)))); manager.getUserDataCache().put(uuid, cache);
+		var workerEntered = new java.util.concurrent.CountDownLatch(1); var releaseWorker = new java.util.concurrent.CountDownLatch(1);
+		manager.getTimer().execute(() -> { workerEntered.countDown(); try { releaseWorker.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } });
+		try {
+			assertTrue(workerEntered.await(5, TimeUnit.SECONDS));
+			var first = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+			var second = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+			var callback = first.thenApply(value -> { try { java.util.concurrent.CompletableFuture.allOf(second).get(2, TimeUnit.SECONDS); return value; } catch (Exception e) { throw new java.util.concurrent.CompletionException(e); } });
+			releaseWorker.countDown();
+			assertTrue(callback.get(5, TimeUnit.SECONDS).applied());
+			assertEquals(3, cache.getIfPresent("Points").getInt());
+		} finally { releaseWorker.countDown(); manager.getTimer().shutdownNow(); }
+	}
+	@Test void sharedMutationListenerCanAwaitQueuedSuccessor() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+		var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedRuntime(new SharedUserDataRuntime(backend, mock(UserCacheOwner.class)));
+		UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid); cache.configureSharedStorage(values -> {}, Runnable::run);
+		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(1)))); manager.getUserDataCache().put(uuid, cache);
+		var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+		manager.getTimer().execute(() -> { entered.countDown(); try { release.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } });
+		var successor = new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.CompletableFuture<?>>();
+		var notified = new java.util.concurrent.CompletableFuture<Void>();
+		try {
+			assertTrue(entered.await(5, TimeUnit.SECONDS));
+			var first = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, keys -> {
+				try { java.util.concurrent.CompletableFuture.allOf(successor.get()).get(3, TimeUnit.SECONDS); notified.complete(null); }
+				catch (Exception e) { notified.completeExceptionally(e); }
+			});
+			successor.set(manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture());
+			release.countDown(); first.toCompletableFuture().get(5, TimeUnit.SECONDS); notified.get(5, TimeUnit.SECONDS);
+			assertEquals(3, cache.getIfPresent("Points").getInt());
+		} finally { release.countDown(); manager.getTimer().shutdownNow(); }
+	}
+	@Test void sharedMutationListenerReentersAfterAdmissionAndRefusedCloseKeepsNotifications() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+		var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedRuntime(new SharedUserDataRuntime(backend, mock(UserCacheOwner.class)));
+		UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid); cache.configureSharedStorage(values -> {}, Runnable::run);
+		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(1)))); manager.getUserDataCache().put(uuid, cache);
+		var firstNotification = new java.util.concurrent.CompletableFuture<Void>(); var secondNotification = new java.util.concurrent.CompletableFuture<Void>();
+		try {
+			var first = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, keys -> {
+				try {
+					assertTrue(cache.tryMutateIntegers(Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).applied());
+					assertThrows(java.util.concurrent.CompletionException.class, () -> manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().join());
+					firstNotification.complete(null);
+				} catch (Throwable failure) { firstNotification.completeExceptionally(failure); }
+			});
+			first.toCompletableFuture().get(5, TimeUnit.SECONDS); firstNotification.get(5, TimeUnit.SECONDS);
+			manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD,
+					keys -> secondNotification.complete(null)).toCompletableFuture().get(5, TimeUnit.SECONDS);
+			secondNotification.get(5, TimeUnit.SECONDS); assertEquals(4, cache.getIfPresent("Points").getInt()); verify(backend, never()).close();
+		} finally { manager.getTimer().shutdownNow(); }
+	}
+	@Test void directSharedMutationReleasesAdmissionBeforeNotificationSubmission() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var manager = spy(new UserDataManager(plugin));
+		var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedRuntime(new SharedUserDataRuntime(backend, mock(UserCacheOwner.class)));
+		UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid); cache.configureSharedStorage(values -> {}, Runnable::run);
+		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(1)))); manager.getUserDataCache().put(uuid, cache);
+		Field active = UserDataManager.class.getDeclaredField("sharedIntegerActiveUsers"); active.setAccessible(true);
+		var observed = new java.util.concurrent.atomic.AtomicBoolean();
+		doAnswer(call -> { synchronized (manager) { observed.set(!((Map<?, ?>) active.get(manager)).containsKey(uuid)); } return call.callRealMethod(); })
+				.when(manager).dispatchSharedMutationNotification(any(Runnable.class));
+		try {
+			assertTrue(cache.tryMutateIntegers(Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, keys -> {}).applied());
+			assertTrue(observed.get(), "notification must be submitted after the synchronous admission ends");
+		} finally { manager.getTimer().shutdownNow(); }
+	}
+	@Test void sharedObserverAndShutdownWaitForPreviouslyQueuedCallback() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+		var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedRuntime(new SharedUserDataRuntime(backend, mock(UserCacheOwner.class)));
+		UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid); cache.configureSharedStorage(values -> {}, Runnable::run);
+		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(1)))); manager.getUserDataCache().put(uuid, cache);
+		var workerEntered = new CountDownLatch(1); var workerRelease = new CountDownLatch(1);
+		var callbackEntered = new CountDownLatch(1); var callbackRelease = new CountDownLatch(1);
+		manager.getTimer().execute(() -> { workerEntered.countDown(); try { workerRelease.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } });
+		try {
+			assertTrue(workerEntered.await(5, TimeUnit.SECONDS));
+			var receipt = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+			receipt.whenComplete((value, failure) -> { callbackEntered.countDown(); try { callbackRelease.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } });
+			var observer = manager.pendingSharedIntegerMutations(uuid).toCompletableFuture();
+			var shutdown = manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture();
+			workerRelease.countDown(); assertTrue(callbackEntered.await(5, TimeUnit.SECONDS));
+			assertFalse(observer.isDone()); assertFalse(shutdown.isDone()); verify(backend, never()).close();
+			callbackRelease.countDown(); observer.get(5, TimeUnit.SECONDS); shutdown.get(5, TimeUnit.SECONDS); verify(backend).close();
+		} finally { workerRelease.countDown(); callbackRelease.countDown(); manager.getTimer().shutdownNow(); }
+	}
+	@Test void rejectedSharedCallbackDeliveryRetainsAdmissionWithoutInlineFallback() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+		var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedRuntime(new SharedUserDataRuntime(backend, mock(UserCacheOwner.class)));
+		UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid); cache.configureSharedStorage(values -> {}, Runnable::run);
+		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(1)))); manager.getUserDataCache().put(uuid, cache);
+		Field field = UserDataManager.class.getDeclaredField("mutationCallbacks"); field.setAccessible(true);
+		var lane = (java.util.concurrent.ThreadPoolExecutor) field.get(manager);
+		var entered = new java.util.concurrent.CountDownLatch(4); var release = new java.util.concurrent.CountDownLatch(1);
+		for (int i = 0; i < 4; i++) lane.execute(() -> { entered.countDown(); try { release.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } });
+		assertTrue(entered.await(5, TimeUnit.SECONDS));
+		for (int i = 0; i < 768; i++) lane.execute(() -> {});
+		try {
+			var receipt = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+			var callback = new java.util.concurrent.atomic.AtomicBoolean(); receipt.whenComplete((value, failure) -> callback.set(true));
+			manager.getTimer().submit(() -> {}).get(5, TimeUnit.SECONDS);
+			assertEquals(2, cache.getIfPresent("Points").getInt()); assertFalse(receipt.isDone()); assertFalse(callback.get());
+			assertTrue(manager.hasUnsettledLegacyIntegerMutations());
+			assertFalse(manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().isDone());
+			assertInstanceOf(java.util.concurrent.RejectedExecutionException.class, manager.getLastDeferredStorageFailure());
+		} finally { release.countDown(); lane.shutdownNow(); manager.getTimer().shutdownNow(); }
+	}
+	@Test void lateReceiptCallbackCanRunOnRegisteringThread() throws Exception {
+		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+		var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+		manager.bindSharedRuntime(new SharedUserDataRuntime(backend, mock(UserCacheOwner.class)));
+		UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid); cache.configureSharedStorage(values -> {}, Runnable::run);
+		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Points", new DataValueInt(1)))); manager.getUserDataCache().put(uuid, cache);
+		try {
+			var receipt = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+			receipt.get(5, TimeUnit.SECONDS); Thread registering = Thread.currentThread();
+			assertSame(registering, receipt.thenApply(value -> Thread.currentThread()).get(5, TimeUnit.SECONDS));
+		} finally { manager.getTimer().shutdownNow(); }
+	}
 	@Test void pendingSharedObserverPropagatesAnAdmittedOperationFailure() throws Exception {
 		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
 		var backend = mock(com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
@@ -1620,6 +1880,7 @@ class SharedCacheBindingRegressionTest {
 			var receipt = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
 			var observer = receipt.handle((value, failure) -> { assertNotNull(failure); assertFalse(Thread.holdsLock(manager)); return null; });
 			manager.getTimer().shutdownNow(); end.invoke(manager, uuid); observer.get(5, TimeUnit.SECONDS);
+			manager.afterSharedMutationFinalization(receipt).toCompletableFuture().get(5, TimeUnit.SECONDS);
 			assertFalse(manager.hasUnsettledLegacyIntegerMutations());
 		} finally { manager.getTimer().shutdownNow(); }
 	}
@@ -1648,7 +1909,7 @@ class SharedCacheBindingRegressionTest {
 		var owner = mock(com.bencodez.advancedcore.core.user.runtime.UserCacheOwner.class);
 		manager.bindSharedRuntime(new com.bencodez.advancedcore.core.user.runtime.SharedUserDataRuntime(backend, owner));
 		try {
-			assertThrows(UnsupportedOperationException.class, () -> manager.submitSharedReplayTransaction(UUID.randomUUID(), UserStorage.SQLITE, Map.of(), scope -> null));
+			assertThrows(UnsupportedOperationException.class, () -> manager.submitSharedReplayTransaction(UUID.randomUUID(), UserStorage.SQLITE, "fixture-operation", Map.of(), scope -> null));
 			assertFalse(manager.hasUnsettledLegacyIntegerMutations()); verify(backend, never()).user(any());
 		} finally { manager.getTimer().shutdownNow(); }
 	}
@@ -1731,17 +1992,23 @@ class SharedCacheBindingRegressionTest {
 		when(plugin.getNativeUserStorageOwner()).thenReturn(new AdvancedCorePlugin.UserStorageOwner(UserStorage.SQLITE, null, table));
 		var manager = new UserDataManager(plugin); UUID uuid = UUID.randomUUID(); var cache = new UserDataCache(manager, uuid);
 		cache.updateCompleteCachePreservingPending(new HashMap<>(Map.of("Activations", new DataValueInt(1))));
-		manager.getUserDataCache().put(uuid, cache); var direct = manager.beginLegacyDirectWrite(uuid);
+		manager.getUserDataCache().put(uuid, cache);
+		var timer = mock(ScheduledExecutorService.class); var task = new java.util.concurrent.atomic.AtomicReference<Runnable>();
+		var schedules = new java.util.concurrent.atomic.AtomicInteger();
+		doAnswer(call -> { if (schedules.getAndIncrement() == 0) { task.set(call.getArgument(0)); return null; } throw new java.util.concurrent.RejectedExecutionException("successor rejected"); })
+				.when(timer).schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
+		Field timerField = UserDataManager.class.getDeclaredField("timer"); timerField.setAccessible(true); var original = manager.getTimer(); timerField.set(manager, timer);
 		try {
-			var first = manager.submitLegacyIntegerMutation(uuid, Map.of("Activations", 1), UserDataCache.IntegerMutation.ADD,
-					keys -> manager.getTimer().shutdown()).toCompletableFuture();
+			var first = manager.submitLegacyIntegerMutation(uuid, Map.of("Activations", 1), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
 			var second = manager.submitLegacyIntegerMutation(uuid, Map.of("Activations", 2), UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
-			manager.endLegacyDirectWrite(direct); direct = null;
+			var drained = manager.pendingLegacyIntegerMutations(uuid).toCompletableFuture();
+			assertNotNull(task.get()); task.get().run();
 			assertTrue(first.get(5, TimeUnit.SECONDS).applied());
 			assertThrows(java.util.concurrent.ExecutionException.class, () -> second.get(5, TimeUnit.SECONDS));
+			assertThrows(java.util.concurrent.ExecutionException.class, () -> drained.get(5, TimeUnit.SECONDS));
 			assertEquals(2, cache.getIfPresent("Activations").getInt());
 			assertTrue(manager.pendingLegacyIntegerMutations(uuid).toCompletableFuture().isDone());
-		} finally { if (direct != null) manager.endLegacyDirectWrite(direct); manager.getTimer().shutdownNow(); }
+		} finally { timerField.set(manager, original); original.shutdownNow(); }
 	}
 	@Test void runtimeShutdownKeepsStorageOwnerUntilPendingAwardFlushes() throws Exception {
 		var plugin = mock(AdvancedCorePlugin.class); var users = mock(com.bencodez.advancedcore.api.user.UserManager.class);
@@ -2940,6 +3207,53 @@ class SharedCacheBindingRegressionTest {
                 workers.shutdownNow();
                 assertTrue(workers.awaitTermination(5, TimeUnit.SECONDS));
             }
+            runtime.close();
+        }
+    }
+
+    @Test void managerWideClearWaitsForAnAlreadyAdmittedSetterBeforeMarkingRemoval() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            var entered = new CountDownLatch(1); var release = new CountDownLatch(1);
+            var workers = Executors.newFixedThreadPool(2);
+            var access = SharedUserDataRuntime.class.getDeclaredMethod("userAccess", UUID.class, java.util.function.Supplier.class); access.setAccessible(true);
+            Field cellsField = SharedUserDataRuntime.class.getDeclaredField("userLocks"); cellsField.setAccessible(true);
+            try {
+                var writer = workers.submit(() -> access.invoke(runtime, fixture.uuid, (java.util.function.Supplier<Void>) () -> {
+	                    entered.countDown();
+	                    try { if (!release.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("fixture timeout"); }
+	                    catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new IllegalStateException(failure); }
+	                    cache.addChange(new UserDataChangeInt("Points", 42), true); return null;
+                }));
+                assertTrue(entered.await(5, TimeUnit.SECONDS));
+                Object cell = ((Map<?, ?>) cellsField.get(runtime)).get(fixture.uuid);
+                Field lockField = cell.getClass().getDeclaredField("lock"); lockField.setAccessible(true);
+                var lock = (java.util.concurrent.locks.ReentrantReadWriteLock) lockField.get(cell);
+                var clear = workers.submit(fixture.manager::clearCache);
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (!lock.hasQueuedThreads() && System.nanoTime() < deadline) java.util.concurrent.locks.LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1));
+                assertTrue(lock.hasQueuedThreads(), "retirement must be waiting for the admitted setter");
+                release.countDown(); writer.get(5, TimeUnit.SECONDS); clear.get(5, TimeUnit.SECONDS);
+                assertEquals(42, fixture.first.points(fixture.uuid));
+                assertThrows(IllegalStateException.class, () -> cache.addChange(new UserDataChangeInt("Points", 99), true));
+            } finally { release.countDown(); workers.shutdownNow(); workers.awaitTermination(5, TimeUnit.SECONDS); }
+            runtime.close();
+        }
+    }
+
+    @Test void removalListenerFailureCannotReopenDetachedSharedCache() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            SharedUserDataRuntime runtime = fixture.runtime();
+            UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+            Field listener = UserDataManager.class.getDeclaredField("sharedCacheRemovalListener"); listener.setAccessible(true);
+            Object original = listener.get(fixture.manager);
+            listener.set(fixture.manager, (java.util.function.Consumer<UUID>) id -> { throw new IllegalStateException("listener failed"); });
+            try {
+                assertThrows(IllegalStateException.class, fixture.manager::clearCache);
+                assertFalse(fixture.manager.containsKey(fixture.uuid));
+                assertThrows(IllegalStateException.class, () -> cache.addChange(new UserDataChangeInt("Points", 99), true));
+            } finally { listener.set(fixture.manager, original); }
             runtime.close();
         }
     }
