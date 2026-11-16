@@ -574,7 +574,14 @@ public class BedrockNameResolverTest {
 		when(player.getName()).thenReturn(".BedrockDude");
 
 		AdvancedCoreUser user = mock(AdvancedCoreUser.class);
-		when(userManager.getUser(player)).thenReturn(user);
+		when(userManager.getUser(uuid, ".BedrockDude")).thenReturn(user);
+		when(user.getData()).thenReturn(mock(com.bencodez.advancedcore.api.user.UserData.class));
+		UserDataManager manager = mock(UserDataManager.class);
+		java.util.concurrent.ScheduledExecutorService worker = mock(java.util.concurrent.ScheduledExecutorService.class);
+		when(userManager.getDataManager()).thenReturn(manager);
+		when(manager.getTimer()).thenReturn(worker);
+		doAnswer(call -> { call.getArgument(0, Runnable.class).run(); return null; })
+				.when(worker).execute(any(Runnable.class));
 
 		resolver.learn(player);
 
