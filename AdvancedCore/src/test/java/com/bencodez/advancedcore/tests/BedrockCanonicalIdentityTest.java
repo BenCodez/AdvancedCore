@@ -21,6 +21,8 @@ import com.bencodez.advancedcore.AdvancedCorePlugin;
 import com.bencodez.advancedcore.api.bedrock.BedrockNameResolver;
 import com.bencodez.advancedcore.api.user.*;
 import com.bencodez.advancedcore.api.user.usercache.UserDataManager;
+import com.bencodez.advancedcore.api.user.usercache.UserDataCache;
+import com.bencodez.simpleapi.scheduler.BukkitScheduler;
 
 /** Exercises the real detector with the optional Floodgate reflection contract, without a server. */
 class BedrockCanonicalIdentityTest {
@@ -39,6 +41,8 @@ class BedrockCanonicalIdentityTest {
         when(plugin.getOptions().getBedrockPlayerPrefix()).thenReturn(".");
         when(plugin.getLogger()).thenReturn(mock(Logger.class));
         when(users.getDataManager()).thenReturn(manager);
+        doAnswer(call -> { call.getArgument(1, Runnable.class).run(); return null; })
+                .when(users).withUserDataChangeDispatcher(any(), any());
         when(manager.getTimer()).thenReturn(worker);
         doAnswer(call -> { pending.add(call.getArgument(0)); return null; }).when(worker).execute(any(Runnable.class));
         when(users.getUser(any(UUID.class), anyString())).thenAnswer(call -> records.get(call.getArgument(0)));
@@ -257,6 +261,123 @@ class BedrockCanonicalIdentityTest {
         verify(plugin.getLogger()).warning("Unable to read observed Bedrock identity; retaining legacy resolution");
     }
 
+    @Test void persistedCanonicalMetadataAloneCannotForceAnUpdatedStoredFlagToTrue() {
+        Player linked = player("StoredFlagControl", true);
+        AdvancedCoreUser record = record(linked);
+        record.getData().setString("BedrockCanonicalName", "StoredFlagControl");
+        record.setBedrockUser(true);
+        resolver.learn(record); // No Player learning in this resolver.
+        record.setBedrockUser(false);
+        resolver.learn(record);
+        assertFalse(resolver.isBedrockName("StoredFlagControl"));
+        assertEquals("StoredFlagControl", resolver.resolve("StoredFlagControl").finalName);
+    }
+
+    @Test void sharedStorageRetainsItsExistingNotificationLane() throws Exception {
+        assertNotificationDelivery(false, true);
+    }
+
+    @Test void pendingStoredFalseCannotDowngradeObservedClientBeforeOrAfterWorkerCompletion() {
+        Player linked = player("PendingJava", true);
+        AdvancedCoreUser record = record(linked);
+        resolver.learn(linked);
+        assertFalse(record.isBedrockUser(), "persistence is deliberately blocked");
+        resolver.learn(record);
+        online();
+        assertTrue(resolver.isBedrockName("PendingJava"));
+        assertTrue(resolver.isBedrockName("pendingjava"));
+        drain();
+        assertTrue(record.isBedrockUser());
+        assertTrue(resolver.isBedrockName("PendingJava"));
+        assertEquals("PendingJava", resolver.resolve("PendingJava").finalName);
+    }
+
+    @Test void legacyInlineNotificationsReturnToPlatformOwnerWhileStorageStaysOnWorker() throws Exception {
+        assertNotificationDelivery(false, false);
+    }
+
+    @Test void rejectedOwnerNotificationDoesNotRunOnStorageWorkerOrPreventTheMutation() throws Exception {
+        assertNotificationDelivery(true, false);
+    }
+
+    private void assertNotificationDelivery(boolean rejectNotification, boolean shared) throws Exception {
+        Player linked = player("NotificationJava", true);
+        UUID id = linked.getUniqueId();
+        // The actual callback entry point is used, not a mocked notification implementation.
+        UserManager callbackUsers = spy(new UserManager(plugin));
+        callbackUsers.getDataManager().getTimer().shutdownNow();
+        doReturn(manager).when(callbackUsers).getDataManager();
+        when(plugin.getUserManager()).thenReturn(callbackUsers);
+        when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+        when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
+        AdvancedCoreUser record = mock(AdvancedCoreUser.class);
+        when(record.getPlugin()).thenReturn(plugin);
+        when(record.getUUID()).thenReturn(id.toString());
+        when(record.getPlayerName()).thenReturn("NotificationJava");
+        when(record.isCached()).thenReturn(true);
+        UserDataCache cache = mock(UserDataCache.class);
+        when(record.getCache()).thenReturn(cache);
+        UserData data = new UserData(record);
+        when(record.getData()).thenReturn(data);
+        doCallRealMethod().when(record).setBedrockUser(true);
+        if (shared) {
+            when(manager.hasSharedSqlBackend()).thenReturn(true);
+            when(manager.usesSharedSqlStorage(UserStorage.SQLITE)).thenReturn(true);
+            doAnswer(call -> { call.getArgument(2, Runnable.class).run(); return null; })
+                    .when(manager).withSharedSqlStorage(eq(id), eq(UserStorage.SQLITE), any(Runnable.class));
+            when(manager.captureSharedUserDataNotification(any(Runnable.class)))
+                    .thenAnswer(call -> call.getArgument(0));
+            doAnswer(call -> { pending.add(call.getArgument(0)); return null; })
+                    .when(manager).dispatchSharedUserDataNotification(any(Runnable.class));
+        }
+        doReturn(record).when(callbackUsers).getUser(id, "NotificationJava");
+        Map<String, Thread> callbackThreads = new ConcurrentHashMap<>();
+        callbackUsers.getUserDataChange().add(new UserDataChanged() {
+            @Override public void onChange(AdvancedCoreUser ignored, String... keys) {
+                for (String key : keys) callbackThreads.put(key, Thread.currentThread());
+            }
+        });
+        ArrayDeque<Runnable> platformTasks = new ArrayDeque<>();
+        BukkitScheduler scheduler = mock(BukkitScheduler.class);
+        when(plugin.getBukkitScheduler()).thenReturn(scheduler);
+        doAnswer(call -> {
+            if (rejectNotification) throw new RejectedExecutionException("synthetic owner stopped");
+            platformTasks.add(call.getArgument(1)); return null;
+        }).when(scheduler).runTask(eq(plugin), any(Runnable.class), eq(linked));
+        resolver = newResolver();
+        Thread platformThread = Thread.currentThread();
+        AtomicReference<Thread> storageThread = new AtomicReference<>();
+        doAnswer(call -> {
+            assertNotSame(platformThread, Thread.currentThread(), "storage ran on platform owner");
+            storageThread.set(Thread.currentThread());
+            return null;
+        }).when(cache).addChange(any(), eq(true));
+        resolver.learn(linked);
+        assertTrue(callbackThreads.isEmpty());
+        Thread storage = new Thread(() -> {
+            drain();
+            callbackUsers.onChange(record, "unrelated"); // dispatch scope must not leak
+        }, "synthetic-storage-worker");
+        storage.start(); storage.join(5000);
+        assertFalse(storage.isAlive());
+        while (!platformTasks.isEmpty()) platformTasks.remove().run();
+        assertNotNull(storageThread.get());
+        if (rejectNotification) {
+            assertNull(callbackThreads.get("isBedrock"));
+            assertNull(callbackThreads.get("BedrockCanonicalName"));
+            verify(plugin.getLogger(), times(2))
+                    .warning("Unable to deliver observed Bedrock identity notification");
+        } else {
+            Thread expected = shared ? storageThread.get() : platformThread;
+            assertSame(expected, callbackThreads.get("isBedrock"));
+            assertSame(expected, callbackThreads.get("BedrockCanonicalName"));
+            if (shared) assertTrue(platformTasks.isEmpty());
+        }
+        verify(record).setBedrockUser(true);
+        verify(cache, times(2)).addChange(any(), eq(true));
+        assertSame(storageThread.get(), callbackThreads.get("unrelated"));
+    }
+
     private void online(Player... players) { bukkit.when(Bukkit::getOnlinePlayers).thenReturn(List.of(players)); }
     private void drain() { while (!pending.isEmpty()) pending.remove().run(); }
     private Player player(String name, boolean linked) {
@@ -280,7 +401,8 @@ class BedrockCanonicalIdentityTest {
         when(data.getString(anyString(), eq(UserDataFetchMode.DEFAULT))).thenAnswer(call -> stored.get(call.getArgument(0)));
         doAnswer(call -> { stored.put(call.getArgument(0), call.getArgument(1)); return null; })
                 .when(data).setString(anyString(), anyString());
-        doAnswer(call -> { stored.put("isBedrock", "true"); return null; }).when(user).setBedrockUser(true);
+        doAnswer(call -> { stored.put("isBedrock", String.valueOf(call.getArgument(0, Boolean.class))); return null; })
+                .when(user).setBedrockUser(anyBoolean());
         records.put(observedId, user);
         return user;
     }

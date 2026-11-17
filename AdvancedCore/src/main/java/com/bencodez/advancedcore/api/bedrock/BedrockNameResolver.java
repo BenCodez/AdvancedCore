@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.bedrock;
 import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -31,6 +32,7 @@ public final class BedrockNameResolver {
 	private final Map<String, Boolean> cache = new ConcurrentHashMap<>();
 	// An observed server name is separate from Bedrock client/transport detection.
 	private final Map<String, String> canonicalNames = new ConcurrentHashMap<>();
+	private final Set<String> observedBedrockNames = ConcurrentHashMap.newKeySet();
 	private final Map<String, String> ciIndex = new ConcurrentHashMap<>();
 
 	/**
@@ -142,17 +144,20 @@ public final class BedrockNameResolver {
 	 * Observations are immediately available in this resolver. Persistence is queued
 	 * on the ordered user-storage worker and follows ordinary user-cache durability;
 	 * return does not acknowledge a durable write. Call from the platform owner.
+	 * Legacy inline notifications return through that player's owner scheduler;
+	 * the shared-SQL notification lane remains worker-owned.
 	 *
 	 * @param player the player to learn from
 	 */
 	public void learn(Player player) {
 		if (player == null) return;
-		// Capture platform state now; never retain a Player in the storage task.
+		// Capture storage identity now. The Player is only a platform callback target.
 		final UUID uuid = player.getUniqueId();
 		final String name = player.getName();
 		if (uuid == null || name == null || name.isEmpty() || !bedrockDetect.isBedrock(uuid)) return;
-		putLearned(name, true);
 		canonicalNames.put(name.toLowerCase(Locale.ROOT), name);
+		observedBedrockNames.add(name.toLowerCase(Locale.ROOT));
+		putLearned(name, true);
 		var manager = userManager.getDataManager();
 		if (manager == null || manager.getTimer() == null) {
 			reportLearningFailure();
@@ -161,11 +166,21 @@ public final class BedrockNameResolver {
 		try {
 			manager.getTimer().execute(() -> {
 				try {
-					AdvancedCoreUser user = userManager.getUser(uuid, name);
-					if (user == null) { reportLearningFailure(); return; }
-					// This is identity evidence on this UUID record, never a name/UUID remap.
-					user.getData().setString(CANONICAL_NAME_KEY, name);
-					user.setBedrockUser(true);
+					Runnable mutation = () -> {
+						AdvancedCoreUser user = userManager.getUser(uuid, name);
+						if (user == null) { reportLearningFailure(); return; }
+						// Evidence on this UUID record, never a name/UUID remap.
+						user.getData().setString(CANONICAL_NAME_KEY, name);
+						user.setBedrockUser(true);
+					};
+					// Shared SQL queues its notifications for later, outside this inline scope.
+					userManager.withUserDataChangeDispatcher(notification -> {
+						try {
+							plugin.getBukkitScheduler().runTask(plugin, notification, player);
+						} catch (RuntimeException rejected) {
+							plugin.getLogger().warning("Unable to deliver observed Bedrock identity notification");
+						}
+					}, mutation);
 				} catch (RuntimeException failure) {
 					reportLearningFailure();
 				}
@@ -455,6 +470,7 @@ public final class BedrockNameResolver {
 	 * Clear the cache and case-insensitive index.
 	 */
 	public void clearCache() {
+		observedBedrockNames.clear();
 		cache.clear();
 		ciIndex.clear();
 		canonicalNames.clear();
@@ -468,6 +484,9 @@ public final class BedrockNameResolver {
 	}
 
 	private Boolean getCachedCaseInsensitive(String name) {
+		// Player observations outrank a pending stored flag. Persisted canonical
+		// metadata alone is not a new client observation and cannot force true.
+		if (observedBedrockNames.contains(name.toLowerCase(Locale.ROOT))) return true;
 		Boolean exact = cache.get(name);
 		if (exact != null)
 			return exact;

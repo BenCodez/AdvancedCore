@@ -580,6 +580,8 @@ public class BedrockNameResolverTest {
 		java.util.concurrent.ScheduledExecutorService worker = mock(java.util.concurrent.ScheduledExecutorService.class);
 		when(userManager.getDataManager()).thenReturn(manager);
 		when(manager.getTimer()).thenReturn(worker);
+		doAnswer(call -> { call.getArgument(1, Runnable.class).run(); return null; })
+				.when(userManager).withUserDataChangeDispatcher(any(), any());
 		doAnswer(call -> { call.getArgument(0, Runnable.class).run(); return null; })
 				.when(worker).execute(any(Runnable.class));
 

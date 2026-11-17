@@ -42,6 +42,7 @@ public class UserManager {
 
 	@Getter
 	private final ArrayList<UserDataChanged> userDataChange = new ArrayList<>();
+	private final ThreadLocal<Consumer<Runnable>> userDataChangeDispatcher = new ThreadLocal<>();
 
 	@Getter
 	private UserValidationService validationService;
@@ -581,10 +582,35 @@ public class UserManager {
 		validationService = UserValidationFactory.create(plugin);
 	}
 
-	public void onChange(AdvancedCoreUser user, String... keys) {
-		for (UserDataChanged change : userDataChange) {
-			change.onChange(user, keys);
+	/**
+	 * Scope inline user-data notifications to an integration-owned dispatcher while
+	 * the mutation itself stays on its caller. Other threads and deferred shared-SQL
+	 * notifications retain their existing lanes. Nested scopes restore their owner.
+	 */
+	public void withUserDataChangeDispatcher(Consumer<Runnable> dispatcher, Runnable mutation) {
+		java.util.Objects.requireNonNull(dispatcher, "dispatcher");
+		java.util.Objects.requireNonNull(mutation, "mutation");
+		Consumer<Runnable> previous = userDataChangeDispatcher.get();
+		userDataChangeDispatcher.set(dispatcher);
+		try { mutation.run(); }
+		finally {
+			if (previous == null) userDataChangeDispatcher.remove();
+			else userDataChangeDispatcher.set(previous);
 		}
+	}
+
+	public void onChange(AdvancedCoreUser user, String... keys) {
+		Consumer<Runnable> dispatcher = userDataChangeDispatcher.get();
+		if (dispatcher == null) {
+			notifyUserDataChange(user, keys);
+		} else {
+			String[] snapshot = keys == null ? null : keys.clone();
+			dispatcher.accept(() -> notifyUserDataChange(user, snapshot));
+		}
+	}
+
+	private void notifyUserDataChange(AdvancedCoreUser user, String... keys) {
+		for (UserDataChanged change : userDataChange) change.onChange(user, keys);
 	}
 
 	public void purgeOldPlayersNow() {
