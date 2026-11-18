@@ -2166,7 +2166,7 @@ public class UserDataManager {
 	synchronized boolean beginSharedSynchronousIntegerMutation(UUID uuid) {
 		boolean worker = uuid.equals(sharedIntegerWorker.get()) && sharedIntegerSynchronousDepth.get() == 0
 				&& !Boolean.TRUE.equals(sharedIntegerCompletion.get());
-		if (!worker && (sharedIntegerClosing || sharedIntegerOwnerReplacement || sharedIntegerQueuedUsers.containsKey(uuid))) return false;
+		if (!worker && (sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement || sharedIntegerQueuedUsers.containsKey(uuid))) return false;
 		if (sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
 		sharedIntegerSynchronousDepth.set(sharedIntegerSynchronousDepth.get() + 1);
 		sharedIntegerActiveUsers.merge(uuid, 1, Integer::sum);
