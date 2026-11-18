@@ -2065,16 +2065,22 @@ class RewardAsyncInjectionTest {
     @Test void missingSelectionKeepsFlagFalseAcrossCheckpointRetry() throws Exception {
         checkpointSelectionScope(null, false);
     }
+    @Test void nullUnlanedDecisionHasMetadataBeforeDurableCheckpoint() throws Exception {
+        checkpointSelectionScope(null, true, null);
+    }
     private void checkpointSelectionScope(String lane, boolean select) throws Exception {
+        checkpointSelectionScope(lane, select, "value");
+    }
+    private void checkpointSelectionScope(String lane, boolean select, String decision) throws Exception {
 		ScheduledExecutorService storageExecutor = mock(ScheduledExecutorService.class);
 		doAnswer(invocation -> { invocation.getArgument(0, Runnable.class).run(); return null; }).when(storageExecutor).execute(any(Runnable.class));
 		when(plugin.getTimer()).thenReturn(storageExecutor);
-		AtomicInteger injections = new AtomicInteger(); List<Boolean> observed = new ArrayList<>(), active = new ArrayList<>();
+		AtomicInteger injections = new AtomicInteger(), checkpointWrites = new AtomicInteger(); List<Boolean> observed = new ArrayList<>(), active = new ArrayList<>();
 		handler.getInjectedRewards().add(new RewardInject("Selected") {
 			@Override public boolean supportsAsyncRequest() { return true; }
 			@Override public Object onRewardRequest(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) { throw new AssertionError(); }
 			@Override public CompletionStage<Object> onRewardRequestAsync(Reward r, AdvancedCoreUser u, ConfigurationSection d, HashMap<String, String> p) {
-				injections.incrementAndGet(); if (select) assertEquals("value", Reward.replaySelection(p, lane, () -> "value")); active.add(Reward.hasReplaySelection(p)); return CompletableFuture.completedFuture(null);
+				injections.incrementAndGet(); if (select) assertEquals(decision, Reward.replaySelection(p, lane, () -> decision)); assertEquals(0, checkpointWrites.get(), "decision is recorded before checkpoint persistence"); active.add(Reward.hasReplaySelection(p)); return CompletableFuture.completedFuture(null);
 			}
 			@Override public CompletionStage<Void> onReplayCheckpointPersisted(Reward r, AdvancedCoreUser u, String occurrence, String key, boolean selected) {
 				observed.add(selected); return observed.size() == 1 ? CompletableFuture.failedFuture(new IllegalStateException("retry")) : CompletableFuture.completedFuture(null);
@@ -2085,7 +2091,7 @@ class RewardAsyncInjectionTest {
 		Object replayState = constructor.newInstance(null, null, false);
 		var setConsumer = stateType.getDeclaredMethod("setCheckpointConsumer", java.util.function.Consumer.class); setConsumer.setAccessible(true);
 		var persisted = new java.util.concurrent.atomic.AtomicReference<Reward.ReplayCheckpoint>();
-		setConsumer.invoke(replayState, (java.util.function.Consumer<Reward.ReplayCheckpoint>) persisted::set);
+		setConsumer.invoke(replayState, (java.util.function.Consumer<Reward.ReplayCheckpoint>) checkpoint -> { checkpointWrites.incrementAndGet(); persisted.set(checkpoint); });
 		var replay = Reward.class.getDeclaredMethod("giveInjectedRewardsAsync", AdvancedCoreUser.class, HashMap.class, int.class, stateType, String.class, String.class); replay.setAccessible(true);
 		@SuppressWarnings("unchecked") CompletionStage<Void> first = (CompletionStage<Void>) replay.invoke(reward, user, new HashMap<>(), 0, replayState, "AsyncReward", "one");
 		assertThrows(java.util.concurrent.CompletionException.class, () -> first.toCompletableFuture().join());
@@ -2093,8 +2099,8 @@ class RewardAsyncInjectionTest {
 		String scoped = "AsyncReward/0" + (lane == null ? "" : "\u0000" + lane);
         String selectionKey = "__advancedcore_replay_selection_" + java.util.Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(scoped.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        if (select) assertEquals("value", new String(java.util.Base64.getUrlDecoder().decode(checkpoint.getPlaceholders().get(selectionKey)),
-                java.nio.charset.StandardCharsets.UTF_8));
+        if (select) assertEquals(decision == null ? "" : java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(decision.getBytes(java.nio.charset.StandardCharsets.UTF_8)), checkpoint.getPlaceholders().get(selectionKey));
         Object restored = constructor.newInstance(checkpoint.getReplayProgress(), checkpoint.getReplayRegistryFingerprints(), false);
 		@SuppressWarnings("unchecked") CompletionStage<Void> retry = (CompletionStage<Void>) replay.invoke(reward, user, checkpoint.getPlaceholders(), 0, restored, "AsyncReward", "one");
 		retry.toCompletableFuture().join(); assertEquals(1, injections.get()); assertEquals(List.of(select && lane == null, select && lane == null), observed); assertEquals(List.of(select && lane == null), active);
