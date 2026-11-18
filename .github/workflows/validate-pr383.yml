@@ -1,0 +1,87 @@
+name: Validate accepted PR383 source
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: BenCodez/AdvancedCore
+          ref: c9a52e3ef17b0f887272739cd3f276cc07808c71
+          persist-credentials: false
+      - name: Verify exact source
+        run: |
+          test "$(git rev-parse HEAD)" = c9a52e3ef17b0f887272739cd3f276cc07808c71
+          test -z "$(git status --porcelain)"
+          printf 'source=%s\nworkflow_ref=%s\nworkflow_sha=%s\nrun=%s/%s\n' "$(git rev-parse HEAD)" "$GITHUB_WORKFLOW_REF" "$GITHUB_WORKFLOW_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00
+        with:
+          java-version: '21'
+          distribution: temurin
+      - name: Full package validation and same-session resolution receipt
+        run: |
+          set -o pipefail
+          mvn -B -f AdvancedCore/pom.xml -Dmaven.compiler.verbose=true package org.apache.maven.plugins:maven-dependency-plugin:3.8.1:list -DincludeScope=test -DoutputAbsoluteArtifactFilename=true -DoutputFile=/tmp/package-dependencies.txt 2>&1 | tee /tmp/package.log
+      - name: Record output identities
+        run: |
+          test "$(git rev-parse HEAD)" = c9a52e3ef17b0f887272739cd3f276cc07808c71
+          test -z "$(git status --porcelain)"
+          test -s AdvancedCore/target/AdvancedCore.jar
+          sha256sum AdvancedCore/pom.xml AdvancedCore/target/AdvancedCore.jar >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'PYTHON'
+          import pathlib, hashlib, json, xml.etree.ElementTree as ET
+          repo = pathlib.Path.home() / ".m2/repository"
+          dependency_lines = pathlib.Path("/tmp/package-dependencies.txt").read_text().splitlines()
+          def parse_dependency(line, repo):
+              record = line.strip().split(" -- module ", 1)[0]
+              coordinate, separator, filename = record.rpartition(":/")
+              assert separator, "Missing resolved artifact path"
+              artifact = pathlib.Path("/" + filename).resolve()
+              assert artifact.is_file() and artifact.is_relative_to(repo.resolve()), "Invalid resolved artifact"
+              return coordinate, {"repository_path": str(artifact.relative_to(repo.resolve())), "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()}
+          used = {}
+          for line in dependency_lines:
+              if ":jar:" not in line:
+                  continue
+              coordinate, identity = parse_dependency(line, repo)
+              assert coordinate not in used, "Duplicate resolved coordinate"
+              used[coordinate] = identity
+          assert used, "Missing same-session dependency graph"
+          print("Package-session dependency artifacts", json.dumps(used, sort_keys=True))
+          classpaths = set()
+          for directory, expected in [("surefire-reports", 2157), ("packaged-artifact-reports", 2)]:
+              reports = list((pathlib.Path("AdvancedCore/target") / directory).glob("TEST-*.xml"))
+              assert reports, "Missing Surefire execution reports"
+              totals = dict.fromkeys(("tests", "failures", "errors", "skipped"), 0)
+              for report in reports:
+                  root = ET.parse(report).getroot()
+                  properties = {x.attrib["name"]: x.attrib.get("value", "") for x in root.findall("./properties/property")}
+                  cp = properties.get("surefire.test.class.path") or properties.get("java.class.path")
+                  assert cp, "Missing actual Surefire classpath"
+                  classpaths.update(cp.split(__import__("os").pathsep))
+                  for key in totals:
+                      totals[key] += int(root.attrib.get(key, 0))
+              assert totals["tests"] == expected and not any(totals[k] for k in ("failures", "errors", "skipped")), totals
+              print(directory, json.dumps(totals), "suites", len(reports))
+              with open(__import__("os").environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+                  summary.write(directory + ": " + json.dumps(totals) + "\n")
+          executed = {}
+          for filename in sorted(classpaths):
+              item = pathlib.Path(filename)
+              if item.suffix == ".jar":
+                  assert item.is_file(), "Missing executed classpath artifact"
+                  executed[str(item.relative_to(repo)) if item.is_relative_to(repo) else item.name] = hashlib.sha256(item.read_bytes()).hexdigest()
+          assert executed, "No executed dependency JARs"
+          print("Actual Surefire classpath JAR hashes", json.dumps(executed, sort_keys=True))
+          assert "search path for class files:" in pathlib.Path("/tmp/package.log").read_text(), "Missing actual compiler search path evidence"
+          manifest = {str(p.relative_to(repo)): hashlib.sha256(p.read_bytes()).hexdigest() for p in repo.rglob("*") if p.is_file() and p.suffix in (".jar", ".pom")}
+          print("Final resolved repository JAR/POM manifest", json.dumps(manifest, sort_keys=True))
+          candidate = "04d2de7666130f0a2eac43dc9d6c2f7f02a70b7b514ba6f34ffc33792e01df69"
+          actual = hashlib.sha256(pathlib.Path("AdvancedCore/target/AdvancedCore.jar").read_bytes()).hexdigest()
+          print("Retained candidate comparison", json.dumps({"candidate": candidate, "hosted": actual, "identical": candidate == actual}))
+          PYTHON
