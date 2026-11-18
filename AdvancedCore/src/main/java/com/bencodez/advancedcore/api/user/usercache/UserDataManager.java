@@ -2045,6 +2045,10 @@ public class UserDataManager {
 				throw new IllegalStateException("Replay checkpoint requires an active lease for its storage owner");
 			if (runtime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || (sharedIntegerClosing && !drainingCheckpoint) || sharedIntegerOwnerReplacement)
 				throw new RejectedExecutionException("Shared user storage is unavailable or retiring");
+			// A store mismatch is a definite precondition failure, not an uncertain
+			// commit. Reject it before consuming checkpoint capacity or admission.
+			if (runtime.backend().storageType() != storage)
+				throw new IllegalStateException("Replay storage does not match the shared storage owner");
 			if (!runtime.backend().supportsAtomicUserTransactions())
 				throw new UnsupportedOperationException("Shared provider does not support atomic replay transactions");
 			// Reserve bounded cleanup capacity so a full set of retained replay

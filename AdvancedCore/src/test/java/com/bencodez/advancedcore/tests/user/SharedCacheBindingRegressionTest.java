@@ -1559,7 +1559,7 @@ class SharedCacheBindingRegressionTest {
 	}
 	@Test void rejectedReplayRetryRemainsUncertainAndDoesNotInventAnOutcome() throws Exception {
 		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
-		var backend = mock(SqlUserBackend.class); when(backend.supportsAtomicUserTransactions()).thenReturn(true);
+		var backend = mock(SqlUserBackend.class); when(backend.storageType()).thenReturn(UserStorage.SQLITE); when(backend.supportsAtomicUserTransactions()).thenReturn(true);
 		var runtime = mock(SharedUserDataRuntime.class); when(runtime.backend()).thenReturn(backend);
 		when(runtime.transaction(any(UUID.class), eq(UserStorage.SQLITE), anyMap(), any()))
 				.thenThrow(new IllegalStateException("synthetic uncertain commit"));
@@ -1592,7 +1592,7 @@ class SharedCacheBindingRegressionTest {
 	}
 	@Test void rejectedCheckpointDoesNotFenceAwardAsCleanedUp() throws Exception {
 		var manager = new UserDataManager(mock(AdvancedCorePlugin.class));
-		var backend = mock(SqlUserBackend.class); when(backend.supportsAtomicUserTransactions()).thenReturn(true);
+		var backend = mock(SqlUserBackend.class); when(backend.storageType()).thenReturn(UserStorage.SQLITE); when(backend.supportsAtomicUserTransactions()).thenReturn(true);
 		var runtime = mock(SharedUserDataRuntime.class); when(runtime.backend()).thenReturn(backend);
 		when(runtime.transaction(any(UUID.class), eq(UserStorage.SQLITE), anyMap(), any()))
 				.thenThrow(new com.bencodez.advancedcore.core.user.storage.SqlUserStorage.ReplayPreconditionException("checkpoint rejected"));
@@ -1905,7 +1905,7 @@ class SharedCacheBindingRegressionTest {
 	}
 	@Test void unsupportedReplayProviderRejectsBeforeAdmission() {
 		var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
-		var backend = mock(com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+		var backend = mock(com.bencodez.advancedcore.core.user.storage.sql.SqlUserBackend.class); when(backend.storageType()).thenReturn(UserStorage.SQLITE); when(backend.isOpen()).thenReturn(true);
 		var owner = mock(com.bencodez.advancedcore.core.user.runtime.UserCacheOwner.class);
 		manager.bindSharedRuntime(new com.bencodez.advancedcore.core.user.runtime.SharedUserDataRuntime(backend, owner));
 		try {
