@@ -608,7 +608,7 @@ public class Reward {
 		return selected;
 	}
 
-	/** Returns whether the active injection already persisted a selected branch. */
+	/** Returns whether the active injection already persisted an unlaned selected branch. */
 	public static boolean hasReplaySelection(HashMap<String, String> placeholders) {
 		String activeKey = ACTIVE_REPLAY_KEY.get();
 		if (activeKey == null) return false;

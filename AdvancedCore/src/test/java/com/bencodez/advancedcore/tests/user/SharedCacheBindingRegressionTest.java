@@ -2381,6 +2381,41 @@ class SharedCacheBindingRegressionTest {
 		}
 	}
 
+    @Test void completeReaderOverrideRetainsDynamicRowAndCertifiesAbsentKeys() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            fixture.first.authoritativeRows = true;
+            var user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+            var custom = new UserData(user) {
+                @Override public ArrayList<String> getKeys() { return new ArrayList<>(List.of("custom", "dynamic")); }
+                @Override public HashMap<String, DataValue> getValuesIfComplete() {
+                    return new HashMap<>(Map.of("custom", new DataValueInt(7), "dynamic", new DataValueInt(9)));
+                }
+            };
+            when(user.getUserData()).thenReturn(custom);
+            try (SharedUserDataRuntime runtime = fixture.runtime()) {
+                UserDataCache cache = fixture.manager.getCache(fixture.uuid);
+                assertEquals(7, cache.getIfPresent("custom").getInt());
+                assertEquals(9, cache.getIfPresent("dynamic").getInt());
+                assertTrue(cache.seedMissingIntegerFromCompleteSnapshot("absent"));
+            }
+        }
+    }
+
+    @Test void unavailableCompleteReaderOverrideDoesNotCertifyMissingKeys() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            fixture.first.authoritativeRows = true;
+            var user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
+            var custom = new UserData(user) {
+                @Override public ArrayList<String> getKeys() { return new ArrayList<>(); }
+                @Override public HashMap<String, DataValue> getValuesIfComplete() { return null; }
+            };
+            when(user.getUserData()).thenReturn(custom);
+            try (SharedUserDataRuntime runtime = fixture.runtime()) {
+                assertFalse(fixture.manager.getCache(fixture.uuid).seedMissingIntegerFromCompleteSnapshot("absent"));
+            }
+        }
+    }
+
     @Test void customValuesReaderIsRetainedWithoutCertifyingMissingKeys() throws Exception {
         try (Fixture fixture = new Fixture()) {
             var user = fixture.plugin.getUserManager().getUser(fixture.uuid, false);
@@ -3379,6 +3414,8 @@ class SharedCacheBindingRegressionTest {
 
     private static final class MemoryBackend implements SqlUserBackend {
         final UserStorage type;
+        boolean authoritativeRows;
+        public boolean hasAuthoritativeRowReads() { return authoritativeRows; }
         final Map<UUID, HashMap<String, DataValue>> rows = new ConcurrentHashMap<>();
         volatile CountDownLatch writeStarted;
         volatile CountDownLatch releaseWrite;

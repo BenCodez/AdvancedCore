@@ -181,9 +181,9 @@ public abstract class RewardInject extends Inject {
 	}
 
 	/**
-	 * Notifies an injection with the authoritative selection state for this exact
-	 * replay path. The default preserves existing four-argument overrides.
-	 * A false value means no accepted replay selection exists for this injection.
+	 * Notifies an injection whether an accepted unlaned replay selection exists for
+	 * this exact replay path. Independent lane selections are not represented here.
+	 * The default preserves existing four-argument overrides.
 	 */
 	public CompletionStage<Void> onReplayCheckpointPersisted(Reward reward, AdvancedCoreUser user, String occurrenceId,
 			String injectionKey, boolean selectionPresent) {
