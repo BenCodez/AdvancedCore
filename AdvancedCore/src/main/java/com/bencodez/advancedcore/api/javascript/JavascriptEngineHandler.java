@@ -1,7 +1,9 @@
 package com.bencodez.advancedcore.api.javascript;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -439,43 +441,56 @@ public class JavascriptEngineHandler {
 	 * @throws IOException if the artifact cannot be downloaded
 	 */
 	private void downloadArtifact(MavenArtifact artifact, Path target) throws IOException {
-		Path tempFile = target.resolveSibling(target.getFileName() + ".tmp");
-
 		logDebug("JavascriptEngine: downloading optional dependency: " + artifact.getCoordinate());
 		logDebug("JavascriptEngine: download URL: " + artifact.getMavenCentralJarUrl());
 		logDebug("JavascriptEngine: download target: " + target);
 
-		HttpURLConnection connection = (HttpURLConnection) URI.create(artifact.getMavenCentralJarUrl()).toURL()
-				.openConnection();
-		connection.setConnectTimeout(CONNECT_TIMEOUT);
-		connection.setReadTimeout(READ_TIMEOUT);
-		connection.setInstanceFollowRedirects(true);
-		connection.setRequestProperty("User-Agent", "AdvancedCore-JavascriptEngine");
+		Path candidate = null;
+		try {
+			HttpURLConnection connection = (HttpURLConnection) URI.create(artifact.getMavenCentralJarUrl()).toURL()
+					.openConnection();
+			try (Closeable disconnect = connection::disconnect) {
+				connection.setConnectTimeout(CONNECT_TIMEOUT);
+				connection.setReadTimeout(READ_TIMEOUT);
+				connection.setInstanceFollowRedirects(true);
+				connection.setRequestProperty("User-Agent", "AdvancedCore-JavascriptEngine");
 
-		int responseCode = connection.getResponseCode();
-		logDebug("JavascriptEngine: Maven Central response for " + artifact.getCoordinate() + ": HTTP "
-				+ responseCode);
+				int responseCode = connection.getResponseCode();
+				logDebug("JavascriptEngine: Maven Central response for " + artifact.getCoordinate() + ": HTTP "
+						+ responseCode);
 
-		if (responseCode < 200 || responseCode >= 300) {
-			connection.disconnect();
-			throw new IOException("Failed to download " + artifact.getCoordinate() + ", HTTP " + responseCode);
+				if (responseCode < 200 || responseCode >= 300) {
+					throw new IOException("Failed to download " + artifact.getCoordinate() + ", HTTP " + responseCode);
+				}
+
+				candidate = Files.createTempFile(target.toAbsolutePath().getParent(), "download-", ".tmp");
+				try (InputStream input = connection.getInputStream();
+						OutputStream output = Files.newOutputStream(candidate)) {
+					input.transferTo(output);
+				}
+			}
+
+			long size = Files.size(candidate);
+			logDebug("JavascriptEngine: downloaded " + artifact.getCoordinate() + " size=" + size + " bytes.");
+
+			if (size <= 0) {
+				throw new IOException("Downloaded empty jar for " + artifact.getCoordinate());
+			}
+			if (Thread.currentThread().isInterrupted()) {
+				throw new InterruptedIOException("Interrupted before saving " + artifact.getCoordinate());
+			}
+
+			Files.move(candidate, target, StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException | RuntimeException | Error failure) {
+			if (candidate != null) {
+				try {
+					Files.deleteIfExists(candidate);
+				} catch (IOException | RuntimeException cleanupFailure) {
+					failure.addSuppressed(cleanupFailure);
+				}
+			}
+			throw failure;
 		}
-
-		try (InputStream input = connection.getInputStream(); OutputStream output = Files.newOutputStream(tempFile)) {
-			input.transferTo(output);
-		} finally {
-			connection.disconnect();
-		}
-
-		long size = Files.size(tempFile);
-		logDebug("JavascriptEngine: downloaded " + artifact.getCoordinate() + " size=" + size + " bytes.");
-
-		if (size <= 0) {
-			Files.deleteIfExists(tempFile);
-			throw new IOException("Downloaded empty jar for " + artifact.getCoordinate());
-		}
-
-		Files.move(tempFile, target, StandardCopyOption.REPLACE_EXISTING);
 
 		logDebug("JavascriptEngine: saved optional dependency: " + target);
 	}
