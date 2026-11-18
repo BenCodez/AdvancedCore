@@ -170,14 +170,16 @@ public final class BukkitSqlUserStorage implements SqlUserStorage {
         Objects.requireNonNull(storage, "storage");
 		routed(storage, (type, target) -> { target.writeValues(type, values); return null; }, () -> {
             if (storage == UserStorage.MYSQL) {
-                if (owner().getMysql() != null) {
+                if (com.bencodez.advancedcore.api.user.usercache.UserDataCache.capturedNestedMysql() != null
+                        || owner().getMysql() != null) {
                     ArrayList<Column> columns = new ArrayList<>();
                     for (Entry<String, DataValue> entry : values.entrySet()) {
                         if (!entry.getKey().equals("uuid")) columns.add(new Column(entry.getKey(), entry.getValue()));
                     }
 					String row = uuid.get();
 					com.bencodez.advancedcore.api.user.usercache.UserDataCache.bindLegacyDirectRow(row, false);
-                    owner().getMysql().update(row, columns, false);
+                    com.bencodez.advancedcore.api.user.userstorage.mysql.MySQL captured = com.bencodez.advancedcore.api.user.usercache.UserDataCache.capturedNestedMysql();
+                    (captured == null ? owner().getMysql() : captured).update(row, columns, false);
                 }
             } else {
                 ArrayList<Column> columns = new ArrayList<>();
@@ -187,7 +189,8 @@ public final class BukkitSqlUserStorage implements SqlUserStorage {
 				if (!columns.isEmpty()) {
 					Column primary = primary();
 					com.bencodez.advancedcore.api.user.usercache.UserDataCache.bindLegacyDirectRow(primary.getValue().getString(), true);
-					owner().getSQLiteUserTable().update(primary, columns);
+					com.bencodez.advancedcore.api.user.userstorage.sql.UserTable captured = com.bencodez.advancedcore.api.user.usercache.UserDataCache.capturedNestedSqlite();
+					(captured == null ? owner().getSQLiteUserTable() : captured).update(primary, columns);
 				}
             }
             return null;
