@@ -604,19 +604,23 @@ public class UserDataManager {
 					replacementFailure = failure;
 				} finally {
 					synchronized (UserDataManager.this) {
-						if (sharedRuntimeReplacement == completion) sharedRuntimeReplacement = null;
-						sharedRuntimeReplacing = false;
+						if (sharedRuntimeReplacement == completion) {
+							sharedRuntimeReplacement = null;
+							sharedRuntimeReplacing = false;
+						}
 					}
 				}
 				if (replacementFailure == null) completion.complete(null);
 				else completion.completeExceptionally(replacementFailure);
 			});
 		} catch (RuntimeException | Error failure) {
-			completion.completeExceptionally(failure);
 			synchronized (this) {
-				if (sharedRuntimeReplacement == completion) sharedRuntimeReplacement = null;
-				sharedRuntimeReplacing = false;
+				if (sharedRuntimeReplacement == completion) {
+					sharedRuntimeReplacement = null;
+					sharedRuntimeReplacing = false;
+				}
 			}
+			completion.completeExceptionally(failure);
 		}
 		return completion;
 	}

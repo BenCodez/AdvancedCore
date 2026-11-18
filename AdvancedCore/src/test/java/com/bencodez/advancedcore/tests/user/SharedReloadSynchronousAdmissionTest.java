@@ -10,9 +10,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -46,6 +49,39 @@ class SharedReloadSynchronousAdmissionTest {
         }
     }
 
+    @Test void rejectedSubmissionCannotClearRetryAdmission() throws Exception {
+        try (Fixture f = new Fixture()) {
+            var cache = f.cache();
+            AtomicInteger submissions = new AtomicInteger();
+            AtomicReference<CompletionStage<Void>> retry = new AtomicReference<>();
+            Field pending = UserDataManager.class.getDeclaredField("sharedRuntimeReplacement");
+            pending.setAccessible(true);
+            doAnswer(call -> {
+                if (submissions.getAndIncrement() == 0) {
+                    // Observe completion before the submitting call returns, as a concurrent
+                    // replacement caller can. Retry at that exact completion boundary.
+                    ((CompletionStage<?>) pending.get(f.manager)).whenComplete((value, failure) ->
+                            retry.set(f.manager.replaceSharedSqlBackendAsync(f.next)));
+                    throw new RejectedExecutionException("submission refused");
+                }
+                f.tasks.add(call.getArgument(0));
+                return null;
+            }).when(f.timer).execute(any(Runnable.class));
+
+            var rejected = f.manager.replaceSharedSqlBackendAsync(f.next);
+            assertTrue(rejected.toCompletableFuture().isCompletedExceptionally());
+            assertNotNull(retry.get());
+            assertFalse(retry.get().toCompletableFuture().isDone());
+            assertEquals(1, f.tasks.size());
+            assertNull(cache.tryMutateIntegers(Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null),
+                    "rejected attempt cleanup must not clear its pending retry's admission");
+            assertEquals(7, cache.getIfPresent("Points").getInt());
+            f.tasks.remove().run();
+            retry.get().toCompletableFuture().get(1, TimeUnit.SECONDS);
+            assertTrue(cache.tryMutateIntegers(Map.of("Points", 1), UserDataCache.IntegerMutation.ADD, null).applied());
+        }
+    }
+
     @Test void failedReplacementRestoresSynchronousAdmission() throws Exception {
         try (Fixture f = new Fixture()) {
             var cache = f.cache();
@@ -72,6 +108,7 @@ class SharedReloadSynchronousAdmissionTest {
         final SharedUserDataRuntime runtime = mock(SharedUserDataRuntime.class);
         final SqlUserBackend next = mock(SqlUserBackend.class);
         final ArrayDeque<Runnable> tasks = new ArrayDeque<>();
+        final ScheduledExecutorService timer = mock(ScheduledExecutorService.class);
         final AtomicInteger writes = new AtomicInteger();
 
         Fixture() throws Exception {
@@ -82,7 +119,6 @@ class SharedReloadSynchronousAdmissionTest {
             when(next.isOpen()).thenReturn(true);
             manager.bindSharedRuntime(runtime);
             manager.getTimer().shutdownNow();
-            var timer = mock(ScheduledExecutorService.class);
             doAnswer(call -> { tasks.add(call.getArgument(0)); return null; }).when(timer).execute(any(Runnable.class));
             Field field = UserDataManager.class.getDeclaredField("timer");
             field.setAccessible(true);
