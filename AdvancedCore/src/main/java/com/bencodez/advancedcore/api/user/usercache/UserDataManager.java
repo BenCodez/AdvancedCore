@@ -1508,16 +1508,25 @@ public class UserDataManager {
 			return CompletableFuture.failedFuture(new IllegalStateException("Cache retirement cannot await its own direct-write callback"));
 		CompletableFuture<Void> pending;
 		CompletableFuture<Void> waiting;
+		AtomicReference<Throwable> mutationFailure = new AtomicReference<>();
 		synchronized (legacyRetirementAdmission) {
 			if (legacyRetirementWait != null) return legacyRetirementWait.copy();
 			java.util.ArrayList<java.util.concurrent.CompletableFuture<?>> dependencies = new java.util.ArrayList<CompletableFuture<?>>();
 			if (legacyDirectAdmissions != 0) dependencies.add(legacyDirectDrain);
 			if (activeLegacyIntegerApplications != 0) dependencies.add(legacyIntegerApplicationDrain);
+			java.util.ArrayList<CompletableFuture<?>> finalizedMutations = new java.util.ArrayList<>();
 			synchronized (legacyMutationAdmission) {
 				for (java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation> queue : pendingLegacyIntegers.values())
-					for (com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation mutation : queue) dependencies.add(mutation.completion.finalized);
+					for (com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation mutation : queue) finalizedMutations.add(mutation.completion.finalized);
 				for (Set<PendingLegacyIntegerMutation> callbacks : legacyCallbackReceipts.values())
-					for (PendingLegacyIntegerMutation mutation : callbacks) dependencies.add(mutation.completion.finalized);
+					for (PendingLegacyIntegerMutation mutation : callbacks) finalizedMutations.add(mutation.completion.finalized);
+			}
+			if (!finalizedMutations.isEmpty()) {
+				// A definite rejection must not skip flushing another accepted change.
+				// Failed direct-write drains remain exceptional; unresolved outcomes
+				// still retain their original admission and never reach this boundary.
+				dependencies.add(CompletableFuture.allOf(finalizedMutations.toArray(CompletableFuture[]::new))
+						.handle((ignored, failure) -> { mutationFailure.set(failure); return null; }));
 			}
 			pending = dependencies.isEmpty() ? null : CompletableFuture.allOf(dependencies.toArray(CompletableFuture[]::new));
 			if (pending != null) {
@@ -1536,11 +1545,15 @@ public class UserDataManager {
 				}
 				try {
 					timer.execute(() -> {
-						Throwable error = null;
+						Throwable error = mutationFailure.get();
 						try { clearCacheNow(); }
-						catch (RuntimeException | Error failureDuringRetirement) { error = failureDuringRetirement; reportDeferredStorageFailure(error); }
+						catch (RuntimeException | Error failureDuringRetirement) {
+							if (error != null && error != failureDuringRetirement) failureDuringRetirement.addSuppressed(error);
+							error = failureDuringRetirement;
+						}
 						finally { synchronized (legacyRetirementAdmission) { if (legacyRetirementWait == waiting) { legacyRetirementWait = null; legacyRetirementRequested = false; } } }
-						if (error == null) waiting.complete(null); else waiting.completeExceptionally(error);
+						if (error == null) waiting.complete(null);
+						else { reportDeferredStorageFailure(error); waiting.completeExceptionally(error); }
 					});
 				} catch (RejectedExecutionException rejected) {
 					synchronized (legacyRetirementAdmission) { legacyRetirementRequested = false; legacyRetirementWait = null; }
