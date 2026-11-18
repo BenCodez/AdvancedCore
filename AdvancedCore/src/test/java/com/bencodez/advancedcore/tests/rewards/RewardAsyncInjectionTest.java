@@ -1758,7 +1758,10 @@ class RewardAsyncInjectionTest {
 		when(config.isOnlineMode()).thenReturn(true);
 		when(plugin.getOptions()).thenReturn(config);
 		VaultHandler vault = mock(VaultHandler.class);
-		when(vault.getEcon()).thenReturn(mock(Economy.class));
+		Economy economy = mock(Economy.class);
+		when(vault.getEcon()).thenReturn(economy);
+		doThrow(new IllegalStateException("economy unavailable")).when(economy)
+				.depositPlayer(any(OfflinePlayer.class), org.mockito.ArgumentMatchers.anyDouble());
 		when(plugin.getVaultHandler()).thenReturn(vault);
 		AdvancedCoreUser realUser = new AdvancedCoreUser(plugin, UUID.randomUUID(), false, false);
 		realUser.setPlayerName("Legacy");
@@ -1784,10 +1787,11 @@ class RewardAsyncInjectionTest {
 		UUID uuid = UUID.fromString(realUser.getUUID());
 		try (org.mockito.MockedStatic<Bukkit> bukkit = org.mockito.Mockito.mockStatic(Bukkit.class)) {
 			bukkit.when(() -> Bukkit.getPlayer(uuid)).thenReturn(null);
+			bukkit.when(() -> Bukkit.getOfflinePlayer(uuid)).thenReturn(mock(OfflinePlayer.class));
 			CompletionStage<Void> result = reward.giveInjectedRewardsAsync(realUser, new HashMap<>());
 			continuation.complete(null);
 			enabled.set(false);
-			queued.get().run();
+			assertThrows(IllegalStateException.class, () -> queued.get().run());
 			result.toCompletableFuture().join();
 		}
 	}

@@ -2190,14 +2190,14 @@ public class AdvancedCoreUser {
 				if (m > 0) {
 					final double money = m;
 					scheduleLegacyRewardAction(
-							() -> plugin.getVaultHandler().getEcon().depositPlayer(getOfflinePlayer(), money), null, false,
+							() -> plugin.getVaultHandler().getEcon().depositPlayer(requireMoneyRewardPlayer(), money), null, false,
 							"money:deposit:" + Double.toString(money));
 
 				} else if (m < 0) {
 					m = m * -1;
 					final double money = m;
 					scheduleLegacyRewardAction(
-							() -> plugin.getVaultHandler().getEcon().withdrawPlayer(getOfflinePlayer(), money), null, false,
+							() -> plugin.getVaultHandler().getEcon().withdrawPlayer(requireMoneyRewardPlayer(), money), null, false,
 							"money:withdraw:" + Double.toString(money));
 
 				}
@@ -2208,6 +2208,12 @@ public class AdvancedCoreUser {
 				collectAsyncFailure(e);
 			}
 		}
+	}
+
+	private OfflinePlayer requireMoneyRewardPlayer() {
+		OfflinePlayer account = getOfflinePlayer();
+		if (account == null) throw replayActionNotStarted("Player account is unavailable before money reward delivery");
+		return account;
 	}
 
 	/**
