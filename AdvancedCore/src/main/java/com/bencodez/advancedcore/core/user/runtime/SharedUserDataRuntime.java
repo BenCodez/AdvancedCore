@@ -43,6 +43,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     private volatile SqlUserBackend pendingBackendClose;
     private volatile boolean closed;
     private CloseAttempt closeAttempt;
+    private final System.Logger submissionLogger = System.getLogger(SharedUserDataRuntime.class.getName());
     private final AtomicBoolean submissionFailureReported = new AtomicBoolean();
 
     private static final class CloseAttempt {
@@ -376,8 +377,12 @@ public final class SharedUserDataRuntime implements AutoCloseable {
         } catch (RuntimeException | Error failure) {
             if (attempt.entry.compareAndSet(0, 3)) attempt.result.completeExceptionally(failure);
             else if (submissionFailureReported.compareAndSet(false, true)) {
-                System.getLogger(SharedUserDataRuntime.class.getName()).log(System.Logger.Level.WARNING,
-                        "Retirement executor reported a submission failure after task entry");
+                try {
+                    submissionLogger.log(System.Logger.Level.WARNING,
+                            "Retirement executor reported a submission failure after task entry");
+                } catch (RuntimeException | Error diagnosticFailure) {
+                    // The running task remains authoritative even when diagnostics fail.
+                }
             }
         }
         return attempt.result.minimalCompletionStage();

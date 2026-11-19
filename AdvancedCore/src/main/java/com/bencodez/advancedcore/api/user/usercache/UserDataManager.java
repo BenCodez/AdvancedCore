@@ -134,6 +134,7 @@ public class UserDataManager {
             this.runtime = runtime; this.replacement = replacement; this.cleanup = cleanup;
         }
     }
+    private final System.Logger completionLogger = System.getLogger(UserDataManager.class.getName());
     private final java.util.concurrent.atomic.AtomicLong diagnosticMask = new java.util.concurrent.atomic.AtomicLong();
     private final java.util.concurrent.atomic.AtomicLong suppressedDeliveryDiagnostics = new java.util.concurrent.atomic.AtomicLong();
     private void deliveryDiagnostic(int category) {
@@ -144,8 +145,12 @@ public class UserDataManager {
             suppressedDeliveryDiagnostics.getAndUpdate(value -> value == Long.MAX_VALUE ? value : value + 1);
             return;
         }
-        System.getLogger(UserDataManager.class.getName()).log(System.Logger.Level.WARNING,
-                "Storage completion scheduling unavailable (category " + category + ")");
+        try {
+            completionLogger.log(System.Logger.Level.WARNING,
+                    "Storage completion scheduling unavailable (category " + category + ")");
+        } catch (RuntimeException | Error diagnosticFailure) {
+            // Diagnostics cannot settle an owned operation or escape into a committed caller.
+        }
     }
 
 	private final ThreadLocal<Boolean> sharedIntegerCompletion = new ThreadLocal<>();
@@ -568,9 +573,9 @@ public class UserDataManager {
 	public final void runStorageMaintenance(Runnable operation) {
 		Objects.requireNonNull(operation, "operation");
 		SharedUserDataRuntime runtime = sharedRuntime;
-		if (runtime == null && sharedRuntimeRetiring) {
-			throw new IllegalStateException("Shared user runtime retirement is still in progress");
-		}
+		if (sharedRuntimeRetiring) {
+            throw new IllegalStateException("Shared user runtime retirement is still in progress");
+        }
 		Runnable guarded = () -> {
 			int previous = storageMaintenanceDepth.get();
 			storageMaintenanceDepth.set(previous + 1);
@@ -596,6 +601,7 @@ public class UserDataManager {
 	}
 
 	private void removeUserDataNow(UUID uuid, UserStorage storage) {
+        if (sharedRuntimeRetiring) throw new IllegalStateException("Shared user runtime retirement is still in progress");
 		SharedUserDataRuntime runtime = sharedRuntime;
 		if (runtime != null && !runtime.isClosed()) {
 			if (!runtime.backend().storageType().equals(storage)) {
@@ -761,7 +767,7 @@ public class UserDataManager {
                     attempt.drain = sharedIntegerDrain;
                     sharedIntegerClosing = true;
                     retirementAttempt = attempt; sharedRuntimeRetirement = attempt.owner; sharedIntegerRetirement = attempt.owner;
-                    created = true; ready = sharedIntegerAdmissions == 0 && replacementAttempt == null;
+                    created = true; ready = attempt.drain.isDone() && replacementAttempt == null;
                 } else attempt = null;
             }
             if (refused != null) return CompletableFuture.failedFuture(refused);
@@ -2262,6 +2268,8 @@ public class UserDataManager {
 			// Reserve bounded cleanup capacity so a full set of retained replay
 			// leases cannot prevent the checkpoints that release those leases.
 			int limit = drainingCheckpoint ? MAX_PENDING_LEGACY_INTEGERS * 2 : MAX_PENDING_LEGACY_INTEGERS;
+            if (drainingCheckpoint && checkpointLease.returning)
+                throw new RejectedExecutionException("Replay checkpoint completion is still finalizing");
             boolean protectedCleanup = drainingCheckpoint && checkpointLease.promise && !checkpointLease.cleanupBusy;
             if (sharedIntegerAdmissions >= limit || (!protectedCleanup && sharedIntegerAdmissions + cleanupHeadroom >= 512))
                 throw new RejectedExecutionException("Shared mutation queue is full");

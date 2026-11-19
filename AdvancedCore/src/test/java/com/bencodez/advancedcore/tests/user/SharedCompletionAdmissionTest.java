@@ -389,4 +389,98 @@ class SharedCompletionAdmissionTest {
             } finally { release.countDown(); worker.join(6000); }
         }
     }
+    @Test void lastDrainSettlementAlwaysWakesRetirement() throws Exception {
+        try (var f = new Fixture()) {
+            UUID id = UUID.randomUUID(); f.manager.acquireSharedReplayCheckpointLease(id, "last");
+            CountDownLatch zero = new CountDownLatch(1), release = new CountDownLatch(1);
+            CompletableFuture<Void> drain = new CompletableFuture<>() {
+                @Override public boolean complete(Void value) {
+                    assertFalse(Thread.holdsLock(f.manager)); zero.countDown();
+                    try { assertTrue(release.await(5, TimeUnit.SECONDS)); }
+                    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new AssertionError(e); }
+                    return super.complete(value);
+                }
+            };
+            set(f.manager, "sharedIntegerDrain", drain);
+            Thread cancel = new Thread(() -> f.manager.cancelSharedReplayCheckpointReservation(id, "last"));
+            try {
+                cancel.start(); assertTrue(zero.await(5, TimeUnit.SECONDS));
+                var retirement = f.manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture();
+                assertFalse(retirement.isDone()); release.countDown(); cancel.join(6000); assertFalse(cancel.isAlive());
+                assertFalse(f.tasks.isEmpty(), "the exact drain settlement must wake the owner coordinator");
+                while (!f.tasks.isEmpty()) f.runOne(); retirement.get(5, TimeUnit.SECONDS);
+            } finally { release.countDown(); cancel.join(6000); }
+        }
+    }
+    @Test void maintenanceAndRemovalRefuseBeforeEnteringPendingRetirementOwner() throws Exception {
+        try (var f = new Fixture()) {
+            var retirement = f.manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture();
+            assertFalse(retirement.isDone()); clearInvocations(f.owner, f.backend);
+            assertThrows(IllegalStateException.class, () -> f.manager.runStorageMaintenance(() -> fail("maintenance entered")));
+            assertThrows(IllegalStateException.class, () -> f.manager.removeUserData(UUID.randomUUID(), UserStorage.SQLITE));
+            verify(f.owner, never()).requireBlockingAllowed(); verify(f.backend, never()).storageType();
+            while (!f.tasks.isEmpty()) f.runOne(); retirement.get(5, TimeUnit.SECONDS);
+        }
+    }
+    @Test void returningCheckpointRejectsSameLeaseRetryWithoutConsumingReservation() throws Exception {
+        try (var f = new Fixture()) {
+            var runtime = mockTransactions(f); UUID id = UUID.randomUUID(); String identity = "returning";
+            f.manager.acquireSharedReplayCheckpointLease(id, identity);
+            var receipt = f.manager.submitSharedReplayCheckpoint(id, UserStorage.SQLITE, identity, Map.of(), tx -> null);
+            CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
+            var finalized = f.manager.afterSharedMutationFinalization(receipt).thenRun(() -> {
+                entered.countDown(); try { assertTrue(release.await(5, TimeUnit.SECONDS)); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            });
+            try {
+                f.runOne(); assertTrue(entered.await(5, TimeUnit.SECONDS));
+                f.manager.acquireSharedReplayCheckpointLease(id, identity);
+                assertEquals(1, field(f.manager, "cleanupHeadroom")); assertEquals(0, credits(f, "general"));
+                assertThrows(RejectedExecutionException.class, () -> f.manager.submitSharedReplayCheckpoint(id, UserStorage.SQLITE, identity, Map.of(), tx -> null));
+                assertEquals(0, credits(f, "general")); assertTrue(f.tasks.isEmpty());
+                release.countDown(); finalized.toCompletableFuture().get(5, TimeUnit.SECONDS);
+                await(() -> { try {
+                    Object state = ((Map<?, ?>) field(f.manager, "sharedReplayLeases")).values().iterator().next();
+                    synchronized (f.manager) { return !(Boolean) field(state, "returning"); }
+                } catch (Exception e) { throw new AssertionError(e); } });
+                // The failed admission did not consume the second reservation.
+                var retry = f.manager.submitSharedReplayCheckpoint(id, UserStorage.SQLITE, identity, Map.of(), tx -> null);
+                f.runOne(); retry.toCompletableFuture().get(5, TimeUnit.SECONDS);
+                f.manager.afterSharedMutationFinalization(retry).toCompletableFuture().get(5, TimeUnit.SECONDS);
+                f.manager.settleSharedReplayLease(id, identity, false, true); f.manager.settleSharedReplayLease(id, identity, false, true);
+                verify(runtime, times(2)).transaction(eq(id), eq(UserStorage.SQLITE), anyMap(), any());
+            } finally { release.countDown(); }
+        }
+    }
+    @Test void failedDiagnosticCannotReplaceRunningRetirementAuthority() throws Exception {
+        try (var f = new Fixture()) {
+            System.Logger logger = mock(System.Logger.class);
+            doThrow(new AssertionError("diagnostic failed")).when(logger).log(any(System.Logger.Level.class), anyString());
+            set(f.runtime, "submissionLogger", logger);
+            CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
+            doAnswer(c -> { entered.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS)); return null; }).when(f.owner).beginRetirement();
+            Thread[] worker = new Thread[1];
+            try {
+                var retirement = assertDoesNotThrow(() -> f.runtime.closeAsync(task -> {
+                    worker[0] = new Thread(task); worker[0].start();
+                    try { assertTrue(entered.await(5, TimeUnit.SECONDS)); }
+                    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new AssertionError(e); }
+                    throw new RejectedExecutionException();
+                })).toCompletableFuture();
+                assertFalse(retirement.isDone()); release.countDown(); retirement.get(5, TimeUnit.SECONDS);
+                verify(logger).log(any(System.Logger.Level.class), anyString()); verify(f.backend, times(1)).close();
+            } finally { release.countDown(); if (worker[0] != null) worker[0].join(6000); }
+        }
+    }
+    @Test void failedCapacityDiagnosticCannotEscapeNotificationSubmission() throws Exception {
+        try (var f = new Fixture()) {
+            System.Logger logger = mock(System.Logger.class);
+            doThrow(new AssertionError("diagnostic failed")).when(logger).log(any(System.Logger.Level.class), anyString());
+            set(f.manager, "completionLogger", logger);
+            for (int i = 0; i < 512; i++) f.manager.dispatchSharedMutationNotification(() -> {});
+            assertDoesNotThrow(() -> f.manager.dispatchSharedMutationNotification(() -> {}));
+            assertEquals(512, credits(f, "general")); assertInstanceOf(RejectedExecutionException.class, f.manager.getLastDeferredStorageFailure());
+            f.manager.closeSharedUserDataNotifications(); assertEquals(0, credits(f, "general"));
+        }
+    }
 }
