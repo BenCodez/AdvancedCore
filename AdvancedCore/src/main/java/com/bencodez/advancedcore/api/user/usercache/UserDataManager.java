@@ -839,8 +839,9 @@ public class UserDataManager {
             if (retirementAttempt != attempt || attempt.finished || attempt.starting) return;
             if (!attempt.drain.isDone() || (attempt.replacement != null && !attempt.replacement.physical.isDone())) return;
             if (failed == null) {
-                attempt.starting = true; sharedRuntimeRetiring = true;
+                attempt.starting = true;
                 closeSharedUserDataNotifications();
+                sharedRuntimeRetiring = true;
             }
         }
         if (failed != null) { finishRetirement(attempt, failed, false); return; }

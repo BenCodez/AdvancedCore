@@ -624,4 +624,20 @@ class SharedCompletionAdmissionTest {
         }
     }
 
+    @Test void notificationFencePrecedesManagerRetiringPublication() throws Exception {
+        try (var f = new Fixture()) {
+            var manager = spy(f.manager);
+            var retiringAtFence = new CompletableFuture<Boolean>();
+            doAnswer(call -> {
+                retiringAtFence.complete((Boolean) field(manager, "sharedRuntimeRetiring"));
+                return call.callRealMethod();
+            }).when(manager).closeSharedUserDataNotifications();
+            var retirement = manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture();
+            assertFalse(retiringAtFence.get(5, TimeUnit.SECONDS), "queued notifications must be fenced before retiring is published");
+            assertTrue((Boolean) field(manager, "sharedNotificationsClosed"));
+            assertTrue((Boolean) field(manager, "sharedRuntimeRetiring"));
+            while (!f.tasks.isEmpty()) f.runOne(); retirement.get(5, TimeUnit.SECONDS);
+        }
+    }
+
 }
