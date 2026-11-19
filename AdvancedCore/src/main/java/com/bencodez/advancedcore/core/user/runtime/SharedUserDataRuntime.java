@@ -42,7 +42,14 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     /** A replacement whose close failed remains here for a later safe retry. */
     private volatile SqlUserBackend pendingBackendClose;
     private volatile boolean closed;
-    private CompletableFuture<Void> closeAttempt;
+    private CloseAttempt closeAttempt;
+    private final AtomicBoolean submissionFailureReported = new AtomicBoolean();
+
+    private static final class CloseAttempt {
+        // Entry and revocation race on the same state; a revoked queued task is inert.
+        final java.util.concurrent.atomic.AtomicInteger entry = new java.util.concurrent.atomic.AtomicInteger();
+        final CompletableFuture<Void> result = new CompletableFuture<>();
+    }
 
     public SharedUserDataRuntime(SqlUserBackend backend, UserCacheOwner cacheOwner) {
         this.backend = Objects.requireNonNull(backend, "backend");
@@ -331,40 +338,54 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     public CompletionStage<Void> closeAsync(Executor executor) {
         Objects.requireNonNull(executor, "executor");
         rejectReentrantTransition();
-        CompletableFuture<Void> result;
+        CloseAttempt attempt;
         synchronized (closeLock) {
-            if (closeAttempt != null && !closeAttempt.isCompletedExceptionally()) return closeAttempt.minimalCompletionStage();
+            if (closeAttempt != null && (!closeAttempt.result.isCompletedExceptionally()
+                    || closeAttempt.entry.get() == 1)) return closeAttempt.result.minimalCompletionStage();
             retiring.set(true);
-            result = new CompletableFuture<>();
-            closeAttempt = result;
+            attempt = new CloseAttempt();
+            closeAttempt = attempt;
         }
         try {
             executor.execute(() -> {
+                if (!attempt.entry.compareAndSet(0, 1)) return;
+                Throwable outcome = null;
                 try {
                     cacheOwner.requireBlockingAllowed();
                     lifecycle.writeLock().lock();
                     try {
                         if (!closed) {
-							cacheOwner.beginRetirement();
+                            cacheOwner.beginRetirement();
                             flushAllInternal();
-							cacheOwner.clearAfterFlush();
-							cacheOwner.shutdown();
-							retryPendingBackendClose();
-							backend.close();
+                            cacheOwner.clearAfterFlush();
+                            cacheOwner.shutdown();
+                            retryPendingBackendClose();
+                            backend.close();
                             closed = true;
                         }
-					} finally {
-						// Disable is terminal even when its flush fails. These callbacks can
-						// schedule UserDataChanged work after Bukkit has unloaded, so neither
-						// a successful nor a failed final retirement may dispatch them.
-						try { cacheOwner.discardAllNotifications(); }
-						finally { lifecycle.writeLock().unlock(); }
-					}
-                    result.complete(null);
-                } catch (Throwable failure) { result.completeExceptionally(failure); }
+                    } finally {
+                        try { cacheOwner.discardAllNotifications(); }
+                        finally { lifecycle.writeLock().unlock(); }
+                    }
+                } catch (Throwable failure) { outcome = failure; }
+                // No storage or owner work remains before observers can request a retry.
+                attempt.entry.set(2);
+                if (outcome == null) attempt.result.complete(null);
+                else attempt.result.completeExceptionally(outcome);
             });
-        } catch (RuntimeException | Error failure) { result.completeExceptionally(failure); }
-        return result.minimalCompletionStage();
+        } catch (RuntimeException | Error failure) {
+            if (attempt.entry.compareAndSet(0, 3)) attempt.result.completeExceptionally(failure);
+            else if (submissionFailureReported.compareAndSet(false, true)) {
+                System.getLogger(SharedUserDataRuntime.class.getName()).log(System.Logger.Level.WARNING,
+                        "Retirement executor reported a submission failure after task entry");
+            }
+        }
+        return attempt.result.minimalCompletionStage();
+    }
+
+    /** Observe only this calling thread's existing lifecycle admission; grants no admission. */
+    public boolean holdsLifecycleAdmission() {
+        return lifecycle.getReadHoldCount() > 0 || lifecycle.isWriteLockedByCurrentThread();
     }
 
     @Override
@@ -422,7 +443,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
     }
 
     private void rejectReentrantTransition() {
-        if (lifecycle.getReadHoldCount() > 0 || lifecycle.isWriteLockedByCurrentThread()) throw new IllegalStateException("Cannot replace or close the user runtime from an active user callback");
+        if (holdsLifecycleAdmission()) throw new IllegalStateException("Cannot replace or close the user runtime from an active user callback");
     }
 
     private List<Column> readStorageRow(UUID uuid) { return backend.user(uuid).readRow(backend.storageType()); }

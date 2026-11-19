@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -69,6 +70,84 @@ public class UserDataManager {
 	private boolean sharedIntegerOwnerReplacement;
 	private CompletableFuture<Void> sharedIntegerDrain = CompletableFuture.completedFuture(null);
 	private CompletableFuture<Void> sharedIntegerRetirement;
+    private ReplacementAttempt replacementAttempt;
+    private RetirementAttempt retirementAttempt;
+    private final ThreadLocal<RetirementAttempt> retirementCleanup = new ThreadLocal<>();
+
+    private static final class OwnedTask implements Runnable {
+        final AtomicInteger entry = new AtomicInteger();
+        final Runnable action;
+        OwnedTask(Runnable action) { this.action = action; }
+        boolean revoke() { return entry.compareAndSet(0, 3); }
+        @Override public void run() {
+            if (!entry.compareAndSet(0, 1)) return;
+            try { action.run(); } finally { entry.set(2); }
+        }
+    }
+    private static final class CompletionBudget {
+        int general, cleanup;
+        synchronized CompletionCredit acquire(boolean reserved) {
+            if (reserved ? cleanup >= 256 : general >= 512) return null;
+            if (reserved) cleanup++; else general++;
+            return new CompletionCredit(this, reserved);
+        }
+        synchronized void release(boolean reserved) {
+            if (reserved) { if (--cleanup < 0) throw new IllegalStateException("Cleanup credit underflow"); }
+            else if (--general < 0) throw new IllegalStateException("Completion credit underflow");
+        }
+    }
+    private static final class CompletionCredit {
+        final CompletionBudget budget; final boolean cleanup;
+        final java.util.concurrent.atomic.AtomicBoolean released = new java.util.concurrent.atomic.AtomicBoolean();
+        CompletionCredit(CompletionBudget budget, boolean cleanup) { this.budget = budget; this.cleanup = cleanup; }
+        void release() { if (released.compareAndSet(false, true)) budget.release(cleanup); }
+    }
+    private final CompletionBudget completionBudget = new CompletionBudget();
+    private int cleanupHeadroom;
+    private final ThreadLocal<java.util.ArrayDeque<Boolean>> sharedSynchronousOwned = ThreadLocal.withInitial(java.util.ArrayDeque::new);
+    private final Set<NotificationBridge> notificationBridges = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+    private static final class NotificationBridge {
+        final CompletionCredit credit; final Runnable notification; final long generation;
+        boolean claimed, revoked;
+        NotificationBridge(CompletionCredit credit, Runnable notification, long generation) {
+            this.credit = credit; this.notification = notification; this.generation = generation;
+        }
+    }
+    private static final class ReplacementAttempt {
+        final SharedUserDataRuntime runtime;
+        final CompletableFuture<Void> physical = new CompletableFuture<>();
+        Throwable outcome;
+        OwnedTask task;
+        ReplacementAttempt(SharedUserDataRuntime runtime) { this.runtime = runtime; }
+    }
+    private static final class RetirementAttempt {
+        final SharedUserDataRuntime runtime;
+        final ReplacementAttempt replacement;
+        final Runnable cleanup;
+        final CompletableFuture<Void> owner = new CompletableFuture<>();
+        CompletableFuture<Void> drain;
+        OwnedTask coordinator;
+        Throwable coordinatorFailure;
+        Throwable replacementFailure;
+        boolean starting, finished, cleanupStarted;
+        RetirementAttempt(SharedUserDataRuntime runtime, ReplacementAttempt replacement, Runnable cleanup) {
+            this.runtime = runtime; this.replacement = replacement; this.cleanup = cleanup;
+        }
+    }
+    private final java.util.concurrent.atomic.AtomicLong diagnosticMask = new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong suppressedDeliveryDiagnostics = new java.util.concurrent.atomic.AtomicLong();
+    private void deliveryDiagnostic(int category) {
+        lastDeferredStorageFailure.set(new RejectedExecutionException("Storage completion scheduling unavailable"));
+        long mask = 1L << category;
+        long prior = diagnosticMask.getAndUpdate(value -> value | mask);
+        if ((prior & mask) != 0) {
+            suppressedDeliveryDiagnostics.getAndUpdate(value -> value == Long.MAX_VALUE ? value : value + 1);
+            return;
+        }
+        System.getLogger(UserDataManager.class.getName()).log(System.Logger.Level.WARNING,
+                "Storage completion scheduling unavailable (category " + category + ")");
+    }
+
 	private final ThreadLocal<Boolean> sharedIntegerCompletion = new ThreadLocal<>();
 	private final ThreadLocal<Boolean> sharedNotificationCallback = new ThreadLocal<>();
 	private final ThreadLocal<Integer> sharedIntegerSynchronousDepth = ThreadLocal.withInitial(() -> 0);
@@ -78,7 +157,9 @@ public class UserDataManager {
 	private record SharedReplayLease(UUID uuid, String identity) { }
 	private static final class SharedReplayLeaseState {
 		final SharedUserDataRuntime runtime; int attempts; int checkpointReservations; boolean committed; boolean checkpointed;
-		SharedReplayLeaseState(SharedUserDataRuntime runtime) { this.runtime = runtime; }
+        CompletionCredit cleanupCredit; boolean cleanupBusy, returning, promise;
+		final SharedReplayLease key;
+        SharedReplayLeaseState(SharedUserDataRuntime runtime, SharedReplayLease key) { this.runtime = runtime; this.key = key; }
 	}
 	private final Map<SharedReplayLease, SharedReplayLeaseState> sharedReplayLeases = new java.util.HashMap<>();
 	/** An observation of uncertain work, never a transaction settlement. */
@@ -90,8 +171,17 @@ public class UserDataManager {
 	}
 	private final Set<UUID> sharedIntegerCompletingUsers = new java.util.HashSet<>();
 	private final Map<UUID, Set<MutationReceipt<?>>> sharedCallbackReceipts = new java.util.HashMap<>();
-	private record DeferredSharedInteger(Runnable action, Consumer<Throwable> reject,
-			MutationReceipt<?> receipt) { }
+    private static final class DeferredSharedInteger {
+        final Runnable action; final Consumer<Throwable> reject; final MutationReceipt<?> receipt;
+        OwnedTask task;
+        DeferredSharedInteger(Runnable action, Consumer<Throwable> reject, MutationReceipt<?> receipt) {
+            this.action = action; this.reject = reject; this.receipt = receipt;
+        }
+        Runnable action() { return action; }
+        Consumer<Throwable> reject() { return reject; }
+        MutationReceipt<?> receipt() { return receipt; }
+    }
+
 	private final Map<UUID, java.util.ArrayDeque<DeferredSharedInteger>> sharedIntegerDeferred = new java.util.HashMap<>();
 	private final AtomicReference<Throwable> lastDeferredStorageFailure = new AtomicReference<>();
 	private final AtomicLong sharedNotificationGeneration = new AtomicLong();
@@ -152,6 +242,10 @@ public class UserDataManager {
 	private static final class MutationReceipt<T> extends GuardedMutationFuture<T> {
 		private final GuardedMutationFuture<Void> finalized;
 		private final UserDataManager sharedOwner;
+        CompletionCredit credit;
+        SharedReplayLeaseState cleanupLease;
+        volatile boolean outcomeKnown, uncertain;
+        OwnedTask retryTask;
 		private MutationReceipt(UserDataManager owner, boolean shared) { super(null); this.sharedOwner = shared ? owner : null; this.finalized = new GuardedMutationFuture<>(owner); }
 		private MutationReceipt(UserDataManager sharedOwner) { this(sharedOwner, true); }
 		@Override public boolean cancel(boolean mayInterruptIfRunning) { return false; }
@@ -174,6 +268,7 @@ public class UserDataManager {
 		final Consumer<Set<String>> notification;
 		final MutationReceipt<UserDataCache.IntegerMutationResult> completion;
 		int attempts;
+        OwnedTask scheduled; long retryDelay = -1; boolean outcomeKnown;
 		PendingLegacyIntegerMutation(UserDataManager manager, UUID uuid, AdvancedCorePlugin.UserStorageOwner owner, Map<String, Integer> values,
 				UserDataCache.IntegerMutation operation, Consumer<Set<String>> notification) {
 			this.uuid = uuid; this.owner = owner; this.values = Map.copyOf(values);
@@ -443,7 +538,8 @@ public class UserDataManager {
 	public final <T> T withSharedNativeUserStorage(
 			java.util.function.Function<AdvancedCorePlugin.UserStorageOwner, T> operation) {
 		Objects.requireNonNull(operation, "operation");
-		SharedSqlRoute admission = sharedSqlRoute;
+		rejectNewRetiringAccess();
+        SharedSqlRoute admission = sharedSqlRoute;
 		if (admission == null || isStorageMaintenanceActive()) {
 			return operation.apply(admission == null
 					? (plugin == null ? null : plugin.getNativeUserStorageOwner()) : admission.nativeOwner());
@@ -533,6 +629,7 @@ public class UserDataManager {
 		}
 		if (sharedIntegerAdmissions != 0) throw new IllegalStateException("Shared integer mutations have not settled");
 		sharedIntegerClosing = false;
+        retirementAttempt = null;
 		sharedRuntime = runtime;
 	}
 
@@ -551,6 +648,7 @@ public class UserDataManager {
 			Map<String, DataValue> initialValues,
 			SqlUserStorage.TransactionWork<T> work) {
 		SharedUserDataRuntime runtime = sharedRuntime;
+        rejectNewRetiringAccess();
 		if (runtime == null) throw new IllegalStateException("Shared user runtime is unavailable");
 		return runtime.transaction(uuid, storage, initialValues, work);
 	}
@@ -572,58 +670,45 @@ public class UserDataManager {
 	 * non-blocking; it runs on this manager's worker while the replacement route
 	 * is still protected from a concurrent retirement admission.
 	 */
-	public final CompletionStage<Void> replaceSharedSqlBackendAsync(SqlUserBackend replacement, Runnable afterReplacement) {
-		Objects.requireNonNull(replacement, "replacement");
-		Objects.requireNonNull(afterReplacement, "afterReplacement");
-		SharedUserDataRuntime runtime;
-		CompletableFuture<Void> completion = new CompletableFuture<>();
-		synchronized (this) {
-			runtime = sharedRuntime;
-			if (runtime == null || sharedRuntimeRetiring) {
-				completion.completeExceptionally(new IllegalStateException(
-						"Shared user storage is retiring and cannot be reloaded"));
-				return completion;
-			}
-			if (sharedIntegerClosing || sharedIntegerOwnerReplacement || sharedIntegerAdmissions != 0) {
-				completion.completeExceptionally(new IllegalStateException("Shared integer mutations have not settled"));
-				return completion;
-			}
-			if (sharedRuntimeReplacement != null && !sharedRuntimeReplacement.toCompletableFuture().isDone()) {
-				completion.completeExceptionally(new IllegalStateException("Shared user storage reload is already in progress"));
-				return completion;
-			}
-			sharedRuntimeReplacement = completion;
-			sharedRuntimeReplacing = true;
-		}
-		try {
-			timer.execute(() -> {
-				Throwable replacementFailure = null;
-				try {
-					runtime.replaceBackend(replacement, afterReplacement);
-				} catch (Throwable failure) {
-					replacementFailure = failure;
-				} finally {
-					synchronized (UserDataManager.this) {
-						if (sharedRuntimeReplacement == completion) {
-							sharedRuntimeReplacement = null;
-							sharedRuntimeReplacing = false;
-						}
-					}
-				}
-				if (replacementFailure == null) completion.complete(null);
-				else completion.completeExceptionally(replacementFailure);
-			});
-		} catch (RuntimeException | Error failure) {
-			synchronized (this) {
-				if (sharedRuntimeReplacement == completion) {
-					sharedRuntimeReplacement = null;
-					sharedRuntimeReplacing = false;
-				}
-			}
-			completion.completeExceptionally(failure);
-		}
-		return completion;
-	}
+    public final CompletionStage<Void> replaceSharedSqlBackendAsync(SqlUserBackend replacement, Runnable afterReplacement) {
+        Objects.requireNonNull(replacement, "replacement"); Objects.requireNonNull(afterReplacement, "afterReplacement");
+        ReplacementAttempt attempt;
+        Throwable refused = null;
+        synchronized (this) {
+            SharedUserDataRuntime runtime = sharedRuntime;
+            if (runtime == null || sharedRuntimeRetiring) refused = new IllegalStateException("Shared user storage is retiring and cannot be reloaded");
+            else if (sharedIntegerClosing || sharedIntegerOwnerReplacement || sharedIntegerAdmissions != 0)
+                refused = new IllegalStateException("Shared integer mutations have not settled");
+            else if (replacementAttempt != null) refused = new IllegalStateException("Shared user storage reload is already in progress");
+            if (refused == null) {
+                attempt = new ReplacementAttempt(runtime);
+                replacementAttempt = attempt; sharedRuntimeReplacement = attempt.physical; sharedRuntimeReplacing = true;
+            } else attempt = null;
+        }
+        if (refused != null) return CompletableFuture.failedFuture(refused);
+        attempt.task = new OwnedTask(() -> {
+            Throwable failure = null;
+            try { attempt.runtime.replaceBackend(replacement, afterReplacement); }
+            catch (Throwable error) { failure = error; }
+            finishReplacement(attempt, failure);
+        });
+        try { timer.execute(attempt.task); }
+        catch (RuntimeException | Error failure) {
+            if (attempt.task.revoke()) finishReplacement(attempt, failure);
+            else deliveryDiagnostic(1);
+        }
+        return attempt.physical.minimalCompletionStage();
+    }
+
+    private void finishReplacement(ReplacementAttempt attempt, Throwable failure) {
+        synchronized (this) {
+            attempt.task.entry.set(2); attempt.outcome = failure;
+            if (replacementAttempt == attempt) {
+                replacementAttempt = null; sharedRuntimeReplacement = null; sharedRuntimeReplacing = false;
+            }
+        }
+        if (failure == null) attempt.physical.complete(null); else attempt.physical.completeExceptionally(failure);
+    }
 
 	/**
 	 * A native storage replacement must not race the shared runtime's final flush
@@ -651,124 +736,133 @@ public class UserDataManager {
 	 * @return the active retirement stage, or {@code null} when no shared runtime
 	 *         owns storage
 	 */
-	public final CompletionStage<Void> closeSharedRuntimeAsyncCompletion(Runnable afterRetirement) {
-		Objects.requireNonNull(afterRetirement, "afterRetirement");
-		if (Boolean.TRUE.equals(sharedIntegerCompletion.get()) || Boolean.TRUE.equals(sharedNotificationCallback.get()) || sharedIntegerSynchronousDepth.get() != 0)
-			return CompletableFuture.failedFuture(new IllegalStateException("Shared retirement cannot await its own mutation completion"));
-		SharedUserDataRuntime runtime;
-		CompletableFuture<Void> completion;
-		synchronized (this) {
-			if (sharedIntegerOwnerReplacement)
-				return CompletableFuture.failedFuture(new IllegalStateException("Shared storage owner replacement is active"));
-			if (sharedIntegerRetirement != null) return sharedIntegerRetirement.copy();
-			if (sharedIntegerAdmissions != 0) {
-				sharedIntegerClosing = true;
-				CompletableFuture<Void> waiting = new CompletableFuture<Void>();
-				sharedIntegerRetirement = waiting;
-				sharedIntegerDrain.whenComplete((ignored, failure) -> {
-					try {
-						timer.execute(() -> {
-							try {
-								CompletionStage<Void> retirement;
-								synchronized (UserDataManager.this) {
-									sharedIntegerRetirement = null;
-									retirement = closeSharedRuntimeAsyncCompletion(afterRetirement);
-									}
-								if (retirement == null) waiting.completeExceptionally(new IllegalStateException("Shared runtime disappeared during retirement"));
-								else retirement.whenComplete((done, error) -> {
-									if (error == null) waiting.complete(null); else waiting.completeExceptionally(error);
-								});
-							} catch (RuntimeException | Error error) {
-								synchronized (UserDataManager.this) {
-									if (!sharedRuntimeRetiring && sharedRuntime != null) sharedIntegerClosing = false;
-								}
-								waiting.completeExceptionally(error);
-							}
-						});
-					} catch (RuntimeException | Error error) {
-						synchronized (UserDataManager.this) {
-							if (sharedIntegerRetirement == waiting) sharedIntegerRetirement = null;
-							sharedIntegerClosing = false;
-						}
-						waiting.completeExceptionally(error);
-					}
-				});
-				return waiting.copy();
-			}
-			if (sharedRuntimeReplacing) {
-				CompletionStage<Void> replacement = sharedRuntimeReplacement;
-				// A failed replacement leaves the old runtime and native owner alive.
-				// Shutdown must still retire that old owner; thenCompose would skip the
-				// recursive retirement entirely on the exceptional path.
-				return replacement.handle((ignored, replacementFailure) -> replacementFailure)
-						.thenCompose(replacementFailure -> continueRetirementAfterReplacement(afterRetirement,
-								replacementFailure));
-			}
-			runtime = sharedRuntime;
-			// A second shutdown caller must not interpret an in-flight retirement as
-			// "no runtime" and close the native provider underneath its final flush.
-			if (runtime == null) return sharedRuntimeRetiring ? sharedRuntimeRetirement : null;
-			sharedIntegerClosing = true;
-            // Fence queued notifications before closeAsync marks the runtime retiring.
-            // An already-running callback retains its lifecycle read admission and
-            // finishes before the runtime's final writer can close storage.
-            closeSharedUserDataNotifications();
-			sharedRuntime = null;
-			sharedRuntimeRetiring = true;
-			completion = new CompletableFuture<>();
-			sharedRuntimeRetirement = completion;
-		}
-		CompletionStage<Void> runtimeClose;
-		try { runtimeClose = Objects.requireNonNull(runtime.closeAsync(timer), "runtime close stage"); }
-		catch (RuntimeException | Error failure) {
-			synchronized (this) {
-				if (sharedRuntime == null) sharedRuntime = runtime;
-				sharedRuntimeRetiring = false;
-				sharedIntegerClosing = false;
-			}
-			completion.completeExceptionally(failure);
-			return completion;
-		}
-		runtimeClose.whenComplete((ignored, failure) -> {
-			if (failure != null) {
-				synchronized (this) {
-					if (sharedRuntime == null) sharedRuntime = runtime;
-					sharedRuntimeRetiring = false;
-					sharedIntegerClosing = false;
-				}
-				reportDeferredStorageFailure(failure);
-				completion.completeExceptionally(failure);
-				return;
-			}
-			Throwable cleanupFailure = null;
-			try { afterRetirement.run(); }
-			catch (RuntimeException | Error failureAfterRetirement) {
-				cleanupFailure = failureAfterRetirement;
-				reportDeferredStorageFailure(cleanupFailure);
-			} finally { synchronized (this) { sharedRuntimeRetiring = false; } }
-			if (cleanupFailure == null) completion.complete(null);
-			else completion.completeExceptionally(cleanupFailure);
-		});
-		return completion;
-	}
+    public final CompletionStage<Void> closeSharedRuntimeAsyncCompletion(Runnable afterRetirement) {
+        Objects.requireNonNull(afterRetirement, "afterRetirement");
+        if (retirementCleanup.get() != null || Boolean.TRUE.equals(sharedIntegerCompletion.get())
+                || Boolean.TRUE.equals(sharedNotificationCallback.get()) || sharedIntegerSynchronousDepth.get() != 0)
+            return CompletableFuture.failedFuture(new IllegalStateException("Shared retirement cannot await its own mutation completion"));
+        for (int retry = 0; retry < 2; retry++) {
+            SharedUserDataRuntime runtime;
+            synchronized (this) { runtime = sharedRuntime != null ? sharedRuntime : retirementAttempt == null ? null : retirementAttempt.runtime; }
+            if (runtime != null && runtime.holdsLifecycleAdmission())
+                return CompletableFuture.failedFuture(new IllegalStateException("Shared retirement cannot await its own storage callback"));
+            RetirementAttempt attempt;
+            Throwable refused = null;
+            boolean created = false; boolean ready = false;
+            synchronized (this) {
+                SharedUserDataRuntime current = sharedRuntime != null ? sharedRuntime : retirementAttempt == null ? null : retirementAttempt.runtime;
+                if (current != runtime) continue;
+                if (sharedIntegerOwnerReplacement) refused = new IllegalStateException("Shared storage owner replacement is active");
+                if (refused == null && retirementAttempt != null && !retirementAttempt.finished)
+                    return retirementAttempt.owner.minimalCompletionStage();
+                if (refused == null && sharedRuntime == null) return null;
+                if (refused == null) {
+                    attempt = new RetirementAttempt(runtime, replacementAttempt, afterRetirement);
+                    attempt.drain = sharedIntegerDrain;
+                    sharedIntegerClosing = true;
+                    retirementAttempt = attempt; sharedRuntimeRetirement = attempt.owner; sharedIntegerRetirement = attempt.owner;
+                    created = true; ready = sharedIntegerAdmissions == 0 && replacementAttempt == null;
+                } else attempt = null;
+            }
+            if (refused != null) return CompletableFuture.failedFuture(refused);
+            if (created && ready) {
+                startRetirement(attempt);
+            } else if (created) {
+                // Registration can run inline, so never do it under the manager monitor.
+                attempt.drain.whenComplete((ignored, failure) -> signalRetirement(attempt));
+                if (attempt.replacement != null)
+                    attempt.replacement.physical.whenComplete((ignored, failure) -> {
+                        synchronized (UserDataManager.this) { attempt.replacementFailure = unwrapCompletion(failure); }
+                        signalRetirement(attempt);
+                    });
+                signalRetirement(attempt);
+            }
+            return attempt.owner.minimalCompletionStage();
+        }
+        return CompletableFuture.failedFuture(new RejectedExecutionException("Shared retirement admission is busy"));
+    }
 
-	private CompletionStage<Void> continueRetirementAfterReplacement(Runnable afterRetirement,
-			Throwable replacementFailure) {
-		if (replacementFailure != null) reportDeferredStorageFailure(replacementFailure);
-		CompletionStage<Void> retirement = closeSharedRuntimeAsyncCompletion(afterRetirement);
-		if (retirement == null) {
-			if (replacementFailure == null) return CompletableFuture.completedFuture(null);
-			return CompletableFuture.failedFuture(replacementFailure);
-		}
-		return retirement.handle((ignored, retirementFailure) -> {
-			if (replacementFailure != null) {
-				if (retirementFailure != null) replacementFailure.addSuppressed(retirementFailure);
-				throw new java.util.concurrent.CompletionException(replacementFailure);
-			}
-			if (retirementFailure != null) throw new java.util.concurrent.CompletionException(retirementFailure);
-			return null;
-		});
-	}
+    private void rejectNewRetiringAccess() {
+        SharedUserDataRuntime runtime = sharedRuntime;
+        if (sharedRuntimeRetiring && runtime != null && !runtime.holdsLifecycleAdmission())
+            throw new RejectedExecutionException("Shared user storage is retiring");
+    }
+
+    private static Throwable unwrapCompletion(Throwable failure) {
+        return failure instanceof CompletionException && failure.getCause() != null ? failure.getCause() : failure;
+    }
+
+    private void signalRetirement(RetirementAttempt attempt) {
+        OwnedTask task = null;
+        Throwable unable = null;
+        synchronized (this) {
+            if (retirementAttempt != attempt || attempt.finished || attempt.starting) return;
+            if (!attempt.drain.isDone() || (attempt.replacement != null && !attempt.replacement.physical.isDone())) return;
+            if (attempt.replacement != null) attempt.replacementFailure = attempt.replacement.outcome;
+            if (attempt.coordinatorFailure != null) unable = attempt.coordinatorFailure;
+            else if (attempt.coordinator == null) {
+                task = new OwnedTask(() -> startRetirement(attempt)); attempt.coordinator = task;
+            }
+        }
+        if (unable != null) { finishRetirement(attempt, unable, false); return; }
+        if (task == null) return;
+        try { timer.execute(task); }
+        catch (RuntimeException | Error failure) {
+            if (task.revoke()) {
+                synchronized (this) { attempt.coordinatorFailure = failure; }
+                signalRetirement(attempt);
+            } else deliveryDiagnostic(2);
+        }
+    }
+
+    private void startRetirement(RetirementAttempt attempt) {
+        Throwable failed = null;
+        if (attempt.runtime.holdsLifecycleAdmission()) failed = new IllegalStateException("Retirement coordinator owns storage admission");
+        synchronized (this) {
+            if (retirementAttempt != attempt || attempt.finished || attempt.starting) return;
+            if (!attempt.drain.isDone() || (attempt.replacement != null && !attempt.replacement.physical.isDone())) return;
+            if (failed == null) {
+                attempt.starting = true; sharedRuntimeRetiring = true;
+                closeSharedUserDataNotifications();
+            }
+        }
+        if (failed != null) { finishRetirement(attempt, failed, false); return; }
+        try {
+            attempt.runtime.closeAsync(timer).whenComplete((ignored, failure) -> finishRetirement(attempt, failure, true));
+        } catch (RuntimeException | Error failure) { finishRetirement(attempt, failure, true); }
+    }
+
+    private void finishRetirement(RetirementAttempt attempt, Throwable failure, boolean physical) {
+        Throwable outcome = unwrapCompletion(failure);
+        boolean physicallySucceeded = physical && outcome == null;
+        if (physicallySucceeded) {
+            synchronized (this) {
+                if (attempt.cleanupStarted) return;
+                attempt.cleanupStarted = true;
+            }
+            RetirementAttempt previous = retirementCleanup.get(); retirementCleanup.set(attempt);
+            try { attempt.cleanup.run(); } catch (Throwable error) { outcome = error; }
+            finally { if (previous == null) retirementCleanup.remove(); else retirementCleanup.set(previous); }
+        }
+        synchronized (this) {
+            if (attempt.finished) return;
+            attempt.finished = true;
+            if (retirementAttempt == attempt) {
+                sharedRuntimeRetiring = false; sharedIntegerRetirement = null;
+                if (physicallySucceeded) sharedRuntime = null;
+                else if (!physical) sharedIntegerClosing = false;
+            }
+            if (attempt.replacementFailure != null) {
+                if (outcome != null && outcome != attempt.replacementFailure) attempt.replacementFailure.addSuppressed(outcome);
+                outcome = attempt.replacementFailure;
+            }
+        }
+        if (physical && outcome != null) {
+            try { reportDeferredStorageFailure(outcome); }
+            catch (RuntimeException | Error diagnosticFailure) { deliveryDiagnostic(11); }
+        }
+        if (outcome == null) attempt.owner.complete(null); else attempt.owner.completeExceptionally(outcome);
+    }
 
 	/**
 	 * Route one complete legacy SQL operation through lifecycle admission. The gate
@@ -780,7 +874,8 @@ public class UserDataManager {
 			BiFunction<UserStorage, SqlUserStorage, T> operation) {
 		Objects.requireNonNull(uuid, "uuid");
 		Objects.requireNonNull(operation, "operation");
-		SharedSqlRoute admission = sharedSqlRoute;
+		rejectNewRetiringAccess();
+        SharedSqlRoute admission = sharedSqlRoute;
 		if (admission == null) throw new IllegalStateException("Shared SQL backend is not bound");
 		if (isPlatformOwnedThread()) {
 			throw new IllegalStateException("Shared user storage must run on a worker thread");
@@ -819,7 +914,8 @@ public class UserDataManager {
 	 * queuing work between its flush and removal.
 	 */
 	private void withSharedSqlBackendExclusive(UUID uuid, Runnable operation) {
-		SharedSqlRoute admission = sharedSqlRoute;
+		rejectNewRetiringAccess();
+        SharedSqlRoute admission = sharedSqlRoute;
 		if (admission == null) {
 			operation.run();
 			return;
@@ -836,7 +932,8 @@ public class UserDataManager {
 
 	/** Admit cache population through the same route that guards backend replacement and close. */
 	private void withSharedCacheAdmission(UUID uuid, Runnable operation) {
-		SharedSqlRoute admission = sharedSqlRoute;
+		rejectNewRetiringAccess();
+        SharedSqlRoute admission = sharedSqlRoute;
 		if (admission == null) {
 			beginLegacyCacheBatch();
 			try { operation.run(); }
@@ -1411,15 +1508,71 @@ public class UserDataManager {
 	}
 
 	/** Mutation listeners use the completion lane so they cannot stall storage work. */
-	public final void dispatchSharedMutationNotification(Runnable notification) {
-		long generation = sharedNotificationGeneration.get();
-		// The bridge runs after the current storage operation has left admission.
-		// It queues only delivery, leaving the storage worker free for successors.
-		timer.execute(() -> {
-			try { dispatchSharedUserDataNotification(notification, generation, mutationCallbacks); }
-			catch (RuntimeException | Error failure) { try { reportDeferredStorageFailure(failure); } catch (RuntimeException | Error ignored) { } }
-		});
-	}
+    public final void dispatchSharedMutationNotification(Runnable notification) {
+        Objects.requireNonNull(notification, "notification");
+        NotificationBridge bridge;
+        synchronized (this) {
+            if (sharedNotificationsClosed) return;
+            CompletionCredit credit = completionBudget.acquire(false);
+            bridge = credit == null ? null : new NotificationBridge(credit, notification, sharedNotificationGeneration.get());
+            if (bridge != null) notificationBridges.add(bridge);
+        }
+        if (bridge == null) { deliveryDiagnostic(3); return; }
+        try { timer.execute(() -> handoffNotification(bridge)); }
+        catch (RuntimeException | Error failure) {
+            boolean revoked;
+            synchronized (this) {
+                revoked = !bridge.claimed && !bridge.revoked;
+                if (revoked) { bridge.revoked = true; notificationBridges.remove(bridge); }
+            }
+            if (revoked) { bridge.credit.release(); throw failure; }
+            deliveryDiagnostic(4);
+        }
+    }
+
+    private void revokeNotificationBridges() {
+        // Caller holds the manager monitor; a claimed bridge is no longer in this registry.
+        for (NotificationBridge bridge : notificationBridges) {
+            bridge.revoked = true; bridge.credit.release();
+        }
+        notificationBridges.clear();
+    }
+
+    private void handoffNotification(NotificationBridge bridge) {
+        SharedSqlRoute admission;
+        synchronized (this) {
+            if (bridge.revoked || bridge.claimed) return;
+            bridge.claimed = true; notificationBridges.remove(bridge); admission = sharedSqlRoute;
+        }
+        if (sharedNotificationsClosed || bridge.generation != sharedNotificationGeneration.get()) { bridge.credit.release(); return; }
+        java.util.concurrent.atomic.AtomicBoolean entered = new java.util.concurrent.atomic.AtomicBoolean();
+        try {
+            mutationCallbacks.execute(() -> {
+                if (!entered.compareAndSet(false, true)) return;
+                try { runSharedNotification(bridge.notification, bridge.generation, admission); }
+                finally { bridge.credit.release(); }
+            });
+        } catch (RuntimeException | Error failure) {
+            // It may still be physically queued: retain its token until actual entry/removal.
+            deliveryDiagnostic(5);
+        }
+    }
+
+    private void runSharedNotification(Runnable notification, long generation, SharedSqlRoute admission) {
+        if (sharedNotificationsClosed || generation != sharedNotificationGeneration.get()) return;
+        try {
+            Runnable admitted = () -> {
+                if (sharedNotificationsClosed || generation != sharedNotificationGeneration.get()) return;
+                try { sharedNotificationCallback.set(true); notification.run(); }
+                catch (RuntimeException | Error failure) { reportDeferredStorageFailure(failure); }
+                finally { sharedNotificationCallback.remove(); }
+            };
+            if (admission == null) admitted.run(); else admission.lifecycleGate().accept(admitted);
+        } catch (RuntimeException | Error failure) {
+            if (!sharedNotificationsClosed && generation == sharedNotificationGeneration.get()) reportDeferredStorageFailure(failure);
+        }
+    }
+
 	private void dispatchSharedUserDataNotification(Runnable notification, long generation) {
 		dispatchSharedUserDataNotification(notification, generation, timer);
 	}
@@ -1427,7 +1580,7 @@ public class UserDataManager {
 	private void dispatchSharedUserDataNotification(Runnable notification, long generation, java.util.concurrent.Executor executor) {
 		Objects.requireNonNull(notification, "notification");
 		if (sharedNotificationsClosed) return;
-		SharedSqlRoute admission = sharedSqlRoute;
+        SharedSqlRoute admission = sharedSqlRoute;
 		try {
 			executor.execute(() -> {
 				if (sharedNotificationsClosed || generation != sharedNotificationGeneration.get()) return;
@@ -1473,10 +1626,10 @@ public class UserDataManager {
 	}
 
 	/** Final shutdown discards queued notifications and prevents future publication. */
-	public final void closeSharedUserDataNotifications() {
-		sharedNotificationsClosed = true;
-		sharedNotificationGeneration.incrementAndGet();
-	}
+	public final synchronized void closeSharedUserDataNotifications() {
+        if (!sharedNotificationsClosed) { sharedNotificationsClosed = true; sharedNotificationGeneration.incrementAndGet(); }
+        revokeNotificationBridges();
+    }
 
 	private void reportDeferredStorageFailure(Throwable failure) {
 		lastDeferredStorageFailure.set(failure);
@@ -1920,7 +2073,10 @@ public class UserDataManager {
 			synchronized (legacyMutationAdmission) {
 				if (pendingLegacyIntegerCount >= MAX_PENDING_LEGACY_INTEGERS) throw new RejectedExecutionException("Legacy integer mutation queue is full");
 				if (legacyIntegerCacheRetirements.contains(uuid)) throw new IllegalStateException("Legacy user cache is retiring");
-				beginLegacyCacheBatch();
+				pending.completion.credit = completionBudget.acquire(false);
+                if (pending.completion.credit == null) throw new RejectedExecutionException("Mutation completion capacity is full");
+                try { beginLegacyCacheBatch(); }
+                catch (RuntimeException | Error failure) { pending.completion.credit.release(); throw failure; }
 				java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation> queue = pendingLegacyIntegers.computeIfAbsent(uuid, ignored -> new java.util.ArrayDeque<>());
 				start = queue.isEmpty(); queue.addLast(pending); pendingLegacyIntegerCount++;
 			}
@@ -1941,12 +2097,15 @@ public class UserDataManager {
 		java.util.Map<java.lang.String,java.lang.Integer> operands = Map.copyOf(values);
 		MutationReceipt<UserDataCache.IntegerMutationResult> receipt = new MutationReceipt<UserDataCache.IntegerMutationResult>(this);
 		SharedUserDataRuntime runtime;
-		Throwable schedulingFailure = null;
+		DeferredSharedInteger scheduled;
 		synchronized (this) {
 			runtime = sharedRuntime;
 			if (runtime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement)
 				throw new RejectedExecutionException("Shared user storage is unavailable or retiring");
-			if (sharedIntegerAdmissions >= MAX_PENDING_LEGACY_INTEGERS) throw new RejectedExecutionException("Shared integer mutation queue is full");
+			if (sharedIntegerAdmissions >= MAX_PENDING_LEGACY_INTEGERS || sharedIntegerAdmissions + cleanupHeadroom >= 512)
+                throw new RejectedExecutionException("Shared integer mutation queue is full");
+            receipt.credit = completionBudget.acquire(false);
+            if (receipt.credit == null) throw new RejectedExecutionException("Mutation completion capacity is full");
 			if (sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
 			sharedIntegerQueuedUsers.merge(uuid, 1, Integer::sum);
 			DeferredSharedInteger deferred = new DeferredSharedInteger(
@@ -1954,10 +2113,9 @@ public class UserDataManager {
 					failure -> finishSharedIntegerMutation(uuid, receipt, null, failure), receipt);
 			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger> queue = sharedIntegerDeferred.computeIfAbsent(uuid, ignored -> new java.util.ArrayDeque<>());
 			queue.addLast(deferred);
-			if (queue.size() == 1 && !sharedIntegerActiveUsers.containsKey(uuid) && !sharedIntegerCompletingUsers.contains(uuid)) try { timer.execute(deferred.action()); }
-			catch (RuntimeException | Error failure) { schedulingFailure = failure; }
-		}
-		if (schedulingFailure != null) finishSharedIntegerMutation(uuid, receipt, null, schedulingFailure);
+			scheduled = claimSharedHeadLocked(uuid);
+        }
+        submitSharedHead(scheduled);
 		return receipt;
 	}
 
@@ -1983,43 +2141,76 @@ public class UserDataManager {
 		finally { sharedIntegerWorker.remove(); }
 	}
 
-	private <T> void finishSharedIntegerMutation(UUID uuid, MutationReceipt<T> receipt, T result, Throwable failure) {
-		DeferredSharedInteger failedTask = null; Throwable schedulingFailure = null;
-		synchronized (this) {
-			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger> queue = sharedIntegerDeferred.get(uuid);
-			if (queue == null || queue.isEmpty() || queue.peekFirst().receipt() != receipt)
-				throw new IllegalStateException("Shared integer completion is out of order");
-			queue.removeFirst();
-			if (queue.isEmpty()) sharedIntegerDeferred.remove(uuid);
-			sharedCallbackReceipts.computeIfAbsent(uuid, ignored -> new java.util.HashSet<>()).add(receipt);
-			sharedIntegerQueuedUsers.computeIfPresent(uuid, (key, count) -> count == 1 ? null : count - 1);
-			queue = sharedIntegerDeferred.get(uuid);
-			if (queue != null && !queue.isEmpty() && !sharedIntegerActiveUsers.containsKey(uuid)) {
-				DeferredSharedInteger next = queue.peekFirst();
-				try { timer.execute(next.action()); }
-				catch (RuntimeException | Error error) { failedTask = next; schedulingFailure = error; }
-			}
-		}
-		if (failedTask != null) failedTask.reject().accept(schedulingFailure);
-		try {
-			mutationCallbacks.execute(() -> {
-				sharedIntegerCompletion.set(true);
-				try { if (failure == null) receipt.succeed(result); else receipt.fail(failure); }
-				finally {
-					sharedIntegerCompletion.remove();
-					synchronized (this) {
-						Set<MutationReceipt<?>> callbacks = sharedCallbackReceipts.get(uuid);
-						callbacks.remove(receipt); if (callbacks.isEmpty()) sharedCallbackReceipts.remove(uuid);
-						if (--sharedIntegerAdmissions == 0) sharedIntegerDrain.complete(null);
-					}
-					sharedIntegerCompletion.set(true);
-					try { receipt.finalized.complete(null); } finally { sharedIntegerCompletion.remove(); }
-				}
-			});
-		} catch (RuntimeException | Error rejected) {
-			try { reportDeferredStorageFailure(rejected); } catch (RuntimeException | Error ignored) { }
-		}
-	}
+    private DeferredSharedInteger claimSharedHeadLocked(UUID uuid) {
+        var queue = sharedIntegerDeferred.get(uuid);
+        if (queue == null || queue.isEmpty() || sharedIntegerActiveUsers.containsKey(uuid) || sharedIntegerCompletingUsers.contains(uuid)) return null;
+        DeferredSharedInteger head = queue.peekFirst();
+        if (head.task != null) return null;
+        head.task = new OwnedTask(head.action());
+        return head;
+    }
+    private void submitSharedHead(DeferredSharedInteger head) {
+        if (head == null) return;
+        try { timer.execute(head.task); }
+        catch (RuntimeException | Error failure) {
+            if (head.task.revoke()) head.reject().accept(failure); else deliveryDiagnostic(6);
+        }
+    }
+    private CompletableFuture<Void> detachSharedDrainLocked() {
+        return sharedIntegerAdmissions == 0 ? sharedIntegerDrain : null;
+    }
+    private static void completeDetachedDrain(CompletableFuture<Void> drain) { if (drain != null) drain.complete(null); }
+    private CompletableFuture<Void> releaseSharedReceiptLocked(MutationReceipt<?> receipt) {
+        if (--sharedIntegerAdmissions < 0) throw new IllegalStateException("Shared admission underflow");
+        SharedReplayLeaseState lease = receipt.cleanupLease;
+        if (lease != null && sharedReplayLeases.get(lease.key) == lease) {
+            lease.promise = true; lease.returning = true; cleanupHeadroom++;
+        }
+        return detachSharedDrainLocked();
+    }
+    private void returnSharedCredit(MutationReceipt<?> receipt) {
+        boolean held = false;
+        synchronized (this) {
+            SharedReplayLeaseState lease = receipt.cleanupLease;
+            if (lease != null && sharedReplayLeases.get(lease.key) == lease && lease.promise) {
+                lease.cleanupBusy = false; lease.returning = false; held = true;
+            }
+        }
+        if (!held && receipt.credit != null) receipt.credit.release();
+    }
+    private <T> void finishSharedIntegerMutation(UUID uuid, MutationReceipt<T> receipt, T result, Throwable failure) {
+        DeferredSharedInteger next;
+        synchronized (this) {
+            var queue = sharedIntegerDeferred.get(uuid);
+            if (queue == null || queue.isEmpty() || queue.peekFirst().receipt() != receipt || receipt.outcomeKnown) return;
+            receipt.outcomeKnown = true; indeterminateReplays.remove(receipt);
+            queue.removeFirst(); if (queue.isEmpty()) sharedIntegerDeferred.remove(uuid);
+            sharedCallbackReceipts.computeIfAbsent(uuid, ignored -> new java.util.HashSet<>()).add(receipt);
+            sharedIntegerQueuedUsers.computeIfPresent(uuid, (key, count) -> count == 1 ? null : count - 1);
+            next = claimSharedHeadLocked(uuid);
+        }
+        submitSharedHead(next);
+        java.util.concurrent.atomic.AtomicBoolean entered = new java.util.concurrent.atomic.AtomicBoolean();
+        try {
+            mutationCallbacks.execute(() -> {
+                if (!entered.compareAndSet(false, true)) return;
+                try {
+                    sharedIntegerCompletion.set(true);
+                    try { if (failure == null) receipt.succeed(result); else receipt.fail(failure); }
+                    finally { sharedIntegerCompletion.remove(); }
+                    CompletableFuture<Void> drain;
+                    synchronized (this) {
+                        Set<MutationReceipt<?>> callbacks = sharedCallbackReceipts.get(uuid);
+                        callbacks.remove(receipt); if (callbacks.isEmpty()) sharedCallbackReceipts.remove(uuid);
+                        drain = releaseSharedReceiptLocked(receipt);
+                    }
+                    completeDetachedDrain(drain);
+                    sharedIntegerCompletion.set(true);
+                    try { receipt.finalized.complete(null); } finally { sharedIntegerCompletion.remove(); }
+                } finally { returnSharedCredit(receipt); }
+            });
+        } catch (RuntimeException | Error rejected) { deliveryDiagnostic(7); }
+    }
 
 	/** Observe when a shared mutation's completion callbacks and admission have settled. */
 	public CompletionStage<Void> afterSharedMutationFinalization(CompletionStage<?> completion) {
@@ -2053,7 +2244,7 @@ public class UserDataManager {
 			Map<String, DataValue> initialValues, SqlUserStorage.TransactionWork<T> work, String checkpointIdentity, String diagnosticIdentity) {
 		Objects.requireNonNull(uuid, "uuid"); Objects.requireNonNull(storage, "storage");
 		Objects.requireNonNull(work, "work"); java.util.Map<java.lang.String,com.bencodez.simpleapi.sql.data.DataValue> initial = Map.copyOf(initialValues);
-		MutationReceipt<T> receipt = new MutationReceipt<T>(this); SharedUserDataRuntime runtime; Throwable schedulingFailure = null;
+		MutationReceipt<T> receipt = new MutationReceipt<T>(this); SharedUserDataRuntime runtime; DeferredSharedInteger scheduled;
 		synchronized (this) {
 			runtime = sharedRuntime;
 			com.bencodez.advancedcore.api.user.usercache.UserDataManager.SharedReplayLeaseState checkpointLease = checkpointIdentity == null ? null : sharedReplayLeases.get(new SharedReplayLease(uuid, checkpointIdentity));
@@ -2071,8 +2262,18 @@ public class UserDataManager {
 			// Reserve bounded cleanup capacity so a full set of retained replay
 			// leases cannot prevent the checkpoints that release those leases.
 			int limit = drainingCheckpoint ? MAX_PENDING_LEGACY_INTEGERS * 2 : MAX_PENDING_LEGACY_INTEGERS;
-			if (sharedIntegerAdmissions >= limit) throw new RejectedExecutionException("Shared mutation queue is full");
-			if (checkpointIdentity != null) checkpointLease.checkpointReservations--;
+            boolean protectedCleanup = drainingCheckpoint && checkpointLease.promise && !checkpointLease.cleanupBusy;
+            if (sharedIntegerAdmissions >= limit || (!protectedCleanup && sharedIntegerAdmissions + cleanupHeadroom >= 512))
+                throw new RejectedExecutionException("Shared mutation queue is full");
+            if (protectedCleanup) {
+                receipt.credit = checkpointLease.cleanupCredit; receipt.cleanupLease = checkpointLease;
+                checkpointLease.cleanupBusy = true; checkpointLease.promise = false; cleanupHeadroom--;
+            } else {
+                receipt.credit = completionBudget.acquire(false);
+                if (receipt.credit == null && drainingCheckpoint) receipt.credit = completionBudget.acquire(true);
+                if (receipt.credit == null) throw new RejectedExecutionException("Mutation completion capacity is full");
+            }
+            if (checkpointIdentity != null) checkpointLease.checkpointReservations--;
 			if (sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
 			sharedIntegerQueuedUsers.merge(uuid, 1, Integer::sum);
 			DeferredSharedInteger deferred = new DeferredSharedInteger(
@@ -2080,66 +2281,70 @@ public class UserDataManager {
 					failure -> finishSharedIntegerMutation(uuid, receipt, null, failure), receipt);
 			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger> queue = sharedIntegerDeferred.computeIfAbsent(uuid, ignored -> new java.util.ArrayDeque<>());
 			queue.addLast(deferred);
-			if (queue.size() == 1 && !sharedIntegerActiveUsers.containsKey(uuid) && !sharedIntegerCompletingUsers.contains(uuid))
-				try { timer.execute(deferred.action()); } catch (RuntimeException | Error failure) { schedulingFailure = failure; }
-		}
-		if (schedulingFailure != null) finishSharedIntegerMutation(uuid, receipt, null, schedulingFailure);
+			scheduled = claimSharedHeadLocked(uuid);
+        }
+        submitSharedHead(scheduled);
 		return receipt;
 	}
 
 	/** Retain the current owner from award admission through durable checkpoint cleanup. */
-	public synchronized void acquireSharedReplayLease(UUID uuid, String identity) { acquireSharedReplayLease(uuid, identity, false); }
-	public synchronized void acquireSharedReplayCheckpointLease(UUID uuid, String identity) { acquireSharedReplayLease(uuid, identity, true); }
-	/** Reject an admitted award overtaken by durable checkpoint cleanup before it writes. */
-	public synchronized void requireSharedReplayAwardActive(UUID uuid, String identity) {
-		com.bencodez.advancedcore.api.user.usercache.UserDataManager.SharedReplayLeaseState state = sharedReplayLeases.get(new SharedReplayLease(Objects.requireNonNull(uuid), Objects.requireNonNull(identity)));
-		if (state == null || state.runtime != sharedRuntime || state.checkpointed)
-			throw new SqlUserStorage.ReplayPreconditionException("Replay award has already been checkpointed");
-	}
-	private void acquireSharedReplayLease(UUID uuid, String identity, boolean checkpoint) {
-		Objects.requireNonNull(uuid, "uuid"); Objects.requireNonNull(identity, "identity");
-		if (identity.isEmpty() || identity.length() > 4096) throw new IllegalArgumentException("Invalid replay identity");
-		SharedReplayLease key = new SharedReplayLease(uuid, identity); com.bencodez.advancedcore.api.user.usercache.UserDataManager.SharedReplayLeaseState existing = sharedReplayLeases.get(key);
-		if (existing != null) {
-			if (existing.runtime != sharedRuntime) throw new IllegalStateException("Replay owner changed");
-			if (existing.checkpointed && !checkpoint) throw new IllegalStateException("Replay award is already checkpointed");
-			existing.attempts++; if (checkpoint) existing.checkpointReservations++;
-			return;
-		}
-		if (sharedRuntime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement)
-			throw new RejectedExecutionException("Shared user storage is unavailable or retiring");
-		if (sharedIntegerAdmissions >= MAX_PENDING_LEGACY_INTEGERS) throw new RejectedExecutionException("Shared mutation queue is full");
-		if (sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
-		SharedReplayLeaseState state = new SharedReplayLeaseState(sharedRuntime); state.attempts = 1;
-		if (checkpoint) state.checkpointReservations = 1; sharedReplayLeases.put(key, state);
-	}
-
-	/** Release a checkpoint reservation only when submission did not admit work. */
-	public synchronized void cancelSharedReplayCheckpointReservation(UUID uuid, String identity) {
-		SharedReplayLease key = new SharedReplayLease(Objects.requireNonNull(uuid), Objects.requireNonNull(identity));
-		SharedReplayLeaseState state = sharedReplayLeases.get(key);
-		if (state == null || state.checkpointReservations == 0 || state.attempts == 0)
-			throw new IllegalStateException("Replay checkpoint reservation is not active");
-		state.checkpointReservations--; state.attempts--;
-		if (state.attempts == 0 && (!state.committed || state.checkpointed)) {
-			sharedReplayLeases.remove(key);
-			if (--sharedIntegerAdmissions == 0) sharedIntegerDrain.complete(null);
-		}
-	}
-
-	/** Settle one lease attempt; a committed award retains the owner until checkpoint cleanup. */
-	public void settleSharedReplayLease(UUID uuid, String identity, boolean awardCommitted, boolean checkpointCommitted) {
-		Objects.requireNonNull(uuid, "uuid"); Objects.requireNonNull(identity, "identity");
-		synchronized (this) {
-			SharedReplayLease key = new SharedReplayLease(uuid, identity); com.bencodez.advancedcore.api.user.usercache.UserDataManager.SharedReplayLeaseState state = sharedReplayLeases.get(key);
-			if (state == null || state.attempts <= 0) throw new IllegalStateException("Replay lease attempt is not active");
-			state.attempts--; state.committed |= awardCommitted; state.checkpointed |= checkpointCommitted;
-			if (state.attempts == 0 && (!state.committed || state.checkpointed)) {
-				sharedReplayLeases.remove(key);
-				if (--sharedIntegerAdmissions == 0) sharedIntegerDrain.complete(null);
-			}
-		}
-	}
+    public synchronized void acquireSharedReplayLease(UUID uuid, String identity) { acquireSharedReplayLease(uuid, identity, false); }
+    public synchronized void acquireSharedReplayCheckpointLease(UUID uuid, String identity) { acquireSharedReplayLease(uuid, identity, true); }
+    public synchronized void requireSharedReplayAwardActive(UUID uuid, String identity) {
+        SharedReplayLeaseState state = sharedReplayLeases.get(new SharedReplayLease(Objects.requireNonNull(uuid), Objects.requireNonNull(identity)));
+        if (state == null || state.runtime != sharedRuntime || state.checkpointed)
+            throw new SqlUserStorage.ReplayPreconditionException("Replay award has already been checkpointed");
+    }
+    private void acquireSharedReplayLease(UUID uuid, String identity, boolean checkpoint) {
+        Objects.requireNonNull(uuid, "uuid"); Objects.requireNonNull(identity, "identity");
+        if (identity.isEmpty() || identity.length() > 4096) throw new IllegalArgumentException("Invalid replay identity");
+        SharedReplayLease key = new SharedReplayLease(uuid, identity); SharedReplayLeaseState existing = sharedReplayLeases.get(key);
+        if (existing != null) {
+            if (existing.runtime != sharedRuntime) throw new IllegalStateException("Replay owner changed");
+            if (existing.checkpointed && !checkpoint) throw new IllegalStateException("Replay award is already checkpointed");
+            if (existing.attempts == Integer.MAX_VALUE || (checkpoint && existing.checkpointReservations == Integer.MAX_VALUE))
+                throw new RejectedExecutionException("Replay reservation capacity is full");
+            existing.attempts++; if (checkpoint) existing.checkpointReservations++; return;
+        }
+        if (sharedRuntime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement)
+            throw new RejectedExecutionException("Shared user storage is unavailable or retiring");
+        if (sharedIntegerAdmissions >= 256 || sharedIntegerAdmissions + cleanupHeadroom + 2 > 512)
+            throw new RejectedExecutionException("Shared mutation queue is full");
+        CompletionCredit credit = completionBudget.acquire(true);
+        if (credit == null) throw new RejectedExecutionException("Replay cleanup capacity is full");
+        SharedReplayLeaseState state = new SharedReplayLeaseState(sharedRuntime, key);
+        state.cleanupCredit = credit; state.promise = true; cleanupHeadroom++;
+        if (sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
+        state.attempts = 1; if (checkpoint) state.checkpointReservations = 1; sharedReplayLeases.put(key, state);
+    }
+    private CompletableFuture<Void> removeSettledLeaseLocked(SharedReplayLeaseState state) {
+        if (state.attempts != 0 || (state.committed && !state.checkpointed)) return null;
+        if (!sharedReplayLeases.remove(state.key, state)) return null;
+        if (state.promise) { state.promise = false; cleanupHeadroom--; }
+        if (!state.cleanupBusy) state.cleanupCredit.release();
+        if (--sharedIntegerAdmissions < 0) throw new IllegalStateException("Shared lease admission underflow");
+        return detachSharedDrainLocked();
+    }
+    public void cancelSharedReplayCheckpointReservation(UUID uuid, String identity) {
+        CompletableFuture<Void> drain;
+        synchronized (this) {
+            SharedReplayLeaseState state = sharedReplayLeases.get(new SharedReplayLease(Objects.requireNonNull(uuid), Objects.requireNonNull(identity)));
+            if (state == null || state.checkpointReservations == 0 || state.attempts == 0)
+                throw new IllegalStateException("Replay checkpoint reservation is not active");
+            state.checkpointReservations--; state.attempts--; drain = removeSettledLeaseLocked(state);
+        }
+        completeDetachedDrain(drain);
+    }
+    public void settleSharedReplayLease(UUID uuid, String identity, boolean awardCommitted, boolean checkpointCommitted) {
+        CompletableFuture<Void> drain;
+        synchronized (this) {
+            SharedReplayLeaseState state = sharedReplayLeases.get(new SharedReplayLease(Objects.requireNonNull(uuid), Objects.requireNonNull(identity)));
+            if (state == null || state.attempts <= 0) throw new IllegalStateException("Replay lease attempt is not active");
+            state.attempts--; state.committed |= awardCommitted; state.checkpointed |= checkpointCommitted;
+            drain = removeSettledLeaseLocked(state);
+        }
+        completeDetachedDrain(drain);
+    }
 
 	private <T> void runSharedReplayTransaction(SharedUserDataRuntime runtime, UUID uuid, UserStorage storage,
 			Map<String, DataValue> initial, SqlUserStorage.TransactionWork<T> work, MutationReceipt<T> receipt, int attempts,
@@ -2166,11 +2371,17 @@ public class UserDataManager {
 				try { reportDeferredStorageFailure(failure); } catch (RuntimeException | Error ignored) { }
 			int next = attempts == Integer.MAX_VALUE ? attempts : attempts + 1;
 			long delay = Math.min(30000L, 250L << Math.min(attempts, 7));
-			try { timer.schedule(() -> runSharedReplayTransaction(runtime, uuid, storage, initial, work, receipt, next, identity, checkpoint), delay, TimeUnit.MILLISECONDS); }
-			catch (RuntimeException | Error rejected) {
-				synchronized (this) { indeterminateReplays.put(receipt, new IndeterminateReplay(uuid, identity, checkpoint)); }
-				try { reportDeferredStorageFailure(rejected); } catch (RuntimeException | Error ignored) { }
-			}
+			receipt.uncertain = true;
+            OwnedTask retry = new OwnedTask(() -> runSharedReplayTransaction(runtime, uuid, storage, initial, work, receipt, next, identity, checkpoint));
+            synchronized (this) { receipt.retryTask = retry; }
+            try { timer.schedule(retry, delay, TimeUnit.MILLISECONDS); }
+            catch (RuntimeException | Error rejected) {
+                if (retry.revoke()) synchronized (this) {
+                    if (!receipt.outcomeKnown && receipt.retryTask == retry)
+                        indeterminateReplays.put(receipt, new IndeterminateReplay(uuid, identity, checkpoint));
+                }
+                deliveryDiagnostic(10);
+            }
 			return;
 		} catch (Error uncertain) {
 			synchronized (this) { indeterminateReplays.put(receipt, new IndeterminateReplay(uuid, identity, checkpoint)); }
@@ -2184,30 +2395,27 @@ public class UserDataManager {
 		boolean worker = uuid.equals(sharedIntegerWorker.get()) && sharedIntegerSynchronousDepth.get() == 0
 				&& !Boolean.TRUE.equals(sharedIntegerCompletion.get());
 		if (!worker && (sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement || sharedIntegerQueuedUsers.containsKey(uuid))) return false;
-		if (sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
+		if (!worker && (sharedIntegerAdmissions >= 256 || sharedIntegerAdmissions + cleanupHeadroom >= 512)) return false;
+        sharedSynchronousOwned.get().push(!worker);
+        if (!worker && sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
 		sharedIntegerSynchronousDepth.set(sharedIntegerSynchronousDepth.get() + 1);
 		sharedIntegerActiveUsers.merge(uuid, 1, Integer::sum);
 		return true;
 	}
-	void endSharedSynchronousIntegerMutation(UUID uuid) {
-		java.util.ArrayList<Runnable> failures = new java.util.ArrayList<Runnable>();
-		synchronized (this) {
-		int depth = sharedIntegerSynchronousDepth.get() - 1;
-		if (depth == 0) sharedIntegerSynchronousDepth.remove(); else sharedIntegerSynchronousDepth.set(depth);
-		sharedIntegerActiveUsers.computeIfPresent(uuid, (key, count) -> count == 1 ? null : count - 1);
-		if (!sharedIntegerActiveUsers.containsKey(uuid) && !sharedIntegerCompletingUsers.contains(uuid)
-				&& !uuid.equals(sharedIntegerWorker.get())) {
-			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger> queue = sharedIntegerDeferred.get(uuid);
-			if (queue != null && !queue.isEmpty()) {
-				com.bencodez.advancedcore.api.user.usercache.UserDataManager.DeferredSharedInteger mutation = queue.peekFirst();
-				try { timer.execute(mutation.action()); }
-				catch (RuntimeException | Error failure) { failures.add(() -> mutation.reject().accept(failure)); }
-			}
-		}
-		if (--sharedIntegerAdmissions == 0) sharedIntegerDrain.complete(null);
-		}
-		for (java.lang.Runnable failure : failures) failure.run();
-	}
+    void endSharedSynchronousIntegerMutation(UUID uuid) {
+        DeferredSharedInteger next = null; CompletableFuture<Void> drain;
+        synchronized (this) {
+            boolean owned = sharedSynchronousOwned.get().pop();
+            if (sharedSynchronousOwned.get().isEmpty()) sharedSynchronousOwned.remove();
+            int depth = sharedIntegerSynchronousDepth.get() - 1;
+            if (depth == 0) sharedIntegerSynchronousDepth.remove(); else sharedIntegerSynchronousDepth.set(depth);
+            sharedIntegerActiveUsers.computeIfPresent(uuid, (key, count) -> count == 1 ? null : count - 1);
+            if (!uuid.equals(sharedIntegerWorker.get())) next = claimSharedHeadLocked(uuid);
+            if (owned) sharedIntegerAdmissions--;
+            drain = detachSharedDrainLocked();
+        }
+        completeDetachedDrain(drain); submitSharedHead(next);
+    }
 
 	/** Fail fast rather than close an owner that still has retained integer operations. */
 	public void withLegacyIntegerOwnerReplacement(Runnable replacement) {
@@ -2307,17 +2515,34 @@ public class UserDataManager {
 		}
 	}
 
-	private void scheduleLegacyIntegerMutation(PendingLegacyIntegerMutation pending, long delayMillis) {
-		try { timer.schedule(() -> runLegacyIntegerMutation(pending), delayMillis, TimeUnit.MILLISECONDS); }
-		catch (RejectedExecutionException failure) { finishLegacyIntegerMutation(pending, null, failure); }
-	}
-	private void retryLegacyIntegerMutation(PendingLegacyIntegerMutation pending) {
-		if (++pending.attempts >= MAX_LEGACY_MUTATION_ATTEMPTS) {
-			finishLegacyIntegerMutation(pending, null, new IllegalStateException("Legacy integer mutation could not acquire an authoritative cache"));
-			return;
-		}
-		scheduleLegacyIntegerMutation(pending, 25);
-	}
+    private void scheduleLegacyIntegerMutation(PendingLegacyIntegerMutation pending, long delayMillis) {
+        OwnedTask task;
+        synchronized (legacyMutationAdmission) {
+            var queue = pendingLegacyIntegers.get(pending.uuid);
+            if (queue == null || queue.peekFirst() != pending || pending.outcomeKnown || pending.scheduled != null) return;
+            task = new OwnedTask(() -> {
+                try { runLegacyIntegerMutation(pending); }
+                finally {
+                    long retry;
+                    synchronized (legacyMutationAdmission) {
+                        pending.scheduled = null; retry = pending.retryDelay; pending.retryDelay = -1;
+                    }
+                    if (retry >= 0) scheduleLegacyIntegerMutation(pending, retry);
+                }
+            });
+            pending.scheduled = task;
+        }
+        try { timer.schedule(task, delayMillis, TimeUnit.MILLISECONDS); }
+        catch (RuntimeException | Error failure) {
+            if (task.revoke()) finishLegacyIntegerMutation(pending, null, failure); else deliveryDiagnostic(8);
+        }
+    }
+    private void retryLegacyIntegerMutation(PendingLegacyIntegerMutation pending) {
+        if (++pending.attempts >= MAX_LEGACY_MUTATION_ATTEMPTS) {
+            finishLegacyIntegerMutation(pending, null, new IllegalStateException("Legacy integer mutation could not acquire an authoritative cache")); return;
+        }
+        synchronized (legacyMutationAdmission) { pending.retryDelay = 25; }
+    }
 
 	private void runLegacyIntegerMutation(PendingLegacyIntegerMutation pending) {
 		try {
@@ -2357,46 +2582,48 @@ public class UserDataManager {
 			throw new IllegalStateException("Legacy integer mutation storage owner changed");
 	}
 
-	private void finishLegacyIntegerMutation(PendingLegacyIntegerMutation pending,
-			UserDataCache.IntegerMutationResult result, Throwable failure) {
-		PendingLegacyIntegerMutation next;
-		synchronized (legacyMutationAdmission) {
-			java.util.ArrayDeque<com.bencodez.advancedcore.api.user.usercache.UserDataManager.PendingLegacyIntegerMutation> queue = pendingLegacyIntegers.get(pending.uuid);
-			if (queue == null || queue.peekFirst() != pending) return;
-			queue.removeFirst();
-			legacyCallbackReceipts.computeIfAbsent(pending.uuid, ignored -> new java.util.HashSet<>()).add(pending);
-			next = queue.peekFirst(); if (next == null) pendingLegacyIntegers.remove(pending.uuid);
-		}
-		if (next != null) scheduleLegacyIntegerMutation(next, 0);
-		try {
-			mutationCallbacks.execute(() -> {
-				legacyIntegerCompletion.set(true);
-				try {
-					if (failure == null) {
-						legacyIntegerNotification.set(true);
-						try { notifyLegacyIntegerMutation(result, pending.operation, pending.notification); }
-						catch (RuntimeException | Error notificationFailure) {
-							try { reportDeferredStorageFailure(notificationFailure); } catch (RuntimeException | Error ignored) { }
-						} finally { legacyIntegerNotification.remove(); }
-						pending.completion.succeed(result);
-					} else pending.completion.fail(failure);
-				}
-				finally {
-					legacyIntegerCompletion.remove();
-					endLegacyCacheBatch();
-					synchronized (legacyMutationAdmission) {
-						Set<PendingLegacyIntegerMutation> callbacks = legacyCallbackReceipts.get(pending.uuid);
-						callbacks.remove(pending); if (callbacks.isEmpty()) legacyCallbackReceipts.remove(pending.uuid);
-						pendingLegacyIntegerCount--;
-					}
-					if (failure == null) pending.completion.finalized.complete(null);
-					else pending.completion.finalized.completeExceptionally(failure);
-				}
-			});
-		} catch (RuntimeException | Error rejected) {
-			try { reportDeferredStorageFailure(rejected); } catch (RuntimeException | Error ignored) { }
-		}
-	}
+    private void finishLegacyIntegerMutation(PendingLegacyIntegerMutation pending,
+            UserDataCache.IntegerMutationResult result, Throwable failure) {
+        PendingLegacyIntegerMutation next;
+        synchronized (legacyMutationAdmission) {
+            var queue = pendingLegacyIntegers.get(pending.uuid);
+            if (queue == null || queue.peekFirst() != pending || pending.outcomeKnown) return;
+            pending.outcomeKnown = true;
+            queue.removeFirst(); legacyCallbackReceipts.computeIfAbsent(pending.uuid, ignored -> new java.util.HashSet<>()).add(pending);
+            next = queue.peekFirst(); if (next == null) pendingLegacyIntegers.remove(pending.uuid);
+        }
+        if (next != null) scheduleLegacyIntegerMutation(next, 0);
+        java.util.concurrent.atomic.AtomicBoolean entered = new java.util.concurrent.atomic.AtomicBoolean();
+        try {
+            mutationCallbacks.execute(() -> {
+                if (!entered.compareAndSet(false, true)) return;
+                try {
+                    legacyIntegerCompletion.set(true);
+                    try {
+                        if (failure == null) {
+                            legacyIntegerNotification.set(true);
+                            try { notifyLegacyIntegerMutation(result, pending.operation, pending.notification); }
+                            catch (RuntimeException | Error notificationFailure) {
+                                try { reportDeferredStorageFailure(notificationFailure); } catch (RuntimeException | Error ignored) { }
+                            } finally { legacyIntegerNotification.remove(); }
+                            pending.completion.succeed(result);
+                        } else pending.completion.fail(failure);
+                    } finally { legacyIntegerCompletion.remove(); }
+                    endLegacyCacheBatch();
+                    synchronized (legacyMutationAdmission) {
+                        var callbacks = legacyCallbackReceipts.get(pending.uuid);
+                        callbacks.remove(pending); if (callbacks.isEmpty()) legacyCallbackReceipts.remove(pending.uuid);
+                        pendingLegacyIntegerCount--;
+                    }
+                    legacyIntegerCompletion.set(true);
+                    try {
+                        if (failure == null) pending.completion.finalized.complete(null);
+                        else pending.completion.finalized.completeExceptionally(failure);
+                    } finally { legacyIntegerCompletion.remove(); }
+                } finally { pending.completion.credit.release(); }
+            });
+        } catch (RuntimeException | Error rejected) { deliveryDiagnostic(9); }
+    }
 
 	/** Fence a direct legacy writer against stale row publication. */
 	public LegacyDirectWrite beginLegacyDirectWrite(UUID uuid) { return beginLegacyDirectWrite(uuid, Set.of()); }
