@@ -533,4 +533,35 @@ class SharedCompletionAdmissionTest {
             } finally { release.countDown(); worker.join(6000); }
         }
     }
+    @Test void repeatedCloseCannotSupersedeAnUnsettledFailedOwner() throws Exception {
+        try (var f = new Fixture()) {
+            var discardFailure = new IllegalStateException("notification discard rejected");
+            AtomicInteger discards = new AtomicInteger(), cleanup = new AtomicInteger();
+            doAnswer(c -> { if (discards.incrementAndGet() == 1) throw discardFailure; return null; }).when(f.owner).discardAllNotifications();
+            var logger = mock(java.util.logging.Logger.class); when(f.plugin.getLogger()).thenReturn(logger);
+            CountDownLatch diagnostic = new CountDownLatch(1), release = new CountDownLatch(1);
+            doAnswer(c -> { diagnostic.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS)); return null; })
+                    .when(logger).log(any(java.util.logging.Level.class), anyString(), any(Throwable.class));
+            var first = f.manager.closeSharedRuntimeAsyncCompletion(cleanup::incrementAndGet).toCompletableFuture();
+            var worker = new Thread(f.tasks.remove());
+            try {
+                worker.start(); assertTrue(diagnostic.await(5, TimeUnit.SECONDS)); assertTrue(f.runtime.isClosed());
+                var second = f.manager.closeSharedRuntimeAsyncCompletion(cleanup::incrementAndGet).toCompletableFuture();
+                while (!f.tasks.isEmpty()) f.runOne();
+                assertFalse(first.isDone()); assertFalse(second.isDone(), "the second close must observe the unsettled first owner");
+                assertTrue(f.manager.hasSharedRuntimeLifecycle());
+                var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+                var next = new SharedUserDataRuntime(backend, mock(UserCacheOwner.class));
+                assertThrows(IllegalStateException.class, () -> f.manager.bindSharedRuntime(next));
+                release.countDown(); worker.join(6000); assertFalse(worker.isAlive());
+                assertSame(discardFailure, assertThrows(ExecutionException.class, () -> first.get(5, TimeUnit.SECONDS)).getCause());
+                assertSame(discardFailure, assertThrows(ExecutionException.class, () -> second.get(5, TimeUnit.SECONDS)).getCause());
+                assertFalse(f.manager.hasSharedRuntimeLifecycle());
+                var retry = f.manager.closeSharedRuntimeAsyncCompletion(cleanup::incrementAndGet).toCompletableFuture();
+                while (!f.tasks.isEmpty()) f.runOne(); retry.get(5, TimeUnit.SECONDS);
+                assertEquals(1, cleanup.get()); assertEquals(2, discards.get()); verify(f.backend, times(1)).close();
+                f.manager.bindSharedRuntime(next); assertTrue(f.manager.hasSharedRuntime());
+            } finally { release.countDown(); worker.join(6000); }
+        }
+    }
 }

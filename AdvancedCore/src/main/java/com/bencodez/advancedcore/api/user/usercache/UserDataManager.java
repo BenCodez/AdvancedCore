@@ -628,7 +628,7 @@ public class UserDataManager {
 	public final synchronized void bindSharedRuntime(SharedUserDataRuntime runtime) {
 		Objects.requireNonNull(runtime, "runtime");
 		// Physical closure is insufficient while an accepted owner barrier is unsettled.
-        if (sharedRuntimeRetiring || (retirementAttempt != null && !retirementAttempt.owner.isDone())) {
+        if (sharedRuntimeRetiring || hasPendingRetirementLocked()) {
 			throw new IllegalStateException("Shared user runtime retirement is still in progress");
 		}
 		if (sharedRuntime != null && !sharedRuntime.isClosed()) {
@@ -683,7 +683,7 @@ public class UserDataManager {
         Throwable refused = null;
         synchronized (this) {
             SharedUserDataRuntime runtime = sharedRuntime;
-            if (runtime == null || sharedRuntimeRetiring) refused = new IllegalStateException("Shared user storage is retiring and cannot be reloaded");
+            if (runtime == null || sharedRuntimeRetiring || hasPendingRetirementLocked()) refused = new IllegalStateException("Shared user storage is retiring and cannot be reloaded");
             else if (sharedIntegerClosing || sharedIntegerOwnerReplacement || sharedIntegerAdmissions != 0)
                 refused = new IllegalStateException("Shared integer mutations have not settled");
             else if (replacementAttempt != null) refused = new IllegalStateException("Shared user storage reload is already in progress");
@@ -723,8 +723,13 @@ public class UserDataManager {
 	 * progress even though the runtime is no longer available for new work.
 	 */
 	public final synchronized boolean hasSharedRuntimeLifecycle() {
-		return sharedRuntimeRetiring || hasSharedRuntime();
+		return hasPendingRetirementLocked() || sharedRuntimeRetiring || hasSharedRuntime();
 	}
+
+    /** State bookkeeping may finish before its authoritative owner observation settles. */
+    private boolean hasPendingRetirementLocked() {
+        return retirementAttempt != null && !retirementAttempt.owner.isDone();
+    }
 
 	/**
 	 * Start shared cache retirement on the manager worker. The callback runs only
@@ -760,7 +765,7 @@ public class UserDataManager {
                 SharedUserDataRuntime current = sharedRuntime != null ? sharedRuntime : retirementAttempt == null ? null : retirementAttempt.runtime;
                 if (current != runtime) continue;
                 if (sharedIntegerOwnerReplacement) refused = new IllegalStateException("Shared storage owner replacement is active");
-                if (refused == null && retirementAttempt != null && !retirementAttempt.finished)
+                if (refused == null && hasPendingRetirementLocked())
                     return retirementAttempt.owner.minimalCompletionStage();
                 if (refused == null && sharedRuntime == null) return null;
                 if (refused == null) {
@@ -2107,7 +2112,7 @@ public class UserDataManager {
 		DeferredSharedInteger scheduled;
 		synchronized (this) {
 			runtime = sharedRuntime;
-			if (runtime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement)
+			if (runtime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || sharedIntegerClosing || hasPendingRetirementLocked() || sharedIntegerOwnerReplacement)
 				throw new RejectedExecutionException("Shared user storage is unavailable or retiring");
 			if (sharedIntegerAdmissions >= MAX_PENDING_LEGACY_INTEGERS || sharedIntegerAdmissions + cleanupHeadroom >= 512)
                 throw new RejectedExecutionException("Shared integer mutation queue is full");
@@ -2258,7 +2263,7 @@ public class UserDataManager {
 			boolean drainingCheckpoint = checkpointLease != null && runtime != null && checkpointLease.runtime == runtime;
 			if (checkpointIdentity != null && (!drainingCheckpoint || checkpointLease.checkpointReservations == 0))
 				throw new IllegalStateException("Replay checkpoint requires an active lease for its storage owner");
-			if (runtime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || (sharedIntegerClosing && !drainingCheckpoint) || sharedIntegerOwnerReplacement)
+			if (runtime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || ((sharedIntegerClosing || hasPendingRetirementLocked()) && !drainingCheckpoint) || sharedIntegerOwnerReplacement)
 				throw new RejectedExecutionException("Shared user storage is unavailable or retiring");
 			// A store mismatch is a definite precondition failure, not an uncertain
 			// commit. Reject it before consuming checkpoint capacity or admission.
@@ -2315,7 +2320,7 @@ public class UserDataManager {
                 throw new RejectedExecutionException("Replay reservation capacity is full");
             existing.attempts++; if (checkpoint) existing.checkpointReservations++; return;
         }
-        if (sharedRuntime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement)
+        if (sharedRuntime == null || sharedRuntimeRetiring || sharedRuntimeReplacing || sharedIntegerClosing || hasPendingRetirementLocked() || sharedIntegerOwnerReplacement)
             throw new RejectedExecutionException("Shared user storage is unavailable or retiring");
         if (sharedIntegerAdmissions >= 256 || sharedIntegerAdmissions + cleanupHeadroom + 2 > 512)
             throw new RejectedExecutionException("Shared mutation queue is full");
@@ -2403,7 +2408,7 @@ public class UserDataManager {
 	synchronized boolean beginSharedSynchronousIntegerMutation(UUID uuid) {
 		boolean worker = uuid.equals(sharedIntegerWorker.get()) && sharedIntegerSynchronousDepth.get() == 0
 				&& !Boolean.TRUE.equals(sharedIntegerCompletion.get());
-		if (!worker && (sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement || sharedIntegerQueuedUsers.containsKey(uuid))) return false;
+		if (!worker && (sharedRuntimeReplacing || sharedIntegerClosing || sharedIntegerOwnerReplacement || hasPendingRetirementLocked() || sharedIntegerQueuedUsers.containsKey(uuid))) return false;
 		if (!worker && (sharedIntegerAdmissions >= 256 || sharedIntegerAdmissions + cleanupHeadroom >= 512)) return false;
         sharedSynchronousOwned.get().push(!worker);
         if (!worker && sharedIntegerAdmissions++ == 0) sharedIntegerDrain = new CompletableFuture<>();
@@ -2431,7 +2436,7 @@ public class UserDataManager {
 		Objects.requireNonNull(replacement, "replacement");
 		if (Boolean.TRUE.equals(legacyIntegerOwnerReplacementThread.get())) { replacement.run(); return; }
 		synchronized (this) {
-			if (sharedIntegerOwnerReplacement || sharedIntegerClosing || sharedIntegerAdmissions != 0)
+			if (sharedIntegerOwnerReplacement || sharedIntegerClosing || hasPendingRetirementLocked() || sharedIntegerAdmissions != 0)
 				throw new IllegalStateException("Shared integer mutations are active");
 			sharedIntegerOwnerReplacement = true;
 		}
