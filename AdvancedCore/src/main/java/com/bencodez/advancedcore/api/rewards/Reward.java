@@ -1514,7 +1514,8 @@ public class Reward {
 		if (RewardEligibility.isConfigured(plugin, getConfig().getConfigData())
 				&& (rewardOptions == null || !rewardOptions.isIgnoreRequirements())) {
 			RewardOptions tracked = (rewardOptions == null ? new RewardOptions() : rewardOptions).captureLegacyFailureObserver();
-			giveRewardAsync(user, tracked).exceptionally(failure -> {
+			startLegacyObservedDispatch(() -> giveRewardAsync(user, tracked),
+					() -> tracked.legacyFailureObserverCapture().get()).exceptionally(failure -> {
 				logRewardUserFailure(failure, tracked.legacyFailureObserverCapture().get());
 				return null;
 			});
@@ -1959,7 +1960,8 @@ public class Reward {
 		RewardOptions effectiveOptions = rewardOptions == null ? new RewardOptions() : rewardOptions;
 		if (requiresAwaitedDelivery(effectiveOptions)) {
 			Consumer<Throwable> observer = effectiveOptions.getAsyncFailureObserver();
-			giveRewardUserAsync(user, phs, effectiveOptions).exceptionally(failure -> {
+			startLegacyObservedDispatch(() -> giveRewardUserAsync(user, phs, effectiveOptions),
+					() -> observer).exceptionally(failure -> {
 				logRewardUserFailure(failure, observer);
 				return null;
 			});
@@ -2110,6 +2112,15 @@ public class Reward {
 			plugin.debug(getRewardName() + ": Player == null & forceoffline false, player: " + user.getPlayerName()
 					+ "/" + user.getUUID());
 			return null;
+		}
+	}
+
+	private CompletionStage<Void> startLegacyObservedDispatch(Supplier<CompletionStage<Void>> dispatch,
+			Supplier<Consumer<Throwable>> observer) {
+		try { return dispatch.get(); }
+		catch (RuntimeException | Error failure) {
+			try { logRewardUserFailure(failure, observer.get()); }
+			finally { throw failure; } // Diagnostics must preserve the synchronous caller's failure.
 		}
 	}
 

@@ -29,6 +29,13 @@ parallel runtime with different caches or a second set of background tasks.
 - Lifecycle calls remain serialized by the owning platform. Consumer hooks and
   game/integration cleanup retain their lifecycle-thread execution.
 
+Terminal cleanup still attempts native MySQL/SQLite owner closure after failed or
+unconfirmed retirement, subject to the existing executor and admission barriers.
+Detached retired-owner retries remain part of the existing terminal cleanup.
+Connection closure does not acknowledge a durable flush: accepted cached changes
+can remain unpersisted after a failed or cancelled final write. This cleanup does
+not provide in-process recovery or guarantee restart durability.
+
 ## Shared shutdown deadline
 
 All owned shutdown waits share one monotonic 15-second deadline captured at entry

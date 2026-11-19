@@ -164,6 +164,75 @@ class RewardAsyncInjectionTest {
 	}
 
 	@Test
+	void synchronousLegacyStartupFailureNotifiesCapturedObserver() {
+		assertSynchronousLegacyStartupFailure(new IllegalStateException("startup refused"), false, false, false);
+	}
+
+	@Test
+	void synchronousLegacyStartupErrorNotifiesCapturedObserver() {
+		assertSynchronousLegacyStartupFailure(new AssertionError("startup failed"), false, false, false);
+	}
+
+	@Test
+	void throwingObserverCannotReplaceSynchronousStartupFailure() {
+		assertSynchronousLegacyStartupFailure(new IllegalStateException("startup refused"), true, false, false);
+	}
+
+	@Test
+	void throwingLoggerCannotReplaceSynchronousStartupFailure() {
+		assertSynchronousLegacyStartupFailure(new IllegalStateException("startup refused"), false, true, false);
+	}
+
+	@Test
+	void synchronousLegacyInjectionStartupFailureNotifiesCapturedObserver() {
+		assertSynchronousLegacyStartupFailure(new IllegalStateException("startup refused"), false, false, true);
+	}
+
+	@Test
+	void synchronousLegacyInjectionStartupErrorNotifiesCapturedObserver() {
+		assertSynchronousLegacyStartupFailure(new AssertionError("startup failed"), false, false, true);
+	}
+
+	@Test
+	void throwingObserverCannotReplaceSynchronousInjectionStartupFailure() {
+		assertSynchronousLegacyStartupFailure(new IllegalStateException("startup refused"), true, false, true);
+	}
+
+	@Test
+	void throwingLoggerCannotReplaceSynchronousInjectionStartupFailure() {
+		assertSynchronousLegacyStartupFailure(new IllegalStateException("startup refused"), false, true, true);
+	}
+
+	private void assertSynchronousLegacyStartupFailure(Throwable original, boolean observerThrows, boolean loggerThrows, boolean injectionRoute) {
+		data.set("GameModes", List.of("SURVIVAL"));
+		Reward target = org.mockito.Mockito.spy(reward);
+		RewardOptions options = new RewardOptions();
+		AtomicInteger calls = new AtomicInteger();
+		AtomicReference<Throwable> seen = new AtomicReference<>();
+		java.util.function.Consumer<Throwable> observer = failure -> {
+			calls.incrementAndGet(); seen.set(failure);
+			if (observerThrows) throw new IllegalStateException("observer refused");
+		};
+		options.setAsyncFailureObserver(observer);
+		Runnable dispatch;
+		if (injectionRoute) {
+			doThrow(original).when(target).giveRewardUserAsync(eq(user), any(HashMap.class), eq(options));
+			dispatch = () -> target.giveRewardUser(user, new HashMap<>(), options);
+		} else {
+			doThrow(original).when(target).giveRewardAsync(eq(user), any(RewardOptions.class));
+			dispatch = () -> target.giveReward(user, options);
+		}
+		Logger logger = plugin.getLogger();
+		if (loggerThrows) doThrow(new IllegalStateException("logger refused")).when(logger)
+				.log(eq(java.util.logging.Level.WARNING), any(String.class), eq(original));
+		assertSame(original, assertThrows(Throwable.class, () -> dispatch.run()));
+		assertEquals(1, calls.get(), "startup failure must notify the captured observer exactly once");
+		assertSame(original, seen.get());
+		assertSame(observer, options.getAsyncFailureObserver(), "dispatch must not replace the caller's observer");
+		verify(plugin.getLogger()).log(eq(java.util.logging.Level.WARNING), any(String.class), eq(original));
+	}
+
+	@Test
 	void eventObserverOverridesCallerForOnlyThatLegacyDispatch() {
 		data.set("GameModes", List.of("SURVIVAL"));
 		var config = mock(AdvancedCoreConfigOptions.class);
