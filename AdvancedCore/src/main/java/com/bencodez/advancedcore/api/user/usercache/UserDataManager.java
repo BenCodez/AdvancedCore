@@ -627,7 +627,8 @@ public class UserDataManager {
 	/** Register the one runtime that owns the shared route for this manager. */
 	public final synchronized void bindSharedRuntime(SharedUserDataRuntime runtime) {
 		Objects.requireNonNull(runtime, "runtime");
-		if (sharedRuntimeRetiring) {
+		// Physical closure is insufficient while an accepted owner barrier is unsettled.
+        if (sharedRuntimeRetiring || (retirementAttempt != null && !retirementAttempt.owner.isDone())) {
 			throw new IllegalStateException("Shared user runtime retirement is still in progress");
 		}
 		if (sharedRuntime != null && !sharedRuntime.isClosed()) {

@@ -483,4 +483,54 @@ class SharedCompletionAdmissionTest {
             f.manager.closeSharedUserDataNotifications(); assertEquals(0, credits(f, "general"));
         }
     }
+    @Test void directCloseCannotDisplaceManagedDrainWaitAndLaterBindingSucceeds() throws Exception {
+        try (var f = new Fixture()) {
+            UUID id = UUID.randomUUID(); f.manager.acquireSharedReplayCheckpointLease(id, "binding");
+            CountDownLatch zero = new CountDownLatch(1), release = new CountDownLatch(1);
+            var drain = new CompletableFuture<Void>() {
+                @Override public boolean complete(Void value) {
+                    assertFalse(Thread.holdsLock(f.manager)); zero.countDown();
+                    try { assertTrue(release.await(5, TimeUnit.SECONDS)); }
+                    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new AssertionError(e); }
+                    return super.complete(value);
+                }
+            };
+            set(f.manager, "sharedIntegerDrain", drain);
+            var cancel = new Thread(() -> f.manager.cancelSharedReplayCheckpointReservation(id, "binding"));
+            try {
+                cancel.start(); assertTrue(zero.await(5, TimeUnit.SECONDS));
+                AtomicInteger cleanup = new AtomicInteger();
+                var retirement = f.manager.closeSharedRuntimeAsyncCompletion(cleanup::incrementAndGet).toCompletableFuture();
+                f.runtime.closeAsync(Runnable::run).toCompletableFuture().get(5, TimeUnit.SECONDS);
+                var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+                var next = new SharedUserDataRuntime(backend, mock(UserCacheOwner.class));
+                assertThrows(IllegalStateException.class, () -> f.manager.bindSharedRuntime(next));
+                release.countDown(); cancel.join(6000); assertFalse(cancel.isAlive());
+                while (!f.tasks.isEmpty()) f.runOne(); retirement.get(5, TimeUnit.SECONDS);
+                assertEquals(1, cleanup.get()); f.manager.bindSharedRuntime(next); assertTrue(f.manager.hasSharedRuntime());
+            } finally { release.countDown(); cancel.join(6000); }
+        }
+    }
+    @Test void bindingWaitsForOwnerSettlementEvenAfterPhysicalCloseAndCleanupExit() throws Exception {
+        try (var f = new Fixture()) {
+            var logger = mock(java.util.logging.Logger.class);
+            when(f.plugin.getLogger()).thenReturn(logger);
+            CountDownLatch diagnostic = new CountDownLatch(1), release = new CountDownLatch(1);
+            doAnswer(c -> { diagnostic.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS)); return null; })
+                    .when(logger).log(any(java.util.logging.Level.class), anyString(), any(Throwable.class));
+            var cleanupFailure = new IllegalStateException("cleanup rejected");
+            var retirement = f.manager.closeSharedRuntimeAsyncCompletion(() -> { throw cleanupFailure; }).toCompletableFuture();
+            var worker = new Thread(f.tasks.remove());
+            try {
+                worker.start(); assertTrue(diagnostic.await(5, TimeUnit.SECONDS));
+                assertTrue(f.runtime.isClosed()); assertFalse(retirement.isDone());
+                var backend = mock(SqlUserBackend.class); when(backend.isOpen()).thenReturn(true);
+                var next = new SharedUserDataRuntime(backend, mock(UserCacheOwner.class));
+                assertThrows(IllegalStateException.class, () -> f.manager.bindSharedRuntime(next));
+                release.countDown(); worker.join(6000); assertFalse(worker.isAlive());
+                assertSame(cleanupFailure, assertThrows(ExecutionException.class, () -> retirement.get(5, TimeUnit.SECONDS)).getCause());
+                f.manager.bindSharedRuntime(next); assertTrue(f.manager.hasSharedRuntime());
+            } finally { release.countDown(); worker.join(6000); }
+        }
+    }
 }
