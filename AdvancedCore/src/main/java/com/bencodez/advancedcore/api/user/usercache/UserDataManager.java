@@ -604,8 +604,10 @@ public class UserDataManager {
 	}
 
 	private void removeUserDataNow(UUID uuid, UserStorage storage) {
-        if (sharedRuntimeRetiring) throw new IllegalStateException("Shared user runtime retirement is still in progress");
 		SharedUserDataRuntime runtime = sharedRuntime;
+        if (sharedRuntimeRetiring && (runtime == null || !runtime.holdsLifecycleAdmission())) {
+            throw new IllegalStateException("Shared user runtime retirement is still in progress");
+        }
 		if (runtime != null && !runtime.isClosed()) {
 			if (!runtime.backend().storageType().equals(storage)) {
 				throw new IllegalStateException("Cannot access " + storage

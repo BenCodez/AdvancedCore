@@ -594,4 +594,34 @@ class SharedCompletionAdmissionTest {
         }
     }
 
+    @Test void admittedNotificationMayRemoveDuringRetirement() throws Exception {
+        try (var f = new Fixture()) {
+            UUID id = UUID.randomUUID();
+            var user = mock(com.bencodez.advancedcore.core.user.storage.SqlUserStorage.class);
+            when(f.backend.user(id)).thenReturn(user);
+            CountDownLatch entered = new CountDownLatch(1), release = new CountDownLatch(1);
+            var removed = new CompletableFuture<Void>();
+            f.manager.dispatchSharedMutationNotification(() -> {
+                try {
+                    f.runtime.withStorageReadAdmission(() -> {
+                        assertTrue(f.runtime.holdsLifecycleAdmission()); entered.countDown();
+                        try { assertTrue(release.await(5, TimeUnit.SECONDS)); }
+                        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); throw new AssertionError(interrupted); }
+                        f.manager.removeUserData(id, UserStorage.SQLITE); return null;
+                    });
+                    removed.complete(null);
+                } catch (Throwable failure) { removed.completeExceptionally(failure); }
+            });
+            f.runOne();
+            try {
+                assertTrue(entered.await(5, TimeUnit.SECONDS));
+                var retirement = f.manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture();
+                assertTrue((Boolean) field(f.manager, "sharedRuntimeRetiring"));
+                release.countDown(); removed.get(5, TimeUnit.SECONDS);
+                verify(user).delete(UserStorage.SQLITE); verify(f.owner).remove(id);
+                while (!f.tasks.isEmpty()) f.runOne(); retirement.get(5, TimeUnit.SECONDS);
+            } finally { release.countDown(); }
+        }
+    }
+
 }
