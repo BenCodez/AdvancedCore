@@ -564,4 +564,34 @@ class SharedCompletionAdmissionTest {
             } finally { release.countDown(); worker.join(6000); }
         }
     }
+    @Test void maintenanceWaitsForOverlappingReplacementOwnerSettlement() throws Exception {
+        try (var f = new Fixture()) {
+            var next = mock(SqlUserBackend.class); when(next.isOpen()).thenReturn(true);
+            var failure = new IllegalStateException("replacement rejected");
+            var reload = f.manager.replaceSharedSqlBackendAsync(next, () -> { throw failure; });
+            AtomicInteger cleanup = new AtomicInteger(), maintenance = new AtomicInteger();
+            var retirement = f.manager.closeSharedRuntimeAsyncCompletion(cleanup::incrementAndGet).toCompletableFuture();
+            f.runOne(); assertTrue(reload.toCompletableFuture().isCompletedExceptionally());
+            var logger = mock(java.util.logging.Logger.class); when(f.plugin.getLogger()).thenReturn(logger);
+            CountDownLatch diagnostic = new CountDownLatch(1), release = new CountDownLatch(1);
+            doAnswer(c -> { diagnostic.countDown(); assertTrue(release.await(5, TimeUnit.SECONDS)); return null; })
+                    .when(logger).log(any(java.util.logging.Level.class), anyString(), any(Throwable.class));
+            f.runOne();
+            var worker = new Thread(f.tasks.remove());
+            try {
+                worker.start(); assertTrue(diagnostic.await(5, TimeUnit.SECONDS));
+                assertTrue(f.runtime.isClosed()); assertEquals(1, cleanup.get());
+                assertFalse(retirement.isDone()); assertTrue(f.manager.hasSharedRuntimeLifecycle());
+                assertThrows(IllegalStateException.class, () -> f.manager.runStorageMaintenance(maintenance::incrementAndGet));
+                assertEquals(0, maintenance.get());
+                release.countDown(); worker.join(6000); assertFalse(worker.isAlive());
+                assertSame(failure, assertThrows(ExecutionException.class, () -> retirement.get(5, TimeUnit.SECONDS)).getCause());
+                f.manager.runStorageMaintenance(() -> {
+                    assertFalse(Thread.holdsLock(f.manager)); maintenance.incrementAndGet();
+                });
+                assertEquals(1, maintenance.get());
+            } finally { release.countDown(); worker.join(6000); }
+        }
+    }
+
 }

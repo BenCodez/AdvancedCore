@@ -572,9 +572,12 @@ public class UserDataManager {
 	 */
 	public final void runStorageMaintenance(Runnable operation) {
 		Objects.requireNonNull(operation, "operation");
-		SharedUserDataRuntime runtime = sharedRuntime;
-		if (sharedRuntimeRetiring) {
-            throw new IllegalStateException("Shared user runtime retirement is still in progress");
+        SharedUserDataRuntime runtime;
+        synchronized (this) {
+            if (sharedRuntimeRetiring || hasPendingRetirementLocked()) {
+                throw new IllegalStateException("Shared user runtime retirement is still in progress");
+            }
+            runtime = sharedRuntime;
         }
 		Runnable guarded = () -> {
 			int previous = storageMaintenanceDepth.get();
