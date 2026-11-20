@@ -22,6 +22,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class UserData {
+	/** Subclasses must opt in before replay transactions bypass user-data overrides. */
+	public boolean supportsAtomicReplayTransactions() { return getClass() == UserData.class; }
 	@Getter
 	@Setter
 	private HashMap<String, DataValue> tempCache;
@@ -127,6 +129,13 @@ public class UserData {
 				UserDataFetchMode.fromBooleans(useCache, waitForCache));
 	}
 
+	/**
+	 * Read an integer using the requested cache and storage policy. When the
+	 * policy permits storage lookup, a cold legacy cache can perform synchronous
+	 * storage access on the calling thread. Callers that must not block a
+	 * platform thread must use a cache-only policy or perform the read on a
+	 * worker; preloading alone cannot guarantee a later cache hit.
+	 */
 	public int getInt(UserStorage storage, String key, int def, UserDataFetchMode mode) {
 		if (key == null || key.isEmpty()) {
 			return def;
@@ -161,11 +170,11 @@ public class UserData {
 		// 2) UserDataCache
 		UserDataCache sharedReadCache = null;
 		if (mode.allowUserCache()) {
-			UserDataCache cache = user.getCache();
+			UserDataCache cache = cacheForRead(mode);
 			sharedReadCache = cache;
 			if (cache != null) {
 				// preserve previous behavior
-				user.cacheIfNeeded();
+				if (mode.allowStorageLookup() && !isExistingLegacyCache(cache)) user.cacheIfNeeded();
 
 				DataValue cv = cache.getIfPresent(key);
 				if (cv != null) {
@@ -181,7 +190,7 @@ public class UserData {
 						}
 					}
 			} else {
-				user.cache();
+				if (mode.allowStorageLookup()) user.cache();
 			}
 
 			if (!mode.allowStorageLookup()) {
@@ -285,7 +294,7 @@ public class UserData {
 		// 2) UserDataCache
 		UserDataCache sharedReadCache = null;
 		if (mode.allowUserCache()) {
-			UserDataCache cache = user.getCache();
+			UserDataCache cache = cacheForRead(mode);
 			sharedReadCache = cache;
 			if (cache != null) {
 				java.util.Map.Entry<String, DataValue> cached = cache.getEntryIfPresent(key);
@@ -296,7 +305,7 @@ public class UserData {
 					return (str != null) ? str : "";
 				}
 			} else {
-				user.cache();
+				if (mode.allowStorageLookup()) user.cache();
 			}
 
 			if (!mode.allowStorageLookup()) {
@@ -314,6 +323,42 @@ public class UserData {
 			return published == null || published.getString() == null ? "" : published.getString();
 		}
 		return sqlData.getString(storage, key);
+	}
+
+	private UserDataCache cacheForRead(UserDataFetchMode mode) {
+		if (mode.allowUserCache()) {
+			com.bencodez.advancedcore.api.user.UserManager users = user.getPlugin().getUserManager();
+			com.bencodez.advancedcore.api.user.usercache.UserDataManager manager = users == null ? null : users.getDataManager();
+			if (manager != null && !mode.allowStorageLookup()) {
+				if (user.getUUID() == null) return null;
+				try {
+					java.util.concurrent.ConcurrentHashMap<java.util.UUID, UserDataCache> caches = manager.getUserDataCache();
+					return caches == null ? null : caches.get(java.util.UUID.fromString(user.getUUID()));
+				} catch (IllegalArgumentException invalidUuid) { return null; }
+			}
+			if (manager != null && !manager.hasSharedSqlBackend() && user.getUUID() != null) {
+				try {
+					java.util.UUID uuid = java.util.UUID.fromString(user.getUUID());
+					java.util.concurrent.ConcurrentHashMap<java.util.UUID, UserDataCache> caches = manager.getUserDataCache();
+					UserDataCache current = caches == null ? null : caches.get(uuid);
+					if (current != null && !current.hasPublishedStorageSnapshot()) {
+						if (mode.waitForCache() && !current.hasEverPublishedStorageSnapshot()) return user.getCache();
+						return manager.getCacheWithoutStorage(uuid);
+					}
+				} catch (IllegalArgumentException invalidUuid) { /* Preserve the normal user cache contract. */ }
+			}
+		}
+		return user.getCache();
+	}
+
+	private boolean isExistingLegacyCache(UserDataCache cache) {
+		com.bencodez.advancedcore.api.user.UserManager users = user.getPlugin().getUserManager();
+		com.bencodez.advancedcore.api.user.usercache.UserDataManager manager = users == null ? null : users.getDataManager();
+		if (manager == null || manager.hasSharedSqlBackend() || user.getUUID() == null) return false;
+		try {
+			java.util.concurrent.ConcurrentHashMap<java.util.UUID, UserDataCache> caches = manager.getUserDataCache();
+			return caches != null && caches.get(java.util.UUID.fromString(user.getUUID())) == cache;
+		} catch (IllegalArgumentException invalidUuid) { return false; }
 	}
 
 	private HashMap<String, DataValue> requirePublishedSnapshot(UserDataFetchMode mode, UserDataCache cache) {
@@ -391,6 +436,51 @@ public class UserData {
 		return convert(sqlData.readRow(storage));
 	}
 
+	/** A null row is ambiguous and must not authorize defaults for absent keys. */
+	public HashMap<String, DataValue> getValuesIfComplete() {
+		UserStorage storage = effectiveStorageType();
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
+		rejectPrimaryThreadPersistedRowRead(storage);
+		java.util.List<com.bencodez.simpleapi.sql.Column> row = sqlData.readRow(storage);
+		return row == null ? null : convert(row);
+	}
+
+	/**
+	 * Whether this reader can provide strict complete legacy rows without a storage
+	 * query. A custom reader may opt in by overriding this method and the strict
+	 * getter; it must distinguish a successful empty row from a failed read.
+	 * This capability does not imply atomic write ordering.
+	 */
+	public boolean supportsStrictCompleteValues() {
+		try {
+			Class<?> type = getClass();
+			if (type.getMethod("getValues").getDeclaringClass() != UserData.class
+					|| type.getMethod("getValues", UserStorage.class).getDeclaringClass() != UserData.class
+					|| type.getMethod("getMySqlRow").getDeclaringClass() != UserData.class
+					|| type.getMethod("getSQLiteRow").getDeclaringClass() != UserData.class
+					|| type.getMethod("convert", java.util.List.class).getDeclaringClass() != UserData.class
+					|| type.getMethod("getValuesIfStrictComplete").getDeclaringClass() != UserData.class) return false;
+		} catch (NoSuchMethodException | SecurityException unavailable) { return false; }
+		return sqlStorage.supportsStrictLegacyRowReads(effectiveStorageType());
+	}
+
+	/** Strict legacy row read for atomic operations; custom row readers remain authoritative. */
+	public HashMap<String, DataValue> getValuesIfStrictComplete() {
+		try {
+			Class<?> type = getClass();
+			if (type.getMethod("getValues").getDeclaringClass() != UserData.class
+					|| type.getMethod("getValues", UserStorage.class).getDeclaringClass() != UserData.class
+					|| type.getMethod("getMySqlRow").getDeclaringClass() != UserData.class
+					|| type.getMethod("getSQLiteRow").getDeclaringClass() != UserData.class
+					|| type.getMethod("convert", java.util.List.class).getDeclaringClass() != UserData.class) return null;
+		} catch (NoSuchMethodException unavailable) { return null; }
+		UserStorage storage = effectiveStorageType();
+		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
+		rejectPrimaryThreadPersistedRowRead(storage);
+		java.util.List<com.bencodez.simpleapi.sql.Column> row = sqlStorage.readRowStrict(storage);
+		return row == null ? null : convert(row);
+	}
+
 	public boolean hasData() {
 		UserStorage storage = effectiveStorageType();
 		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
@@ -452,15 +542,33 @@ public class UserData {
 		UserDataChangeInt change = new UserDataChangeInt(key, value);
 		if (queueSharedMutation(storage, change, queue, async)) return;
 		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
+		UserDataManager directManager = sharedDataManager();
+		UserDataManager.LegacyDirectWrite early = (!queue || async) ? beginDirectAdmission(directManager, storage, change) : null;
+		java.util.concurrent.atomic.AtomicBoolean released = new java.util.concurrent.atomic.AtomicBoolean();
+		UserDataManager.LegacyDirectWrite captured = early;
+		Runnable release = () -> { if (captured != null && released.compareAndSet(false, true)) directManager.endLegacyDirectWrite(captured); };
+		boolean[] handedOff = { false };
+		try {
 
-		if (user.isCached()) {
+		boolean initiallyCached = user.isCached();
+		if (initiallyCached) {
 			boolean flushImmediately = !queue && user.getPlugin().getUserManager().getDataManager()
 					.usesSharedSqlStorage(storage);
-			user.getCache().addChange(change, queue || flushImmediately);
+			if (queue || storage == effectiveStorageType()) {
+				UserDataCache target = queue ? cacheForRead(UserDataFetchMode.CACHE_ONLY) : user.getCache();
+				if (target == null) throw new IllegalStateException("User cache was removed before the queued change was admitted");
+				if (queue || flushImmediately || target.matchesLegacyStorage(storage)) {
+					if (!queue && !flushImmediately) UserDataCache.runWithLegacyDirectPublication(directManager, captured, target, () -> target.addChange(change, false));
+					else target.addChange(change, true);
+				}
+			}
 			// An immediate shared flush reports the change from its persistence
 			// completion callback. Keep the legacy eager callback for ordinary
 			// queued/cache-only changes, but do not report this direct write twice.
-			if (!flushImmediately) user.getPlugin().getUserManager().onChange(user, key);
+			if (!flushImmediately) {
+				if (queue) release.run();
+				UserDataCache.runWithLegacyDirectCallback(directManager, captured, () -> user.getPlugin().getUserManager().onChange(user, key));
+			}
 			if (queue || flushImmediately) {
 				if (flushImmediately) {
 					user.getCache().processChangesImmediately(async);
@@ -470,25 +578,100 @@ public class UserData {
 		}
 
 		if (async) {
-			user.getPlugin().getTimer().execute(new Runnable() {
+			handedOff[0] = true;
+			try { user.getPlugin().getTimer().execute(new Runnable() {
 
 				@Override
 				public void run() {
-					sqlData.setInt(storage, key, value);
+					try {
+					writeDirectInt(storage, key, value, captured);
+			if (captured != null) directManager.markLegacyDirectWriteSucceeded(captured);
 
-					if (!user.isCached()) {
+					if (!initiallyCached) {
+				release.run();
 						user.getPlugin().getUserManager().onChange(user, key);
 					}
+					} catch (RuntimeException | Error failure) { if (captured != null) directManager.failLegacyDirectWrite(captured, change, failure); throw failure; } finally { release.run(); }
 				}
-			});
+			}); } catch (RuntimeException | Error failure) { if (captured != null) directManager.failLegacyDirectWrite(captured, change, failure); release.run(); throw failure; }
 		} else {
 			// process change right away
-			sqlData.setInt(storage, key, value);
+			writeDirectInt(storage, key, value, captured);
+			if (captured != null) directManager.markLegacyDirectWriteSucceeded(captured);
 
-			if (!user.isCached()) {
+			if (!initiallyCached) {
+				release.run();
 				user.getPlugin().getUserManager().onChange(user, key);
 			}
 		}
+		} catch (RuntimeException | Error failure) { if (captured != null) directManager.failLegacyDirectWrite(captured, change, failure); throw failure; } finally { if (!handedOff[0]) release.run(); }
+	}
+
+	private static String directStorageKey(UserStorage storage, String key) {
+		return storage == UserStorage.SQLITE ? UserDataCache.sqliteDirectKey(key) : storage.name() + ":" + key;
+	}
+
+	private UserDataManager.LegacyDirectWrite beginDirectAdmission(UserDataManager manager, UserStorage storage, UserDataChange change) {
+		if (manager == null || manager.hasSharedSqlBackend() || user.getUUID() == null) return null;
+		try { String row = user.getUUID(); return manager.beginLegacyDirectWrite(java.util.UUID.fromString(row), java.util.Set.of(directStorageKey(storage, change.getKey())), storage == UserStorage.SQLITE ? row : null); }
+		catch (IllegalArgumentException invalidUuid) { return null; }
+	}
+
+	private void writeDirectInt(UserStorage storage, String key, int value, UserDataManager.LegacyDirectWrite alreadyAdmitted) {
+		writeDirect(() -> sqlData.setInt(storage, key, value), null, alreadyAdmitted, storage, new UserDataChangeInt(key, value));
+	}
+
+	private void writeDirect(Runnable operation, java.util.Map<String, DataValue> batchValues, UserDataManager.LegacyDirectWrite alreadyAdmitted, UserStorage storage, UserDataChange change) {
+		com.bencodez.advancedcore.api.user.UserManager users = user.getPlugin().getUserManager();
+		UserDataManager manager = users == null ? null : users.getDataManager();
+		UserDataManager.LegacyDirectWrite admission = null;
+		boolean internalBatch = false;
+		if (manager != null && !manager.hasSharedSqlBackend() && user.getUUID() != null) {
+			try {
+				java.lang.String rowIdentity = user.getUUID();
+				java.util.UUID uuid = java.util.UUID.fromString(rowIdentity);
+				internalBatch = batchValues != null && UserDataCache.isLegacyBatchPersistence(manager, uuid, batchValues);
+				if (!internalBatch && alreadyAdmitted == null) {
+					java.util.Set<String> keys = new java.util.HashSet<>();
+					if (change != null) keys.add(directStorageKey(storage, change.getKey()));
+					else if (batchValues != null) for (String name : batchValues.keySet()) {
+						if (name == null || name.equals("uuid")) continue;
+						DataValue value = batchValues.get(name);
+						if (storage == UserStorage.SQLITE && UserDataCache.sqliteDirectKey(name).equals(UserDataCache.sqliteDirectKey("uuid"))
+								&& value != null && value.isString() && user.getUUID().equals(value.getString())) continue;
+						keys.add(directStorageKey(storage, name));
+					}
+					admission = manager.beginLegacyDirectWrite(uuid, keys, storage == UserStorage.SQLITE ? rowIdentity : null);
+					if (admission != null && storage == UserStorage.SQLITE && batchValues != null) {
+						DataValue first = null, last = null; boolean found = false;
+						for (java.util.Map.Entry<java.lang.String,com.bencodez.simpleapi.sql.data.DataValue> entry : batchValues.entrySet()) {
+							String name = entry.getKey();
+							if (name == null || name.equals("uuid") || !UserDataCache.sqliteDirectKey(name).equals(UserDataCache.sqliteDirectKey("uuid"))) continue;
+							if (!found) first = entry.getValue();
+							last = entry.getValue(); found = true;
+						}
+						if (found) manager.configureSqliteBulkPrimary(admission,
+								first == null || !first.isString() || !user.getUUID().equals(first.getString()),
+								last == null || !last.isString() || !user.getUUID().equals(last.getString()));
+					}
+				}
+			}
+			catch (IllegalArgumentException invalidUuid) { /* Preserve legacy non-UUID identities. */ }
+		}
+		UserDataManager.LegacyDirectWrite effectiveAdmission = alreadyAdmitted == null ? admission : alreadyAdmitted;
+		if (!internalBatch && batchValues != null && manager != null) manager.invalidateLegacyBulkSnapshot(effectiveAdmission);
+		try {
+			if (!internalBatch && manager != null && storage == UserStorage.SQLITE) {
+				if (change != null && UserDataCache.sqliteDirectKey(change.getKey()).equals(UserDataCache.sqliteDirectKey("uuid"))) manager.guardLegacySqliteDestination(effectiveAdmission, change.toUserDataValue());
+				if (batchValues != null) for (java.util.Map.Entry<java.lang.String,com.bencodez.simpleapi.sql.data.DataValue> entry : batchValues.entrySet()) if (entry.getKey() != null && UserDataCache.sqliteDirectKey(entry.getKey()).equals(UserDataCache.sqliteDirectKey("uuid"))) manager.guardLegacySqliteDestination(effectiveAdmission, entry.getValue());
+			}
+			if (internalBatch) operation.run(); else UserDataCache.runWithLegacyDirectWrite(manager, effectiveAdmission, change, () -> UserDataCache.runOutsideLegacyBatch(operation));
+			if (!internalBatch && batchValues != null && manager != null) manager.completeLegacyBulkValues(effectiveAdmission, batchValues, key -> directStorageKey(storage, key));
+			if (!internalBatch && change != null && manager != null) manager.completeLegacyBulkValues(effectiveAdmission, java.util.Collections.singletonMap(change.getKey(), change.toUserDataValue()), key -> directStorageKey(storage, key));
+			if (admission != null) manager.markLegacyDirectWriteSucceeded(admission);
+		}
+		catch (RuntimeException | Error failure) { if (admission != null) manager.failLegacyDirectWrite(admission, change, failure); throw failure; }
+		finally { if (admission != null) manager.endLegacyDirectWrite(admission); }
 	}
 
 	public void setString(final String key, final String value) {
@@ -523,12 +706,30 @@ public class UserData {
 		UserDataChangeString change = new UserDataChangeString(key, value);
 		if (queueSharedMutation(storage, change, queue, async)) return;
 		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
+		UserDataManager directManager = sharedDataManager();
+		UserDataManager.LegacyDirectWrite early = (!queue || async) ? beginDirectAdmission(directManager, storage, change) : null;
+		java.util.concurrent.atomic.AtomicBoolean released = new java.util.concurrent.atomic.AtomicBoolean();
+		UserDataManager.LegacyDirectWrite captured = early;
+		Runnable release = () -> { if (captured != null && released.compareAndSet(false, true)) directManager.endLegacyDirectWrite(captured); };
+		boolean[] handedOff = { false };
+		try {
 
-		if (user.isCached()) {
+		boolean initiallyCached = user.isCached();
+		if (initiallyCached) {
 			boolean flushImmediately = !queue && user.getPlugin().getUserManager().getDataManager()
 					.usesSharedSqlStorage(storage);
-			user.getCache().addChange(change, queue || flushImmediately);
-			if (!flushImmediately) user.getPlugin().getUserManager().onChange(user, key);
+			if (queue || storage == effectiveStorageType()) {
+				UserDataCache target = queue ? cacheForRead(UserDataFetchMode.CACHE_ONLY) : user.getCache();
+				if (target == null) throw new IllegalStateException("User cache was removed before the queued change was admitted");
+				if (queue || flushImmediately || target.matchesLegacyStorage(storage)) {
+					if (!queue && !flushImmediately) UserDataCache.runWithLegacyDirectPublication(directManager, captured, target, () -> target.addChange(change, false));
+					else target.addChange(change, true);
+				}
+			}
+			if (!flushImmediately) {
+				if (queue) release.run();
+				UserDataCache.runWithLegacyDirectCallback(directManager, captured, () -> user.getPlugin().getUserManager().onChange(user, key));
+			}
 			if (queue || flushImmediately) {
 				if (flushImmediately) {
 					user.getCache().processChangesImmediately(async);
@@ -538,22 +739,30 @@ public class UserData {
 		}
 
 		if (async) {
-			user.getPlugin().getTimer().execute(new Runnable() {
+			handedOff[0] = true;
+			try { user.getPlugin().getTimer().execute(new Runnable() {
 
 				@Override
 				public void run() {
-					sqlData.setString(storage, key, value);
-					if (!user.isCached()) {
+					try {
+					writeDirect(() -> sqlData.setString(storage, key, value), null, captured, storage, change);
+			if (captured != null) directManager.markLegacyDirectWriteSucceeded(captured);
+					if (!initiallyCached) {
+				release.run();
 						user.getPlugin().getUserManager().onChange(user, key);
 					}
+					} catch (RuntimeException | Error failure) { if (captured != null) directManager.failLegacyDirectWrite(captured, change, failure); throw failure; } finally { release.run(); }
 				}
-			});
+			}); } catch (RuntimeException | Error failure) { if (captured != null) directManager.failLegacyDirectWrite(captured, change, failure); release.run(); throw failure; }
 		} else {
-			sqlData.setString(storage, key, value);
-			if (!user.isCached()) {
+			writeDirect(() -> sqlData.setString(storage, key, value), null, captured, storage, change);
+			if (captured != null) directManager.markLegacyDirectWriteSucceeded(captured);
+			if (!initiallyCached) {
+				release.run();
 				user.getPlugin().getUserManager().onChange(user, key);
 			}
 		}
+		} catch (RuntimeException | Error failure) { if (captured != null) directManager.failLegacyDirectWrite(captured, change, failure); throw failure; } finally { if (!handedOff[0]) release.run(); }
 
 	}
 
@@ -697,7 +906,14 @@ public class UserData {
 	}
 
 	public void setValues(HashMap<String, DataValue> values) {
-		setValues(effectiveStorageType(), values);
+		com.bencodez.advancedcore.api.user.UserManager users = user.getPlugin().getUserManager();
+		UserDataManager manager = users == null ? null : users.getDataManager();
+		UserStorage captured = null;
+		if (manager != null && user.getUUID() != null) {
+			try { captured = UserDataCache.legacyBatchStorage(manager, java.util.UUID.fromString(user.getUUID()), values); }
+			catch (IllegalArgumentException ignored) { /* Preserve ordinary non-UUID user behavior. */ }
+		}
+		setValues(captured == null ? effectiveStorageType() : captured, values);
 	}
 
 	public void setValues(String key, DataValue value) {
@@ -709,7 +925,7 @@ public class UserData {
 	public void setValues(UserStorage storage, HashMap<String, DataValue> values) {
 		if (queueSharedValues(storage, values)) return;
 		ensureRequestedStorageIsNotOwnedByAnotherSharedBackend(storage);
-		sqlData.setValues(storage, values);
+		writeDirect(() -> sqlData.setValues(storage, values), values, null, storage, null);
 	}
 
 	public void tempCache() {

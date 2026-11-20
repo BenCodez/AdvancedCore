@@ -22,6 +22,14 @@ import com.bencodez.simpleapi.sql.data.DataValue;
  * expose a caller extension of their existing user-row transaction.
  */
 public interface SqlUserStorage {
+    /**
+     * A replay callback may reject before it performs any write or external
+     * effect. Never throw this after modifying transaction state: callers use it
+     * to distinguish a definite rejection from an uncertain commit.
+     */
+    final class ReplayPreconditionException extends IllegalStateException {
+        public ReplayPreconditionException(String message) { super(message); }
+    }
     List<Column> readRow(UserStorage storage);
 
     boolean contains(UserStorage storage);

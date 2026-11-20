@@ -52,6 +52,15 @@ public final class MysqlUserBackend implements SqlUserBackend {
     }
 
     @Override public UserStorage storageType() { return UserStorage.MYSQL; }
+	@Override public Boolean caseInsensitiveColumnNames() {
+		DbType type = table.getMysql().getConnectionManager().getDbType();
+		if (type == DbType.MYSQL || type == DbType.MARIADB) return Boolean.TRUE;
+		// Schema lookup itself folds registered identifiers even on PostgreSQL.
+		// A single database-wide rule cannot describe both registered and dynamic keys.
+		return null;
+	}
+	@Override public boolean hasAuthoritativeRowReads() { return true; }
+	@Override public boolean supportsAtomicUserTransactions() { return true; }
 
     @Override
     public SqlUserStorage user(UUID uuid) {

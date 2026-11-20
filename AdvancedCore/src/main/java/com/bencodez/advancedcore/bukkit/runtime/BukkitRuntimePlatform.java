@@ -552,7 +552,8 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
         }
 		CompletionStage<Void> retirement = admission.manager().closeSharedRuntimeAsyncCompletion(closeMysql);
         if (retirement == null) {
-			return closeUserStorageOwnerAsync(admission);
+			return admission.manager().shutdownLegacyIntegerMutations()
+					.thenCompose(ignored -> closeUserStorageOwnerAsync(admission));
 		}
 		return retirement;
 	}
@@ -601,6 +602,11 @@ public final class BukkitRuntimePlatform implements RuntimePlatform {
     }
 
 	private void closeCurrentUserStorageOwner(UserStorageAdmission admission) {
+		if (admission.manager() != null) {
+			admission.manager().closeLegacyIntegerAdmissionForShutdown();
+			if (admission.manager().hasUnsettledLegacyIntegerMutations())
+				throw new IllegalStateException("Legacy integer mutations have not settled");
+		}
 		if (!userStorageOwnerClosed.compareAndSet(false, true)) return;
 		try {
 			AdvancedCorePlugin.UserStorageOwner owner = plugin.getNativeUserStorageOwner();

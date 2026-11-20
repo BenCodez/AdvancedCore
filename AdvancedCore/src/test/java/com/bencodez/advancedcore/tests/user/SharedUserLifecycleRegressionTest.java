@@ -476,11 +476,11 @@ class SharedUserLifecycleRegressionTest {
                 UserDataCache cache = caches.get(call.getArgument(0));
                 return cache != null && cache.hasCache();
             });
-            when(manager.retireSharedCache(any(UUID.class), nullable(UserDataCache.class))).thenAnswer(call -> {
+            when(manager.retireSharedCacheAfterFlush(any(UUID.class), nullable(UserDataCache.class))).thenAnswer(call -> {
                 UUID cachedUuid = call.getArgument(0);
                 UserDataCache expected = call.getArgument(1);
                 if (caches.get(cachedUuid) != expected) return false;
-                if (expected != null) caches.remove(cachedUuid, expected);
+                if (expected != null) { expected.retireAfterSharedFlush(); caches.remove(cachedUuid, expected); }
                 return true;
             });
             ScheduledExecutorService timer = mock(ScheduledExecutorService.class);

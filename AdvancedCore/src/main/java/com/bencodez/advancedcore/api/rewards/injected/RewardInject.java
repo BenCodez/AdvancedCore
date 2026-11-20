@@ -180,6 +180,16 @@ public abstract class RewardInject extends Inject {
 		return CompletableFuture.completedFuture(null);
 	}
 
+	/**
+	 * Notifies an injection whether an accepted unlaned replay selection exists for
+	 * this exact replay path. Independent lane selections are not represented here.
+	 * The default preserves existing four-argument overrides.
+	 */
+	public CompletionStage<Void> onReplayCheckpointPersisted(Reward reward, AdvancedCoreUser user, String occurrenceId,
+			String injectionKey, boolean selectionPresent) {
+		return onReplayCheckpointPersisted(reward, user, occurrenceId, injectionKey);
+	}
+
 	/** Serializes a synchronized asynchronous injection through completion, not just invocation. */
 	public synchronized CompletionStage<Object> runSynchronizedAsync(Supplier<CompletionStage<Object>> request) {
 		CompletableFuture<Object> result = new CompletableFuture<>();

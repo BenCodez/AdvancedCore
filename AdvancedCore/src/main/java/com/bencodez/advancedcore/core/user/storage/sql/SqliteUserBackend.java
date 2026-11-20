@@ -48,6 +48,8 @@ public final class SqliteUserBackend implements SqlUserBackend {
 
     public Path databaseFile() { return databaseFile; }
     @Override public UserStorage storageType() { return UserStorage.SQLITE; }
+	@Override public boolean hasAuthoritativeRowReads() { return true; }
+	@Override public boolean supportsAtomicUserTransactions() { return true; }
 
     @Override
     public SqlUserStorage user(UUID uuid) {

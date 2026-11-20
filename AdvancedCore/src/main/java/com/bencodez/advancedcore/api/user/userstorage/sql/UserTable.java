@@ -24,6 +24,12 @@ import com.bencodez.simpleapi.sql.data.DataValueString;
 import com.bencodez.simpleapi.sql.sqlite.db.SQLite;
 
 public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
+	/** A rejected insert whose original row identity is no longer safe to recreate. */
+	public static final class StaleRowWriteException extends IllegalStateException {
+		private static final long serialVersionUID = 1L;
+		public StaleRowWriteException(String message) { super(message); }
+	}
+	private static final ThreadLocal<Boolean> STRICT_ROW_READ = new ThreadLocal<>();
 	static String quoteIdentifier(String identifier) {
 		if (identifier == null) {
 			throw new IllegalArgumentException("SQL identifier cannot be null");
@@ -39,6 +45,43 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 
 	private SQLite sqLite;
 	private AdvancedCorePlugin plugin;
+	private volatile java.sql.Connection guardedConnection;
+	private final String directGuardName = "advancedcore_direct_" + Integer.toHexString(System.identityHashCode(this));
+	private final org.sqlite.SQLiteCommitListener directCommitListener = new org.sqlite.SQLiteCommitListener() {
+		@Override public void onCommit() { com.bencodez.advancedcore.api.user.usercache.UserDataCache.sqliteDirectCommit(directCommitListener); }
+		@Override public void onRollback() { com.bencodez.advancedcore.api.user.usercache.UserDataCache.sqliteDirectRollback(directCommitListener); }
+	};
+	/** Identity of this table's SQLite commit observation, without opening storage. */
+	public Object legacyDirectProviderIdentity() { return directCommitListener; }
+	/** Subclasses must explicitly opt in before replay transactions bypass their overrides. */
+	public boolean supportsAtomicReplayTransactions() { return getClass() == UserTable.class; }
+
+	private boolean ensureDirectGuard(java.sql.Connection connection) throws java.sql.SQLException {
+		java.sql.Connection nativeConnection = connection;
+		if (!(nativeConnection instanceof org.sqlite.SQLiteConnection)) {
+			try { nativeConnection = connection.unwrap(org.sqlite.SQLiteConnection.class); }
+			catch (java.sql.SQLException unavailable) { return false; }
+			if (nativeConnection == null) return false;
+		}
+		if (guardedConnection == nativeConnection && !nativeConnection.isClosed()) return true;
+		org.sqlite.Function.create(nativeConnection, directGuardName, new org.sqlite.Function() {
+			@Override protected void xFunc() throws java.sql.SQLException {
+				result(com.bencodez.advancedcore.api.user.usercache.UserDataCache.observeSqliteDirectKey(value_text(0), value_text(1)) ? 1 : 0);
+			}
+		});
+		((org.sqlite.SQLiteConnection) nativeConnection).addCommitListener(directCommitListener);
+		guardedConnection = nativeConnection;
+		return true;
+	}
+
+	private static String sqlLiteral(String value) { return "'" + value.replace("'", "''") + "'"; }
+	private String directGuard(String uuid, String key) { return directGuardName + "(" + sqlLiteral(uuid) + "," + sqlLiteral(key) + ")"; }
+	private void appendBalancedGuard(StringBuilder result, List<Column> columns, String uuid, String operator, int start, int end) {
+		if (end - start == 1) { result.append(directGuard(uuid, columns.get(start).getName())); return; }
+		int middle = start + (end - start) / 2;
+		result.append('('); appendBalancedGuard(result, columns, uuid, operator, start, middle);
+		result.append(operator); appendBalancedGuard(result, columns, uuid, operator, middle, end); result.append(')');
+	}
 
 	public UserTable(AdvancedCorePlugin plugin, String name, Collection<Column> columns) {
 		this.name = name;
@@ -411,46 +454,59 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 	}
 
 	public ArrayList<Column> getExact(Column column) {
+		return getExact(column, Boolean.TRUE.equals(STRICT_ROW_READ.get()));
+	}
+
+	/** Shared storage must not turn a failed row read into an empty snapshot. */
+	public ArrayList<Column> getExactStrict(Column column) {
+		Boolean previous = STRICT_ROW_READ.get();
+		STRICT_ROW_READ.set(Boolean.TRUE);
+		try { return getExact(column); }
+		finally { if (previous == null) STRICT_ROW_READ.remove(); else STRICT_ROW_READ.set(previous); }
+	}
+
+	private ArrayList<Column> getExact(Column column, boolean strict) {
 		ArrayList<Column> result = new ArrayList<>();
 
 		String query = "SELECT * FROM " + getName() + " WHERE `" + column.getName() + "`=?";
 		try {
 			synchronized (object) {
-				PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-				if (column.getValue().isString()) {
-					s.setString(1, column.getValue().getString());
-				} else if (column.getValue().isInt()) {
-					s.setInt(1, column.getValue().getInt());
-				} else {
-					s.setBoolean(1, column.getValue().getBoolean());
-				}
-				ResultSet rs = s.executeQuery();
-
-				if (rs.next()) {
-					for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-						String columnName = rs.getMetaData().getColumnLabel(i);
-						Column rCol = null;
-						if (plugin.getUserManager().getDataManager().isInt(columnName)) {
-							rCol = new Column(columnName, DataType.INTEGER);
-							rCol.setValue(new DataValueInt(rs.getInt(i)));
-						} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
-							rCol = new Column(columnName, DataType.BOOLEAN);
-							rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
-						} else {
-							rCol = new Column(columnName, DataType.STRING);
-							rCol.setValue(new DataValueString(rs.getString(i)));
+				try (PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query)) {
+					if (column.getValue().isString()) {
+						s.setString(1, column.getValue().getString());
+					} else if (column.getValue().isInt()) {
+						s.setInt(1, column.getValue().getInt());
+					} else {
+						s.setBoolean(1, column.getValue().getBoolean());
+					}
+					try (ResultSet rs = s.executeQuery()) {
+						if (rs.next()) {
+							for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+								String columnName = rs.getMetaData().getColumnLabel(i);
+								Column rCol = null;
+								if (plugin.getUserManager().getDataManager().isInt(columnName)) {
+									rCol = new Column(columnName, DataType.INTEGER);
+									rCol.setValue(new DataValueInt(rs.getInt(i)));
+								} else if (plugin.getUserManager().getDataManager().isBoolean(columnName)) {
+									rCol = new Column(columnName, DataType.BOOLEAN);
+									rCol.setValue(new DataValueBoolean(Boolean.valueOf(rs.getString(i))));
+								} else {
+									rCol = new Column(columnName, DataType.STRING);
+									rCol.setValue(new DataValueString(rs.getString(i)));
+								}
+								result.add(rCol);
+							}
 						}
-						result.add(rCol);
 					}
 				}
-				rs.close();
-				s.close();
 				return result;
 			}
 
 		} catch (SQLException e) {
+			if (strict) throw new IllegalStateException("Failed to read SQLite user row", e);
 			e.printStackTrace();
 		} catch (ArrayIndexOutOfBoundsException e) {
+			if (strict) throw new IllegalStateException("Failed to read SQLite user row", e);
 		}
 
 		for (Column col : getColumns()) {
@@ -620,48 +676,79 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 		return getTableColumns().contains(column.getName());
 	}
 
+	private static boolean sameSqliteIdentifier(String left, String right) {
+		return com.bencodez.advancedcore.api.user.usercache.UserDataCache.sqliteDirectKey(left)
+				.equals(com.bencodez.advancedcore.api.user.usercache.UserDataCache.sqliteDirectKey(right));
+	}
+
 	public void insert(List<Column> columns) {
 		for (Column c : columns) {
 			checkColumn(c);
 		}
-		String query = "INSERT OR REPLACE INTO " + getName() + " (";
+		String targetId = null;
 		for (Column column : columns) {
-			if (columns.indexOf(column) < columns.size() - 1) {
-				query += "`" + column.getName() + "`, ";
-			} else {
-				query += "`" + column.getName() + "`) ";
-			}
+			if (targetId == null && sameSqliteIdentifier(column.getName(), primaryKey.getName()) && column.getValue() != null && column.getValue().isString())
+				targetId = column.getValue().getString();
 		}
-		query += "VALUES (";
-		for (int i = 0; i < columns.size(); i++) {
-			if (i < columns.size() - 1) {
-				query += "?, ";
-			} else {
-				query += "?)";
-			}
-		}
-		query += ";";
+		final String rowId = targetId;
+		boolean legacyBatch = com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyBatchPersistence(targetId);
+		boolean direct = com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence();
+		if (direct && targetId != null) com.bencodez.advancedcore.api.user.usercache.UserDataCache.bindLegacyDirectRow(targetId, true);
+		if (direct) com.bencodez.advancedcore.api.user.usercache.UserDataCache.classifySqliteDirectStatement(true);
+		if (direct) com.bencodez.advancedcore.api.user.usercache.UserDataCache.setSqliteMoveDestination(targetId, null);
 		try {
-			PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query);
-			for (int i = 0; i < columns.size(); i++) {
-				if (columns.get(i).getValue() != null) {
-					if (columns.get(i).getValue().isString()) {
-						s.setString(i + 1, columns.get(i).getValue().getString());
-					} else if (columns.get(i).getValue().isInt()) {
-						s.setInt(i + 1, columns.get(i).getValue().getInt());
-					} else {
-						s.setBoolean(i + 1, columns.get(i).getValue().getBoolean());
-					}
-				} else {
-					s.setString(i + 1, "");
+			java.sql.Connection connection = sqLite.getSQLConnection();
+			boolean guarded = direct && targetId != null && ensureDirectGuard(connection);
+			boolean directStatement = guarded;
+			java.util.List<Column> mutable = new ArrayList<>();
+			for (Column column : columns) if (!sameSqliteIdentifier(column.getName(), primaryKey.getName())) mutable.add(column);
+			guarded = guarded && !mutable.isEmpty();
+			boolean guardedPrimaryOnly = directStatement && mutable.isEmpty();
+			StringBuilder query = new StringBuilder(guarded ? "INSERT INTO " : legacyBatch || (directStatement && mutable.isEmpty()) ? "INSERT OR IGNORE INTO " : "INSERT OR REPLACE INTO ");
+			query.append(quoteIdentifier(getName())).append(" (");
+			for (int i = 0; i < columns.size(); i++) { if (i != 0) query.append(", "); query.append(quoteIdentifier(columns.get(i).getName())); }
+			query.append(guarded || guardedPrimaryOnly ? ") SELECT " : ") VALUES (");
+			for (int i = 0; i < columns.size(); i++) { if (i != 0) query.append(", "); query.append("?"); }
+			if (guarded) {
+				query.append(" WHERE ").append(directGuard(rowId, primaryKey.getName())).append(" AND ("); appendBalancedGuard(query, mutable, rowId, " OR ", 0, mutable.size());
+				query.append(") AND (("); appendBalancedGuard(query, mutable, rowId, " AND ", 0, mutable.size());
+				query.append(") OR EXISTS (SELECT 1 FROM ")
+					.append(quoteIdentifier(getName())).append(" WHERE ").append(quoteIdentifier(primaryKey.getName())).append("=").append(sqlLiteral(targetId)).append("))")
+					.append(" ON CONFLICT(").append(quoteIdentifier(primaryKey.getName())).append(") DO UPDATE SET ");
+				for (int i = 0; i < mutable.size(); i++) {
+					if (i != 0) query.append(", ");
+					Column column = mutable.get(i); String name = quoteIdentifier(column.getName());
+					query.append(name).append("=CASE WHEN ").append(directGuard(rowId, column.getName()))
+						.append(" THEN excluded.").append(name).append(" ELSE ").append(quoteIdentifier(getName())).append(".").append(name).append(" END");
+				}
+			} else if (guardedPrimaryOnly) query.append(" WHERE ").append(directGuard(rowId, primaryKey.getName()));
+			else query.append(")");
+			try (PreparedStatement statement = connection.prepareStatement(query.toString())) {
+				for (int i = 0; i < columns.size(); i++) {
+					if (columns.get(i).getValue() == null) statement.setString(i + 1, "");
+					else bindValue(statement, i + 1, columns.get(i));
+				}
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.rejectStaleLegacyBatch(targetId);
+				int inserted;
+				if (directStatement) com.bencodez.advancedcore.api.user.usercache.UserDataCache.beginSqliteDirectExecution(true, legacyDirectProviderIdentity());
+				try { inserted = statement.executeUpdate(); }
+				finally { if (directStatement) com.bencodez.advancedcore.api.user.usercache.UserDataCache.endSqliteDirectExecution(); }
+				if (legacyBatch && inserted == 0) com.bencodez.advancedcore.api.user.usercache.UserDataCache.rejectLegacyBatchInsertConflict(targetId);
+				if (legacyBatch && inserted > 0) com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyBatchProviderCommit(targetId, columns.stream().map(Column::getName).toList(), com.bencodez.advancedcore.api.user.UserStorage.SQLITE, false);
+				if (directStatement && !guarded && inserted == 0 && com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasAdmittedSqliteDirectKey(primaryKey.getName())
+						&& com.bencodez.advancedcore.api.user.usercache.UserDataCache.isCurrentLegacyDirectKey(rowId, primaryKey.getName()))
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(targetId, new IllegalStateException("SQLite primary-only insert encountered an existing row"));
+				if (guarded && inserted == 0 && mutable.stream().anyMatch(column -> com.bencodez.advancedcore.api.user.usercache.UserDataCache.isCurrentLegacyDirectKey(rowId, column.getName()))) {
+					StaleRowWriteException failure = new StaleRowWriteException("SQLite direct write could not safely recreate a partially superseded row");
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(targetId, failure);
+					throw failure;
 				}
 			}
-			s.executeUpdate();
-			s.close();
 		} catch (SQLException e) {
+			com.bencodez.advancedcore.api.user.usercache.UserDataCache.propagateLegacyBatchWriteFailure(targetId, e);
+			com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(targetId, e);
 			e.printStackTrace();
 		}
-
 	}
 
 	public List<List<Column>> search(Column column) {
@@ -731,36 +818,85 @@ public class UserTable extends com.bencodez.simpleapi.sql.sqlite.Table {
 		}
 		if (containsKey(primaryKey.getValue().toString())) {
 			synchronized (object) {
+				columns = com.bencodez.advancedcore.api.user.usercache.UserDataCache.filterConfirmedLegacyBatchColumns(primaryKey.getValue().getString(), columns, com.bencodez.advancedcore.api.user.UserStorage.SQLITE, legacyDirectProviderIdentity());
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.rejectStaleLegacyBatch(primaryKey.getValue().getString());
+				if (columns.isEmpty()) return;
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.classifySqliteDirectStatement(false);
+				java.sql.Connection connection = sqLite.getSQLConnection();
+				boolean guarded = false;
+				try { guarded = com.bencodez.advancedcore.api.user.usercache.UserDataCache.hasLegacyDirectPersistence() && ensureDirectGuard(connection); }
+				catch (SQLException failure) {
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(primaryKey.getValue().getString(), failure);
+					failure.printStackTrace();
+					return;
+				}
 				StringBuilder query = new StringBuilder("UPDATE ").append(getName()).append(" SET ");
+				String moveDestination = null;
+				for (Column column : columns) if (sameSqliteIdentifier(column.getName(), primaryKey.getName()) && column.getValue() != null && column.getValue().isString()) moveDestination = column.getValue().getString();
+				if (guarded) com.bencodez.advancedcore.api.user.usercache.UserDataCache.setSqliteMoveDestination(primaryKey.getValue().getString(), moveDestination);
 				for (int i = 0; i < columns.size(); i++) {
-					query.append("`").append(columns.get(i).getName()).append("`=?");
+					String name = quoteIdentifier(columns.get(i).getName());
+					query.append(name).append("=");
+					if (guarded)
+						query.append("CASE WHEN ").append(directGuard(primaryKey.getValue().getString(), columns.get(i).getName())).append(" THEN ? ELSE ").append(name).append(" END");
+					else query.append("?");
 					if (i != columns.size() - 1) {
 						query.append(", ");
 					}
 				}
 				query.append(" WHERE `").append(primaryKey.getName()).append("`=?");
-				try (PreparedStatement s = sqLite.getSQLConnection().prepareStatement(query.toString())) {
+				if (guarded) query.append(" AND ").append(directGuard(primaryKey.getValue().getString(), primaryKey.getName()));
+				try (PreparedStatement s = connection.prepareStatement(query.toString())) {
 					int parameter = 1;
 					for (Column column : columns) {
 						bindValue(s, parameter++, column);
 					}
 					bindValue(s, parameter, primaryKey);
-					s.executeUpdate();
+					if (guarded) com.bencodez.advancedcore.api.user.usercache.UserDataCache.beginSqliteDirectExecution(false, legacyDirectProviderIdentity());
+					int updated;
+					try { updated = s.executeUpdate(); }
+					finally { if (guarded) com.bencodez.advancedcore.api.user.usercache.UserDataCache.endSqliteDirectExecution(); }
+					if (updated == 0) {
+						String row = primaryKey.getValue().getString();
+						StaleRowWriteException failure = new StaleRowWriteException("SQLite update target disappeared before the write");
+						com.bencodez.advancedcore.api.user.usercache.UserDataCache.propagateLegacyBatchWriteFailure(row, failure);
+						com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(row, failure);
+					}
+					else com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyBatchProviderCommit(primaryKey.getValue().getString(), columns.stream().map(Column::getName).toList(), com.bencodez.advancedcore.api.user.UserStorage.SQLITE, false);
 				} catch (SQLException e) {
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.propagateLegacyBatchWriteFailure(primaryKey.getValue().getString(), e);
+					com.bencodez.advancedcore.api.user.usercache.UserDataCache.recordLegacyDirectWriteFailure(primaryKey.getValue().getString(), e);
 					e.printStackTrace();
 				}
 			}
 		} else {
+			String row = primaryKey.getValue().getString();
+			long claim = com.bencodez.advancedcore.api.user.usercache.UserDataCache.confirmedLegacyBatchClaimSerial(row);
+			columns = com.bencodez.advancedcore.api.user.usercache.UserDataCache.filterConfirmedLegacyBatchColumns(row, columns, com.bencodez.advancedcore.api.user.UserStorage.SQLITE, legacyDirectProviderIdentity());
+			com.bencodez.advancedcore.api.user.usercache.UserDataCache.rejectStaleLegacyBatch(row);
+			if (claim != com.bencodez.advancedcore.api.user.usercache.UserDataCache.confirmedLegacyBatchClaimSerial(row)) {
+				if (!containsKey(row)) com.bencodez.advancedcore.api.user.usercache.UserDataCache.rejectLegacyBatchInsertConflict(row);
+				if (!columns.isEmpty()) update(primaryKey, columns);
+				return;
+			}
 			boolean addPrimary = true;
 			for (Column col : columns) {
 				if (col.getName().equals("uuid")) {
 					addPrimary = false;
 				}
 			}
-			if (addPrimary) {
-				columns.add(primaryKey);
+			List<Column> insertColumns = new ArrayList<>(columns);
+			if (addPrimary) insertColumns.add(primaryKey);
+			try {
+				insert(insertColumns);
+			} catch (com.bencodez.advancedcore.api.user.usercache.UserDataCache.StaleLegacyBatchException stale) {
+				claim = com.bencodez.advancedcore.api.user.usercache.UserDataCache.confirmedLegacyBatchClaimSerial(row);
+				List<Column> remaining = com.bencodez.advancedcore.api.user.usercache.UserDataCache.filterConfirmedLegacyBatchColumns(row, columns, com.bencodez.advancedcore.api.user.UserStorage.SQLITE, legacyDirectProviderIdentity());
+				if (claim == com.bencodez.advancedcore.api.user.usercache.UserDataCache.confirmedLegacyBatchClaimSerial(row)) throw stale;
+				com.bencodez.advancedcore.api.user.usercache.UserDataCache.rejectStaleLegacyBatch(row);
+				if (!containsKey(row)) throw stale;
+				if (!remaining.isEmpty()) update(primaryKey, remaining);
 			}
-			insert(columns);
 		}
 	}
 

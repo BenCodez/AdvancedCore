@@ -55,6 +55,153 @@ class SqliteUserTransactionTest {
     @TempDir Path tempDir;
     private static final UserStorage TYPE = UserStorage.SQLITE;
 
+    @Test void ambiguousCommittedReplayTransactionRetriesWithoutDuplicateAward() throws Exception {
+        UUID uuid = UUID.randomUUID(); var actual = backend(); createReceipts(actual.databaseFile());
+        var backend = spy(actual); var data = spy(actual.user(uuid));
+        doReturn(data).when(backend).user(uuid);
+        var attempts = new java.util.concurrent.atomic.AtomicInteger();
+        var committed = new CountDownLatch(1); var retryEntered = new CountDownLatch(1); var allowRetry = new CountDownLatch(1);
+        doAnswer(call -> {
+            int attempt = attempts.getAndIncrement();
+            if (attempt == 1) { retryEntered.countDown(); if (!allowRetry.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("retry fixture timed out"); }
+            Object value = call.callRealMethod();
+            if (attempt == 0) { committed.countDown(); throw new IllegalStateException("uncertain after commit"); } return value;
+        })
+                .when(data).transaction(eq(TYPE), anyMap(), any());
+        var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+        var owner = mock(UserCacheOwner.class); var runtime = new SharedUserDataRuntime(backend, owner); manager.bindSharedRuntime(runtime);
+        try {
+            var initial = Map.<String, DataValue>of("Points", new DataValueInt(0));
+            var receipt = manager.submitSharedReplayTransaction(uuid, TYPE, "event-one", initial, scope -> {
+                if (receipt(scope.connection(), "event-one")) return false;
+                var row = scope.readRow(); int previous = value(row, "Points");
+                scope.writeValues(Map.of("Points", new DataValueInt(previous + 1))); insert(scope.connection(), "event-one"); return true;
+            }).toCompletableFuture();
+            assertTrue(committed.await(5, TimeUnit.SECONDS));
+            var next = manager.submitSharedReplayTransaction(uuid, TYPE, "event-two", initial, scope -> {
+                if (receipt(scope.connection(), "event-two")) return false;
+                var row = scope.readRow(); int previous = value(row, "Points");
+                scope.writeValues(Map.of("Points", new DataValueInt(previous + 1))); insert(scope.connection(), "event-two"); return true;
+            }).toCompletableFuture();
+            assertTrue(retryEntered.await(5, TimeUnit.SECONDS)); assertFalse(next.isDone()); allowRetry.countDown();
+            assertFalse(receipt.cancel(false)); assertFalse(receipt.get(5, TimeUnit.SECONDS));
+            assertTrue(next.get(5, TimeUnit.SECONDS)); assertEquals(3, attempts.get());
+            assertEquals(2, value(actual.user(uuid).readRow(TYPE), "Points"));
+            manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().get(5, TimeUnit.SECONDS);
+        } finally { allowRetry.countDown(); manager.getTimer().shutdownNow(); if (actual.isOpen()) actual.close(); }
+    }
+    @Test void definiteReplayRejectionFinishesAndAllowsTheNextQueuedTransaction() throws Exception {
+        UUID uuid = UUID.randomUUID(); var backend = backend();
+        var plugin = mock(AdvancedCorePlugin.class); var manager = new UserDataManager(plugin);
+        var owner = mock(UserCacheOwner.class); var runtime = new SharedUserDataRuntime(backend, owner); manager.bindSharedRuntime(runtime);
+        try {
+            var initial = Map.<String, DataValue>of("Points", new DataValueInt(0));
+            var rejected = manager.submitSharedReplayTransaction(uuid, TYPE, "fixture-operation", initial, scope -> {
+                throw new SqlUserStorage.ReplayPreconditionException("invalid intent");
+            }).toCompletableFuture();
+            var next = manager.submitSharedReplayTransaction(uuid, TYPE, "fixture-operation", initial, scope -> {
+                scope.writeValues(Map.of("Points", new DataValueInt(2))); return true;
+            }).toCompletableFuture();
+            var failure = assertThrows(java.util.concurrent.ExecutionException.class, () -> rejected.get(5, TimeUnit.SECONDS));
+            assertInstanceOf(SqlUserStorage.ReplayPreconditionException.class, failure.getCause());
+            manager.afterSharedMutationFinalization(rejected).toCompletableFuture().get(5, TimeUnit.SECONDS);
+            assertTrue(next.get(5, TimeUnit.SECONDS)); assertEquals(2, value(backend.user(uuid).readRow(TYPE), "Points"));
+            manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().get(5, TimeUnit.SECONDS);
+        } finally { manager.getTimer().shutdownNow(); if (backend.isOpen()) backend.close(); }
+    }
+    @Test void replayFinalizationWaitsForCompletionCallbacksAndAdmissionRelease() throws Exception {
+        UUID uuid = UUID.randomUUID(); var backend = backend();
+        var manager = new UserDataManager(mock(AdvancedCorePlugin.class));
+        manager.bindSharedRuntime(new SharedUserDataRuntime(backend, mock(UserCacheOwner.class)));
+        var entered = new CountDownLatch(1); var continueTransaction = new CountDownLatch(1);
+        var callbackEntered = new CountDownLatch(1); var continueCallback = new CountDownLatch(1);
+        try {
+            var operation = manager.submitSharedReplayTransaction(uuid, TYPE, "fixture-operation",
+                    Map.of("Points", new DataValueInt(0)), scope -> {
+                        entered.countDown();
+                        try { assertTrue(continueTransaction.await(5, TimeUnit.SECONDS)); }
+                        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); throw new AssertionError(interrupted); }
+                        return true;
+                    });
+            assertTrue(entered.await(5, TimeUnit.SECONDS));
+            operation.whenComplete((result, error) -> {
+                callbackEntered.countDown();
+                try { assertTrue(continueCallback.await(5, TimeUnit.SECONDS)); }
+                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); throw new AssertionError(interrupted); }
+            });
+            var finalized = manager.afterSharedMutationFinalization(operation).toCompletableFuture();
+            var otherManager = new UserDataManager(mock(AdvancedCorePlugin.class));
+            try { assertThrows(IllegalArgumentException.class, () -> otherManager.afterSharedMutationFinalization(operation)); }
+            finally { otherManager.getTimer().shutdownNow(); }
+            continueTransaction.countDown(); assertTrue(callbackEntered.await(5, TimeUnit.SECONDS));
+            assertFalse(finalized.isDone());
+            assertThrows(IllegalStateException.class, () -> manager.withLegacyIntegerOwnerReplacement(() -> fail("owner changed during callback")));
+            continueCallback.countDown(); finalized.get(5, TimeUnit.SECONDS);
+            assertDoesNotThrow(() -> manager.withLegacyIntegerOwnerReplacement(() -> {}));
+            manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().get(5, TimeUnit.SECONDS);
+        } finally { continueTransaction.countDown(); continueCallback.countDown(); manager.getTimer().shutdownNow(); if (backend.isOpen()) backend.close(); }
+    }
+    @Test void saturatedReplayLeasesCanStillAdmitCheckpointCleanup() throws Exception {
+        UUID uuid = UUID.randomUUID(); var backend = backend();
+        var manager = new UserDataManager(mock(AdvancedCorePlugin.class));
+        manager.bindSharedRuntime(new SharedUserDataRuntime(backend, mock(UserCacheOwner.class)));
+        try {
+            for (int i = 0; i < 256; i++) {
+                String identity = "award-" + i;
+                manager.acquireSharedReplayLease(uuid, identity);
+                manager.settleSharedReplayLease(uuid, identity, true, false);
+            }
+            assertThrows(java.util.concurrent.RejectedExecutionException.class, () -> manager.acquireSharedReplayLease(uuid, "new-award"));
+            assertThrows(java.util.concurrent.RejectedExecutionException.class, () -> manager.submitSharedReplayTransaction(uuid, TYPE, "fixture-operation",
+                    Map.of("Points", new DataValueInt(0)), scope -> null));
+            manager.acquireSharedReplayCheckpointLease(uuid, "award-0");
+            var cleanup = assertDoesNotThrow(() -> manager.submitSharedReplayCheckpoint(uuid, TYPE, "award-0",
+                    Map.of("Points", new DataValueInt(0)), scope -> null));
+            cleanup.toCompletableFuture().get(5, TimeUnit.SECONDS);
+            manager.settleSharedReplayLease(uuid, "award-0", false, true);
+            manager.afterSharedMutationFinalization(cleanup).toCompletableFuture().get(5, TimeUnit.SECONDS);
+        } finally { manager.getTimer().shutdownNow(); if (backend.isOpen()) backend.close(); }
+    }
+    @Test void sharedAwardReceiptFlushesToSqliteBeforeOwnerClose() throws Exception {
+        UUID uuid = UUID.randomUUID(); var backend = backend(); Path database = backend.databaseFile();
+        var plugin = mock(AdvancedCorePlugin.class); var users = mock(UserManager.class);
+        when(plugin.getUserManager()).thenReturn(users); when(plugin.getStorageType()).thenReturn(TYPE);
+        var manager = new UserDataManager(plugin); when(users.getDataManager()).thenReturn(manager);
+        var owner = new com.bencodez.advancedcore.bukkit.user.runtime.BukkitUserCacheOwner(manager);
+        var runtime = new SharedUserDataRuntime(backend, owner); manager.bindSharedRuntime(runtime);
+        try {
+            backend.user(uuid).writeValues(TYPE, new HashMap<>(Map.of("Points", new DataValueInt(1))));
+            owner.populate(uuid, new HashMap<>(Map.of("Points", new DataValueInt(1))), true);
+            var receipt = manager.submitSharedIntegerMutation(uuid, Map.of("Points", 1),
+                    com.bencodez.advancedcore.api.user.usercache.UserDataCache.IntegerMutation.ADD, null).toCompletableFuture();
+            assertTrue(receipt.get(5, TimeUnit.SECONDS).applied());
+            manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture().get(5, TimeUnit.SECONDS);
+            try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + database);
+                 PreparedStatement statement = connection.prepareStatement("SELECT Points FROM Users WHERE uuid=?")) {
+                statement.setString(1, uuid.toString());
+                try (ResultSet result = statement.executeQuery()) { assertTrue(result.next()); assertEquals(2, result.getInt(1)); }
+            }
+        } finally { manager.getTimer().shutdownNow(); if (backend.isOpen()) backend.close(); }
+    }
+    @Test void newMissingCachedIntegerSurvivesRealSqliteFlush() {
+        UUID uuid = UUID.randomUUID();
+        try (SqliteUserBackend backend = backend()) {
+            var plugin = mock(AdvancedCorePlugin.class); var users = mock(UserManager.class);
+            var manager = mock(UserDataManager.class); var user = mock(com.bencodez.advancedcore.api.user.AdvancedCoreUser.class);
+            when(plugin.getUserManager()).thenReturn(users); when(users.getUser(uuid, false)).thenReturn(user);
+            when(manager.getPlugin()).thenReturn(plugin);
+            when(manager.getTimer()).thenReturn(mock(java.util.concurrent.ScheduledExecutorService.class));
+            var cache = new com.bencodez.advancedcore.api.user.usercache.UserDataCache(manager, uuid);
+            cache.configureSharedStorage(values -> backend.user(uuid).writeValues(TYPE, values), Runnable::run);
+            cache.updateCompleteCachePreservingPending(new HashMap<>());
+            assertTrue(cache.seedMissingIntegerFromCompleteSnapshot("Points"));
+            assertTrue(cache.tryMutateIntegers(java.util.Map.of("Points", 1),
+                    com.bencodez.advancedcore.api.user.usercache.UserDataCache.IntegerMutation.ADD, null).applied());
+            cache.processChangesForSharedRuntime();
+            assertEquals(1, value(backend.user(uuid).readRow(TYPE), "Points"));
+        }
+    }
+
     /**
      * Creates a SQLite backend for testing with Points and Votes columns.
      *
