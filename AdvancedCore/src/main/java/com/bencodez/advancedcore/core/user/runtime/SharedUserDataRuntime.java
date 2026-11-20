@@ -354,6 +354,7 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                 try {
                     cacheOwner.requireBlockingAllowed();
                     lifecycle.writeLock().lock();
+                    Throwable storageFailure = null;
                     try {
                         if (!closed) {
                             cacheOwner.beginRetirement();
@@ -364,9 +365,15 @@ public final class SharedUserDataRuntime implements AutoCloseable {
                             backend.close();
                             closed = true;
                         }
+                    } catch (RuntimeException | Error failure) {
+                        storageFailure = failure;
+                        throw failure;
                     } finally {
                         try { cacheOwner.discardAllNotifications(); }
-                        finally { lifecycle.writeLock().unlock(); }
+                        catch (RuntimeException | Error discardFailure) {
+                            if (storageFailure == null) throw discardFailure;
+                            if (storageFailure != discardFailure) storageFailure.addSuppressed(discardFailure);
+                        } finally { lifecycle.writeLock().unlock(); }
                     }
                 } catch (Throwable failure) { outcome = failure; }
                 // No storage or owner work remains before observers can request a retry.

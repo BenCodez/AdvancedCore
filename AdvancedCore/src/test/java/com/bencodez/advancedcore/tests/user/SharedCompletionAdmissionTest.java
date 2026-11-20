@@ -140,7 +140,7 @@ class SharedCompletionAdmissionTest {
                     });
                     while (!f.tasks.isEmpty()) f.runOne();
                 }
-                assertTrue(entered.await(5, TimeUnit.SECONDS)); storage.run(); release.countDown();
+                assertTrue(entered.await(5, TimeUnit.SECONDS)); assertEquals(512, credits(f, "general")); storage.run(); release.countDown();
                 assertEquals("accepted", receipt.toCompletableFuture().get(5, TimeUnit.SECONDS));
                 f.manager.afterSharedMutationFinalization(receipt).toCompletableFuture().get(5, TimeUnit.SECONDS);
             } finally { release.countDown(); }
@@ -637,6 +637,43 @@ class SharedCompletionAdmissionTest {
             assertTrue((Boolean) field(manager, "sharedNotificationsClosed"));
             assertTrue((Boolean) field(manager, "sharedRuntimeRetiring"));
             while (!f.tasks.isEmpty()) f.runOne(); retirement.get(5, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test void retirementLoggerFailurePreservesRecordedStorageCause() throws Exception {
+        try (var f = new Fixture()) {
+            var cause = new IllegalStateException("retirement refused");
+            doThrow(cause).when(f.owner).beginRetirement();
+            var logger = mock(java.util.logging.Logger.class); when(f.plugin.getLogger()).thenReturn(logger);
+            doThrow(new AssertionError("logger failed")).when(logger).log(any(java.util.logging.Level.class), anyString(), any(Throwable.class));
+            var completion = f.manager.closeSharedRuntimeAsyncCompletion(() -> {}).toCompletableFuture();
+            while (!f.tasks.isEmpty()) f.runOne();
+            assertSame(cause, assertThrows(ExecutionException.class, () -> completion.get(5, TimeUnit.SECONDS)).getCause());
+            assertSame(cause, f.manager.getLastDeferredStorageFailure());
+        }
+    }
+    @Test void flushFailureRemainsPrimaryWhenDiscardAlsoFails() throws Exception {
+        try (var f = new Fixture()) {
+            UUID id = UUID.randomUUID(); when(f.owner.cachedUsers()).thenReturn(Set.of(id));
+            var flush = new IllegalStateException("flush refused");
+            var discard = new IllegalStateException("discard refused");
+            doThrow(flush).when(f.owner).flush(eq(id), eq(UserStorage.SQLITE), any());
+            doThrow(discard).when(f.owner).discardAllNotifications();
+            var completion = f.runtime.closeAsync(Runnable::run).toCompletableFuture();
+            assertSame(flush, assertThrows(ExecutionException.class, () -> completion.get(5, TimeUnit.SECONDS)).getCause());
+            assertTrue(Arrays.asList(flush.getSuppressed()).contains(discard));
+            assertFalse(f.runtime.holdsLifecycleAdmission()); verify(f.backend, never()).close();
+        }
+    }
+    @Test void identicalFlushAndDiscardFailureIsNotSelfSuppressed() throws Exception {
+        try (var f = new Fixture()) {
+            UUID id = UUID.randomUUID(); when(f.owner.cachedUsers()).thenReturn(Set.of(id));
+            var failure = new IllegalStateException("storage refused");
+            doThrow(failure).when(f.owner).flush(eq(id), eq(UserStorage.SQLITE), any());
+            doThrow(failure).when(f.owner).discardAllNotifications();
+            var completion = f.runtime.closeAsync(Runnable::run).toCompletableFuture();
+            assertSame(failure, assertThrows(ExecutionException.class, () -> completion.get(5, TimeUnit.SECONDS)).getCause());
+            assertEquals(0, failure.getSuppressed().length); assertFalse(f.runtime.holdsLifecycleAdmission());
         }
     }
 

@@ -82,6 +82,40 @@ class LegacyRejectedMutationFlushTest {
         }
     }
 
+
+    @Test void rejectedMutationRetirementSettlesWhenLoggingFails() throws Exception {
+        try (var f = new Fixture()) {
+            var rejected = f.submit(true); var accepted = f.submit(false);
+            var retirement = f.manager.clearCacheAsyncCompletion().toCompletableFuture();
+            f.runWorker(); f.runWorker(); f.awaitFinalized(rejected, true); f.awaitFinalized(accepted, false);
+            failingLogger(f);
+            assertDoesNotThrow(f::runFinalFlushIfScheduled);
+            assertTrue(retirement.isDone()); assertThrows(ExecutionException.class, () -> retirement.get(2, TimeUnit.SECONDS));
+            assertEquals(5, f.persisted.get());
+        }
+    }
+    @Test void failedDependencyRetirementSettlesWhenLoggingFails() throws Exception { failedDrain(false); }
+    @Test void rejectedSchedulingRetirementSettlesWhenLoggingFails() throws Exception { failedDrain(true); }
+    private void failedDrain(boolean rejectScheduling) throws Exception {
+        try (var f = new Fixture()) {
+            Field count = UserDataManager.class.getDeclaredField("legacyDirectAdmissions"); count.setAccessible(true); count.set(f.manager, 1);
+            Field drainField = UserDataManager.class.getDeclaredField("legacyDirectDrain"); drainField.setAccessible(true);
+            var drain = new CompletableFuture<Void>(); drainField.set(f.manager, drain);
+            var completion = f.manager.clearCacheAsyncCompletion().toCompletableFuture();
+            var cause = new java.util.concurrent.RejectedExecutionException("retirement refused");
+            failingLogger(f);
+            if (rejectScheduling) {
+                doThrow(cause).when(f.manager.getTimer()).execute(any(Runnable.class)); drain.complete(null);
+            } else drain.completeExceptionally(cause);
+            assertTrue(completion.isDone(), "diagnostics must not strand the retirement result");
+            assertSame(cause, assertThrows(ExecutionException.class, () -> completion.get(2, TimeUnit.SECONDS)).getCause());
+        }
+    }
+    private void failingLogger(Fixture f) {
+        var logger = mock(java.util.logging.Logger.class); when(f.plugin.getLogger()).thenReturn(logger);
+        doThrow(new AssertionError("logger failed")).when(logger).log(any(java.util.logging.Level.class), anyString(), any(Throwable.class));
+    }
+
     private static final class Fixture implements AutoCloseable {
         final AdvancedCorePlugin plugin = mock(AdvancedCorePlugin.class);
         final UserDataManager manager;

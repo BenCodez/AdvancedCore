@@ -139,6 +139,10 @@ public class UserDataManager {
     private final java.util.concurrent.atomic.AtomicLong suppressedDeliveryDiagnostics = new java.util.concurrent.atomic.AtomicLong();
     private void deliveryDiagnostic(int category) {
         lastDeferredStorageFailure.set(new RejectedExecutionException("Storage completion scheduling unavailable"));
+        logDeliveryDiagnostic(category);
+    }
+
+    private void logDeliveryDiagnostic(int category) {
         long mask = 1L << category;
         long prior = diagnosticMask.getAndUpdate(value -> value | mask);
         if ((prior & mask) != 0) {
@@ -876,8 +880,7 @@ public class UserDataManager {
             }
         }
         if (physical && outcome != null) {
-            try { reportDeferredStorageFailure(outcome); }
-            catch (RuntimeException | Error diagnosticFailure) { deliveryDiagnostic(11); }
+            reportDeferredStorageFailure(outcome);
         }
         if (outcome == null) attempt.owner.complete(null); else attempt.owner.completeExceptionally(outcome);
     }
@@ -1651,9 +1654,14 @@ public class UserDataManager {
 
 	private void reportDeferredStorageFailure(Throwable failure) {
 		lastDeferredStorageFailure.set(failure);
-		if (plugin != null && plugin.getLogger() != null) {
-			plugin.getLogger().log(java.util.logging.Level.SEVERE, "Deferred user-cache cleanup failed", failure);
-		}
+        try {
+            if (plugin != null && plugin.getLogger() != null) {
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Deferred user-cache cleanup failed", failure);
+            }
+        } catch (RuntimeException | Error diagnosticFailure) {
+            // Keep the storage outcome authoritative even when its diagnostic fails.
+            logDeliveryDiagnostic(11);
+        }
 	}
 
 	/** Retain a cache reconciliation failure after its SQL transaction committed. */
