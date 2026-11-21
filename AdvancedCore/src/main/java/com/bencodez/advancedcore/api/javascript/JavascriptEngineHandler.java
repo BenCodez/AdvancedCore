@@ -397,7 +397,7 @@ public class JavascriptEngineHandler {
 			}
 
 			Files.createDirectories(jar.getParent());
-			downloadArtifact(artifact, jar);
+			downloadArtifact(artifact, jar, true);
 			jars.add(jar);
 		}
 
@@ -455,6 +455,10 @@ public class JavascriptEngineHandler {
 	 * @throws IOException if the artifact cannot be downloaded
 	 */
 	private void downloadArtifact(MavenArtifact artifact, Path target) throws IOException {
+		downloadArtifact(artifact, target, false);
+	}
+
+	private void downloadArtifact(MavenArtifact artifact, Path target, boolean preserveReadableCache) throws IOException {
 		logDebug("JavascriptEngine: downloading optional dependency: " + artifact.getCoordinate());
 		logDebug("JavascriptEngine: download URL: " + artifact.getMavenCentralJarUrl());
 		logDebug("JavascriptEngine: download target: " + target);
@@ -500,7 +504,12 @@ public class JavascriptEngineHandler {
 				throw new IOException("Cannot replace dependency directory or symlink: " + artifact.getCoordinate());
 			}
 
-			Files.move(candidate, target, StandardCopyOption.REPLACE_EXISTING);
+			if (preserveReadableCache && Files.exists(target) && isReadableJar(target)) {
+				Files.delete(candidate);
+				return;
+			}
+			// No non-atomic fallback: an unsupported publication must preserve the prior cache.
+			Files.move(candidate, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
 		} catch (IOException | RuntimeException | Error failure) {
 			if (candidate != null) {
 				try {

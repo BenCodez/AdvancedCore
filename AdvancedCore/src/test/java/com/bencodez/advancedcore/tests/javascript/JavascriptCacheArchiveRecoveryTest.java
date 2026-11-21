@@ -32,6 +32,17 @@ class JavascriptCacheArchiveRecoveryTest {
   var f=new Fixture(new byte[]{1,2,3});Path target=f.folder.resolve(file("asm"));Files.write(target,new byte[]{9});byte[] good=jar("other attempt");f.beforeBody=()->{try{Files.write(target,good);}catch(IOException e){throw new UncheckedIOException(e);}};
   try(var ignored=f.peer()){assertThrows(IOException.class,()->load(f.handler));}assertArrayEquals(good,Files.readAllBytes(target));f.preserved();
  }
+ @Test void healthyArchivePublishedDuringRepairIsPreserved()throws Exception{
+  var f=new Fixture(jar("downloaded"));Path target=f.folder.resolve(file("asm"));Files.write(target,new byte[]{9});byte[] good=jar("operator publication");f.beforeBody=()->{try{Files.write(target,good);}catch(IOException e){throw new UncheckedIOException(e);}};
+  try(var ignored=f.peer()){assertEquals(6,load(f.handler).size());}assertArrayEquals(good,Files.readAllBytes(target));assertEquals(1,f.requests.get());f.preserved();
+ }
+ @Test void unsupportedAtomicPublicationPreservesBrokenCache()throws Exception{
+  var f=new Fixture(jar("downloaded"));Path target=f.folder.resolve(file("asm"));byte[] broken={9};Files.write(target,broken);
+  try(var ignored=f.peer();var files=mockStatic(Files.class,CALLS_REAL_METHODS)){
+   files.when(()->Files.move(any(Path.class),eq(target),eq(StandardCopyOption.ATOMIC_MOVE),eq(StandardCopyOption.REPLACE_EXISTING))).thenThrow(new AtomicMoveNotSupportedException("candidate","cache","unsupported"));
+   assertThrows(AtomicMoveNotSupportedException.class,()->load(f.handler));
+  }assertArrayEquals(broken,Files.readAllBytes(target));f.preserved();
+ }
  @Test void directoryAtManagedPathIsNeverRemoved()throws Exception{
   var f=new Fixture(jar("unused"));Path target=f.folder.resolve(file("asm"));Files.delete(target);Files.createDirectory(target);Files.writeString(target.resolve("operator.txt"),"preserve");
   try(var ignored=f.peer()){assertThrows(IOException.class,()->load(f.handler));}assertEquals("preserve",Files.readString(target.resolve("operator.txt")));assertEquals(0,f.requests.get());f.preserved();
