@@ -292,6 +292,7 @@ public class JavascriptEngineHandler {
 		logDebug("JavascriptEngine: preparing downloaded Nashorn " + nashornVersion + ".");
 		logDebug("JavascriptEngine: dependency folder: " + getLibraryFolder().resolve(nashornVersion));
 
+		URLClassLoader candidateLoader = null;
 		try {
 			List<Path> jars = getOrDownloadJars(nashornVersion, asmVersion);
 
@@ -308,13 +309,13 @@ public class JavascriptEngineHandler {
 			}
 
 			URLClassLoader loader = createClassLoader(jars);
+			candidateLoader = loader;
 
 			logDebug("JavascriptEngine: loading Nashorn factory class from downloaded classloader.");
 			Class<?> foundFactory = Class.forName(NASHORN_FACTORY_CLASS, true, loader);
 			Method foundMethod = getScriptEngineMethod(foundFactory);
 
 			if (foundMethod == null) {
-				closeQuietly(loader);
 				logWarning("JavascriptEngine: Nashorn " + nashornVersion
 						+ " was loaded, but no getScriptEngine method was found.");
 				return null;
@@ -324,7 +325,6 @@ public class JavascriptEngineHandler {
 			ScriptEngine engine = (ScriptEngine) foundMethod.invoke(foundFactory.getDeclaredConstructor().newInstance());
 
 			if (engine == null) {
-				closeQuietly(loader);
 				logWarning("JavascriptEngine: Nashorn " + nashornVersion + " returned a null script engine.");
 				return null;
 			}
@@ -335,6 +335,7 @@ public class JavascriptEngineHandler {
 			factory = foundFactory;
 			methodToUse = foundMethod;
 			loadedVersion = nashornVersion;
+			candidateLoader = null; // Published loader ownership belongs to this handler.
 
 			logDebug("JavascriptEngine: loaded optional Nashorn JavaScript engine " + nashornVersion + ".");
 			logEngine("JavascriptEngine: downloaded engine details", engine);
@@ -344,6 +345,8 @@ public class JavascriptEngineHandler {
 					+ e.getClass().getSimpleName() + ": " + e.getMessage());
 			logDebug(e);
 			return null;
+		} finally {
+			if (candidateLoader != null) closeQuietly(candidateLoader);
 		}
 	}
 
