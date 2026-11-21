@@ -16,6 +16,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.jar.JarFile;
+import java.util.zip.ZipException;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -372,9 +374,18 @@ public class JavascriptEngineHandler {
 			Path jar = libraryFolder.resolve(nashornVersion).resolve(artifact.getFileName());
 
 			if (Files.exists(jar)) {
-				logDebug("JavascriptEngine: found dependency: " + artifact.getCoordinate() + " at " + jar);
-				jars.add(jar);
-				continue;
+				if (!Files.isRegularFile(jar)) {
+					throw new IOException("Dependency cache path is not a regular file: " + artifact.getCoordinate());
+				}
+				if (isReadableJar(jar)) {
+					logDebug("JavascriptEngine: found dependency: " + artifact.getCoordinate() + " at " + jar);
+					jars.add(jar);
+					continue;
+				}
+				if (Files.isSymbolicLink(jar)) {
+					throw new IOException("Cannot replace unreadable dependency symlink: " + artifact.getCoordinate());
+				}
+				logWarning("JavascriptEngine: unreadable cached dependency: " + artifact.getCoordinate());
 			}
 
 			logWarning("JavascriptEngine: missing dependency: " + artifact.getCoordinate() + " expected at " + jar);
@@ -479,8 +490,14 @@ public class JavascriptEngineHandler {
 			if (size <= 0) {
 				throw new IOException("Downloaded empty jar for " + artifact.getCoordinate());
 			}
+			if (!isReadableJar(candidate)) {
+				throw new IOException("Downloaded unreadable jar for " + artifact.getCoordinate());
+			}
 			if (Thread.currentThread().isInterrupted()) {
 				throw new InterruptedIOException("Interrupted before saving " + artifact.getCoordinate());
+			}
+			if (Files.isDirectory(target) || Files.isSymbolicLink(target)) {
+				throw new IOException("Cannot replace dependency directory or symlink: " + artifact.getCoordinate());
 			}
 
 			Files.move(candidate, target, StandardCopyOption.REPLACE_EXISTING);
@@ -496,6 +513,15 @@ public class JavascriptEngineHandler {
 		}
 
 		logDebug("JavascriptEngine: saved optional dependency: " + target);
+	}
+
+	/** Structural archive check only; this does not impose a version or checksum policy. */
+	private boolean isReadableJar(Path path) throws IOException {
+		try (JarFile ignored = new JarFile(path.toFile())) {
+			return true;
+		} catch (ZipException invalidArchive) {
+			return false;
+		}
 	}
 
 	/**

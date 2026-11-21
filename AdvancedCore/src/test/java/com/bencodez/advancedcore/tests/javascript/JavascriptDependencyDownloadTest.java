@@ -38,8 +38,19 @@ import com.bencodez.advancedcore.api.javascript.JavascriptEngineHandler;
 
 class JavascriptDependencyDownloadTest {
 
-    private static final byte[] VALID = {1, 2, 3};
-    private static final byte[] REPLACEMENT = {4, 5, 6};
+    private static final byte[] VALID = archive("initial");
+    private static final byte[] REPLACEMENT = archive("replacement");
+
+    private static byte[] archive(String value) {
+        try {
+            var bytes = new java.io.ByteArrayOutputStream();
+            try (var jar = new java.util.jar.JarOutputStream(bytes)) {
+                var entry = new java.util.jar.JarEntry("entry.txt"); entry.setTime(0);
+                jar.putNextEntry(entry); jar.write(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)); jar.closeEntry();
+            }
+            return bytes.toByteArray();
+        } catch (IOException failure) { throw new AssertionError(failure); }
+    }
 
     @TempDir
     Path directory;
