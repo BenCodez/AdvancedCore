@@ -105,6 +105,16 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                        <!-- This shaded JAR is not multi-release or a JPMS module. -->
+                                        <exclude>META-INF/versions/**</exclude>
+                                        <exclude>module-info.class</exclude>
+                                        <!-- Optional compile-time annotations need not be embedded.
+                                             Do not strip runtime services or dependency implementations. -->
+                                        <exclude>org/checkerframework/**</exclude>
+                                        <exclude>org/jspecify/**</exclude>
+                                        <!-- Maven descriptors are not runtime version or service data. -->
+                                        <exclude>META-INF/maven/**/pom.xml</exclude>
+                                        <exclude>META-INF/maven/**/pom.properties</exclude>
                                     </excludes>
                                 </filter>
                             </filters>

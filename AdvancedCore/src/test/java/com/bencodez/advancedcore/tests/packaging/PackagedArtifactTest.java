@@ -30,10 +30,29 @@ public class PackagedArtifactTest {
             assertNotNull(artifact.getEntry("com/bencodez/simpleapi/folialib/FoliaLib.class"));
             assertNotNull(artifact.getEntry("com/bencodez/simpleapi/hikari/HikariDataSource.class"));
             assertNotNull(artifact.getEntry("com/bencodez/advancedcore/rhino/Context.class"));
+            // The normal published AdvancedCore JAR must retain the transport APIs
+            // embedded in SimpleAPI; downstream consumers load these in isolation.
+            assertNotNull(artifact.getEntry("redis/clients/jedis/HostAndPort.class"));
+            assertNotNull(artifact.getEntry("org/eclipse/paho/client/mqttv3/MqttClient.class"));
+            assertNotNull(artifact.getEntry("com/bencodez/simpleapi/servercomm/http/HttpTlsIdentity.class"));
 
             assertNull(artifact.getEntry("com/tcoded/folialib/FoliaLib.class"));
             assertNull(artifact.getEntry("com/zaxxer/hikari/HikariDataSource.class"));
             assertNull(artifact.getEntry("org/mozilla/javascript/Context.class"));
+            assertTrue(artifact.getManifest() != null);
+            assertTrue(!"true".equalsIgnoreCase(
+                    artifact.getManifest().getMainAttributes().getValue("Multi-Release")),
+                    "Versioned implementations cannot be filtered from a multi-release JAR");
+            assertTrue(artifact.stream().noneMatch(entry -> entry.getName().startsWith("META-INF/versions/")
+                            || entry.getName().equals("module-info.class")),
+                    "The shaded distribution must not contain unreachable module payload");
+            assertTrue(artifact.stream().noneMatch(entry -> entry.getName().startsWith("org/checkerframework/")
+                            || entry.getName().startsWith("org/jspecify/")),
+                    "Optional annotation libraries should not be embedded");
+            assertTrue(artifact.stream().noneMatch(entry -> entry.getName().startsWith("META-INF/maven/")
+                            && (entry.getName().endsWith("/pom.xml")
+                                || entry.getName().endsWith("/pom.properties"))),
+                    "Dependency Maven descriptors should not be embedded");
         }
         System.out.printf("AdvancedCore packaged artifact: %,d bytes; required classes and relocations retained%n",
                 Files.size(artifactPath));
