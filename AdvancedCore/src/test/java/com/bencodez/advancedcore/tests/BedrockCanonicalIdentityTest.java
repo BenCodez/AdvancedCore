@@ -45,7 +45,7 @@ class BedrockCanonicalIdentityTest {
                 .when(users).withUserDataChangeDispatcher(any(), any());
         when(manager.getTimer()).thenReturn(worker);
         doAnswer(call -> { pending.add(call.getArgument(0)); return null; }).when(worker).execute(any(Runnable.class));
-        when(users.getUser(any(UUID.class), anyString())).thenAnswer(call -> records.get(call.getArgument(0)));
+        when(users.getUser(any(UUID.class), eq(false))).thenAnswer(call -> records.get(call.getArgument(0)));
         bukkit = mockStatic(Bukkit.class);
         online();
         resolver = newResolver();
@@ -63,12 +63,63 @@ class BedrockCanonicalIdentityTest {
                 failure -> fail(failure));
     }
 
+    @Test void liveCanonicalSpellingOutranksStaleCaseEquivalentStoredMetadata() {
+        Player linked = player("MixedCaseJava", true);
+        AdvancedCoreUser record = record(linked);
+        record.setBedrockUser(true);
+        record.getData().setString("BedrockCanonicalName", "mixedcasejava");
+        resolver.learn(linked);
+        resolver.learn(record);
+        online();
+        assertEquals("MixedCaseJava", resolver.resolve("mixedcasejava").finalName);
+        assertEquals("MixedCaseJava", resolver.resolveWithoutDb("MIXEDCASEJAVA").finalName);
+        assertTrue(resolver.isBedrockName("mixedcasejava"));
+    }
+
+    @Test void offlineObservedUuidRemainsTheActualStorageOwner() throws Exception {
+        observedUuidRemainsTheActualStorageOwner(false);
+    }
+
+    @Test void onlineObservedUuidRemainsTheActualStorageOwner() throws Exception {
+        observedUuidRemainsTheActualStorageOwner(true);
+    }
+
+    private void observedUuidRemainsTheActualStorageOwner(boolean onlineMode) throws Exception {
+        Player linked = player("StorageOwnerJava", true);
+        UUID original = linked.getUniqueId();
+        UUID different = UUID.fromString("11111111-2222-4333-8444-666666666666");
+        when(plugin.getOptions().isOnlineMode()).thenReturn(onlineMode);
+        when(plugin.getStorageType()).thenReturn(UserStorage.SQLITE);
+        when(manager.effectiveStorageType(UserStorage.SQLITE)).thenReturn(UserStorage.SQLITE);
+        field(users, "plugin", plugin);
+        doCallRealMethod().when(users).getUser(any(UUID.class), anyString());
+        doCallRealMethod().when(users).getUser(any(UUID.class), anyBoolean());
+        doAnswer(call -> call.getArgument(2, Supplier.class).get())
+                .when(manager).withSharedSqlBackendOrLegacy(any(Supplier.class), any(), any());
+        List<String> writtenIds = new ArrayList<>();
+        var table = mock(com.bencodez.advancedcore.api.user.userstorage.sql.UserTable.class);
+        when(plugin.getSQLiteUserTable()).thenReturn(table);
+        doAnswer(call -> {
+            writtenIds.add(call.getArgument(0, com.bencodez.simpleapi.sql.Column.class).getValue().getString());
+            return null;
+        }).when(table).update(any(com.bencodez.simpleapi.sql.Column.class), anyList());
+        var lookup = mock(com.bencodez.advancedcore.api.misc.PlayerManager.class);
+        when(lookup.getUUID("StorageOwnerJava")).thenReturn(different.toString());
+        try (var staticLookup = mockStatic(com.bencodez.advancedcore.api.misc.PlayerManager.class)) {
+            staticLookup.when(com.bencodez.advancedcore.api.misc.PlayerManager::getInstance).thenReturn(lookup);
+            resolver.learn(linked);
+            drain();
+            assertEquals(List.of(original.toString(), original.toString()), writtenIds,
+                    "both metadata writes must stay on the observed UUID even when name lookup disagrees");
+        }
+    }
+
     @Test void observedLinkedNameSurvivesDisconnectStoredLearningAndResolverRestart() throws Exception {
         Player linked = player("SyntheticLinked", true);
         AdvancedCoreUser record = record(linked);
         online(linked);
         resolver.learn(linked);
-        verify(users, never()).getUser(any(UUID.class), anyString());
+        verify(users, never()).getUser(any(UUID.class), anyBoolean());
         online();
         assertEquals("SyntheticLinked", resolver.resolve("SyntheticLinked").finalName);
         // Even a disconnected/stale Player must never be accessed by persistence.
@@ -82,7 +133,7 @@ class BedrockCanonicalIdentityTest {
         resolver.learn(record);
         assertEquals("SyntheticLinked", resolver.resolve("SyntheticLinked").finalName);
         assertTrue(resolver.isBedrockName("SyntheticLinked"));
-        verify(users, times(1)).getUser(linked.getUniqueId(), "SyntheticLinked");
+        verify(users, times(1)).getUser(linked.getUniqueId(), false);
         verify(users, never()).getUser(any(Player.class));
     }
 
@@ -126,7 +177,7 @@ class BedrockCanonicalIdentityTest {
         assertEquals("FirstJava", resolver.resolve("FirstJava").finalName);
         assertEquals("SecondJava", resolver.resolve("SecondJava").finalName);
         assertEquals(".BedrockName", resolver.resolve(".BedrockName").finalName);
-        for (Player player : List.of(first, unlinked, second)) verify(users).getUser(player.getUniqueId(), player.getName());
+        for (Player player : List.of(first, unlinked, second)) verify(users).getUser(player.getUniqueId(), false);
         for (AdvancedCoreUser record : List.of(firstRecord, unlinkedRecord, secondRecord)) {
             verify(record).setBedrockUser(true);
         }
@@ -138,7 +189,7 @@ class BedrockCanonicalIdentityTest {
         doThrow(new RejectedExecutionException("synthetic rejection")).when(worker).execute(any(Runnable.class));
         resolver.learn(linked); online();
         assertEquals("RejectedJava", resolver.resolve("RejectedJava").finalName);
-        verify(users, never()).getUser(any(UUID.class), anyString());
+        verify(users, never()).getUser(any(UUID.class), anyBoolean());
         verify(plugin.getLogger()).warning(anyString());
     }
 
@@ -207,13 +258,13 @@ class BedrockCanonicalIdentityTest {
         record(first); record(second);
         resolver.learn(first); resolver.learn(second);
         assertEquals(2, pending.size());
-        verify(users, never()).getUser(any(UUID.class), anyString());
+        verify(users, never()).getUser(any(UUID.class), anyBoolean());
         online();
         assertEquals("QueuedFirst", resolver.resolve("QueuedFirst").finalName);
         assertEquals("QueuedSecond", resolver.resolve("QueuedSecond").finalName);
         drain();
-        verify(users).getUser(first.getUniqueId(), "QueuedFirst");
-        verify(users).getUser(second.getUniqueId(), "QueuedSecond");
+        verify(users).getUser(first.getUniqueId(), false);
+        verify(users).getUser(second.getUniqueId(), false);
     }
 
     @Test void asynchronousPersistedLookupReadsCanonicalEvidenceOnItsWorker() throws Exception {
@@ -330,7 +381,7 @@ class BedrockCanonicalIdentityTest {
             doAnswer(call -> { pending.add(call.getArgument(0)); return null; })
                     .when(manager).dispatchSharedUserDataNotification(any(Runnable.class));
         }
-        doReturn(record).when(callbackUsers).getUser(id, "NotificationJava");
+        doReturn(record).when(callbackUsers).getUser(id, false);
         Map<String, Thread> callbackThreads = new ConcurrentHashMap<>();
         callbackUsers.getUserDataChange().add(new UserDataChanged() {
             @Override public void onChange(AdvancedCoreUser ignored, String... keys) {

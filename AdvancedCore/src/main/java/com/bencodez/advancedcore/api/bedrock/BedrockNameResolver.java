@@ -135,7 +135,8 @@ public final class BedrockNameResolver {
 		boolean bedrock = user.isBedrockUser();
 		putLearned(name, bedrock);
 		String canonical = bedrock ? storedCanonicalName(user, name) : null;
-		if (canonical != null) canonicalNames.put(name.toLowerCase(Locale.ROOT), canonical);
+		if (canonical != null) canonicalNames.compute(name.toLowerCase(Locale.ROOT),
+				(key, prior) -> observedBedrockNames.contains(key) ? prior : canonical);
 	}
 
 	/**
@@ -155,8 +156,8 @@ public final class BedrockNameResolver {
 		final UUID uuid = player.getUniqueId();
 		final String name = player.getName();
 		if (uuid == null || name == null || name.isEmpty() || !bedrockDetect.isBedrock(uuid)) return;
-		canonicalNames.put(name.toLowerCase(Locale.ROOT), name);
 		observedBedrockNames.add(name.toLowerCase(Locale.ROOT));
+		canonicalNames.put(name.toLowerCase(Locale.ROOT), name);
 		putLearned(name, true);
 		var manager = userManager.getDataManager();
 		if (manager == null || manager.getTimer() == null) {
@@ -167,8 +168,9 @@ public final class BedrockNameResolver {
 			manager.getTimer().execute(() -> {
 				try {
 					Runnable mutation = () -> {
-						AdvancedCoreUser user = userManager.getUser(uuid, name);
+						AdvancedCoreUser user = userManager.getUser(uuid, false);
 						if (user == null) { reportLearningFailure(); return; }
+						user.setPlayerName(name);
 						// Evidence on this UUID record, never a name/UUID remap.
 						user.getData().setString(CANONICAL_NAME_KEY, name);
 						user.setBedrockUser(true);
