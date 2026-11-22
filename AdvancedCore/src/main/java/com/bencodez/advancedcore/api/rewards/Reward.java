@@ -247,7 +247,7 @@ public class Reward {
 	public void giveInjectedRewards(AdvancedCoreUser user, HashMap<String, String> placeholders) {
 		if (RewardEligibility.isConfigured(plugin, getConfig().getConfigData())) {
 			giveRewardUserAsync(user, placeholders, new RewardOptions().setCheckTimed(false)).exceptionally(failure -> {
-				logRewardUserFailure(failure);
+				logRewardUserFailure(failure, null);
 				return null;
 			});
 			return;
@@ -858,8 +858,12 @@ public class Reward {
 
 	/** Returns whether the active replay already froze this logical command lane. */
 	public static boolean hasReplayCommandSnapshot(HashMap<String, String> placeholders, String lane) {
-		ReplayState replayState = currentReplayState();
-		String activeKey = currentReplayKey();
+		return hasReplayCommandSnapshot(placeholders, lane, currentReplayState(), currentReplayKey());
+	}
+
+	/** Checks a captured replay context after an asynchronous continuation. */
+	public static boolean hasReplayCommandSnapshot(HashMap<String, String> placeholders, String lane,
+			ReplayState replayState, String activeKey) {
 		if (replayState == null || activeKey == null) return false;
 		String storageKey = replaySequenceKey(REPLAY_COMMAND_PREFIX, activeKey,
 				lane == null ? "commands" : lane);
@@ -1481,8 +1485,10 @@ public class Reward {
 		// player owner. Unconfigured legacy definitions retain their established path.
 		if (RewardEligibility.isConfigured(plugin, getConfig().getConfigData())
 				&& (rewardOptions == null || !rewardOptions.isIgnoreRequirements())) {
-			giveRewardAsync(user, rewardOptions).exceptionally(failure -> {
-				logRewardUserFailure(failure);
+			RewardOptions tracked = (rewardOptions == null ? new RewardOptions() : rewardOptions)
+					.captureLegacyFailureObserver();
+			giveRewardAsync(user, tracked).exceptionally(failure -> {
+				logRewardUserFailure(failure, tracked.legacyFailureObserverCapture().get());
 				return null;
 			});
 			return;
@@ -1612,6 +1618,11 @@ public class Reward {
 	 * @return completion stage for the complete reward injection chain
 	 */
 	public CompletionStage<Void> giveRewardAsync(AdvancedCoreUser user, RewardOptions rewardOptions) {
+		// A retained event options object can be used for a separate explicit dispatch.
+		// Only the original legacy invocation may update its terminal observer capture.
+		if (rewardOptions != null && !rewardOptions.claimLegacyFailureObserverCapture()) {
+			rewardOptions = rewardOptions.withoutLegacyFailureObserverCapture();
+		}
 		boolean primaryThread = false;
 		try {
 			primaryThread = Bukkit.isPrimaryThread();
@@ -1677,6 +1688,7 @@ public class Reward {
 
 		PlayerRewardEvent event = new PlayerRewardEvent(this, user, rewardOptions);
 		Bukkit.getPluginManager().callEvent(event);
+		rewardOptions.updateLegacyFailureObserverCapture();
 		if (event.isCancelled()) {
 			plugin.debug("Reward " + name + " was cancelled for " + user.getPlayerName());
 			return CompletableFuture.completedFuture(null);
@@ -1913,8 +1925,9 @@ public class Reward {
 	public void giveRewardUser(AdvancedCoreUser user, HashMap<String, String> phs, RewardOptions rewardOptions) {
 		RewardOptions effectiveOptions = rewardOptions == null ? new RewardOptions() : rewardOptions;
 		if (requiresAwaitedDelivery(effectiveOptions)) {
+			Consumer<Throwable> observer = effectiveOptions.getAsyncFailureObserver();
 			giveRewardUserAsync(user, phs, effectiveOptions).exceptionally(failure -> {
-				logRewardUserFailure(failure);
+				logRewardUserFailure(failure, observer);
 				return null;
 			});
 			return;
@@ -2033,7 +2046,8 @@ public class Reward {
 
 		Player player = user.getPlayer();
 		if (player == null) {
-			player = Bukkit.getPlayer(user.getPlayerName());
+			String playerName = user.getPlayerName();
+			if (playerName != null && !playerName.isBlank()) player = Bukkit.getPlayer(playerName);
 		}
 		if (player != null || isForceOffline()) {
 
@@ -2066,7 +2080,14 @@ public class Reward {
 		}
 	}
 
-	private void logRewardUserFailure(Throwable failure) {
+	private void logRewardUserFailure(Throwable failure, Consumer<Throwable> observer) {
+		if (observer != null) {
+			try {
+				observer.accept(failure);
+			} catch (Throwable ignored) {
+				// Best-effort diagnostics must not suppress or replace the original failure.
+			}
+		}
 		if (plugin.getLogger() != null) {
 			plugin.getLogger().log(Level.WARNING, "Failed to give reward " + getRewardName(), failure);
 		} else {
