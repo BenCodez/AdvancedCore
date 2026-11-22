@@ -688,8 +688,14 @@ public class UserDataCache {
 			persisted = true;
 			synchronized (this) {
 				if (!values.isEmpty()) storedDataPresent = true;
+				// Checkpoint-staged values have already been published, but are not
+				// part of this claimed batch. Their versions must not be acknowledged
+				// as if the older queued value had persisted them.
+				java.util.HashSet<String> stagedKeys = new java.util.HashSet<>();
+				for (UserDataChange staged : changesAfterExclusiveFlush) stagedKeys.add(staged.getKey());
 				if (cache != null) {
 					for (UserDataChange persistedChange : changes) {
+						if (stagedKeys.contains(persistedChange.getKey())) continue;
 						Long persistedVersion = persistedMutationVersions.get(persistedChange.getKey());
 						Long queuedVersion = changedAt.get(persistedChange.getKey());
 						// A setter may have queued a newer value while this batch was in
@@ -713,7 +719,7 @@ public class UserDataCache {
 					values.keySet().forEach(key -> persistedAt.put(key, completedVersion));
 				}
 				persistedMutationVersions.forEach((key, version) -> {
-					if (version.equals(changedAt.get(key))) changedAt.remove(key);
+					if (!stagedKeys.contains(key) && version.equals(changedAt.get(key))) changedAt.remove(key);
 				});
 			}
 			changedUser = user;

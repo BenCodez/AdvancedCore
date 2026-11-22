@@ -368,6 +368,43 @@ class AtomicIntegerMutationTest {
         try { if (!latch.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("fixture timeout"); }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
     }
+    @Test void batchCompletionCannotConsumeVersionOfCheckpointStagedMutation() throws Exception {
+        var plugin = mock(AdvancedCorePlugin.class, RETURNS_DEEP_STUBS);
+        var manager = mock(UserDataManager.class);
+        when(manager.getPlugin()).thenReturn(plugin);
+        when(manager.getTimer()).thenReturn(mock(ScheduledExecutorService.class));
+        var cache = new UserDataCache(manager, UUID.randomUUID());
+        cache.configureSharedStorage(values -> {}, Runnable::run);
+        cache.updateCache(new HashMap<>(Map.of("a", new DataValueInt(1), "b", new DataValueInt(2))));
+        var stored = new HashMap<String, DataValue>();
+        cache.setSharedStorageWriter(stored::putAll);
+        assertTrue(cache.tryMutateIntegers(Map.of("a", 1, "b", 1), IntegerMutation.ADD, null).applied());
+        var injected = new AtomicBoolean();
+        var staged = new ConcurrentLinkedQueue<com.bencodez.advancedcore.api.user.usercache.change.UserDataChange>() {
+            @Override public com.bencodez.advancedcore.api.user.usercache.change.UserDataChange poll() {
+                var value = super.poll();
+                if (value == null && injected.compareAndSet(false, true)) {
+                    // Model a mutation after the initial checkpoint drain has found
+                    // no staged work, but before its next storage batch is claimed.
+                    assertTrue(cache.tryMutateIntegers(Map.of("a", 10), IntegerMutation.ADD, null).applied());
+                }
+                return value;
+            }
+        };
+        var field = UserDataCache.class.getDeclaredField("changesAfterExclusiveFlush");
+        field.setAccessible(true); field.set(cache, staged);
+        var previous = new AtomicInteger();
+        cache.flushChangesAndRun(() -> {
+            previous.set(cache.tryMutateIntegers(Map.of("a", 1), IntegerMutation.ADD, null).previous().get("a"));
+        });
+        cache.processChangesForSharedRuntime();
+        assertTrue(injected.get());
+        assertEquals(12, previous.get(), "completion of the older batch must not erase a newer staged value");
+        assertEquals(13, cache.getIfPresent("a").getInt());
+        assertEquals(13, stored.get("a").getInt());
+        assertEquals(3, stored.get("b").getInt(), "unrelated claimed keys still settle normally");
+    }
+
     private UserDataCache cache() {
         var plugin = mock(AdvancedCorePlugin.class); var manager = mock(UserDataManager.class);
         var timer = mock(ScheduledExecutorService.class);
