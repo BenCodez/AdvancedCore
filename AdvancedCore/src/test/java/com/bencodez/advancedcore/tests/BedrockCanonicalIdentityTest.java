@@ -76,6 +76,45 @@ class BedrockCanonicalIdentityTest {
         assertTrue(resolver.isBedrockName("mixedcasejava"));
     }
 
+    @Test void anObservationCannotExposeBedrockFlagBeforeItsCanonicalName() throws Exception {
+        Player linked = player("PublicationJava", true);
+        record(linked);
+        online();
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        for (String fieldName : List.of("canonicalNames", "observedIdentities")) {
+            Field target;
+            try { target = BedrockNameResolver.class.getDeclaredField(fieldName); }
+            catch (NoSuchFieldException oldSnapshot) { continue; }
+            Map<String, Object> publication = new ConcurrentHashMap<>() {
+                @Override public Object put(String key, Object value) {
+                    if (key.equals("publicationjava")) {
+                        entered.countDown();
+                        try { assertTrue(release.await(5, TimeUnit.SECONDS)); }
+                        catch (InterruptedException interrupted) { throw new AssertionError(interrupted); }
+                    }
+                    return super.put(key, value);
+                }
+            };
+            target.setAccessible(true); target.set(resolver, publication);
+        }
+        var worker = Executors.newSingleThreadExecutor();
+        try {
+            var learning = worker.submit(() -> resolver.learn(linked));
+            assertTrue(entered.await(4, TimeUnit.SECONDS));
+            var during = resolver.resolveWithoutDb("publicationjava");
+            if (during.isBedrock) assertEquals("PublicationJava", during.finalName,
+                    "a new true observation must carry its matching canonical name");
+            release.countDown();
+            learning.get(4, TimeUnit.SECONDS);
+            assertEquals("PublicationJava", resolver.resolveWithoutDb("publicationjava").finalName);
+            assertTrue(resolver.resolveWithoutDb("publicationjava").isBedrock);
+        } finally {
+            release.countDown(); worker.shutdownNow();
+            assertTrue(worker.awaitTermination(4, TimeUnit.SECONDS));
+        }
+    }
+
     @Test void offlineObservedUuidRemainsTheActualStorageOwner() throws Exception {
         observedUuidRemainsTheActualStorageOwner(false);
     }
