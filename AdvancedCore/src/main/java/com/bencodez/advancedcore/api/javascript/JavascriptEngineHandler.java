@@ -1,7 +1,9 @@
 package com.bencodez.advancedcore.api.javascript;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -14,6 +16,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.jar.JarFile;
+import java.util.zip.ZipException;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -290,6 +294,7 @@ public class JavascriptEngineHandler {
 		logDebug("JavascriptEngine: preparing downloaded Nashorn " + nashornVersion + ".");
 		logDebug("JavascriptEngine: dependency folder: " + getLibraryFolder().resolve(nashornVersion));
 
+		URLClassLoader candidateLoader = null;
 		try {
 			List<Path> jars = getOrDownloadJars(nashornVersion, asmVersion);
 
@@ -306,13 +311,13 @@ public class JavascriptEngineHandler {
 			}
 
 			URLClassLoader loader = createClassLoader(jars);
+			candidateLoader = loader;
 
 			logDebug("JavascriptEngine: loading Nashorn factory class from downloaded classloader.");
 			Class<?> foundFactory = Class.forName(NASHORN_FACTORY_CLASS, true, loader);
 			Method foundMethod = getScriptEngineMethod(foundFactory);
 
 			if (foundMethod == null) {
-				closeQuietly(loader);
 				logWarning("JavascriptEngine: Nashorn " + nashornVersion
 						+ " was loaded, but no getScriptEngine method was found.");
 				return null;
@@ -322,7 +327,6 @@ public class JavascriptEngineHandler {
 			ScriptEngine engine = (ScriptEngine) foundMethod.invoke(foundFactory.getDeclaredConstructor().newInstance());
 
 			if (engine == null) {
-				closeQuietly(loader);
 				logWarning("JavascriptEngine: Nashorn " + nashornVersion + " returned a null script engine.");
 				return null;
 			}
@@ -333,6 +337,7 @@ public class JavascriptEngineHandler {
 			factory = foundFactory;
 			methodToUse = foundMethod;
 			loadedVersion = nashornVersion;
+			candidateLoader = null; // Published loader ownership belongs to this handler.
 
 			logDebug("JavascriptEngine: loaded optional Nashorn JavaScript engine " + nashornVersion + ".");
 			logEngine("JavascriptEngine: downloaded engine details", engine);
@@ -342,6 +347,8 @@ public class JavascriptEngineHandler {
 					+ e.getClass().getSimpleName() + ": " + e.getMessage());
 			logDebug(e);
 			return null;
+		} finally {
+			if (candidateLoader != null) closeQuietly(candidateLoader);
 		}
 	}
 
@@ -367,9 +374,18 @@ public class JavascriptEngineHandler {
 			Path jar = libraryFolder.resolve(nashornVersion).resolve(artifact.getFileName());
 
 			if (Files.exists(jar)) {
-				logDebug("JavascriptEngine: found dependency: " + artifact.getCoordinate() + " at " + jar);
-				jars.add(jar);
-				continue;
+				if (!Files.isRegularFile(jar)) {
+					throw new IOException("Dependency cache path is not a regular file: " + artifact.getCoordinate());
+				}
+				if (isReadableJar(jar)) {
+					logDebug("JavascriptEngine: found dependency: " + artifact.getCoordinate() + " at " + jar);
+					jars.add(jar);
+					continue;
+				}
+				if (Files.isSymbolicLink(jar)) {
+					throw new IOException("Cannot replace unreadable dependency symlink: " + artifact.getCoordinate());
+				}
+				logWarning("JavascriptEngine: unreadable cached dependency: " + artifact.getCoordinate());
 			}
 
 			logWarning("JavascriptEngine: missing dependency: " + artifact.getCoordinate() + " expected at " + jar);
@@ -381,7 +397,7 @@ public class JavascriptEngineHandler {
 			}
 
 			Files.createDirectories(jar.getParent());
-			downloadArtifact(artifact, jar);
+			downloadArtifact(artifact, jar, true);
 			jars.add(jar);
 		}
 
@@ -439,45 +455,82 @@ public class JavascriptEngineHandler {
 	 * @throws IOException if the artifact cannot be downloaded
 	 */
 	private void downloadArtifact(MavenArtifact artifact, Path target) throws IOException {
-		Path tempFile = target.resolveSibling(target.getFileName() + ".tmp");
+		downloadArtifact(artifact, target, false);
+	}
 
+	private void downloadArtifact(MavenArtifact artifact, Path target, boolean preserveReadableCache) throws IOException {
 		logDebug("JavascriptEngine: downloading optional dependency: " + artifact.getCoordinate());
 		logDebug("JavascriptEngine: download URL: " + artifact.getMavenCentralJarUrl());
 		logDebug("JavascriptEngine: download target: " + target);
 
-		HttpURLConnection connection = (HttpURLConnection) URI.create(artifact.getMavenCentralJarUrl()).toURL()
-				.openConnection();
-		connection.setConnectTimeout(CONNECT_TIMEOUT);
-		connection.setReadTimeout(READ_TIMEOUT);
-		connection.setInstanceFollowRedirects(true);
-		connection.setRequestProperty("User-Agent", "AdvancedCore-JavascriptEngine");
+		Path candidate = null;
+		try {
+			HttpURLConnection connection = (HttpURLConnection) URI.create(artifact.getMavenCentralJarUrl()).toURL()
+					.openConnection();
+			try (Closeable disconnect = connection::disconnect) {
+				connection.setConnectTimeout(CONNECT_TIMEOUT);
+				connection.setReadTimeout(READ_TIMEOUT);
+				connection.setInstanceFollowRedirects(true);
+				connection.setRequestProperty("User-Agent", "AdvancedCore-JavascriptEngine");
 
-		int responseCode = connection.getResponseCode();
-		logDebug("JavascriptEngine: Maven Central response for " + artifact.getCoordinate() + ": HTTP "
-				+ responseCode);
+				int responseCode = connection.getResponseCode();
+				logDebug("JavascriptEngine: Maven Central response for " + artifact.getCoordinate() + ": HTTP "
+						+ responseCode);
 
-		if (responseCode < 200 || responseCode >= 300) {
-			connection.disconnect();
-			throw new IOException("Failed to download " + artifact.getCoordinate() + ", HTTP " + responseCode);
+				if (responseCode < 200 || responseCode >= 300) {
+					throw new IOException("Failed to download " + artifact.getCoordinate() + ", HTTP " + responseCode);
+				}
+
+				candidate = Files.createTempFile(target.toAbsolutePath().getParent(), "download-", ".tmp");
+				try (InputStream input = connection.getInputStream();
+						OutputStream output = Files.newOutputStream(candidate)) {
+					input.transferTo(output);
+				}
+			}
+
+			long size = Files.size(candidate);
+			logDebug("JavascriptEngine: downloaded " + artifact.getCoordinate() + " size=" + size + " bytes.");
+
+			if (size <= 0) {
+				throw new IOException("Downloaded empty jar for " + artifact.getCoordinate());
+			}
+			if (!isReadableJar(candidate)) {
+				throw new IOException("Downloaded unreadable jar for " + artifact.getCoordinate());
+			}
+			if (Thread.currentThread().isInterrupted()) {
+				throw new InterruptedIOException("Interrupted before saving " + artifact.getCoordinate());
+			}
+			if (Files.isDirectory(target) || Files.isSymbolicLink(target)) {
+				throw new IOException("Cannot replace dependency directory or symlink: " + artifact.getCoordinate());
+			}
+
+			if (preserveReadableCache && Files.exists(target) && isReadableJar(target)) {
+				Files.delete(candidate);
+				return;
+			}
+			// No non-atomic fallback: an unsupported publication must preserve the prior cache.
+			Files.move(candidate, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException | RuntimeException | Error failure) {
+			if (candidate != null) {
+				try {
+					Files.deleteIfExists(candidate);
+				} catch (IOException | RuntimeException cleanupFailure) {
+					failure.addSuppressed(cleanupFailure);
+				}
+			}
+			throw failure;
 		}
-
-		try (InputStream input = connection.getInputStream(); OutputStream output = Files.newOutputStream(tempFile)) {
-			input.transferTo(output);
-		} finally {
-			connection.disconnect();
-		}
-
-		long size = Files.size(tempFile);
-		logDebug("JavascriptEngine: downloaded " + artifact.getCoordinate() + " size=" + size + " bytes.");
-
-		if (size <= 0) {
-			Files.deleteIfExists(tempFile);
-			throw new IOException("Downloaded empty jar for " + artifact.getCoordinate());
-		}
-
-		Files.move(tempFile, target, StandardCopyOption.REPLACE_EXISTING);
 
 		logDebug("JavascriptEngine: saved optional dependency: " + target);
+	}
+
+	/** Structural archive check only; this does not impose a version or checksum policy. */
+	private boolean isReadableJar(Path path) throws IOException {
+		try (JarFile ignored = new JarFile(path.toFile())) {
+			return true;
+		} catch (ZipException invalidArchive) {
+			return false;
+		}
 	}
 
 	/**
