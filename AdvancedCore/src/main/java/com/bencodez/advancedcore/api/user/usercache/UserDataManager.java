@@ -1446,6 +1446,7 @@ public class UserDataManager {
 		addKey(new UserDataKeyString("ChoicePreference"));
 		addKey(new UserDataKeyBoolean("CheckWorld"));
 		addKey(new UserDataKeyBoolean("isBedrock"));
+		addKey(new UserDataKeyString("BedrockCanonicalName"));
 	}
 
 	public void removeCache(UUID uuid, String playerName) {

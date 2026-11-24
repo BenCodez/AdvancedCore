@@ -3,6 +3,7 @@ package com.bencodez.advancedcore.api.bedrock;
 import java.lang.reflect.Method;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -27,7 +28,12 @@ public final class BedrockNameResolver {
 	private final String bedrockPrefix;
 	private final AdvancedCorePlugin plugin;
 
+	private static final String CANONICAL_NAME_KEY = "BedrockCanonicalName";
 	private final Map<String, Boolean> cache = new ConcurrentHashMap<>();
+	// An observed server name is separate from Bedrock client/transport detection.
+	private final Map<String, String> canonicalNames = new ConcurrentHashMap<>();
+	private record CachedIdentity(String canonicalName, boolean bedrock) { }
+	private final Map<String, CachedIdentity> observedIdentities = new ConcurrentHashMap<>();
 	private final Map<String, String> ciIndex = new ConcurrentHashMap<>();
 
 	/**
@@ -127,28 +133,87 @@ public final class BedrockNameResolver {
 		String name = user.getPlayerName();
 		if (name == null || name.isEmpty())
 			return;
-		putLearned(name, user.isBedrockUser());
+		boolean bedrock = user.isBedrockUser();
+		putLearned(name, bedrock);
+		String canonical = bedrock ? storedCanonicalName(user, name) : null;
+		if (canonical != null) canonicalNames.put(name.toLowerCase(Locale.ROOT), canonical);
 	}
 
 	/**
 	 * Learns whether a player is a Bedrock player.
 	 * 
+	 * Observations are immediately available in this resolver. Persistence is queued
+	 * on the ordered user-storage worker and follows ordinary user-cache durability;
+	 * return does not acknowledge a durable write. Call from the platform owner.
+	 * Legacy inline notifications return through that player's owner scheduler;
+	 * the shared-SQL notification lane remains worker-owned.
+	 *
 	 * @param player the player to learn from
 	 */
 	public void learn(Player player) {
-		if (player == null)
-			return;
+		if (player == null) return;
+		// Capture storage identity now. The Player is only a platform callback target.
 		final UUID uuid = player.getUniqueId();
-		final boolean isBedrock = bedrockDetect.isBedrock(uuid);
-		final String originalName = player.getName();
-		if (isBedrock) {
-			plugin.debug("Learned Bedrock player: " + originalName + " (" + uuid + ")");
-			cache.put(originalName, true);
-			ciIndex.put(originalName.toLowerCase(Locale.ROOT), originalName);
-			AdvancedCoreUser user = userManager.getUser(player);
-			if (user != null)
-				user.setBedrockUser(true);
+		final String name = player.getName();
+		if (uuid == null || name == null || name.isEmpty() || !bedrockDetect.isBedrock(uuid)) return;
+		// Publish the flag and exact spelling in one immutable per-name observation.
+		observedIdentities.put(name.toLowerCase(Locale.ROOT), new CachedIdentity(name, true));
+		var manager = userManager.getDataManager();
+		if (manager == null || manager.getTimer() == null) {
+			reportLearningFailure();
+			return;
 		}
+		try {
+			manager.getTimer().execute(() -> {
+				try {
+					Runnable mutation = () -> {
+						AdvancedCoreUser user = userManager.getUser(uuid, false);
+						if (user == null) { reportLearningFailure(); return; }
+						user.setPlayerName(name);
+						// Evidence on this UUID record, never a name/UUID remap.
+						user.getData().setString(CANONICAL_NAME_KEY, name);
+						user.setBedrockUser(true);
+					};
+					// Shared SQL queues its notifications for later, outside this inline scope.
+					userManager.withUserDataChangeDispatcher(notification -> {
+						try {
+							plugin.getBukkitScheduler().runTask(plugin, notification, player);
+						} catch (RuntimeException rejected) {
+							plugin.getLogger().warning("Unable to deliver observed Bedrock identity notification");
+						}
+					}, mutation);
+				} catch (RuntimeException failure) {
+					reportLearningFailure();
+				}
+			});
+		} catch (RuntimeException rejected) {
+			reportLearningFailure();
+		}
+	}
+
+	private void reportLearningFailure() {
+		plugin.getLogger().warning("Unable to persist observed Bedrock identity; observation remains session-local");
+	}
+
+	private String storedCanonicalName(AdvancedCoreUser user, String name) {
+		try {
+			if (user.getData() == null) return null;
+			String observed = user.getData().getString(CANONICAL_NAME_KEY, user.getUserDataFetchMode());
+			// Never let metadata redirect a query to another name/account.
+			return observed != null && observed.equalsIgnoreCase(name) ? observed : null;
+		} catch (RuntimeException unreadable) {
+			plugin.getLogger().warning("Unable to read observed Bedrock identity; retaining legacy resolution");
+			return null;
+		}
+	}
+
+	private String exactName(String name, CachedIdentity identity) {
+		return identity.canonicalName() == null ? addPrefixIfNeeded(name, identity.bedrock()) : identity.canonicalName();
+	}
+
+	private String storedExactName(String name, boolean bedrock, AdvancedCoreUser user) {
+		String observed = bedrock ? storedCanonicalName(user, name) : null;
+		return observed == null ? addPrefixIfNeeded(name, bedrock) : observed;
 	}
 
 	/**
@@ -189,10 +254,10 @@ public final class BedrockNameResolver {
 		// A known exact identity must win before an online prefixed variant. This
 		// prevents an online Bedrock account such as ".Name" from taking a vote for
 		// an offline Java account named "Name".
-		Boolean cached = getCachedCaseInsensitive(incomingName);
+		CachedIdentity cached = getCachedCaseInsensitive(incomingName);
 		if (cached != null) {
-			boolean bedrock = cached;
-			String finalName = addPrefixIfNeeded(incomingName, bedrock);
+			boolean bedrock = cached.bedrock();
+			String finalName = exactName(incomingName, cached);
 			return new Result(finalName, bedrock, "cache-" + (bedrock ? "bedrock" : "java"));
 		}
 
@@ -200,7 +265,7 @@ public final class BedrockNameResolver {
 			if (userManager.userExistStored(incomingName)) {
 				AdvancedCoreUser user = userManager.getUser(incomingName);
 				boolean bedrock = user.isBedrockUser();
-				String finalName = addPrefixIfNeeded(incomingName, bedrock);
+				String finalName = storedExactName(incomingName, bedrock, user);
 				return new Result(finalName, bedrock, "db-" + (bedrock ? "bedrock" : "java"));
 			}
 		} catch (Throwable ignored) {
@@ -216,11 +281,11 @@ public final class BedrockNameResolver {
 		// Cache on prefixed variant
 		String prefixed = buildPrefixedVariant(incomingName);
 		if (prefixed != null) {
-			Boolean cachedPrefixed = getCachedCaseInsensitive(prefixed);
+			CachedIdentity cachedPrefixed = getCachedCaseInsensitive(prefixed);
 			if (cachedPrefixed != null) {
-				boolean bedrock = cachedPrefixed;
+				boolean bedrock = cachedPrefixed.bedrock();
 				// if the prefixed variant is known bedrock, credit the prefixed name
-				String finalName = bedrock ? prefixed : incomingName;
+				String finalName = bedrock ? exactName(prefixed, cachedPrefixed) : incomingName;
 				return new Result(finalName, bedrock, "cache-" + (bedrock ? "bedrock" : "java") + "-prefixed-variant");
 			}
 		}
@@ -321,7 +386,7 @@ public final class BedrockNameResolver {
 		AdvancedCoreUser user = getPersistedUser(incomingName);
 		if (user != null) {
 			boolean bedrock = user.isBedrockUser();
-			return new Result(addPrefixIfNeeded(incomingName, bedrock), bedrock,
+			return new Result(storedExactName(incomingName, bedrock, user), bedrock,
 					"db-" + (bedrock ? "bedrock" : "java"));
 		}
 
@@ -366,10 +431,10 @@ public final class BedrockNameResolver {
 		// Cache on prefixed variant
 		String prefixed = buildPrefixedVariant(incomingName);
 		if (prefixed != null) {
-			Boolean cachedPrefixed = getCachedCaseInsensitive(prefixed);
+			CachedIdentity cachedPrefixed = getCachedCaseInsensitive(prefixed);
 			if (cachedPrefixed != null) {
-				boolean bedrock = cachedPrefixed;
-				String finalName = bedrock ? prefixed : incomingName;
+				boolean bedrock = cachedPrefixed.bedrock();
+				String finalName = bedrock ? exactName(prefixed, cachedPrefixed) : incomingName;
 				return new Result(finalName, bedrock, "cache-" + (bedrock ? "bedrock" : "java") + "-prefixed-variant");
 			}
 		}
@@ -385,28 +450,30 @@ public final class BedrockNameResolver {
 	private Result resolveExactWithoutDb(String incomingName) {
 		Player match = findOnlineExact(incomingName);
 		if (match != null) return resultFromOnlineMatch(incomingName, match);
-		Boolean cached = getCachedCaseInsensitive(incomingName);
+		CachedIdentity cached = getCachedCaseInsensitive(incomingName);
 		if (cached == null) return null;
-		return new Result(addPrefixIfNeeded(incomingName, cached), cached,
-				"cache-" + (cached ? "bedrock" : "java"));
+		return new Result(exactName(incomingName, cached), cached.bedrock(),
+				"cache-" + (cached.bedrock() ? "bedrock" : "java"));
 	}
 
 	/**
-	 * Get the prefixed name if the player is a Bedrock player.
+	 * Get the canonical name, preserving observed linked Java and unlinked Bedrock identities.
 	 * 
 	 * @param name the player name
-	 * @return the prefixed name if Bedrock, otherwise the original name
+	 * @return the canonical name selected by the resolver
 	 */
 	public String getPrefixedIfBedrock(String name) {
-		return addPrefixIfNeeded(name, isBedrockName(name));
+		return resolve(name).finalName;
 	}
 
 	/**
 	 * Clear the cache and case-insensitive index.
 	 */
 	public void clearCache() {
+		observedIdentities.clear();
 		cache.clear();
 		ciIndex.clear();
+		canonicalNames.clear();
 	}
 
 	private void putLearned(String originalCaseName, boolean isBedrock) {
@@ -416,12 +483,18 @@ public final class BedrockNameResolver {
 		ciIndex.put(originalCaseName.toLowerCase(Locale.ROOT), originalCaseName);
 	}
 
-	private Boolean getCachedCaseInsensitive(String name) {
-		Boolean exact = cache.get(name);
-		if (exact != null)
-			return exact;
-		String canonical = ciIndex.get(name.toLowerCase(Locale.ROOT));
-		return (canonical != null) ? cache.get(canonical) : null;
+	private CachedIdentity getCachedCaseInsensitive(String name) {
+		Boolean flag = cache.get(name);
+		String lower = name.toLowerCase(Locale.ROOT);
+		if (flag == null) {
+			String canonical = ciIndex.get(lower);
+			flag = canonical == null ? null : cache.get(canonical);
+		}
+		String storedCanonical = canonicalNames.get(lower);
+		// A single read captures both pieces of the live observation. Read it
+		// after legacy evidence so concurrent stored learning cannot mask it.
+		CachedIdentity observed = observedIdentities.get(lower);
+		return observed != null ? observed : flag == null ? null : new CachedIdentity(storedCanonical, flag);
 	}
 
 	private String addPrefixIfNeeded(String name, boolean bedrock) {
@@ -462,7 +535,8 @@ public final class BedrockNameResolver {
 
 	private Result resultFromOnlineMatch(String incomingName, Player match) {
 		boolean bedrock = bedrockDetect.isBedrock(match.getUniqueId());
-		String finalName = bedrock ? addPrefixIfNeeded(match.getName(), true) : incomingName;
+		// Bukkit already exposes the canonical linked Java or unlinked Bedrock name.
+		String finalName = bedrock ? match.getName() : incomingName;
 		return new Result(finalName, bedrock, bedrock ? "online-uuid-bedrock" : "online-uuid-java");
 	}
 
