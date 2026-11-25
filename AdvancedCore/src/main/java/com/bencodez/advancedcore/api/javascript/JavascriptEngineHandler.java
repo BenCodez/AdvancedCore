@@ -313,21 +313,32 @@ public class JavascriptEngineHandler {
 			URLClassLoader loader = createClassLoader(jars);
 			candidateLoader = loader;
 
-			logDebug("JavascriptEngine: loading Nashorn factory class from downloaded classloader.");
-			Class<?> foundFactory = Class.forName(NASHORN_FACTORY_CLASS, true, loader);
-			Method foundMethod = getScriptEngineMethod(foundFactory);
+			Class<?> foundFactory;
+			Method foundMethod;
+			ScriptEngine engine;
+			try {
+				logDebug("JavascriptEngine: loading Nashorn factory class from downloaded classloader.");
+				foundFactory = Class.forName(NASHORN_FACTORY_CLASS, true, loader);
+				foundMethod = getScriptEngineMethod(foundFactory);
 
-			if (foundMethod == null) {
-				logWarning("JavascriptEngine: Nashorn " + nashornVersion
-						+ " was loaded, but no getScriptEngine method was found.");
-				return null;
-			}
+				if (foundMethod == null) {
+					logWarning("JavascriptEngine: Nashorn " + nashornVersion
+							+ " was loaded, but no getScriptEngine method was found.");
+					return null;
+				}
 
-			logDebug("JavascriptEngine: invoking Nashorn " + nashornVersion + " factory getScriptEngine.");
-			ScriptEngine engine = (ScriptEngine) foundMethod.invoke(foundFactory.getDeclaredConstructor().newInstance());
+				logDebug("JavascriptEngine: invoking Nashorn " + nashornVersion + " factory getScriptEngine.");
+				engine = (ScriptEngine) foundMethod.invoke(foundFactory.getDeclaredConstructor().newInstance());
 
-			if (engine == null) {
-				logWarning("JavascriptEngine: Nashorn " + nashornVersion + " returned a null script engine.");
+				if (engine == null) {
+					logWarning("JavascriptEngine: Nashorn " + nashornVersion + " returned a null script engine.");
+					return null;
+				}
+
+			} catch (LinkageError unavailableProvider) {
+				logWarning("JavascriptEngine: failed to initialize Nashorn " + nashornVersion + ": "
+						+ unavailableProvider.getClass().getSimpleName() + ": " + unavailableProvider.getMessage());
+				logDebug(unavailableProvider);
 				return null;
 			}
 
@@ -623,7 +634,7 @@ public class JavascriptEngineHandler {
 					+ ", languageName=" + engine.getFactory().getLanguageName()
 					+ ", languageVersion=" + engine.getFactory().getLanguageVersion()
 					+ ", names=" + engine.getFactory().getNames());
-		} catch (Exception e) {
+		} catch (Exception | LinkageError e) {
 			logWarning(prefix + ": failed to read engine details: " + e.getMessage());
 			logDebug(e);
 		}
