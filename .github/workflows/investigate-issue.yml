@@ -1,0 +1,30 @@
+name: Investigate issue without posting
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: AdvancedCore issue number to investigate
+        required: true
+        type: string
+      timeout_minutes:
+        description: Maximum agent runtime (5 to 30 minutes; not a spending cap)
+        required: true
+        default: '15'
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  issues: read
+
+jobs:
+  investigate:
+    if: ${{ github.repository == 'BenCodez/AdvancedCore' && github.ref == 'refs/heads/master' && github.event_name == 'workflow_dispatch' }}
+    uses: BenCodez/VotingPlugin/.github/workflows/investigate-issue-reusable.yml@68cd96bce3684462baffa569a26295965af36339
+    with:
+      issue_number: ${{ inputs.issue_number }}
+      timeout_minutes: ${{ inputs.timeout_minutes }}
+      openai_project_id: ${{ vars.OPENAI_PROJECT_ID }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
