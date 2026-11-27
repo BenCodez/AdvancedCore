@@ -17,6 +17,8 @@ def validate(text):
         "github.ref == 'refs/heads/master'",
         "github.event_name == 'workflow_dispatch'",
         "uses: BenCodez/VotingPlugin/.github/workflows/investigate-issue-reusable.yml@" + PIN,
+        "issue_number: ${{ inputs.issue_number }}",
+        "timeout_minutes: ${{ inputs.timeout_minutes }}",
         "openai_project_id: ${{ vars.OPENAI_PROJECT_ID }}",
         "OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}",
     ):
@@ -71,6 +73,16 @@ class EntrypointTests(unittest.TestCase):
         for added in ("post_comment", "engine_ref"):
             with self.subTest(added=added), self.assertRaises(ValueError):
                 validate(self.text.replace("    inputs:", "    inputs:\n      " + added + ":\n        type: string"))
+
+    def test_forwarded_inputs_cannot_be_overridden_or_swapped(self):
+        for original, changed in (
+            ("issue_number: ${{ inputs.issue_number }}", "issue_number: '42'"),
+            ("timeout_minutes: ${{ inputs.timeout_minutes }}", "timeout_minutes: '30'"),
+            ("issue_number: ${{ inputs.issue_number }}", "issue_number: ${{ inputs.timeout_minutes }}"),
+            ("timeout_minutes: ${{ inputs.timeout_minutes }}", "timeout_minutes: ${{ inputs.issue_number }}"),
+        ):
+            with self.subTest(changed=changed), self.assertRaises(ValueError):
+                validate(self.text.replace(original, changed))
 
     def test_extra_job_or_execution_rejected(self):
         for extra in (
