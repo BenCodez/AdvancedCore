@@ -3,11 +3,10 @@ package com.bencodez.advancedcore;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 
+import com.bencodez.advancedcore.api.misc.SoundResolver;
 import com.bencodez.advancedcore.api.user.UserStorage;
 import com.bencodez.simpleapi.debug.DebugLevel;
 import com.bencodez.simpleapi.file.YMLConfig;
@@ -665,17 +664,7 @@ public class AdvancedCoreConfigOptions {
 	 * @return The Sound object for click sound, or null if set to "none"
 	 */
 	public Sound getClickSoundSound() {
-
-		if (getClickSoundSoundStr().equalsIgnoreCase("none")) {
-			return null;
-		}
-		try {
-			return Registry.SOUNDS
-					.get(NamespacedKey.minecraft(getClickSoundSoundStr().replaceAll("_", ".").toLowerCase()));
-		} catch (Exception e) {
-			e.printStackTrace();
-			return Registry.SOUNDS.get(NamespacedKey.minecraft("ui.button.click"));
-		}
+		return SoundResolver.resolveClickSound(getClickSoundSoundStr());
 	}
 
 	/**

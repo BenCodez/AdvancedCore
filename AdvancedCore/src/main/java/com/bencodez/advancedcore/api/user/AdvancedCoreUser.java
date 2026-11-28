@@ -27,10 +27,8 @@ import java.util.function.Supplier;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
-import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
-import org.bukkit.Registry;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
@@ -41,6 +39,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import com.bencodez.advancedcore.AdvancedCorePlugin;
+import com.bencodez.advancedcore.api.misc.SoundResolver;
 import com.bencodez.advancedcore.api.item.ItemBuilder;
 import com.bencodez.advancedcore.api.messages.PlaceholderUtils;
 import com.bencodez.advancedcore.api.misc.PlayerManager;
@@ -593,6 +592,7 @@ public class AdvancedCoreUser {
 	 */
 	@Getter
 	private AdvancedCorePlugin plugin = null;
+	private long lastInvalidSoundWarningAt;
 
 	/** The uuid. */
 	private String uuid;
@@ -2824,16 +2824,21 @@ public class AdvancedCoreUser {
 	public void playSound(String soundName, float volume, float pitch) {
 		Player player = getPlayer();
 		if (player != null) {
-			Sound sound = null;
-			try {
-				sound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundName));
-			} catch (Exception e) {
-				plugin.debug(e);
-			}
+			Sound sound = SoundResolver.resolve(soundName);
 			if (sound != null) {
 				player.playSound(player.getLocation(), sound, volume, pitch);
 			} else {
-				plugin.debug("Invalid sound: " + soundName);
+				// Bound both diagnostic size and repeated warnings for this user.
+				synchronized (this) {
+					long now = System.currentTimeMillis();
+					if (now - lastInvalidSoundWarningAt >= 30_000L) {
+						lastInvalidSoundWarningAt = now;
+						String value = String.valueOf(soundName);
+						value = value.substring(0, Math.min(value.length(), 128)).replaceAll("[\\p{Cntrl}]", "?");
+						plugin.getLogger().warning("Invalid reward sound: " + value
+								+ ". Use a registry key such as entity.player.levelup (warnings limited to one per 30s per user).");
+					}
+				}
 			}
 		}
 	}
